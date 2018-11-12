@@ -32,3 +32,14 @@ services:
      - ./data/grafana:/var/lib/grafana
     ports:
      - 3000:3000
+
+  notebook:
+#docker run --rm -p 10000:8888 -e JUPYTER_ENABLE_LAB=yes -v "$PWD":/home/jovyan/work jupyter/datascience-notebook:latest
+    image: jupyter/datascience-notebook
+    restart: always
+    volumes:
+     - ./data/jupyter:/home/jovyan/work
+    environment:
+     JUPITER_ENABLE_LAB: yes
+    ports:
+     - 8888:8888
