@@ -13,7 +13,7 @@ class Job(db.Entity):
 	duration = Optional(datetime.timedelta)
 	info_dict = Optional(Json)
 	# end template
-	jobid = Required(int, unique=True)
+	jobid = PrimaryKey(int)
 	processes = Set('Process')
 	ppr = Optional('PostProcessRun')
 
@@ -61,7 +61,7 @@ class Host(db.Entity):
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
 	info_dict = Optional(Json)
 	# end template
-	name = Required(str,unique=True)
+	name = PrimaryKey(str)
 	ipaddr = Optional(str)
 	processes = Set(Process)
 	
