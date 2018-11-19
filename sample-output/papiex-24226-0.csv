@@ -1,0 +1,2 @@
+exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
+bash,/bin/bash,sieve.sh 1000sieve.sh 1000sieve.sh 1000,24226,0,24225,21875,1,1,24226,1542636676363797,1542636676363991,415864,0

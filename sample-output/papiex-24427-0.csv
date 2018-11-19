@@ -1,0 +1,2 @@
+exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
+gfortran,/usr/local/bin/gfortran,-fopenmp fft_openmp.f90 -o fft_openmp-fopenmp fft_openmp.f90 -o fft_openmp,24427,0,24426,21875,1,1,24427,1542636734523822,1542636734523875,90317,0

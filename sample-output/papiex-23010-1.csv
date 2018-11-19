@@ -1,0 +1,2 @@
+exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
+comm,/usr/bin/comm,-23 /dev/fd/63 /dev/fd/62,23010,1,21900,21875,1,1,23010,1542636651651751,1542636651651852,201626,0

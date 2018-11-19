@@ -1,0 +1,2 @@
+exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
+g++,/usr/local/bin/g++,-fopenmp md_openmp.cpp -o md_openmp-fopenmp md_openmp.cpp -o md_openmp,24422,0,24419,21875,1,1,24422,1542636682433799,1542636682433866,115976,0

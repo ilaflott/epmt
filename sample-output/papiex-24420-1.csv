@@ -1,0 +1,2 @@
+exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
+cc1plus,/usr/local/libexec/gcc/x86_64-pc-linux-gnu/6.1.0/cc1plus,-quiet -imultiarch x86_64-linux-gnu -D_GNU_SOURCE -D_REENTRANT md_openmp.cpp -quiet -dumpbase md_openmp.cpp -mtune=generic -march=x86-64 -auxbase md_openmp -fopenmp -o /tmp/ccIjWtVD.s,24420,1,24419,21875,1,1,24420,1542636682014288,1542636682360427,795550568,318970430

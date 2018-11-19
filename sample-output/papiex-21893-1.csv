@@ -1,0 +1,2 @@
+exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
+cc1,/usr/local/libexec/gcc/x86_64-pc-linux-gnu/6.1.0/cc1,-quiet -imultiarch x86_64-linux-gnu unit1.c -quiet -dumpbase unit1.c -mtune=generic -march=x86-64 -auxbase unit1 -Wall -o /tmp/cc717rpu.s,21893,1,21892,21875,1,1,21893,1542636626224291,1542636626257919,77269336,16489

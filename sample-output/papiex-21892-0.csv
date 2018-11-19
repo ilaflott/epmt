@@ -1,0 +1,2 @@
+exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
+gcc,/usr/local/bin/gcc,-Wall unit1.c -o unit1a,21892,0,21891,21875,1,1,21892,1542636626168111,1542636626479584,715868133,338231
