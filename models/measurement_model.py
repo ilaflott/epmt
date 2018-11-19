@@ -31,11 +31,14 @@ class Process(db.Entity):
 	args = Optional(str)
 	pid = Required(int)
 	ppid = Required(int)
+	pgid = Required(int)
 	sid = Required(int)
+	gen = Required(int)
 
 class Thread(db.Entity):
-	time = Required(datetime.datetime, default=datetime.datetime.utcnow())
+	time = Required(datetime.datetime)
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
+	end = Required(datetime.datetime)
 	duration = Required(datetime.timedelta)
 	info_dict = Optional(Json)
 	# end template
@@ -53,16 +56,16 @@ class Thread(db.Entity):
 class Metric(db.Entity):
 	name = Required(str)
 	value = Required(float)
-	threads = Set(Thread)
+	thread = Required(Thread)
 
 # Removing/changing hosts needs to be addressed
 class Host(db.Entity):
-	time = Required(datetime.datetime, default=datetime.datetime.utcnow())
-	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
-	info_dict = Optional(Json)
+	# time = Required(datetime.datetime, default=datetime.datetime.utcnow())
+	# updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
+	#info_dict = Optional(Json)
 	# end template
 	name = PrimaryKey(str)
-	ipaddr = Optional(str)
+	#ipaddr = Optional(str)
 	processes = Set(Process)
 	
 
