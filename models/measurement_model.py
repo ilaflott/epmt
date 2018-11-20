@@ -53,8 +53,12 @@ class Thread(db.Entity):
 #   duration = Required(datetime.timedelta)
 #	parent = Required(Thread) # Fix: Could be process or host
 
+class MetricName(db.Entity):
+	name = PrimaryKey(str)
+	metrics = Set('Metric')
+
 class Metric(db.Entity):
-	name = Required(str)
+	metricname = Required('MetricName')
 	value = Required(float)
 	thread = Required(Thread)
 
@@ -67,5 +71,3 @@ class Host(db.Entity):
 	name = PrimaryKey(str)
 	#ipaddr = Optional(str)
 	processes = Set(Process)
-	
-
