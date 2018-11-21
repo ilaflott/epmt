@@ -3,7 +3,7 @@ import settings
 from pony.orm import *
 from models import *
 from os.path import basename
-from sys import stdout
+from sys import stdout, argv
 # from pytz import UTC
 # from pytz import timezone
 from pandas import read_csv,Timestamp
@@ -167,26 +167,22 @@ def load_job_from_dirofcsvs(jobid, hostname, pattern=settings.input_pattern, dir
 	print "Earliest process start:",earliest_process,"\n","Latest process end:",latest_process,"\n","Computed duration of job:",(j.end-j.start).total_seconds(),"seconds","\n","Duration of job:",j.duration,"microseconds"
 	print len(files),"files imported,", datetime.datetime.now() - then,"seconds,",len(files)/float((datetime.datetime.now() - then).total_seconds()),"per second."
 	print "load_process_from_pandas()", ponyt, "\nread_csv()", csvt
-#		exit(0)
-#		print "Made it"
 
-db.bind(**settings.db_params)
-db.generate_mapping(create_tables=True)
-db.drop_all_tables(with_all_data=True)
-db.create_tables()
-load_job_from_dirofcsvs(4,"hostname.foo.com")
-#try:
-#	test_insert(1)
-#	test_query(1)
-#except Exception as exception:
-#	print type(exception).__name__,exception.args#
-#	exit(1)
+def setup_db():
+	db.bind(**settings.db_params)
+	db.generate_mapping(create_tables=True)
 
-#with db_session:
-#	h = Host(dbname="one",jobid=234)
+def setup_db_host(hostname):
+	settings.db_params['host'] = hostname
 
+if __name__ == 'main':
+	print setup_db_host
+# executed: if __name__ == '__main__':
 
-
-#if __name__ == '__name__':
-#	app = App()
-#	app.run()
+if __name__ == '__main__':
+	if len(argv) > 1:
+		setup_db_host(argv[1])
+	setup_db()
+	db.drop_all_tables(with_all_data=True)
+	db.create_tables()
+	load_job_from_dirofcsvs(4,"hostname.foo.com")
