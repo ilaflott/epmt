@@ -10,6 +10,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: example
+      POSTGRES_DATABASE: EPMT
     ports:
       - 5432:5432
 
@@ -19,12 +20,6 @@ services:
     ports:
       - 8080:8080
   
-  web:
-    image: webapp
-    build: .
-    ports:
-      - 5000:5000
-
   grafana:
     image: grafana/grafana:latest
     restart: always
@@ -33,13 +28,24 @@ services:
     ports:
      - 3000:3000
 
-  notebook:
-#docker run --rm -p 10000:8888 -e JUPYTER_ENABLE_LAB=yes -v "$PWD":/home/jovyan/work jupyter/datascience-notebook:latest
-    image: jupyter/datascience-notebook
-    restart: always
-    volumes:
-     - ./data/jupyter:/home/jovyan/work
-    environment:
-     JUPITER_ENABLE_LAB: yes
+  web:
+    image: webapp
+    build: .
+    depends_on:
+      - "db"
+    command: ["./wait-for-it.sh", "db:5432", "--", "python", "main.py"]
+
+  db:
+    image: postgres
     ports:
-     - 8888:8888
+       - 5432:5432
+#   notebook:
+# #docker run --rm -p 10000:8888 -e JUPYTER_ENABLE_LAB=yes -v "$PWD":/home/jovyan/work jupyter/datascience-notebook:latest
+#     image: jupyter/datascience-notebook
+#     restart: always
+#     volumes:
+#      - ./data/jupyter:/home/jovyan/work
+#     environment:
+#      JUPITER_ENABLE_LAB: yes
+#     ports:
+#      - 8888:8888

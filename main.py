@@ -93,6 +93,9 @@ def load_process_from_pandas(df, h, j, mns):
 		for metric,obj in mns.iteritems():
 #			dprint("Creating metric",metric,"value",df[metric][0])
 			m = Metric(metricname=obj,value=df[metric][0],thread=t)
+			t.metrics.add(m)
+		p.threads.add(t)
+
 	p.start = earliest_thread
 	p.end = latest_thread
 	p.duration = int(float((latest_thread - earliest_thread).total_seconds())*float(1000000))
@@ -153,6 +156,7 @@ def load_job_from_dirofcsvs(jobid, hostname, pattern=settings.input_pattern, dir
 #
 #
 #
+	j.processes.add(p)
 	j.start = earliest_process
 	j.end = latest_process
 	j.duration = int(float((latest_process - earliest_process).total_seconds())*float(1000000))
@@ -168,10 +172,9 @@ def load_job_from_dirofcsvs(jobid, hostname, pattern=settings.input_pattern, dir
 
 db.bind(**settings.db_params)
 db.generate_mapping(create_tables=True)
+db.drop_all_tables(with_all_data=True)
+db.create_tables()
 load_job_from_dirofcsvs(4,"hostname.foo.com")
-	#       db.bind(provider='postgres', user='postgres', password='example', host='0.0.0.0', dbname='EPMT')
-	# 	db.drop_all_tables(with_all_data=True)
-	#	db.create_tables()
 #try:
 #	test_insert(1)
 #	test_query(1)
