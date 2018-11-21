@@ -3,8 +3,8 @@
 #
 
 from pony.orm import *
-import time, datetime
 from .general import db
+import datetime
 
 # User running experiment or frepp
 class User(db.Entity):

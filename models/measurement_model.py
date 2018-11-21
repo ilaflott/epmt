@@ -3,32 +3,42 @@
 #
 
 from pony.orm import *
-import time, datetime
 from .general import db
-
-# A job doesn't have to be part of an experiment or postprocess run
+import datetime
+#
+# A job is a separate but possibly connected entity to an experiment/postprocess run
+#
 class Job(db.Entity):
-	time = Required(datetime.datetime, default=datetime.datetime.utcnow())
+# Rollup entries, computed at insert time
+	start = Required(datetime.datetime, default=datetime.datetime.utcnow())
+	end = Required(datetime.datetime, default=datetime.datetime.fromtimestamp(0))
+	duration = Required(int, default=0)
+# End rollups
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
-	duration = Optional(datetime.timedelta)
 	info_dict = Optional(Json)
-	# end template
+# End generic template
+	submit = Optional(datetime.datetime)
 	jobid = PrimaryKey(int)
 	processes = Set('Process')
 	ppr = Optional('PostProcessRun')
 
 class Process(db.Entity):
-	time = Required(datetime.datetime, default=datetime.datetime.utcnow())
+# Rollup entries, computed at insert time
+	start = Required(datetime.datetime, default=datetime.datetime.utcnow())
+	end = Required(datetime.datetime, default=datetime.datetime.fromtimestamp(0))
+	duration = Required(int, default=0)
+# End rollup
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
-	duration = Optional(datetime.timedelta)
 	info_dict = Optional(Json)
-	# end template
+# End generic template
 	job = Required('Job')
 	host = Required('Host')
 	threads = Set('Thread')
+# These should probably be abstracted/reduced
 	exename = Required(str)
 	path = Required(str)
 	args = Optional(str)
+# End above
 	pid = Required(int)
 	ppid = Required(int)
 	pgid = Required(int)
@@ -36,12 +46,14 @@ class Process(db.Entity):
 	gen = Required(int)
 
 class Thread(db.Entity):
-	time = Required(datetime.datetime)
-	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
+# These are measured
+	start = Required(datetime.datetime)
 	end = Required(datetime.datetime)
-	duration = Required(datetime.timedelta)
+# This is computed at insert time
+	duration = Required(int)
+	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
 	info_dict = Optional(Json)
-	# end template
+# End generic template
 	tid = Required(int)
 	metrics = Set('Metric')
 	process = Required(Process)

@@ -2,43 +2,27 @@
 import settings
 from pony.orm import *
 from models import *
-import os, sys, time, datetime
-from pytz import UTC
-from pytz import timezone
-import pandas as pd
-import glob
-import itertools
-spinner = itertools.cycle(['-', '/', '|', '\\'])
+from os.path import basename
+from sys import stdout
+# from pytz import UTC
+# from pytz import timezone
+from pandas import read_csv,Timestamp
+from glob import glob
+from itertools import cycle
+#
+#
+# Spinning cursor sequence
+spinner = cycle(['-', '/', '|', '\\'])
 
 def dprint(*args):
 	if (settings.debug): print args
-# 
-# Logical Model
-#
-@db_session
-def test_insert(jobid):
-		h = Host(name="foo.bar.com")
-		j = Job(jobid=jobid)
-		p = Process(exename='a.out', path='/home/phil', host=h, pid=1011, ppid=1, sid=1, job=j)
-		t = Thread(tid=1011, duration=datetime.timedelta(minutes=1),process=p)
-		m1 = Metric(name='cycles', value=1001, threads=[t])
-		m2 = Metric(name='bytes', value=2002, threads=[t])
-		t.metrics = [ m1, m2 ]
-		p.threads = [ t ]
-		j.processes = [ p ]
 
-@db_session
-def test_query(jobid):
-	t = Job[jobid]
-	print t.jobid 
-	for p in t.processes:
-		print p.exename
-		for t in p.threads:
-			for m in t.metrics:
-				print m.name, m.value
+# Construct a number from the pattern
 
 def sortKeyFunc(s):
-    t = os.path.basename(s)
+    t = basename(s)
+# if this changes we must adjust this
+#    assert settings.input_pattern == "papiex-[0-9]*-[0-9]*.csv"
 # skip papiex- and .csv
     t = t[7:-4]
 # append instance number 
@@ -51,7 +35,6 @@ def lookup_or_create_metricname(metricname):
 	if mn is None:
 		dprint("Creating metric",metricname)
 		mn = MetricName(name=metricname)
-#	print mn
 	return mn
 
 @db_session
@@ -60,7 +43,6 @@ def lookup_or_create_job(jobid):
 	if job is None:
 		dprint("Creating job",jobid)
 		job = Job(jobid=jobid)
-#	print job
 	return job
 
 @db_session
@@ -69,13 +51,15 @@ def lookup_or_create_host(hostname):
 	if host is None:
 		dprint("Creating host",hostname)
 		host = Host(name=hostname)
-#	print host
 	return host
 
 @db_session
 def load_process_from_pandas(df, h, j, mns):
 # Assumes all processes are from same host
 #	dprint("Creating process",str(df['pid'][0]),"gen",str(df['generation'][0]),"exename",df['exename'][0])
+	earliest_thread = datetime.datetime.utcnow()
+	latest_thread = datetime.datetime.fromtimestamp(0)
+
 	p = Process(exename=df['exename'][0],
 		    args=df['args'][0],
 		    path=df['path'][0],
@@ -86,32 +70,37 @@ def load_process_from_pandas(df, h, j, mns):
 		    gen=int(df['generation'][0]),
 		    job=j,
 		    host=h)
-#	print p
 	# Add all threads
 	for index, row in df.iterrows():
-#		print "Adding thread TID: "+str(row['tid']),row['start']
-		start = pd.Timestamp(row['start'], unit='us')
+#		dprint "Adding thread TID: "+str(row['tid']),row['start']
+#		print index,row['start']
+#		start = datetime.datetime.utcfromtimestamp(row['start'])
+		start = Timestamp(row['start'], unit='us')
+		if (start < earliest_thread):
+			earliest_thread = start
 #		start = start.tz_localize(UTC)
-		end = pd.Timestamp(row['end'], unit='us')
+		end = Timestamp(row['end'], unit='us')
+		if (end > latest_thread):
+			latest_thread = end
 #		end = end.tz_localize(UTC)
 		duration = end-start
 #		dprint("Creating thread",str(row['tid']),"start",start,"end",end,"duration",duration)
 		t = Thread(tid=row['tid'],
-			   time=start,
+			   start=start,
 			   end=end,
-			   duration=duration,
+			   duration=int(float(duration.total_seconds())*float(1000000)),
 			   process=p)
-#		print t
-#		p.threads.add(t)
-		# Add metrics
 		for metric,obj in mns.iteritems():
 #			dprint("Creating metric",metric,"value",df[metric][0])
 			m = Metric(metricname=obj,value=df[metric][0],thread=t)
-#			print m
-#			t.metrics.add(m)a
+	p.start = earliest_thread
+	p.end = latest_thread
+	p.duration = int(float((latest_thread - earliest_thread).total_seconds())*float(1000000))
+#	print "Earliest thread start:",earliest_thread,"\n","Latest thread end:",latest_thread,"\n","Computed duration of process:",(p.end-p.start).total_seconds(),"seconds","\n","Duration of process:",p.duration,"microseconds"
+	return p
 
 @db_session
-def load_job_from_dirofcsvs(jobid, hostname, pattern="papiex-[0-9]*-[0-9]*.csv", dirname="./sample-output/"):
+def load_job_from_dirofcsvs(jobid, hostname, pattern=settings.input_pattern, dirname="./sample-output/"):
 # Damn NAN's for empty strings require converters, and empty integers need floats
 	conv_dic = { 'exename':str, 
 		     'path':str, 
@@ -125,24 +114,26 @@ def load_job_from_dirofcsvs(jobid, hostname, pattern="papiex-[0-9]*-[0-9]*.csv",
 		'numtids':                    float }
 #	data_offset = settings.metrics_offset
 #	print "Pattern:"+dirname+pattern
-	files = sorted(glob.glob(dirname+pattern),key=sortKeyFunc)
+#	files = [ "sample-output/papiex-24414-0.csv" ]
+	files = sorted(glob(dirname+pattern),key=sortKeyFunc)
 # Sort by PID
 	then = datetime.datetime.now()
 	csvt = datetime.timedelta()
 	ponyt = datetime.timedelta()
-	sys.stdout.write('-')
+	earliest_process = datetime.datetime.utcnow()
+	latest_process = datetime.datetime.fromtimestamp(0)
+	stdout.write('-')
 # Hostname, job, metricname objects
 	h = None
 	m = None
 	mns = {}
 # Iterate over files 
 	for f in files:
-		sys.stdout.write('\b')            # erase the last written char
-		sys.stdout.write(spinner.next())  # write the next character
-		sys.stdout.flush()                # flush stdout buffer (actual character display)
-#		print f
+		stdout.write('\b')            # erase the last written char
+		stdout.write(spinner.next())  # write the next character
+		stdout.flush()                # flush stdout buffer (actual character display)
 		csv = datetime.datetime.now()
-	        pf = pd.read_csv(f,
+	        pf = read_csv(f,
 				 dtype=dtype_dic, 
 				 converters=conv_dic)
 		csvt += datetime.datetime.now() - csv
@@ -152,28 +143,25 @@ def load_job_from_dirofcsvs(jobid, hostname, pattern="papiex-[0-9]*-[0-9]*.csv",
 				mns[metric] = lookup_or_create_metricname(metric)
 			j = lookup_or_create_job(jobid)
 			h = lookup_or_create_host(hostname)
-
-#		print pf.columns
-# Force types (args may be empty which results in an float)		
-#		pf['exename'] = pf['exename'].astype('object');
-#		pf['args'] = pf['args'].astype('object');
-#		pf['path'] = pf['path'].astype('object');
-#		print pf.dtypes
-#		print pf['args'].dtype
-#		print pf['args'][0]
-#		print "THERE"
-#		thread_cnt = len(pf.index)
-#		metric_cnt = len(pf.columns) - settings.metrics_offset
-#		metric_names = pf.columns[settings.metrics_offset:].values.tolist()
-#		dprint (f,": Read",thread_cnt,"threads with ",metric_cnt,"metrics",metric_names)
-#		print pf['tid']
-#		for index, row in pf.iterrows():
-#			print index,"TID: "+str(row['tid'])
 		pony = datetime.datetime.now()
-		load_process_from_pandas(pf, h, j, mns)
+		p = load_process_from_pandas(pf, h, j, mns)
+		if (p.start < earliest_process):
+			earliest_process = p.start
+		if (p.end > latest_process):
+			latest_process = p.end
 		ponyt += datetime.datetime.now() - pony
-	sys.stdout.write('\b')            # erase the last written char
-	print len(files),"files imported,", datetime.datetime.now() - then,"seconds,",len(files)/float((datetime.datetime.now() - then).seconds),"per second."
+#
+#
+#
+	j.start = earliest_process
+	j.end = latest_process
+	j.duration = int(float((latest_process - earliest_process).total_seconds())*float(1000000))
+#
+#
+#
+	stdout.write('\b')            # erase the last written char
+	print "Earliest process start:",earliest_process,"\n","Latest process end:",latest_process,"\n","Computed duration of job:",(j.end-j.start).total_seconds(),"seconds","\n","Duration of job:",j.duration,"microseconds"
+	print len(files),"files imported,", datetime.datetime.now() - then,"seconds,",len(files)/float((datetime.datetime.now() - then).total_seconds()),"per second."
 	print "load_process_from_pandas()", ponyt, "\nread_csv()", csvt
 #		exit(0)
 #		print "Made it"
