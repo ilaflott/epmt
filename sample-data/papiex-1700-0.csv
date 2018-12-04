@@ -1,0 +1,3 @@
+# scripts
+exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
+python2.7,/usr/bin/python2.7,sieve.py,1700,0,192,1,1,1,1700,1543854426479458,1543854426533879,173448623,42558386

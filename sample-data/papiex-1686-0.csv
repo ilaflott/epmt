@@ -1,0 +1,4 @@
+# binaries
+exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
+fft_openmp,/Users/phil/Work/papiex-oss/papiex/x86_64-Linux/tests/fft_openmp,,1686,0,192,1,1,2,1686,1543854408103472,1543854426389537,58411404534,18040723834
+,,,,,,,,,1687,1543854408103807,1543854426389451,58410066450,12371951028

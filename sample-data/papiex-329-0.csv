@@ -1,0 +1,3 @@
+# 
+exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
+cc1plus,/usr/local/libexec/gcc/x86_64-pc-linux-gnu/6.1.0/cc1plus,-quiet -imultiarch x86_64-linux-gnu -D_GNU_SOURCE -D_REENTRANT md_openmp.cpp -quiet -dumpbase md_openmp.cpp -mtune=generic -march=x86-64 -auxbase md_openmp -fopenmp -o /tmp/ccVfzLeq.s,329,0,328,1,1,1,329,1543854273546836,1543854274651476,3521849007,302380923

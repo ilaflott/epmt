@@ -1,0 +1,3 @@
+# shells
+exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
+sort,/usr/bin/sort,,2171,0,2145,1,1,1,2171,1543854431727408,1543854431730796,10764347,242824

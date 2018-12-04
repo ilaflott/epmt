@@ -1,0 +1,3 @@
+# shells
+exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
+bsd-csh,/bin/bsd-csh,-f -c sleep 1,2478,0,192,1,1,1,2478,1543854432578181,1543854434105964,0,0

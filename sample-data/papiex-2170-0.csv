@@ -1,0 +1,3 @@
+# shells
+exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
+seq,/usr/bin/seq,81 9 100,2170,0,2145,1,1,1,2170,1543854431728773,1543854431728823,122775,38855

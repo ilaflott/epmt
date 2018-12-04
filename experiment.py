@@ -54,13 +54,20 @@ def lookup_or_create_PostProcessRun(experiment_name, username, platform_name, me
         else:
             logger.debug("Found %s %s, %s, %s",ppr,experiment_name,username,platform_name)
         return e, ppr
-
+#
+#
+#
 basicConfig(level=DEBUG)
+#
+#
+#
 db.bind(**settings.db_params)
-#if __name__ == '__main__':
 db.generate_mapping(create_tables=True)
 db.drop_all_tables(with_all_data=True)
 db.create_tables()
+#
+#
+#
 metadata = { "metadata1": "value1", "metadata2": "value2" }
 e, ppr = lookup_or_create_PostProcessRun("exp_name","exp_user","exp_platform", metadata)    
 logger.debug("%s %s",e,ppr)

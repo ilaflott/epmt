@@ -1,0 +1,3 @@
+# shells
+exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
+mv,/bin/mv,input2.new input2,2174,0,2145,1,1,1,2174,1543854431837456,1543854431839147,5371368,141438

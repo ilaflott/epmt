@@ -1,0 +1,3 @@
+# 
+exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
+rm,/bin/rm,-f input2,945,0,937,1,1,1,945,1543854352715322,1543854352716743,4504141,201970

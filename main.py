@@ -9,6 +9,8 @@ from sys import stdout, argv
 from pandas import read_csv,Timestamp
 from glob import glob
 from itertools import cycle
+from logging import getLogger, basicConfig, DEBUG
+logger = getLogger(__name__)  # you can use other name
 #
 #
 # Spinning cursor sequence
@@ -103,7 +105,7 @@ def load_process_from_pandas(df, h, j, mns):
 	return p
 
 @db_session
-def load_job_from_dirofcsvs(jobid, hostname, pattern=settings.input_pattern, dirname="./sample-output/"):
+def load_job_from_dirofcsvs(jobid, hostname, pattern=settings.input_pattern, dirname="./sample-data/"):
 # Damn NAN's for empty strings require converters, and empty integers need floats
 	conv_dic = { 'exename':str, 
 		     'path':str, 
@@ -119,6 +121,9 @@ def load_job_from_dirofcsvs(jobid, hostname, pattern=settings.input_pattern, dir
 #	print "Pattern:"+dirname+pattern
 #	files = [ "sample-output/papiex-24414-0.csv" ]
 	files = sorted(glob(dirname+pattern),key=sortKeyFunc)
+	if not files:
+		stdout.write(dirname+pattern+" matched no files.\n");
+		return None
 # Sort by PID
 	then = datetime.datetime.now()
 	csvt = datetime.timedelta()
@@ -131,6 +136,7 @@ def load_job_from_dirofcsvs(jobid, hostname, pattern=settings.input_pattern, dir
 	m = None
 	mns = {}
 # Iterate over files 
+	dprint(files)
 	for f in files:
 		stdout.write('\b')            # erase the last written char
 		stdout.write(spinner.next())  # write the next character
@@ -138,7 +144,9 @@ def load_job_from_dirofcsvs(jobid, hostname, pattern=settings.input_pattern, dir
 		csv = datetime.datetime.now()
 	        pf = read_csv(f,
 				 dtype=dtype_dic, 
-				 converters=conv_dic)
+				 converters=conv_dic,
+			         comment="#",
+			         skiprows=1)
 		csvt += datetime.datetime.now() - csv
 # Lookup or create the necessary objects, only happens once!
 		if h is None:
@@ -166,23 +174,26 @@ def load_job_from_dirofcsvs(jobid, hostname, pattern=settings.input_pattern, dir
 	stdout.write('\b')            # erase the last written char
 	print "Earliest process start:",earliest_process,"\n","Latest process end:",latest_process,"\n","Computed duration of job:",(j.end-j.start).total_seconds(),"seconds","\n","Duration of job:",j.duration,"microseconds"
 	print len(files),"files imported,", datetime.datetime.now() - then,"seconds,",len(files)/float((datetime.datetime.now() - then).total_seconds()),"per second."
-	print "load_process_from_pandas()", ponyt, "\nread_csv()", csvt
+	print "load_process_from_pandas() took ", ponyt, "\nread_csv() took", csvt
+	print j
+	return j
 
-def setup_db():
-	db.bind(**settings.db_params)
-	db.generate_mapping(create_tables=True)
-
-def setup_db_host(hostname):
-	settings.db_params['host'] = hostname
-
-if __name__ == 'main':
-	print setup_db_host
-# executed: if __name__ == '__main__':
-
-if __name__ == '__main__':
-	if len(argv) > 1:
-		setup_db_host(argv[1])
-	setup_db()
-	db.drop_all_tables(with_all_data=True)
-	db.create_tables()
-	load_job_from_dirofcsvs(4,"hostname.foo.com")
+#
+#
+#
+basicConfig(level=DEBUG)
+#
+#
+#
+db.bind(**settings.db_params)
+db.generate_mapping(create_tables=True)
+db.drop_all_tables(with_all_data=True)
+db.create_tables()
+#
+#
+#
+j = load_job_from_dirofcsvs(4,"hostname.foo.com",dirname="./sample-data/")
+if j:
+	exit(0)
+else:
+	exit(1)

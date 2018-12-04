@@ -1,0 +1,3 @@
+# 
+exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
+f951,/usr/local/libexec/gcc/x86_64-pc-linux-gnu/6.1.0/f951,fft_openmp.f90 -quiet -dumpbase fft_openmp.f90 -mtune=generic -march=x86-64 -auxbase fft_openmp -fopenmp -fintrinsic-modules-path /usr/local/lib/gcc/x86_64-pc-linux-gnu/6.1.0/finclude -o /tmp/ccXdgtWa.s,382,0,381,1,1,1,382,1543854275267428,1543854275702916,1388428230,58018217

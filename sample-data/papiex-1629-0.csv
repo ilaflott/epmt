@@ -1,0 +1,3 @@
+# simple
+exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
+ps,/bin/ps,-fade,1629,0,192,1,1,1,1629,1543854359508701,1543854359521188,39772427,2096810

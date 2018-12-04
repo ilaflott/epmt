@@ -1,0 +1,3 @@
+# shells
+exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
+bsd-csh,/bin/bsd-csh,-f sieve.csh 100,2501,0,192,1,1,1,2501,1543854434202654,1543854436056844,0,0
