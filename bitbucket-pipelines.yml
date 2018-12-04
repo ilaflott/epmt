@@ -5,4 +5,4 @@ pipelines:
     - step:
         script: # Modify the commands below to build your repository.
         - pip install -r requirements.txt
-        - python ./main.py
+        - python epmt-job.py && python epmt-exp.py
