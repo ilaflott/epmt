@@ -1,6 +1,8 @@
-.PHONY: docker-build docker-test default
-default: docker-build docker-test
-docker-build:
-	docker build . -t epmt
-docker-test:
-	docker run epmt
+.PHONY: epmt-build epmt-test default
+default: epmt-build epmt-test
+epmt-build:
+	docker build . -t epmt:latest
+	docker-compose build
+epmt-test:
+	docker run epmt:latest
+	docker-compose up
