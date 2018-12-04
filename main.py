@@ -9,15 +9,12 @@ from sys import stdout, argv
 from pandas import read_csv,Timestamp
 from glob import glob
 from itertools import cycle
-from logging import getLogger, basicConfig, DEBUG
+from logging import getLogger, basicConfig, DEBUG, ERROR
 logger = getLogger(__name__)  # you can use other name
 #
 #
 # Spinning cursor sequence
 spinner = cycle(['-', '/', '|', '\\'])
-
-def dprint(*args):
-	if (settings.debug): print args
 
 # Construct a number from the pattern
 
@@ -35,7 +32,7 @@ def sortKeyFunc(s):
 def lookup_or_create_metricname(metricname):
 	mn = MetricName.get(name=metricname)
 	if mn is None:
-		dprint("Creating metric",metricname)
+		logger.debug("Creating metric %s",metricname)
 		mn = MetricName(name=metricname)
 	return mn
 
@@ -43,7 +40,7 @@ def lookup_or_create_metricname(metricname):
 def lookup_or_create_job(jobid):
 	job = Job.get(jobid=jobid)
 	if job is None:
-		dprint("Creating job",jobid)
+		logger.debug("Creating job %s",jobid)
 		job = Job(jobid=jobid)
 	return job
 
@@ -51,7 +48,7 @@ def lookup_or_create_job(jobid):
 def lookup_or_create_host(hostname):
 	host = Host.get(name=hostname)
 	if host is None:
-		dprint("Creating host",hostname)
+		logger.debug("Creating host %s",hostname)
 		host = Host(name=hostname)
 	return host
 
@@ -136,7 +133,7 @@ def load_job_from_dirofcsvs(jobid, hostname, pattern=settings.input_pattern, dir
 	m = None
 	mns = {}
 # Iterate over files 
-	dprint(files)
+	logger.debug("%d files matched (%s): %s",len(files),dirname+pattern,files)
 	for f in files:
 		stdout.write('\b')            # erase the last written char
 		stdout.write(spinner.next())  # write the next character
@@ -172,10 +169,16 @@ def load_job_from_dirofcsvs(jobid, hostname, pattern=settings.input_pattern, dir
 #
 #
 	stdout.write('\b')            # erase the last written char
-	print "Earliest process start:",earliest_process,"\n","Latest process end:",latest_process,"\n","Computed duration of job:",(j.end-j.start).total_seconds(),"seconds","\n","Duration of job:",j.duration,"microseconds"
-	print len(files),"files imported,", datetime.datetime.now() - then,"seconds,",len(files)/float((datetime.datetime.now() - then).total_seconds()),"per second."
-	print "load_process_from_pandas() took ", ponyt, "\nread_csv() took", csvt
-	print j
+	logger.info("Earliest process start: %s",earliest_process)
+	logger.info("Latest process end: %s",latest_process)
+	logger.info("Computed duration of job: %f",(j.end-j.start).total_seconds())
+	logger.info("Duration of job: %f",j.duration)
+	logger.info("%d files imported", len(files))
+	logger.info("%s seconds",datetime.datetime.now() - then)
+	logger.info("%f per second",len(files)/float((datetime.datetime.now() - then).total_seconds()))
+	logger.info("load_process_from_pandas() took %s", ponyt)
+	logger.info("read_csv took %s",csvt)
+	logger.info(j)
 	return j
 
 #
@@ -185,6 +188,10 @@ basicConfig(level=DEBUG)
 #
 #
 #
+if settings.db_params.get('hostname'):
+	logger.info("Using DB: %s %s %s",settings.db_params['provider'],"Hostname:",settings.db_params['provider'])
+else:
+	logger.info("Using DB: %s", settings.db_params['provider'])
 db.bind(**settings.db_params)
 db.generate_mapping(create_tables=True)
 db.drop_all_tables(with_all_data=True)
