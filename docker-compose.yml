@@ -10,16 +10,10 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: example
-      POSTGRES_DATABASE: EPMT
+      POSTGRES_DB: EPMT
     ports:
       - 5432:5432
 
-  adminer:
-    image: adminer
-    restart: always
-    ports:
-      - 8080:8080
-  
   grafana:
     image: grafana/grafana:latest
     restart: always
@@ -28,17 +22,43 @@ services:
     ports:
      - 3000:3000
 
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+  
   web:
     image: webapp
     build: .
     depends_on:
       - "db"
-    command: ["./wait-for-it.sh", "db:5432", "--", "python", "main.py"]
-
-  db:
-    image: postgres
     ports:
-       - 5432:5432
+      - 8888:8888
+    command: >
+     bash -c "sleep 15 && ./wait-for-it.sh db:5432 -- python epmt.py && jupyter notebook --ip=0.0.0.0"
+#    command: ["./wait-for-it.sh", "db:5432", "--", "python", "epmt.py"]
+#    command: ["jupyter", "notebook", "EPMT.ipynb"]
+#  db:
+#    image: postgres
+#    ports:
+#       - 5432:5432
+#version:  '3'
+#services:
+#  datascience-notebook:
+#      image:    jupyter/datascience-notebook
+#      volumes:
+#        - .:/home/jovyan/work
+#        - ${LOCAL_DATASETS}:/home/jovyan/work/datasets
+#        - ${LOCAL_MODULES}:/home/jovyan/work/modules
+#        - ${LOCAL_SSL_CERTS}:/etc/ssl/notebook
+#      ports:
+#        - 8888:8888
+#      container_name:   jupyter_notebook
+#      command: "start-notebook.sh"
+# \
+#        --NotebookApp.password=${ACCESS_TOKEN} \
+#        --NotebookApp.certfile=/etc/ssl/notebook/jupyter.pem"
 #   notebook:
 # #docker run --rm -p 10000:8888 -e JUPYTER_ENABLE_LAB=yes -v "$PWD":/home/jovyan/work jupyter/datascience-notebook:latest
 #     image: jupyter/datascience-notebook
