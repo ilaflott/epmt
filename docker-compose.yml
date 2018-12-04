@@ -36,7 +36,7 @@ services:
     ports:
       - 8888:8888
     command: >
-     bash -c "sleep 15 && ./wait-for-it.sh db:5432 -- python main.py && python experiment.py & jupyter notebook --ip=0.0.0.0"
+     bash -c "./wait-for-it.sh db:5432 -- cp settings_pg.py settings.py && python main.py && python experiment.py && jupyter notebook --ip=0.0.0.0"
 #    command: ["./wait-for-it.sh", "db:5432", "--", "python", "epmt.py"]
 #    command: ["jupyter", "notebook", "EPMT.ipynb"]
 #  db:
