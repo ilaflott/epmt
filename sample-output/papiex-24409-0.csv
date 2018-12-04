@@ -1,2 +1,0 @@
-exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
-gcc,/usr/local/bin/gcc,-pthread dotprod_mutex.c -o dotprod_mutex,24409,0,21891,21875,1,1,24409,1542636681392506,1542636681735724,788845252,1688955

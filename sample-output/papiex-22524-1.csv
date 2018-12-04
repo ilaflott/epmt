@@ -1,2 +1,0 @@
-exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
-sort,/usr/bin/sort,,22524,1,22522,21875,1,1,22524,1542636641657832,1542636641657972,292182,0

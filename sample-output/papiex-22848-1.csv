@@ -1,2 +1,0 @@
-exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
-seq,/usr/bin/seq,142129 377 1000,22848,1,22847,21875,1,1,22848,1542636648200761,1542636648200822,93639,0

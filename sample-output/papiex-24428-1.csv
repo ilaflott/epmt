@@ -1,2 +1,0 @@
-exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
-as,/usr/bin/as,--64 -o /tmp/ccs9IrTI.o /tmp/ccHHSdle.s,24428,1,24426,21875,1,1,24428,1542636734698496,1542636734704054,12731376,0

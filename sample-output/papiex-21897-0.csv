@@ -1,2 +1,0 @@
-exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
-unit1a,/Users/philipmucci/Work/papiex-oss/papiex/x86_64-Linux/tests/unit1a,,21897,0,21891,21875,1,1,21897,1542636626547630,1542636628710452,4971193331,173539654

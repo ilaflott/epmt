@@ -1,2 +1,0 @@
-exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
-bash,/bin/bash,-c sleep 1,21899,0,21891,21875,1,1,21899,1542636628875865,1542636628880533,10690490,337432
