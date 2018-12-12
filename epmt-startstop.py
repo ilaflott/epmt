@@ -92,6 +92,7 @@ def create_job_prolog(jobid, from_batch=[]):
 #	print env
 	retval['job_pl_id'] = jobid
 	retval['job_pl_scriptname'] = "job_scriptname"
+	retval['job_pl_hostname'] = gethostname()
 	retval['job_pl_env_len'] = len(env)
 	retval['job_pl_env'] = env
 	retval['job_pl_start'] = ts
@@ -110,7 +111,6 @@ def create_job_epilog(prolog, from_batch=[], status="0"):
 	retval['job_el_from_batch'] = from_batch
 	retval['job_el_status'] = status
 
-	logger.info("Detected duration of job %s is %s",prolog['job_pl_id'],retval['job_el_stop'] - prolog['job_pl_start'])
 	return retval
 
 def write_job_prolog(jobdatafile,data):
@@ -161,9 +161,9 @@ def get_job_id():
 #		logger.warn("Using random number %d for JobID",r)
 		return str(1) #r
 
-def get_job_dir(jobid=get_job_id(), hostname=gethostname(), prefix="/tmp/epmt/"):
-	return prefix+jobid+"/"+hostname
-def get_job_file(jobid=get_job_id(), hostname=gethostname(), prefix="/tmp/epmt/"):
+def get_job_dir(jobid=get_job_id(), hostname="", prefix="/tmp/epmt/"):
+	return prefix+jobid
+def get_job_file(jobid=get_job_id(), hostname="", prefix="/tmp/epmt/"):
 	s = get_job_dir(jobid,hostname,prefix)
 	return s+"/job_metadata"
 
@@ -189,6 +189,7 @@ def epmt_start(from_batch=[]):
 	file = get_job_file()
 	d = create_job_prolog(jobid,from_batch)
 	write_job_prolog(file,d)
+	logger.info("wrote prolog %s",file);
 	return d
 
 def epmt_stop(from_batch=[]):
@@ -199,9 +200,14 @@ def epmt_stop(from_batch=[]):
 	prolog = read_job_metadata(file)
 	if not prolog:
 		return False
+	logger.info("read prolog %s",file);
 	epilog = create_job_epilog(prolog,from_batch)
 	metadata = merge_two_dicts(prolog,epilog)
 	write_job_epilog(file,metadata)
+	logger.info("wrote prolog %s",file);
+	logger.info("job start: %s",metadata['job_pl_start'])
+	logger.info("job stop: %s",metadata['job_el_stop'])
+	logger.info("job duration:  %s",metadata['job_el_stop'] - metadata['job_pl_start'])
 	return metadata
 
 
