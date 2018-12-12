@@ -5,12 +5,14 @@ from logging import getLogger, basicConfig, DEBUG, INFO, WARNING, ERROR
 from datetime import datetime
 from os import environ, makedirs, errno
 from socket import gethostname
-from json import dumps as dict_to_json
-from subprocess import call as forkexec
-from random import randint
+#from json import dumps as dict_to_json
+#from subprocess import call as forkexec
+#from random import randint
 import pickle
 import argparse
-from dictdiffer import diff
+import imp
+
+#from dictdiffer import diff
 
 logger = getLogger(__name__)  # you can use other name
 
@@ -104,7 +106,8 @@ def create_job_epilog(prolog, from_batch=[], status="0"):
 	retval = {}
 	ts=datetime.now()
 	env=blacklist_filter(filter,**environ)
-	env = list(diff(prolog['job_pl_env'],env))
+	if dd is True:
+		env = list(dictdiffer.diff(prolog['job_pl_env'],env))
 	retval['job_el_env_changes_len'] = len(env)
 	retval['job_el_env_changes'] = env
 	retval['job_el_stop'] = ts
@@ -204,10 +207,11 @@ def epmt_stop(from_batch=[]):
 	epilog = create_job_epilog(prolog,from_batch)
 	metadata = merge_two_dicts(prolog,epilog)
 	write_job_epilog(file,metadata)
-	logger.info("wrote prolog %s",file);
+	logger.info("wrote epilog %s",file);
 	logger.info("job start: %s",metadata['job_pl_start'])
 	logger.info("job stop: %s",metadata['job_el_stop'])
 	logger.info("job duration:  %s",metadata['job_el_stop'] - metadata['job_pl_start'])
+	logger.info("job changed env: %s",metadata['job_el_env_changes'])
 	return metadata
 
 
@@ -222,6 +226,13 @@ def epmt_test_start_stop(from_batch=[]):
 		exit(1)
 	print d4
 	
+try:
+	imp.find_module('dictdiffer')
+	import dictdiffer
+	dd = True
+except ImportError:
+	logger.warn("dictdiffer module not found");
+	dd = False
 
 if (__name__ == "__main__"):
 	parser=argparse.ArgumentParser(description="...")
