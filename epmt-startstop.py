@@ -181,17 +181,17 @@ def create_job_dir(dir=get_job_dir()):
 #
 #
 #db.bind(**settings.db_params)
-def epmt_start():
+def epmt_start(from_batch=[]):
 	jobid = get_job_id()
 	dir = create_job_dir()
 	if dir is False:
 		exit(1)
 	file = get_job_file()
-	d = create_job_prolog(jobid)
+	d = create_job_prolog(jobid,from_batch)
 	write_job_prolog(file,d)
 	return d
 
-def epmt_stop():
+def epmt_stop(from_batch=[]):
 	jobid = get_job_id()
 	file = get_job_file()
 	if file is False:
@@ -199,27 +199,28 @@ def epmt_stop():
 	prolog = read_job_metadata(file)
 	if not prolog:
 		return False
-	epilog = create_job_epilog(prolog)
+	epilog = create_job_epilog(prolog,from_batch)
 	metadata = merge_two_dicts(prolog,epilog)
 	write_job_epilog(file,metadata)
 	return metadata
 
 
-def epmt_test_start_stop():
-	d1 = epmt_start()
+def epmt_test_start_stop(from_batch=[]):
+	d1 = epmt_start(from_batch)
 	environ['INSERTED_ENV'] = "Yessir!"
-	d2 = epmt_stop()
+	d2 = epmt_stop(from_batch)
  	d3 = merge_two_dicts(d1,d2)
  	d4 = read_job_metadata(jobdatafile=get_job_file())
  	print "Test is",(d3 == d4)
 	if (d3 != d4):
 		exit(1)
+	print d4
 	
 
 if (__name__ == "__main__"):
 	parser=argparse.ArgumentParser(description="...")
 	parser.add_argument('pos_arg',type=str,help="A command: start, stop, test");
-	parser.add_argument('opt_pos_arg',type=str,nargs='?',help="Additional arguments from calling scripts");
+	parser.add_argument('other_args',nargs='*',help="Additional arguments from calling scripts");
 	parser.add_argument('--debug',action='store_true',help="Debug mode, verbose")
 	args = parser.parse_args()
 	if args.debug:
@@ -228,11 +229,11 @@ if (__name__ == "__main__"):
 		basicConfig(level=INFO)
 		
 	if args.pos_arg == 'start':
-		epmt_start()
+		epmt_start(from_batch=args.other_args)
 	elif args.pos_arg == 'stop':
-		epmt_stop()
+		epmt_stop(from_batch=args.other_args)
 	elif args.pos_arg == 'test':
-		epmt_test_start_stop()
+		epmt_test_start_stop(from_batch=args.other_args)
 	
 
 	
