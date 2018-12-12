@@ -6,16 +6,6 @@ from pony.orm import *
 from .general import db
 import datetime
 
-# User running experiment or frepp
-class User(db.Entity):
-	time = Required(datetime.datetime, default=datetime.datetime.utcnow())
-	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
-	info_dict = Optional(Json)
-	# end template
-	username = PrimaryKey(str)
-	exps = Set('Experiment')
-	pprs = Set('PostProcessRun')
-
 # Build/version/etc
 class Platform(db.Entity):
 	time = Required(datetime.datetime, default=datetime.datetime.utcnow())
@@ -33,7 +23,7 @@ class Experiment(db.Entity):
 	info_dict = Optional(Json)
 	# end template
 	experiment_name = Required(str)
-	user = Required(User)
+	user = Required('User')
 	platform = Required(Platform)
 #	PrimaryKey(experiment_name, user.username, platform)
 	pprs = Set('PostProcessRun')
@@ -46,7 +36,7 @@ class PostProcessRun(db.Entity):
 	# end template
 	# Currently these are the same as in the experiment
 	experiment = Required(Experiment)
-	user = Required(User)
+	user = Required('User')
 	platform = Required(Platform)
 	jobs = Set('Job')
 #	composite_index(experiment, user, platform)
