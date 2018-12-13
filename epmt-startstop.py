@@ -1,16 +1,24 @@
 #!/usr/bin/env python
-#import settings
+import settings
 #from models import db, db_session, User, Platform, Experiment, PostProcessRun
 from logging import getLogger, basicConfig, DEBUG, INFO, WARNING, ERROR
 from datetime import datetime
-from os import environ, makedirs, errno
+from os import environ, makedirs, errno, path, getpid, getuid
 from socket import gethostname
 #from json import dumps as dict_to_json
-#from subprocess import call as forkexec
-#from random import randint
+from subprocess import call as forkexecwait
+from random import randint
+from imp import find_module
+from grp import getgrall, getgrgid
+from pwd import getpwnam, getpwuid
 import pickle
 import argparse
-import imp
+
+def getgroups(user):
+    gids = [g.gr_gid for g in getgrall() if user in g.gr_mem]
+    gid = getpwnam(user).pw_gid
+    gids.append(getgrgid(gid).gr_gid)
+    return [getgrgid(gid).gr_name for gid in gids]
 
 #from dictdiffer import diff
 
@@ -58,6 +66,50 @@ key2slurm = {
 #	"JOB_ID":"SLURM_JOB_ID",
 #	"JOB_MAXRANK":"SLURM_NPROCS",
 
+global_job_id = ""
+global_job_name = ""
+global_job_scriptname = ""
+global_job_username = ""
+global_job_groupnames = ""
+
+def set_job_globals(cmdline=[]):
+	global global_job_id, global_job_name, global_job_scriptname
+	global global_job_username, global_job_groupnames
+
+	global_job_id = get_job_var("JOB_ID")
+	if not global_job_id:
+		global_job_id=str(getpid())
+		logger.warn("Using process id %s as JOB_ID",global_job_id)
+
+	global_job_name = get_job_var("JOB_NAME")
+	if not global_job_name:
+		if cmdline:
+			global_job_name=' '.join(cmdline)
+			logger.warn("Using command line %s as JOB_NAME",global_job_name)
+		else:
+			global_job_name=str(getpid())
+			logger.warn("Using process id %s as JOB_NAME",global_job_name)
+
+	global_job_scriptname = get_job_var("JOB_SCRIPTNAME")
+	if not global_job_scriptname:
+		global_job_scriptname=global_job_name
+		logger.warn("Using process name %s as JOB_SCRIPTNAME",global_job_name)
+
+	global_job_username = get_job_var("JOB_USER")
+	if not global_job_username:
+		global_job_username = getpwuid(getuid()).pw_name
+		logger.warn("Using username %s as JOB_USER",global_job_username)
+
+	global_job_groupnames = getgroups('phil')
+		
+	logger.debug("ID: %s",global_job_id)
+	logger.debug("NAME: %s",global_job_name)
+	logger.debug("SCRIPTNAME: %s",global_job_scriptname)
+	logger.debug("USER: %s",global_job_username)
+	logger.debug("GROUPS: %s",global_job_groupnames)
+	return global_job_id
+
+
 # Remove those with _ at beginning
 def blacklist_filter(filter=None, **env):
 #	print env
@@ -87,14 +139,31 @@ def job_run(argvlist):
 	else:
 		return 256,stdout,stderr
 
+def get_job_var(var):
+	logger.debug("looking for %s",var)
+	a = False
+	if var in key2pbs:
+		logger.debug("looking for %s",key2pbs[var])
+		a=environ.get(key2pbs[var])
+	if not a and var in key2slurm:
+		logger.debug("looking for %s",key2slurm[var])
+		a=environ.get(key2slurm[var])
+	if not a:
+		logger.debug("%s not found",var)
+		return False
+	return a
+
 def create_job_prolog(jobid, from_batch=[]):
 	retval = {}
 	ts=datetime.now()
 	env=blacklist_filter(filter,**environ)
 #	print env
-	retval['job_pl_id'] = jobid
-	retval['job_pl_scriptname'] = "job_scriptname"
+	retval['job_pl_id'] = global_job_id
+	retval['job_pl_scriptname'] = global_job_scriptname
 	retval['job_pl_hostname'] = gethostname()
+	retval['job_pl_jobname'] = global_job_name
+	retval['job_pl_username'] = global_job_username
+	retval['job_pl_groupnames'] = global_job_groupnames
 	retval['job_pl_env_len'] = len(env)
 	retval['job_pl_env'] = env
 	retval['job_pl_start'] = ts
@@ -155,29 +224,26 @@ def job_gather():
 	return True
 
 def get_job_id():
-	if environ.get('PBS_JOBID'):
-		return environ['PBS_JOBID']
-	elif environ.get('SLURM_JOBID'):
-		return environ['SLURM_JOBID']
-	else:
-#		r=randint(0,1000000000)
-#		logger.warn("Using random number %d for JobID",r)
-		return str(1) #r
+	global global_job_id
+	return(global_job_id)
 
-def get_job_dir(jobid=get_job_id(), hostname="", prefix="/tmp/epmt/"):
-	return prefix+jobid
-def get_job_file(jobid=get_job_id(), hostname="", prefix="/tmp/epmt/"):
-	s = get_job_dir(jobid,hostname,prefix)
+def get_job_dir(hostname="", prefix="/tmp/epmt/"):
+	global global_job_id
+	return prefix+global_job_id
+
+def get_job_file(hostname="", prefix="/tmp/epmt/"):
+	s = get_job_dir(hostname,prefix)
 	return s+"/job_metadata"
 
-def create_job_dir(dir=get_job_dir()):
+def create_job_dir(dir):
 	try:
 		makedirs(dir, 0700) 
+		logger.debug("created dir %s",dir)
 	except OSError, e:
 		if e.errno != errno.EEXIST:
-			logger.debug("dir %s: %s",dir,e)
+			logger.error("dir %s: %s",dir,e)
 			return s
-	logger.debug("created dir (or it existed) %s",dir)
+		logger.debug("dir exists %s",dir)
 	return dir
 
 #
@@ -186,7 +252,7 @@ def create_job_dir(dir=get_job_dir()):
 #db.bind(**settings.db_params)
 def epmt_start(from_batch=[]):
 	jobid = get_job_id()
-	dir = create_job_dir()
+	dir = create_job_dir(get_job_dir())
 	if dir is False:
 		exit(1)
 	file = get_job_file()
@@ -207,7 +273,12 @@ def epmt_stop(from_batch=[]):
 	epilog = create_job_epilog(prolog,from_batch)
 	metadata = merge_two_dicts(prolog,epilog)
 	write_job_epilog(file,metadata)
-	logger.info("wrote epilog %s",file);
+	logger.debug("wrote epilog %s",file);
+	logger.info("job hostname: %s",metadata['job_pl_hostname'])
+	logger.info("job username: %s",metadata['job_pl_username'])
+	logger.info("job groupnames: %s",metadata['job_pl_groupnames'])
+	logger.info("job name: %s",metadata['job_pl_jobname'])
+	logger.info("job script name: %s",metadata['job_pl_scriptname'])
 	logger.info("job start: %s",metadata['job_pl_start'])
 	logger.info("job stop: %s",metadata['job_el_stop'])
 	logger.info("job duration:  %s",metadata['job_el_stop'] - metadata['job_pl_start'])
@@ -227,30 +298,60 @@ def epmt_test_start_stop(from_batch=[]):
 	print d4
 	
 try:
-	imp.find_module('dictdiffer')
+	find_module('dictdiffer')
 	import dictdiffer
 	dd = True
 except ImportError:
 	logger.warn("dictdiffer module not found");
 	dd = False
 
+def epmt_run(cmdline, wrapit=True):
+	logger.debug(cmdline)
+	started = False
+	file = get_job_file()
+	if wrapit and not path.exists(file):
+		epmt_start()
+		started = True
+	t = environ.get("PAPIEX_OSS_PATH")
+	if t and path.exists(t):
+		logger.info("Overriding settings.install_prefix with PAPIEX_OSS_PATH=",t)
+		settings.install_prefix = t
+	cmd =  "PAPIEX_OPTIONS=PERF_COUNT_SW_CPU_CLOCK "
+	cmd += "PAPIEX_OUTPUT_DIR="+get_job_dir()+" "
+	cmd += settings.install_prefix+"/bin/monitor-run -i "+settings.install_prefix+"/lib/libpapiex.so "+" ".join(cmdline)
+	print cmd
+	return_code = forkexecwait(cmd, shell=True)
+	if started:
+		epmt_stop()
+		started = False
+	return return_code
+
 if (__name__ == "__main__"):
 	parser=argparse.ArgumentParser(description="...")
-	parser.add_argument('pos_arg',type=str,help="A command: start, stop, test");
+	parser.add_argument('epmt_cmd',type=str,help="start, run, stop, test");
 	parser.add_argument('other_args',nargs='*',help="Additional arguments from calling scripts");
 	parser.add_argument('--debug',action='store_true',help="Debug mode, verbose")
 	args = parser.parse_args()
 	if args.debug:
 		basicConfig(level=DEBUG)
 	else:
-		basicConfig(level=INFO)
-		
-	if args.pos_arg == 'start':
+		basicConfig(level=WARNING)
+
+	set_job_globals(cmdline=args.other_args)
+	if args.epmt_cmd == 'start':
 		epmt_start(from_batch=args.other_args)
-	elif args.pos_arg == 'stop':
+	elif args.epmt_cmd == 'stop':
 		epmt_stop(from_batch=args.other_args)
-	elif args.pos_arg == 'test':
+	elif args.epmt_cmd == 'test':
 		epmt_test_start_stop(from_batch=args.other_args)
+	elif args.epmt_cmd == 'run':
+		if args.other_args: 
+			epmt_run(args.other_args)
+		else:
+			logger.warning("no run command given")
+			exit(1)
+	
+
 	
 
 	
