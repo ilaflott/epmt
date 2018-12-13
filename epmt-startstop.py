@@ -11,6 +11,7 @@ from random import randint
 from imp import find_module
 from grp import getgrall, getgrgid
 from pwd import getpwnam, getpwuid
+from glob import glob
 import pickle
 import argparse
 
@@ -317,7 +318,7 @@ def epmt_run(cmdline, wrapit=True):
 		logger.info("Overriding settings.install_prefix with PAPIEX_OSS_PATH=",t)
 		settings.install_prefix = t
 	cmd =  "PAPIEX_OPTIONS=PERF_COUNT_SW_CPU_CLOCK "
-	cmd += "PAPIEX_OUTPUT_DIR="+get_job_dir()+" "
+	cmd += "PAPIEX_OUTPUT="+get_job_dir()+" "
 	cmd += settings.install_prefix+"/bin/monitor-run -i "+settings.install_prefix+"/lib/libpapiex.so "+" ".join(cmdline)
 	print cmd
 	return_code = forkexecwait(cmd, shell=True)
@@ -325,6 +326,24 @@ def epmt_run(cmdline, wrapit=True):
 		epmt_stop()
 		started = False
 	return return_code
+
+def epmt_submit(jobid,prefix="/tmp/epmt/",pattern=settings.input_pattern):
+    if not jobid:
+        logger.error("Job ID is empty!");
+        exit(1);
+    t = environ.get("PAPIEX_OUTPUT")
+    if t and path.exists(t):
+        dirname = t+"/"
+    else:
+        dirname = prefix+jobid+"/"
+    metafile = dirname+"job_metadata"
+    metadata = read_job_metadata(metafile)
+    files = glob(dirname+pattern)
+    if not files:
+        logger.error("%s matched no files",dirname+pattern);
+        exit(1);
+    logger.debug("%d files to submit",len(files))
+    logger.debug("%s",files)
 
 if (__name__ == "__main__"):
 	parser=argparse.ArgumentParser(description="...")
@@ -337,19 +356,28 @@ if (__name__ == "__main__"):
 	else:
 		basicConfig(level=WARNING)
 
-	set_job_globals(cmdline=args.other_args)
 	if args.epmt_cmd == 'start':
-		epmt_start(from_batch=args.other_args)
+            set_job_globals(cmdline=args.other_args)
+            epmt_start(from_batch=args.other_args)
 	elif args.epmt_cmd == 'stop':
-		epmt_stop(from_batch=args.other_args)
+            set_job_globals(cmdline=args.other_args)
+            epmt_stop(from_batch=args.other_args)
 	elif args.epmt_cmd == 'test':
-		epmt_test_start_stop(from_batch=args.other_args)
+            set_job_globals(cmdline=args.other_args)
+            epmt_test_start_stop(from_batch=args.other_args)
+	elif args.epmt_cmd == 'submit':
+            if args.other_args: 
+                epmt_submit(args.other_args[0])
+            else:
+                set_job_globals(cmdline=args.other_args)
+                epmt_submit(global_job_id)
 	elif args.epmt_cmd == 'run':
-		if args.other_args: 
-			epmt_run(args.other_args)
-		else:
-			logger.warning("no run command given")
-			exit(1)
+            set_job_globals(cmdline=args.other_args)
+            if args.other_args: 
+                epmt_run(args.other_args)
+            else:
+                logger.warning("no run command given")
+                exit(1)
 	
 
 	
