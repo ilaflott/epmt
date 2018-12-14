@@ -1,3 +1,0 @@
-# shells
-exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
-cat,/bin/cat,input2,2175,0,2145,1,1,1,2175,1543854431879990,1543854431883325,10595246,252125

@@ -1,3 +1,0 @@
-# 
-exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
-sleep,/bin/sleep,1,906,0,904,1,1,1,906,1543854351365415,1543854352366692,3192337880,52896

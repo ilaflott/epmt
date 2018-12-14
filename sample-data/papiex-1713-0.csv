@@ -1,3 +1,0 @@
-# scripts
-exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
-perl,/usr/bin/perl,sieve.pl,1713,0,192,1,1,1,1713,1543854426617245,1543854427385751,2450194535,762653995

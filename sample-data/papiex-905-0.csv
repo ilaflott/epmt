@@ -1,3 +1,0 @@
-# 
-exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
-tcsh,/usr/bin/tcsh,-f -c sleep 1-f -c sleep 1,905,0,904,1,1,1,905,1543854351244824,1543854351329607,270277987,321475

@@ -1,3 +1,0 @@
-# 
-exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
-as,/usr/bin/as,--64 -o /tmp/ccuI1zBo.o /tmp/cccdYpZy.s,224,0,222,1,1,1,224,1543854272618544,1543854272620879,7404501,2300286

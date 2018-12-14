@@ -1,4 +1,0 @@
-# 
-exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
-fft_openmp,/Users/phil/Work/papiex-oss/papiex/x86_64-Linux/tests/fft_openmp,,478,0,192,1,1,2,478,1543854323246516,1543854345409232,70661529713,20743350599
-,,,,,,,,,479,1543854323248040,1543854345304913,70324036655,14541597269

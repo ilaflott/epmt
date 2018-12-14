@@ -1,3 +1,0 @@
-# 
-exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
-python2.7,/usr/bin/python2.7,sieve.py,492,0,192,1,1,1,492,1543854346412205,1543854346729805,1012558976,96307700

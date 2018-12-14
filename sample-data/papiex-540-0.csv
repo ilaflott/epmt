@@ -1,3 +1,0 @@
-# 
-exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
-bash,/bin/bash,sieve.sh 100sieve.sh 100sieve.sh 100,540,0,539,1,1,1,540,1543854349894832,1543854349895174,1053568,329831

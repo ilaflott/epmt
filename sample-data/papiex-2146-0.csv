@@ -1,3 +1,0 @@
-# shells
-exename,path,args,pid,generation,ppid,pgid,sid,numtids,tid,start,end,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
-tcsh,/usr/bin/tcsh,-f sieve.csh 100-f sieve.csh 100,2146,0,2145,1,1,1,2146,1543854431010921,1543854431011114,578850,181154
