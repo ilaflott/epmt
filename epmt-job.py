@@ -10,6 +10,8 @@ from pandas import read_csv,Timestamp
 from glob import glob
 from itertools import cycle
 from logging import getLogger, basicConfig, DEBUG, ERROR
+import epmt_cmds
+
 logger = getLogger(__name__)  # you can use other name
 #
 #
@@ -37,11 +39,35 @@ def lookup_or_create_metricname(metricname):
 	return mn
 
 @db_session
-def lookup_or_create_job(jobid):
+def lookup_or_create_job(jobid,user,metadata={}):
 	job = Job.get(jobid=jobid)
 	if job is None:
 		logger.debug("Creating job %s",jobid)
-		job = Job(jobid=jobid)
+		job = Job(jobid=jobid,user=user)
+                if metadata:
+                    assert metadata['job_pl_id'] == jobid
+                    job.jobname = metadata['job_pl_jobname']
+                    job.jobscriptname = metadata['job_pl_scriptname']
+                    job.exitcode = metadata['job_el_status']
+# fix below
+                    job.env_dict = metadata['job_pl_env']
+                    job.info_dict = metadata['job_pl_from_batch'] # end batch also
+##	metadata['job_pl_id'] = global_job_id
+##	metadata['job_pl_scriptname'] = global_job_scriptname
+##	metadata['job_pl_jobname'] = global_job_name
+##	metadata['job_pl_from_batch'] = from_batch
+#	metadata['job_pl_hostname'] = gethostname()
+#	metadata['job_pl_username'] = global_job_username
+#	metadata['job_pl_groupnames'] = global_job_groupnames
+#	metadata['job_pl_env_len'] = len(env)
+#	metadata['job_pl_env'] = env
+#	metadata['job_pl_start'] = ts
+#	metadata['job_el_env_changes_len'] = len(env)
+#	metadata['job_el_env_changes'] = env
+#	metadata['job_el_stop'] = ts
+#	metadata['job_el_from_batch'] = from_batch
+#	metadata['job_el_status'] = status
+                    
 	return job
 
 @db_session
@@ -53,7 +79,45 @@ def lookup_or_create_host(hostname):
 	return host
 
 @db_session
-def load_process_from_pandas(df, h, j, mns):
+def lookup_or_create_user(username):
+	user = User.get(name=username)
+	if user is None:
+		logger.debug("Creating user %s",username)
+		user = User(name=username)
+	return user
+
+@db_session
+def lookup_or_create_group(groupname):
+	group = Group.get(name=groupname)
+	if group is None:
+		logger.debug("Creating group %s",groupname)
+		group = Group(name=groupname)
+	return group
+
+@db_session
+def lookup_or_create_tag(tagname):
+	tag = Tag.get(name=tagname)
+	if tag is None:
+		logger.debug("Creating tag %s",tagname)
+		tag = Tag(name=tagname)
+	return tag
+@db_session
+def lookup_or_create_queue(queuename):
+	queue = Queue.get(name=queuename)
+	if queue is None:
+		logger.debug("Creating queue %s",queuename)
+		queue = Queue(name=queuename)
+	return queue
+@db_session
+def lookup_or_create_account(accountname):
+	account = account.get(name=accountname)
+	if account is None:
+		logger.debug("Creating account %s",accountname)
+		account = account(name=accountname)
+	return account
+
+@db_session
+def load_process_from_pandas(df, h, j, u, mns):
 # Assumes all processes are from same host
 #	dprint("Creating process",str(df['pid'][0]),"gen",str(df['generation'][0]),"exename",df['exename'][0])
 	earliest_thread = datetime.datetime.utcnow()
@@ -68,7 +132,8 @@ def load_process_from_pandas(df, h, j, mns):
 		    sid=int(df['sid'][0]),
 		    gen=int(df['generation'][0]),
 		    job=j,
-		    host=h)
+		    host=h,
+                    user=u)
 	# Add all threads
 	for index, row in df.iterrows():
 #		dprint "Adding thread TID: "+str(row['tid']),row['start']
@@ -102,9 +167,11 @@ def load_process_from_pandas(df, h, j, mns):
 	return p
 
 @db_session
-def ETL_job(jobid, filedict, pattern=settings.input_pattern):
+def ETL_job(jobid, dir, metadata, pattern=settings.input_pattern):
+    filedict = get_filedict(dir,pattern)
 # Damn NAN's for empty strings require converters, and empty integers need floats
     hostname = ""
+    username = "hello"
     file = ""
     conv_dic = { 'exename':str, 
                  'path':str, 
@@ -125,7 +192,8 @@ def ETL_job(jobid, filedict, pattern=settings.input_pattern):
 # Hostname, job, metricname objects
 # Iterate over hosts
     logger.debug("Iterating over hosts for job ID %s: %s",jobid,filedict.keys())
-    j = lookup_or_create_job(jobid)
+    u = lookup_or_create_user(metadata['job_pl_username'])
+    j = lookup_or_create_job(jobid,u)
     for hostname, files in filedict.iteritems():
         logger.debug("Processing host %s",hostname)
         h = lookup_or_create_host(hostname)
@@ -151,7 +219,7 @@ def ETL_job(jobid, filedict, pattern=settings.input_pattern):
                     mns[metric] = lookup_or_create_metricname(metric)
 #
             pony = datetime.datetime.now()
-            p = load_process_from_pandas(pf, h, j, mns)
+            p = load_process_from_pandas(pf, h, j, u, mns)
             if (p.start < earliest_process):
                 earliest_process = p.start
             if (p.end > latest_process):
@@ -163,14 +231,15 @@ def ETL_job(jobid, filedict, pattern=settings.input_pattern):
             j.processes.add(p)
     j.start = earliest_process
     j.end = latest_process
-    j.duration = int(float((latest_process - earliest_process).total_seconds())*float(1000000))
+    d = j.end - j.start
+    j.duration = int(d.total_seconds()*1000000)
 #
 #
 #
     stdout.write('\b')            # erase the last written char
     logger.info("Earliest process start: %s",j.start)
     logger.info("Latest process end: %s",j.end)
-    logger.info("Computed duration of job: %f sec (%f)",j.duration/1000000,j.duration)
+    logger.info("Computed duration of job: %f",j.duration)
     logger.info("%d processes imported", len(j.processes))
     logger.info("%f processes per second",len(j.processes)/float((datetime.datetime.now() - then).total_seconds()))
     logger.info("Import took %s seconds",datetime.datetime.now() - then)
@@ -218,7 +287,7 @@ def get_filedict(dirname,pattern=settings.input_pattern):
             filedict[host] = [ f ]
     return filedict
 
-j = ETL_job(4,get_filedict("./sample-data/"))
+j = ETL_job(4,"./sample-data/",epmt_cmds.read_job_metadata("./sample-data/job_metadata"))
 if j:
 	exit(0)
 else:

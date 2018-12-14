@@ -24,6 +24,7 @@ class Host(db.Entity):
 	# end template
 	name = PrimaryKey(str)
 	processes = Set('Process')
+	jobs = Set('Job')
 #
 # A job is a separate but possibly connected entity to an experiment/postprocess run
 #
@@ -43,10 +44,11 @@ class Job(db.Entity):
 	jobscriptname = Optional(str)
 	sessionid = Optional(int)
 	exitcode = Optional(int)
-	tags = Set('Tag')
-	user = Optional('User')
-	group = Optional('Group')
+	user = Required('User')
+	groups = Set('Group')
+	hosts = Set('Host')
 	processes = Set('Process')
+	tags = Set('Tag')
 	account = Optional('Account')
 	queue = Optional('Queue')
 	ppr = Optional('PostProcessRun')
@@ -63,7 +65,7 @@ class Process(db.Entity):
 	tag = Optional('Tag')
 	job = Required('Job')
 	host = Required('Host')
-	user = Optional('User')
+	user = Required('User')
 	group = Optional('Group')
 	threads = Set('Thread')
 # These should probably be abstracted/reduced
@@ -113,8 +115,8 @@ class User(db.Entity):
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
 	info_dict = Optional(Json)
 	# end template
-	username = PrimaryKey(str)
-	userid = Optional(int,unique=True)
+	name = PrimaryKey(str)
+	id = Optional(int,unique=True)
 	groups = Set('Group')
 	exps = Set('Experiment')
 	pprs = Set('PostProcessRun')
@@ -126,8 +128,8 @@ class Group(db.Entity):
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
 	info_dict = Optional(Json)
 	# end template
-	groupname = PrimaryKey(str)
-	groupid = Required(int,unique=True)
+	name = PrimaryKey(str)
+	id = Required(int,unique=True)
 	jobs = Set('Job')
 	processes = Set('Process')
 	users = Set('User')
@@ -137,8 +139,8 @@ class Queue(db.Entity):
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
 	info_dict = Optional(Json)
 	# end template
-	queuename = PrimaryKey(str)
-	queueid = Optional(int,unique=True)
+	name = PrimaryKey(str)
+	id = Optional(int,unique=True)
 	jobs = Set('Job')	
 
 class Account(db.Entity):
@@ -146,6 +148,6 @@ class Account(db.Entity):
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
 	info_dict = Optional(Json)
 	# end template
-	accountname = PrimaryKey(str)
-	accountid = Optional(int,unique=True)
+	name = PrimaryKey(str)
+	id = Optional(int,unique=True)
 	jobs = Set('Job')	
