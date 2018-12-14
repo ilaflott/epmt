@@ -327,6 +327,32 @@ def epmt_run(cmdline, wrapit=True):
 		started = False
 	return return_code
 
+def db_submit_job(metadata, filedict):
+    logger.info("%s",metadata)
+    logger.info("%s",filedict)
+    return True
+
+def get_filedict(dirname,pattern):
+    # Now get all the files in the dir
+    files = glob(dirname+pattern)
+    if not files:
+        logger.error("%s matched no files",dirname+pattern);
+        exit(1);
+    logger.debug("%d files to submit",len(files))
+    logger.debug("%s",files)
+    # Build a hash of hosts and their data files
+    filedict={}
+    for f in files:
+        host = path.basename(f.split("-papiex-")[0])
+        if not host:
+            logger.warning("%s didn't match split on -papiex-, ignoring",f);
+            continue
+        if filedict.get(host):
+            filedict[host].append(f)
+        else:
+            filedict[host] = [ f ]
+    return filedict
+
 def epmt_submit(jobid,prefix="/tmp/epmt/",pattern=settings.input_pattern):
     if not jobid:
         logger.error("Job ID is empty!");
@@ -338,12 +364,9 @@ def epmt_submit(jobid,prefix="/tmp/epmt/",pattern=settings.input_pattern):
         dirname = prefix+jobid+"/"
     metafile = dirname+"job_metadata"
     metadata = read_job_metadata(metafile)
-    files = glob(dirname+pattern)
-    if not files:
-        logger.error("%s matched no files",dirname+pattern);
-        exit(1);
-    logger.debug("%d files to submit",len(files))
-    logger.debug("%s",files)
+    filedict = get_filedict(dirname,pattern)
+    logger.info("Hosts found: %s",filedict.keys())
+    exit(db_submit_job(metadata,filedict,pattern))
 
 if (__name__ == "__main__"):
 	parser=argparse.ArgumentParser(description="...")
