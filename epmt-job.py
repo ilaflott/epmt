@@ -102,84 +102,82 @@ def load_process_from_pandas(df, h, j, mns):
 	return p
 
 @db_session
-def load_job_from_dirofcsvs(jobid, hostname, pattern=settings.input_pattern, dirname="./sample-data/"):
+def ETL_job(jobid, filedict, pattern=settings.input_pattern):
 # Damn NAN's for empty strings require converters, and empty integers need floats
-	conv_dic = { 'exename':str, 
-		     'path':str, 
-		     'args':str } 
-	dtype_dic = { 
-		'pid':                        float,
-		'generation':                 float,
-		'ppid':                       float,
-		'pgid':                       float,
-		'sid':                        float,
-		'numtids':                    float }
-#	data_offset = settings.metrics_offset
-#	print "Pattern:"+dirname+pattern
-#	files = [ "sample-output/papiex-24414-0.csv" ]
-	files = sorted(glob(dirname+pattern),key=sortKeyFunc)
-	if not files:
-		stdout.write(dirname+pattern+" matched no files.\n");
-		return None
-# Sort by PID
-	then = datetime.datetime.now()
-	csvt = datetime.timedelta()
-	ponyt = datetime.timedelta()
-	earliest_process = datetime.datetime.utcnow()
-	latest_process = datetime.datetime.fromtimestamp(0)
-	stdout.write('-')
+    hostname = ""
+    file = ""
+    conv_dic = { 'exename':str, 
+                 'path':str, 
+                 'args':str } 
+    dtype_dic = { 
+        'pid':                        float,
+        'generation':                 float,
+        'ppid':                       float,
+        'pgid':                       float,
+        'sid':                        float,
+        'numtids':                    float }
+    then = datetime.datetime.now()
+    csvt = datetime.timedelta()
+    ponyt = datetime.timedelta()
+    earliest_process = datetime.datetime.utcnow()
+    latest_process = datetime.datetime.fromtimestamp(0)
+    stdout.write('-')
 # Hostname, job, metricname objects
-	h = None
-	m = None
-	mns = {}
-# Iterate over files 
-	logger.debug("%d files matched (%s): %s",len(files),dirname+pattern,files)
+# Iterate over hosts
+    logger.debug("Iterating over hosts for job ID %s: %s",jobid,filedict.keys())
+    j = lookup_or_create_job(jobid)
+    for hostname, files in filedict.iteritems():
+        logger.debug("Processing host %s",hostname)
+        h = lookup_or_create_host(hostname)
+        mns = {}
 	for f in files:
-		stdout.write('\b')            # erase the last written char
-		stdout.write(spinner.next())  # write the next character
-		stdout.flush()                # flush stdout buffer (actual character display)
-		csv = datetime.datetime.now()
-	        pf = read_csv(f,
-				 dtype=dtype_dic, 
-				 converters=conv_dic,
-			         comment="#",
-			         skiprows=1)
-		csvt += datetime.datetime.now() - csv
+            logger.debug("Processing file %s",f)
+#
+            stdout.write('\b')            # erase the last written char
+            stdout.write(spinner.next())  # write the next character
+            stdout.flush()                # flush stdout buffer (actual character display)
+#
+            csv = datetime.datetime.now()
+            pf = read_csv(f,
+                          sep=",",
+                          dtype=dtype_dic, 
+                          converters=conv_dic,
+                          skiprows=1)
+#            print pf["path"],pf["args"]
+            csvt += datetime.datetime.now() - csv
 # Lookup or create the necessary objects, only happens once!
-		if h is None:
-			for metric in pf.columns[settings.metrics_offset:].values.tolist():
-				mns[metric] = lookup_or_create_metricname(metric)
-			j = lookup_or_create_job(jobid)
-			h = lookup_or_create_host(hostname)
-		pony = datetime.datetime.now()
-		p = load_process_from_pandas(pf, h, j, mns)
-		if (p.start < earliest_process):
-			earliest_process = p.start
-		if (p.end > latest_process):
-			latest_process = p.end
-		ponyt += datetime.datetime.now() - pony
+            if mns is None:
+                for metric in pf.columns[settings.metrics_offset:].values.tolist():
+                    mns[metric] = lookup_or_create_metricname(metric)
+#
+            pony = datetime.datetime.now()
+            p = load_process_from_pandas(pf, h, j, mns)
+            if (p.start < earliest_process):
+                earliest_process = p.start
+            if (p.end > latest_process):
+                latest_process = p.end
+            ponyt += datetime.datetime.now() - pony
 #
 #
 #
-	j.processes.add(p)
-	j.start = earliest_process
-	j.end = latest_process
-	j.duration = int(float((latest_process - earliest_process).total_seconds())*float(1000000))
+            j.processes.add(p)
+    j.start = earliest_process
+    j.end = latest_process
+    j.duration = int(float((latest_process - earliest_process).total_seconds())*float(1000000))
 #
 #
 #
-	stdout.write('\b')            # erase the last written char
-	logger.info("Earliest process start: %s",earliest_process)
-	logger.info("Latest process end: %s",latest_process)
-	logger.info("Computed duration of job: %f",(j.end-j.start).total_seconds())
-	logger.info("Duration of job: %f",j.duration)
-	logger.info("%d files imported", len(files))
-	logger.info("%s seconds",datetime.datetime.now() - then)
-	logger.info("%f per second",len(files)/float((datetime.datetime.now() - then).total_seconds()))
-	logger.info("load_process_from_pandas() took %s", ponyt)
-	logger.info("read_csv took %s",csvt)
-	logger.info(j)
-	return j
+    stdout.write('\b')            # erase the last written char
+    logger.info("Earliest process start: %s",j.start)
+    logger.info("Latest process end: %s",j.end)
+    logger.info("Computed duration of job: %f sec (%f)",j.duration/1000000,j.duration)
+    logger.info("%d processes imported", len(j.processes))
+    logger.info("%f processes per second",len(j.processes)/float((datetime.datetime.now() - then).total_seconds()))
+    logger.info("Import took %s seconds",datetime.datetime.now() - then)
+    logger.info("load_process_from_pandas() took %s", ponyt)
+    logger.info("read_csv took %s",csvt)
+    logger.info(j)
+    return j
 
 #
 #
@@ -199,7 +197,28 @@ db.create_tables()
 #
 #
 #
-j = load_job_from_dirofcsvs(4,"hostname.foo.com",dirname="./sample-data/")
+def get_filedict(dirname,pattern=settings.input_pattern):
+    # Now get all the files in the dir
+    files = glob(dirname+pattern)
+    if not files:
+        logger.error("%s matched no files",dirname+pattern);
+        exit(1);
+    logger.debug("%d files to submit",len(files))
+    logger.debug("%s",files)
+    # Build a hash of hosts and their data files
+    filedict={}
+    for f in files:
+        host = basename(f.split("-papiex-")[0])
+        if not host:
+            logger.warning("%s didn't match split on -papiex-, ignoring",f);
+            continue
+        if filedict.get(host):
+            filedict[host].append(f)
+        else:
+            filedict[host] = [ f ]
+    return filedict
+
+j = ETL_job(4,get_filedict("./sample-data/"))
 if j:
 	exit(0)
 else:
