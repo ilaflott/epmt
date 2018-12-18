@@ -95,12 +95,16 @@ def lookup_or_create_group(groupname):
 	return group
 
 @db_session
-def lookup_or_create_tag(tagname):
+def lookup_or_create_tags(tagnames):
+    retval=[]
+    for tagname in tagnames:
 	tag = Tag.get(name=tagname)
 	if tag is None:
-		logger.debug("Creating tag %s",tagname)
-		tag = Tag(name=tagname)
-	return tag
+            logger.debug("Creating tag %s",tagname)
+            tag = Tag(name=tagname)
+        retval.append(tag)
+    return retval
+
 @db_session
 def lookup_or_create_queue(queuename):
 	queue = Queue.get(name=queuename)
@@ -117,7 +121,7 @@ def lookup_or_create_account(accountname):
 	return account
 
 @db_session
-def load_process_from_pandas(df, h, j, u, mns):
+def load_process_from_pandas(df, h, j, u, tags, mns):
 # Assumes all processes are from same host
 #	dprint("Creating process",str(df['pid'][0]),"gen",str(df['generation'][0]),"exename",df['exename'][0])
 	earliest_thread = datetime.datetime.utcnow()
@@ -134,6 +138,11 @@ def load_process_from_pandas(df, h, j, u, mns):
 		    job=j,
 		    host=h,
                     user=u)
+# Add tags to process and job        
+        for t in tags:
+            p.tags.add(t)
+            j.tags.add(t)
+
 	# Add all threads
 	for index, row in df.iterrows():
 #		dprint "Adding thread TID: "+str(row['tid']),row['start']
@@ -165,6 +174,19 @@ def load_process_from_pandas(df, h, j, u, mns):
 	p.duration = int(float((latest_thread - earliest_thread).total_seconds())*float(1000000))
 #	print "Earliest thread start:",earliest_thread,"\n","Latest thread end:",latest_thread,"\n","Computed duration of process:",(p.end-p.start).total_seconds(),"seconds","\n","Duration of process:",p.duration,"microseconds"
 	return p
+
+def extract_header_dict(jobdatafile,comment="#"):
+    rows=0
+    header_dict={}
+    with open(jobdatafile,'r') as file:
+        for line in file:
+            line = line.strip()
+            if line.startswith("#"):
+                rows += 1
+# We could extend this here to support multiple tags                
+                header_dict["tags"]=[ line[1:].lstrip() ]
+    logger.debug("%d rows of header, dictionary is %s",rows,header_dict)
+    return rows,header_dict
 
 @db_session
 def ETL_job(jobid, dir, metadata, pattern=settings.input_pattern):
@@ -206,11 +228,15 @@ def ETL_job(jobid, dir, metadata, pattern=settings.input_pattern):
             stdout.flush()                # flush stdout buffer (actual character display)
 #
             csv = datetime.datetime.now()
+
+            rows,header = extract_header_dict(f)
+            tags = lookup_or_create_tags(header['tags'])
+
             pf = read_csv(f,
                           sep=",",
                           dtype=dtype_dic, 
                           converters=conv_dic,
-                          skiprows=1)
+                          skiprows=rows)
 #            print pf["path"],pf["args"]
             csvt += datetime.datetime.now() - csv
 # Lookup or create the necessary objects, only happens once!
@@ -219,7 +245,9 @@ def ETL_job(jobid, dir, metadata, pattern=settings.input_pattern):
                     mns[metric] = lookup_or_create_metricname(metric)
 #
             pony = datetime.datetime.now()
-            p = load_process_from_pandas(pf, h, j, u, mns)
+
+            p = load_process_from_pandas(pf, h, j, u, tags, mns)
+
             if (p.start < earliest_process):
                 earliest_process = p.start
             if (p.end > latest_process):

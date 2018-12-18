@@ -11,7 +11,7 @@ class Tag(db.Entity):
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
 	info_dict = Optional(Json)
 	# end template
-	tagname = Required(str)
+	name = Required(str)
 	jobs = Set('Job')
 	processes = Set('Process')
 #
@@ -62,7 +62,7 @@ class Process(db.Entity):
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
 	info_dict = Optional(Json)
 # End generic template
-	tag = Optional('Tag')
+	tags = Set('Tag')
 	job = Required('Job')
 	host = Required('Host')
 	user = Required('User')
