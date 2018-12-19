@@ -378,7 +378,7 @@ if (__name__ == "__main__"):
         if (metadata['job_pl_id'] != args.jobid):
             logger.warning("Forcing job id to be %s from command line",args.jobid)
             metadata['job_pl_id'] = args.jobid
-        j = ETL_job_dir(args.jobid,args.data_dir,metadata,pattern="papiex*.csv")
+        j = ETL_job_dir(args.jobid,args.data_dir,metadata,pattern="*papiex*.csv")
     else:
         logger.error("Give all args or no args");
         j = None

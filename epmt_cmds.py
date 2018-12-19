@@ -3,7 +3,7 @@ import settings
 #from models import db, db_session, User, Platform, Experiment, PostProcessRun
 from logging import getLogger, basicConfig, DEBUG, INFO, WARNING, ERROR
 from datetime import datetime
-from os import environ, makedirs, errno, path, getpid, getuid
+from os import environ, makedirs, errno, path, getpid, getuid, getpgid, getsid
 from socket import gethostname
 #from json import dumps as dict_to_json
 from subprocess import call as forkexecwait
@@ -80,8 +80,8 @@ def set_job_globals(cmdline=[]):
 
 	global_job_id = get_job_var("JOB_ID")
 	if not global_job_id:
-		global_job_id=str(getpid())
-		logger.warn("Using process id %s as JOB_ID",global_job_id)
+		global_job_id=str(getsid(0))
+		logger.warn("Using session id %s as JOB_ID",global_job_id)
 
 	global_job_name = get_job_var("JOB_NAME")
 	if not global_job_name:
@@ -89,8 +89,8 @@ def set_job_globals(cmdline=[]):
 			global_job_name=' '.join(cmdline)
 			logger.warn("Using command line %s as JOB_NAME",global_job_name)
 		else:
-			global_job_name=str(getpid())
-			logger.warn("Using process id %s as JOB_NAME",global_job_name)
+			global_job_name=global_job_id
+			logger.warn("Using job id %s as JOB_NAME",global_job_name)
 
 	global_job_scriptname = get_job_var("JOB_SCRIPTNAME")
 	if not global_job_scriptname:
@@ -102,7 +102,7 @@ def set_job_globals(cmdline=[]):
 		global_job_username = getpwuid(getuid()).pw_name
 		logger.warn("Using username %s as JOB_USER",global_job_username)
 
-	global_job_groupnames = getgroups('phil')
+	global_job_groupnames = getgroups(global_job_username)
 		
 	logger.debug("ID: %s",global_job_id)
 	logger.debug("NAME: %s",global_job_name)
@@ -231,7 +231,7 @@ def get_job_id():
 
 def get_job_dir(hostname="", prefix="/tmp/epmt/"):
 	global global_job_id
-	return prefix+global_job_id
+	return prefix+global_job_id+"/"
 
 def get_job_file(hostname="", prefix="/tmp/epmt/"):
 	s = get_job_dir(hostname,prefix)
@@ -307,17 +307,24 @@ except ImportError:
 	logger.warn("dictdiffer module not found");
 	dd = False
 
-def epmt_run(cmdline, wrapit=True):
+def epmt_run(cmdline, wrapit=False):
 	logger.debug(cmdline)
 	started = False
-	file = get_job_file()
-	if wrapit and not path.exists(file):
-		epmt_start()
-		started = True
+        set_job_globals(cmdline)
+        if wrapit:
+            file = get_job_file()
+            if not path.exists(file):
+                epmt_start()
+                started = True
+            else:
+                logger.warning("%s already exists, ignoring!",file)
+        else:
+            logger.debug("Skipping epmt_start")
+
 	t = environ.get("PAPIEX_OSS_PATH")
 	if t and path.exists(t):
-		logger.info("Overriding settings.install_prefix with PAPIEX_OSS_PATH=",t)
-		settings.install_prefix = t
+            logger.info("Overriding settings.install_prefix with PAPIEX_OSS_PATH=",t)
+            settings.install_prefix = t
 	cmd =  "PAPIEX_OPTIONS=PERF_COUNT_SW_CPU_CLOCK "
 	cmd += "PAPIEX_OUTPUT="+get_job_dir()+" "
 	cmd += settings.install_prefix+"/bin/monitor-run -i "+settings.install_prefix+"/lib/libpapiex.so "+" ".join(cmdline)
@@ -326,6 +333,9 @@ def epmt_run(cmdline, wrapit=True):
 	if started:
 		epmt_stop()
 		started = False
+        else:
+            logger.debug("Skipping epmt_stop")
+        logger.debug("Exit code %d",return_code)
 	return return_code
 
 def db_submit_job(metadata, filedict):
@@ -359,15 +369,20 @@ def epmt_submit(directory="/tmp/epmt/",pattern=settings.input_pattern):
 
 if (__name__ == "__main__"):
 	parser=argparse.ArgumentParser(description="...")
-	parser.add_argument('epmt_cmd',type=str,help="start, run, stop, test");
-	parser.add_argument('other_args',nargs='*',help="Additional arguments from calling scripts");
+	parser.add_argument('epmt_cmd',type=str,help="start, run, stop, submit, test");
+	parser.add_argument('other_args',nargs='*',help="Additional arguments from the calling scripts");
 	parser.add_argument('--debug',action='store_true',help="Debug mode, verbose")
+	parser.add_argument('--auto',action='store_true',help="Do start/stop when running")
 	args = parser.parse_args()
 	if args.debug:
 		basicConfig(level=DEBUG)
 	else:
 		basicConfig(level=INFO)
 
+	if args.auto:
+            if not args.epmt_cmd == "run":
+                logger.error("Only valid with run command")
+                exit(1)
 	if args.epmt_cmd == 'start':
             set_job_globals(cmdline=args.other_args)
             epmt_start(from_batch=args.other_args)
@@ -380,15 +395,14 @@ if (__name__ == "__main__"):
 	elif args.epmt_cmd == 'submit':
             if len(args.other_args) == 1: 
                 epmt_submit(args.other_args[0],pattern="papiex*.csv")
-            else:
-                logger.error("<directory> required as argument")
-                exit(1)
+            else: 
+                set_job_globals(cmdline=args.other_args)
+                epmt_submit(get_job_dir(),pattern="papiex*.csv")
 #                set_job_globals(cmdline=args.other_args)
 #                epmt_submit(global_job_id)
 	elif args.epmt_cmd == 'run':
-            set_job_globals(cmdline=args.other_args)
             if args.other_args: 
-                epmt_run(args.other_args)
+                epmt_run(args.other_args,wrapit=args.auto)
             else:
                 logger.warning("no run command given")
                 exit(1)
