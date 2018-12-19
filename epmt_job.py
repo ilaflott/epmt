@@ -2,15 +2,14 @@
 import settings
 from pony.orm import *
 from models import *
-from os.path import basename
 from sys import stdout, argv
 # from pytz import UTC
 # from pytz import timezone
 from pandas import read_csv,Timestamp
+from os.path import basename
 from glob import glob
 from itertools import cycle
-from logging import getLogger, basicConfig, DEBUG, ERROR
-import epmt_cmds
+from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
 
 logger = getLogger(__name__)  # you can use other name
 #
@@ -127,17 +126,22 @@ def load_process_from_pandas(df, h, j, u, tags, mns):
 	earliest_thread = datetime.datetime.utcnow()
 	latest_thread = datetime.datetime.fromtimestamp(0)
 
-	p = Process(exename=df['exename'][0],
-		    args=df['args'][0],
-		    path=df['path'][0],
-		    pid=int(df['pid'][0]),
-		    ppid=int(df['ppid'][0]),
-		    pgid=int(df['pgid'][0]),
-		    sid=int(df['sid'][0]),
-		    gen=int(df['generation'][0]),
-		    job=j,
-		    host=h,
-                    user=u)
+	try:
+            p = Process(exename=df['exename'][0],
+                        args=df['args'][0],
+                        path=df['path'][0],
+                        pid=int(df['pid'][0]),
+                        ppid=int(df['ppid'][0]),
+                        pgid=int(df['pgid'][0]),
+                        sid=int(df['sid'][0]),
+                        gen=int(df['generation'][0]),
+                        job=j,
+                        host=h,
+                        user=u)
+        except ValueError:
+            logger.error("Data conversion error, likely corrupted CSV");
+            return None
+
 # Add tags to process and job        
         for t in tags:
             p.tags.add(t)
@@ -175,26 +179,41 @@ def load_process_from_pandas(df, h, j, u, tags, mns):
 #	print "Earliest thread start:",earliest_thread,"\n","Latest thread end:",latest_thread,"\n","Computed duration of process:",(p.end-p.start).total_seconds(),"seconds","\n","Duration of process:",p.duration,"microseconds"
 	return p
 
+#
+# Extract a dictionary from the rows of header on the file
+#
+
 def extract_header_dict(jobdatafile,comment="#"):
     rows=0
     header_dict={}
     with open(jobdatafile,'r') as file:
         for line in file:
             line = line.strip()
-            if line.startswith("#"):
+            if line.startswith(comment):
                 rows += 1
 # We could extend this here to support multiple tags                
                 header_dict["tags"]=[ line[1:].lstrip() ]
     logger.debug("%d rows of header, dictionary is %s",rows,header_dict)
     return rows,header_dict
 
-@db_session
-def ETL_job(jobid, dir, metadata, pattern=settings.input_pattern):
+#
+# Load the entire job into the DB, consisting of a job_metadata file and a dir of papiex files
+#
+
+def ETL_job_dir(jobid, dir, metadata, pattern=settings.input_pattern):
+    if not dir.endswith("/"):
+        logger.warn("%s should have a trailing /",dir)
+        dir = dir+"/"
     filedict = get_filedict(dir,pattern)
-# Damn NAN's for empty strings require converters, and empty integers need floats
+    return(ETL_job_dict(metadata,filedict))
+
+@db_session
+def ETL_job_dict(metadata, filedict):
+    jobid = metadata['job_pl_id']
+    logger.info("Processing job id %s",jobid)
     hostname = ""
-    username = "hello"
     file = ""
+# Damn NAN's for empty strings require converters, and empty integers need floats
     conv_dic = { 'exename':str, 
                  'path':str, 
                  'args':str } 
@@ -220,6 +239,8 @@ def ETL_job(jobid, dir, metadata, pattern=settings.input_pattern):
         logger.debug("Processing host %s",hostname)
         h = lookup_or_create_host(hostname)
         mns = {}
+        cntmax = len(files)
+        cnt = 0
 	for f in files:
             logger.debug("Processing file %s",f)
 #
@@ -234,7 +255,7 @@ def ETL_job(jobid, dir, metadata, pattern=settings.input_pattern):
 
             pf = read_csv(f,
                           sep=",",
-                          dtype=dtype_dic, 
+#                          dtype=dtype_dic, 
                           converters=conv_dic,
                           skiprows=rows)
 #            print pf["path"],pf["args"]
@@ -247,16 +268,27 @@ def ETL_job(jobid, dir, metadata, pattern=settings.input_pattern):
             pony = datetime.datetime.now()
 
             p = load_process_from_pandas(pf, h, j, u, tags, mns)
+            if not p:
+                logger.error("Failed loading from pandas, file %s, frame %s",f,pf);
+                continue
 
             if (p.start < earliest_process):
                 earliest_process = p.start
             if (p.end > latest_process):
                 latest_process = p.end
             ponyt += datetime.datetime.now() - pony
+
 #
 #
 #
             j.processes.add(p)
+            cnt += 1
+            if cnt % (cntmax/100) == 0:
+                logger.info("Did %d of %d...",cnt,cntmax)
+#
+#
+#
+
     j.start = earliest_process
     j.end = latest_process
     d = j.end - j.start
@@ -276,24 +308,6 @@ def ETL_job(jobid, dir, metadata, pattern=settings.input_pattern):
     logger.info(j)
     return j
 
-#
-#
-#
-basicConfig(level=DEBUG)
-#
-#
-#
-if settings.db_params.get('hostname'):
-	logger.info("Using DB: %s %s %s",settings.db_params['provider'],"Hostname:",settings.db_params['provider'])
-else:
-	logger.info("Using DB: %s", settings.db_params['provider'])
-db.bind(**settings.db_params)
-db.generate_mapping(create_tables=True)
-db.drop_all_tables(with_all_data=True)
-db.create_tables()
-#
-#
-#
 def get_filedict(dirname,pattern=settings.input_pattern):
     # Now get all the files in the dir
     files = glob(dirname+pattern)
@@ -301,22 +315,75 @@ def get_filedict(dirname,pattern=settings.input_pattern):
         logger.error("%s matched no files",dirname+pattern);
         exit(1);
     logger.debug("%d files to submit",len(files))
-    logger.debug("%s",files)
+    if (len(files) > 30):
+        logger.debug("Skipping printing files, too many")
+    else:
+        logger.debug("%s",files)
     # Build a hash of hosts and their data files
     filedict={}
+    dumperr = False
     for f in files:
-        host = basename(f.split("-papiex-")[0])
-        if not host:
-            logger.warning("%s didn't match split on -papiex-, ignoring",f);
+        t = basename(f)
+        ts = t.split("papiex")
+        if len(ts) == 2:
+            if len(ts[0]) == 0:
+                host = "unknown"
+                dumperr = True
+            else:
+                host = ts[0]
+        else:
+            logger.warn("Split failed of %s, only %d parts",t,len(ts))
             continue
         if filedict.get(host):
             filedict[host].append(f)
         else:
             filedict[host] = [ f ]
+    if dumperr:
+        logger.warn("Host not found in name split, using unknown host")
+
     return filedict
 
-j = ETL_job(4,"./sample-data/",epmt_cmds.read_job_metadata("./sample-data/job_metadata"))
-if j:
+
+logger.info("Using DB: %s", settings.db_params)
+db.bind(**settings.db_params)
+db.generate_mapping(create_tables=True)
+#db.drop_all_tables(with_all_data=True)
+db.create_tables()
+#
+#
+#
+if (__name__ == "__main__"):
+    import argparse
+    parser=argparse.ArgumentParser(description="...")
+    parser.add_argument('jobid',nargs="?",type=int,help="directory containing the job_metadata file for the job");
+    parser.add_argument('data_dir',nargs="?",type=str,help="directory of papiex output files for the job");
+    parser.add_argument('metadata_dir',nargs="?",type=str,help="directory containing the job_metadata file for the job");
+    parser.add_argument('--debug',action='store_true',help="Debug mode, be verbose")
+    parser.add_argument('--test',action='store_true',help="Test mode, job id 4, requires data and metadata in ./test-job")
+    args = parser.parse_args()
+    if args.debug:
+        basicConfig(level=DEBUG)
+    else:
+        basicConfig(level=INFO)
+    # "./sample-data/"
+
+    from epmt_cmds import read_job_metadata
+    if args.test:
+        metadata = read_job_metadata("./test-job/job_metadata")
+        metadata['job_pl_id'] = 4
+        logger.warning("Forcing job id to be %s for test",4)
+        j = ETL_job_dir(4,"./test-job/",metadata,pattern="papiex*.csv")
+    elif args.jobid and args.data_dir and args.metadata_dir:
+        metadata = read_job_metadata(args.metadata_dir+"/job_metadata")
+        if (metadata['job_pl_id'] != args.jobid):
+            logger.warning("Forcing job id to be %s from command line",args.jobid)
+            metadata['job_pl_id'] = args.jobid
+        j = ETL_job_dir(args.jobid,args.data_dir,metadata,pattern="papiex*.csv")
+    else:
+        logger.error("Give all args or no args");
+        j = None
+
+    if j:
 	exit(0)
-else:
+    else:
 	exit(1)

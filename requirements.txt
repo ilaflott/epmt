@@ -2,3 +2,4 @@ pandas==0.17.1
 pony==0.7.6
 psycopg2-binary==2.7.5
 jupyter==1.0.0
+dictdiffer==0.7.1
