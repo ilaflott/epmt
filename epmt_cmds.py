@@ -264,11 +264,11 @@ def epmt_start(from_batch=[]):
 	if dir is False:
 		exit(1)
 	file = get_job_file()
-	d = create_job_prolog(jobid,from_batch)
-	write_job_prolog(file,d)
+	metadata = create_job_prolog(jobid,from_batch)
+	write_job_prolog(file,metadata)
 	logger.info("wrote prolog %s",file);
 	logger.debug("%s",metadata)
-	return d
+	return metadata
 
 def epmt_stop(from_batch=[]):
 	jobid = get_job_id()
