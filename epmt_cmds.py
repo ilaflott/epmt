@@ -236,21 +236,34 @@ def get_job_id():
 	return(global_job_id)
 
 def get_job_dir(hostname="", prefix="/tmp/epmt/"):
-	global global_job_id
-	return prefix+global_job_id+"/"
+    global global_job_id
+    dirname = ""
+    t = environ.get("PAPIEX_OUTPUT")
+    if t and len(t) > 0:
+        dirname = t
+    elif t:
+        logger.error("PAPIEX_OUTPUT is set but blank")
+        exit(1)
+    else:
+        dirname = prefix+global_job_id+"/"
+
+    if not dirname.endswith("/"):
+        logger.error("Warning missing trailing / on %s",dirname);
+        dirname += "/"
+    return dirname
 
 def get_job_file(hostname="", prefix="/tmp/epmt/"):
 	s = get_job_dir(hostname,prefix)
-	return s+"/job_metadata"
+	return s+"job_metadata"
 
 def create_job_dir(dir):
 	try:
 		makedirs(dir, 0700) 
-		logger.debug("created dir %s",dir)
+		logger.info("created dir %s",dir)
 	except OSError, e:
 		if e.errno != errno.EEXIST:
 			logger.error("dir %s: %s",dir,e)
-			return s
+			return False
 		logger.debug("dir exists %s",dir)
 	return dir
 
@@ -374,7 +387,10 @@ if (__name__ == "__main__"):
             if not args.epmt_cmd == "run":
                 logger.error("Only valid with run command")
                 exit(1)
-	if args.epmt_cmd == 'start':
+        if args.epmt_cmd == "gjd":
+            set_job_globals(cmdline=args.other_args)
+            print get_job_dir()
+	elif args.epmt_cmd == 'start':
             set_job_globals(cmdline=args.other_args)
             epmt_start(from_batch=args.other_args)
 	elif args.epmt_cmd == 'stop':
