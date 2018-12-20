@@ -3,7 +3,7 @@ import settings
 #from models import db, db_session, User, Platform, Experiment, PostProcessRun
 from logging import getLogger, basicConfig, DEBUG, INFO, WARNING, ERROR
 from datetime import datetime
-from os import environ, makedirs, errno, path, getpid, getuid, getpgid, getsid
+from os import environ, makedirs, errno, path, getpid, getuid, getsid
 from socket import gethostname
 #from json import dumps as dict_to_json
 from subprocess import call as forkexecwait
@@ -166,6 +166,7 @@ def create_job_prolog(jobid, from_batch=[]):
 	metadata['job_pl_jobname'] = global_job_name
 	metadata['job_pl_username'] = global_job_username
 	metadata['job_pl_groupnames'] = global_job_groupnames
+	metadata['job_pl_submit'] = datetime.now()
 	metadata['job_pl_env_len'] = len(env)
 	metadata['job_pl_env'] = env
 	metadata['job_pl_start'] = ts
@@ -177,8 +178,13 @@ def create_job_epilog(prolog, from_batch=[], status="0"):
 	metadata = {}
 	ts=datetime.now()
 	env=blacklist_filter(filter,**environ)
-	if dd is True:
-		env = list(dictdiffer.diff(prolog['job_pl_env'],env))
+        try:
+            find_module('dictdiffer')
+            import dictdiffer
+            env = list(dictdiffer.diff(prolog['job_pl_env'],env))
+        except ImportError:
+            logger.warn("dictdiffer module not found");
+            env = env
 	metadata['job_el_env_changes_len'] = len(env)
 	metadata['job_el_env_changes'] = env
 	metadata['job_el_stop'] = ts
@@ -258,10 +264,11 @@ def epmt_start(from_batch=[]):
 	if dir is False:
 		exit(1)
 	file = get_job_file()
-	d = create_job_prolog(jobid,from_batch)
-	write_job_prolog(file,d)
+	metadata = create_job_prolog(jobid,from_batch)
+	write_job_prolog(file,metadata)
 	logger.info("wrote prolog %s",file);
-	return d
+	logger.debug("%s",metadata)
+	return metadata
 
 def epmt_stop(from_batch=[]):
 	jobid = get_job_id()
@@ -275,16 +282,8 @@ def epmt_stop(from_batch=[]):
 	epilog = create_job_epilog(prolog,from_batch)
 	metadata = merge_two_dicts(prolog,epilog)
 	write_job_epilog(file,metadata)
-	logger.debug("wrote epilog %s",file);
-	logger.info("job hostname: %s",metadata['job_pl_hostname'])
-	logger.info("job username: %s",metadata['job_pl_username'])
-	logger.info("job groupnames: %s",metadata['job_pl_groupnames'])
-	logger.info("job name: %s",metadata['job_pl_jobname'])
-	logger.info("job script name: %s",metadata['job_pl_scriptname'])
-	logger.info("job start: %s",metadata['job_pl_start'])
-	logger.info("job stop: %s",metadata['job_el_stop'])
-	logger.info("job duration:  %s",metadata['job_el_stop'] - metadata['job_pl_start'])
-	logger.info("job changed env: %s",metadata['job_el_env_changes'])
+	logger.info("wrote epilog %s",file);
+	logger.debug("%s",metadata)
 	return metadata
 
 
@@ -299,14 +298,6 @@ def epmt_test_start_stop(from_batch=[]):
 		exit(1)
 	print d4
 	
-try:
-	find_module('dictdiffer')
-	import dictdiffer
-	dd = True
-except ImportError:
-	logger.warn("dictdiffer module not found");
-	dd = False
-
 def epmt_run(cmdline, wrapit=False):
 	logger.debug(cmdline)
 	started = False
