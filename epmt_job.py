@@ -2,7 +2,7 @@
 import settings
 from pony.orm import *
 from models import *
-from sys import stdout, argv
+from sys import stdout, argv, stderr
 # from pytz import UTC
 # from pytz import timezone
 from pandas import read_csv,Timestamp
@@ -167,12 +167,16 @@ def load_process_from_pandas(df, h, j, u, tags, mns):
 			   end=end,
 			   duration=int(float(duration.total_seconds())*float(1000000)),
 			   process=p)
-		for metric,obj in mns.iteritems():
-#			dprint("Creating metric",metric,"value",df[metric][0])
-			m = Metric(metricname=obj,value=df[metric][0],thread=t)
-			t.metrics.add(m)
+		for metricname,obj in mns.iteritems():
+                    value = row.get(metricname)
+                    if value is None:
+                        logger.error("Key %s not found in data",metricname)
+                        return None
+                    m = Metric(metricname=obj,value=value,thread=t)
+                    t.metrics.add(m)
 		p.threads.add(t)
 
+        
 	p.start = earliest_thread
 	p.end = latest_thread
 	p.duration = int(float((latest_thread - earliest_thread).total_seconds())*float(1000000))
@@ -209,7 +213,10 @@ def ETL_job_dir(jobid, dir, metadata, pattern=settings.input_pattern):
 
 @db_session
 def ETL_job_dict(metadata, filedict):
+# Only fields used for now
     jobid = metadata['job_pl_id']
+    username = metadata['job_pl_username']
+#
     logger.info("Processing job id %s",jobid)
     hostname = ""
     file = ""
@@ -233,12 +240,12 @@ def ETL_job_dict(metadata, filedict):
 # Hostname, job, metricname objects
 # Iterate over hosts
     logger.debug("Iterating over hosts for job ID %s: %s",jobid,filedict.keys())
-    u = lookup_or_create_user(metadata['job_pl_username'])
-    j = lookup_or_create_job(jobid,u)
+    u = lookup_or_create_user(username)
+    j = lookup_or_create_job(jobid,u,metadata)
+    mns = {}
     for hostname, files in filedict.iteritems():
         logger.debug("Processing host %s",hostname)
         h = lookup_or_create_host(hostname)
-        mns = {}
         cntmax = len(files)
         cnt = 0
 	for f in files:
@@ -248,11 +255,10 @@ def ETL_job_dict(metadata, filedict):
             stdout.write(spinner.next())  # write the next character
             stdout.flush()                # flush stdout buffer (actual character display)
 #
-            csv = datetime.datetime.now()
-
             rows,header = extract_header_dict(f)
             tags = lookup_or_create_tags(header['tags'])
 
+            csv = datetime.datetime.now()
             pf = read_csv(f,
                           sep=",",
 #                          dtype=dtype_dic, 
@@ -260,31 +266,37 @@ def ETL_job_dict(metadata, filedict):
                           skiprows=rows)
 #            print pf["path"],pf["args"]
             csvt += datetime.datetime.now() - csv
+
+            if pf.empty:
+                logger.error("Something wrong with file %s, readcsv returned empty, skipping...",f)
+                continue
+
 # Lookup or create the necessary objects, only happens once!
-            if mns is None:
+            if not mns:
                 for metric in pf.columns[settings.metrics_offset:].values.tolist():
+                    logger.info("Creating metric %s",metric)
                     mns[metric] = lookup_or_create_metricname(metric)
 #
             pony = datetime.datetime.now()
-
             p = load_process_from_pandas(pf, h, j, u, tags, mns)
+            ponyt += datetime.datetime.now() - pony
             if not p:
-                logger.error("Failed loading from pandas, file %s, frame %s",f,pf);
+                logger.error("Failed loading from pandas, file %s!",f);
                 continue
 
             if (p.start < earliest_process):
                 earliest_process = p.start
             if (p.end > latest_process):
                 latest_process = p.end
-            ponyt += datetime.datetime.now() - pony
 
 #
 #
 #
             j.processes.add(p)
             cnt += 1
-            if cnt % (cntmax/100) == 0:
-                logger.info("Did %d of %d...",cnt,cntmax)
+            if cntmax/100 != 0:
+                if cnt % (cntmax/100) == 0:
+                    logger.info("Did %d of %d...",cnt,cntmax)
 #
 #
 #
@@ -299,7 +311,7 @@ def ETL_job_dict(metadata, filedict):
     stdout.write('\b')            # erase the last written char
     logger.info("Earliest process start: %s",j.start)
     logger.info("Latest process end: %s",j.end)
-    logger.info("Computed duration of job: %f",j.duration)
+    logger.info("Computed duration of job: %f us, %.2f m",j.duration,j.duration/60000000)
     logger.info("%d processes imported", len(j.processes))
     logger.info("%f processes per second",len(j.processes)/float((datetime.datetime.now() - then).total_seconds()))
     logger.info("Import took %s seconds",datetime.datetime.now() - then)
@@ -344,11 +356,6 @@ def get_filedict(dirname,pattern=settings.input_pattern):
     return filedict
 
 
-logger.info("Using DB: %s", settings.db_params)
-db.bind(**settings.db_params)
-db.generate_mapping(create_tables=True)
-#db.drop_all_tables(with_all_data=True)
-db.create_tables()
 #
 #
 #
@@ -360,6 +367,10 @@ if (__name__ == "__main__"):
     parser.add_argument('metadata_dir',nargs="?",type=str,help="directory containing the job_metadata file for the job");
     parser.add_argument('--debug',action='store_true',help="Debug mode, be verbose")
     parser.add_argument('--test',action='store_true',help="Test mode, job id 4, requires data and metadata in ./test-job")
+#    parser.add_argument("-v", "--verbosity", action="count",
+#                        help="increase output verbosity")
+# parser.add_argument("-v", "--verbosity", type=int, choices=[0, 1, 2],
+#                    help="increase output verbosity")
     args = parser.parse_args()
     if args.debug:
         basicConfig(level=DEBUG)
@@ -367,23 +378,37 @@ if (__name__ == "__main__"):
         basicConfig(level=INFO)
     # "./sample-data/"
 
+    logger.info("Using DB: %s", settings.db_params)
+    db.bind(**settings.db_params)
+    db.generate_mapping(create_tables=True)
+    db.drop_all_tables(with_all_data=True)
+    db.create_tables()
+
     from epmt_cmds import read_job_metadata
     if args.test:
         metadata = read_job_metadata("./test-job/job_metadata")
         metadata['job_pl_id'] = 4
         logger.warning("Forcing job id to be %s for test",4)
-        j = ETL_job_dir(4,"./test-job/",metadata,pattern="papiex*.csv")
+        j = ETL_job_dir(4,"./test-job/",metadata)
     elif args.jobid and args.data_dir and args.metadata_dir:
         metadata = read_job_metadata(args.metadata_dir+"/job_metadata")
         if (metadata['job_pl_id'] != args.jobid):
             logger.warning("Forcing job id to be %s from command line",args.jobid)
             metadata['job_pl_id'] = args.jobid
-        j = ETL_job_dir(args.jobid,args.data_dir,metadata,pattern="papiex*.csv")
+        j = ETL_job_dir(args.jobid,args.data_dir,metadata)
     else:
-        logger.error("Give all args or no args");
+        parser.print_help(stderr)
+        metadata = read_job_metadata("./test-job/job_metadata")
+        print metadata
         j = None
 
     if j:
 	exit(0)
     else:
 	exit(1)
+else:
+    logger.info("Using DB: %s", settings.db_params)
+    db.bind(**settings.db_params)
+    db.generate_mapping(create_tables=True)
+    db.drop_all_tables(with_all_data=True)
+    db.create_tables()
