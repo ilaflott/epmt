@@ -237,6 +237,11 @@ def get_job_id():
 
 def get_job_dir(hostname="", prefix="/tmp/epmt/"):
     global global_job_id
+
+    if not prefix.endswith("/"):
+        logger.error("Warning missing trailing / on %s",prefix);
+        prefix += "/"
+
     dirname = ""
     t = environ.get("PAPIEX_OUTPUT")
     if t and len(t) > 0:
@@ -245,11 +250,10 @@ def get_job_dir(hostname="", prefix="/tmp/epmt/"):
         logger.error("PAPIEX_OUTPUT is set but blank")
         exit(1)
     else:
+        if global_job_id == "":
+            logger.error("Unknown job id")
+            exit(1)
         dirname = prefix+global_job_id+"/"
-
-    if not dirname.endswith("/"):
-        logger.error("Warning missing trailing / on %s",dirname);
-        dirname += "/"
     return dirname
 
 def get_job_file(hostname="", prefix="/tmp/epmt/"):
@@ -311,7 +315,25 @@ def epmt_test_start_stop(from_batch=[]):
 		exit(1)
 	print d4
 	
-def epmt_run(cmdline, wrapit=False):
+def epmt_source(debug=False):
+	t = environ.get("PAPIEX_OSS_PATH")
+	if t and path.exists(t):
+            logger.info("Overriding settings.install_prefix with PAPIEX_OSS_PATH=",t)
+            dirname = t
+        else:
+            dirname = settings.install_prefix
+        if not dirname.endswith("/"):
+            logger.error("Warning missing trailing / on %s",dirname);
+            dirname += "/"
+
+	cmd = "PAPIEX_OPTIONS="+settings.PAPIEX_OPTIONS
+	cmd += " PAPIEX_OUTPUT="+get_job_dir()
+        if debug:
+            cmd += " PAPIEX_DEBUG=TRUE"
+	cmd += " LD_PRELOAD="+dirname+"lib/libpapiex.so:"+dirname+"lib/libmonitor.so"
+        return cmd
+
+def epmt_run(cmdline, wrapit=False, debug=False):
 	logger.debug(cmdline)
 	started = False
         set_job_globals(cmdline)
@@ -325,14 +347,10 @@ def epmt_run(cmdline, wrapit=False):
         else:
             logger.debug("Skipping epmt_start")
 
-	t = environ.get("PAPIEX_OSS_PATH")
-	if t and path.exists(t):
-            logger.info("Overriding settings.install_prefix with PAPIEX_OSS_PATH=",t)
-            settings.install_prefix = t
-	cmd =  "PAPIEX_OPTIONS=PERF_COUNT_SW_CPU_CLOCK "
-	cmd += "PAPIEX_OUTPUT="+get_job_dir()+" "
-	cmd += settings.install_prefix+"/bin/monitor-run -i "+settings.install_prefix+"/lib/libpapiex.so "+" ".join(cmdline)
-	print cmd
+	cmd = epmt_source(debug=debug)
+        cmd += " "+" ".join(cmdline)
+
+	logger.info("Executing(%s)",cmd)
 	return_code = forkexecwait(cmd, shell=True)
 	if started:
 		epmt_stop()
@@ -375,6 +393,8 @@ if (__name__ == "__main__"):
 	parser=argparse.ArgumentParser(description="...")
 	parser.add_argument('epmt_cmd',type=str,help="start, run, stop, submit, test");
 	parser.add_argument('other_args',nargs='*',help="Additional arguments from the calling scripts");
+	parser.add_argument('--csh',action='store_true',help="C-shell mode")
+	parser.add_argument('--bash',action='store_true',help="Bash mode")
 	parser.add_argument('--debug',action='store_true',help="Debug mode, verbose")
 	parser.add_argument('--auto',action='store_true',help="Do start/stop when running")
 	args = parser.parse_args()
@@ -405,11 +425,16 @@ if (__name__ == "__main__"):
             else: 
                 set_job_globals(cmdline=args.other_args)
                 epmt_submit(get_job_dir(),pattern="papiex*.csv")
-#                set_job_globals(cmdline=args.other_args)
-#                epmt_submit(global_job_id)
 	elif args.epmt_cmd == 'run':
             if args.other_args: 
                 epmt_run(args.other_args,wrapit=args.auto)
             else:
                 logger.warning("no run command given")
                 exit(1)
+	elif args.epmt_cmd == 'source':
+                set_job_globals(cmdline=args.other_args)
+                if args.csh:
+                    logger.error("Not yet supported")
+                else:
+                    print "export "+epmt_source()
+                exit(0)
