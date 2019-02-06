@@ -14,13 +14,13 @@ services:
     ports:
       - 5432:5432
 
-  grafana:
-    image: grafana/grafana:latest
-    restart: always
-    volumes: 
-     - ./data/grafana:/var/lib/grafana
-    ports:
-     - 3000:3000
+#  grafana:
+#    image: grafana/grafana:latest
+#    restart: always
+#    volumes: 
+#     - ./data/grafana:/var/lib/grafana
+#    ports:
+#     - 3000:3000
 
   adminer:
     image: adminer
@@ -36,7 +36,7 @@ services:
     ports:
       - 8888:8888
     command: >
-     bash -c "./wait-for-it.sh db:5432 -- cp settings_pg.py settings.py && python epmt-job.py && python epmt-exp.py && jupyter notebook --ip=0.0.0.0"
+     bash -c "./wait-for-it.sh db:5432 -- cp settings_pg.py settings.py && jupyter notebook --ip=0.0.0.0"
 #    command: ["./wait-for-it.sh", "db:5432", "--", "python", "epmt.py"]
 #    command: ["jupyter", "notebook", "EPMT.ipynb"]
 #  db:
