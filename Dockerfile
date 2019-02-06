@@ -5,7 +5,7 @@ WORKDIR /home/app
 RUN pip install -r requirements.txt
 COPY models /home/app/models
 COPY sample-data /home/app/sample-data
-COPY EPMT.ipynb wait-for-it.sh epmt-exp.py epmt-job.py settings.py settings_pg.py /home/app/
+COPY EPMT.ipynb wait-for-it.sh *py /home/app/
 RUN groupadd -r app && useradd -r -g app app && chown -R app:app /home/app
 USER app
 # configured to connect to host 'db' by default
