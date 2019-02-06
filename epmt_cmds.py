@@ -81,26 +81,26 @@ def set_job_globals(cmdline=[]):
 	global_job_id = get_job_var("JOB_ID")
 	if not global_job_id:
 		global_job_id=str(getsid(0))
-		logger.warn("Using session id %s as JOB_ID",global_job_id)
+		logger.warn("JOB_ID unset: Using session id %s as JOB_ID",global_job_id)
 
 	global_job_name = get_job_var("JOB_NAME")
 	if not global_job_name:
 		if cmdline:
 			global_job_name=' '.join(cmdline)
-			logger.warn("Using command line %s as JOB_NAME",global_job_name)
+			logger.warn("JOB_NAME unset: Using command line %s as JOB_NAME",global_job_name)
 		else:
 			global_job_name=global_job_id
-			logger.warn("Using job id %s as JOB_NAME",global_job_name)
+			logger.warn("JOB_NAME unset: Using job id %s as JOB_NAME",global_job_name)
 
 	global_job_scriptname = get_job_var("JOB_SCRIPTNAME")
 	if not global_job_scriptname:
 		global_job_scriptname=global_job_name
-		logger.warn("Using process name %s as JOB_SCRIPTNAME",global_job_name)
+		logger.warn("JOB_SCRIPTNAME unset: Using process name %s as JOB_SCRIPTNAME",global_job_name)
 
 	global_job_username = get_job_var("JOB_USER")
 	if not global_job_username:
 		global_job_username = getpwuid(getuid()).pw_name
-		logger.warn("Using username %s as JOB_USER",global_job_username)
+		logger.warn("JOB_USER unset: Using username %s as JOB_USER",global_job_username)
 
 	global_job_groupnames = getgroups(global_job_username)
 		
@@ -175,16 +175,32 @@ def create_job_prolog(jobid, from_batch=[]):
 	return metadata
 
 def create_job_epilog(prolog, from_batch=[], status="0"):
-	metadata = {}
+	metadata={}
+        env={}
 	ts=datetime.now()
-	env=blacklist_filter(filter,**environ)
-        try:
-            find_module('dictdiffer')
-            import dictdiffer
-            env = list(dictdiffer.diff(prolog['job_pl_env'],env))
-        except ImportError:
-            logger.warn("dictdiffer module not found");
-            env = env
+	stop_env=blacklist_filter(filter,**environ)
+        start_env=prolog['job_pl_env']
+        for e in start_env.keys():
+            if e in stop_env.keys():
+                if start_env[e] == stop_env[e]:
+                    logger.debug("Found "+e)
+                else:
+                    logger.debug("Different "+e)
+                    env[e] = stop_env[e]
+            else:
+                logger.debug("Deleted "+e)
+                env[e] = start_env[e]
+        for e in stop_env.keys():
+            if e not in start_env.keys():
+                logger.debug("Added "+e)
+                env[e] = stop_env[e]
+#        try:
+#            find_module('dictdiffer')
+#            import dictdiffer
+#            env = list(dictdiffer.diff(prolog['job_pl_env'],env))
+#        except ImportError:
+#            logger.warn("dictdiffer module not found");
+#            env = env
 	metadata['job_el_env_changes_len'] = len(env)
 	metadata['job_el_env_changes'] = env
 	metadata['job_el_stop'] = ts
@@ -395,13 +411,17 @@ if (__name__ == "__main__"):
 	parser.add_argument('other_args',nargs='*',help="Additional arguments from the calling scripts");
 	parser.add_argument('--csh',action='store_true',help="C-shell mode")
 	parser.add_argument('--bash',action='store_true',help="Bash mode")
-	parser.add_argument('--debug',action='store_true',help="Debug mode, verbose")
+	parser.add_argument('-d', '--debug',action='count',help="Increase level of verbosity/debug")
 	parser.add_argument('--auto',action='store_true',help="Do start/stop when running")
 	args = parser.parse_args()
-	if args.debug:
-		basicConfig(level=DEBUG)
-	else:
+        if not args.debug:
+            basicConfig(level=WARNING)
+        elif args.debug == 1:
+		basicConfig(level=WARNING)
+	elif args.debug == 2:
 		basicConfig(level=INFO)
+        elif args.debug == 3:
+		basicConfig(level=DEBUG)
 
 	if args.auto:
             if not args.epmt_cmd == "run":
