@@ -255,13 +255,16 @@ def get_job_dir(hostname="", prefix="/tmp/epmt/"):
     global global_job_id
 
     if not prefix.endswith("/"):
-        logger.error("Warning missing trailing / on %s",prefix);
+        logger.warning("missing trailing / on prefix %s",prefix);
         prefix += "/"
 
     dirname = ""
     t = environ.get("PAPIEX_OUTPUT")
     if t and len(t) > 0:
         dirname = t
+        if not dirname.endswith("/"):
+            logger.warning("missing trailing / on PAPIEX_OUTPUT variable %s",dirname);
+        dirname += "/"
     elif t:
         logger.error("PAPIEX_OUTPUT is set but blank")
         exit(1)
@@ -270,6 +273,7 @@ def get_job_dir(hostname="", prefix="/tmp/epmt/"):
             logger.error("Unknown job id")
             exit(1)
         dirname = prefix+global_job_id+"/"
+
     return dirname
 
 def get_job_file(hostname="", prefix="/tmp/epmt/"):
@@ -387,13 +391,10 @@ def epmt_submit(directory="/tmp/epmt/",pattern=settings.input_pattern):
 #        logger.error("Job ID is empty!");
 #        exit(1);
     from epmt_job import get_filedict, ETL_job_dict
-    t = environ.get("PAPIEX_OUTPUT")
-    if t and path.exists(t):
-        dirname = t
-    else:
-        dirname = directory
+    logger.debug("submit %s",directory)
+    dirname = directory
     if not dirname.endswith("/"):
-        logger.error("Warning missing trailing / on %s",dirname);
+        logger.warning("missing trailing / on submit dirname %s",dirname);
         dirname += "/"
     metafile = dirname+"job_metadata"
     metadata = read_job_metadata(metafile)
@@ -420,7 +421,7 @@ if (__name__ == "__main__"):
 		basicConfig(level=WARNING)
 	elif args.debug == 2:
 		basicConfig(level=INFO)
-        elif args.debug == 3:
+        elif args.debug >= 3:
 		basicConfig(level=DEBUG)
 
 	if args.auto:
@@ -440,16 +441,18 @@ if (__name__ == "__main__"):
             set_job_globals(cmdline=args.other_args)
             epmt_test_start_stop(from_batch=args.other_args)
 	elif args.epmt_cmd == 'submit':
+# Here if we pass an argument, we assume we are not in a job context
+# but are post processing after job has completed
             if len(args.other_args) == 1: 
-                epmt_submit(args.other_args[0],pattern="papiex*.csv")
+                epmt_submit(directory=args.other_args[0])
             else: 
                 set_job_globals(cmdline=args.other_args)
-                epmt_submit(get_job_dir(),pattern="papiex*.csv")
+                epmt_submit(directory=get_job_dir())
 	elif args.epmt_cmd == 'run':
             if args.other_args: 
                 epmt_run(args.other_args,wrapit=args.auto)
             else:
-                logger.warning("no run command given")
+                logger.error("No command given")
                 exit(1)
 	elif args.epmt_cmd == 'source':
                 set_job_globals(cmdline=args.other_args)

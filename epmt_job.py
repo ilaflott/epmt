@@ -363,9 +363,9 @@ def get_filedict(dirname,pattern=settings.input_pattern):
 if (__name__ == "__main__"):
     import argparse
     parser=argparse.ArgumentParser(description="...")
-    parser.add_argument('jobid',nargs="?",type=int,help="directory containing the job_metadata file for the job");
-    parser.add_argument('data_dir',nargs="?",type=str,help="directory of papiex output files for the job");
-    parser.add_argument('metadata_dir',nargs="?",type=str,help="directory containing the job_metadata file for the job");
+    parser.add_argument('jobid',nargs="?",type=int,help="job id");
+    parser.add_argument('data_dir',nargs="?",type=str,help="directory containing papiex output files");
+    parser.add_argument('metadata_dir',nargs="?",type=str,help="directory containing the job_metadata file");
     parser.add_argument('--drop',action='store_true',help="Drop all tables first")
     parser.add_argument('--debug',action='store_true',help="Debug mode, be verbose")
     parser.add_argument('--test',action='store_true',help="Test mode, job id 4, requires data and metadata in ./test-job")
