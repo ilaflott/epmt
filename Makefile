@@ -4,7 +4,8 @@ SHELL=/bin/bash
 .PHONY: epmt-build epmt-test default clean distclean check
 default: epmt-build epmt-test
 epmt-build:
-	docker build . -t epmt:latest
+	docker build -t epmt:latest -f ./Dockerfile .
+	docker build -t epmt-papiex:latest -f ./Dockerfiles/Dockerfile.epmt-papiex .
 #	docker-compose build
 epmt-test:
 	docker run epmt:latest
