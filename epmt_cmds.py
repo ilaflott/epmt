@@ -12,6 +12,7 @@ from imp import find_module
 from grp import getgrall, getgrgid
 from pwd import getpwnam, getpwuid
 from glob import glob
+from sys import stdout, stderr
 import pickle
 import argparse
 
@@ -121,26 +122,6 @@ def blacklist_filter(filter=None, **env):
 			env2[k] = v
 	return env2
 
-def job_epilog(jobdatafile="unknown_job.jobid", exitcode=0, stdout=None, stderr=None):
-	# timestamp
-	ts=datetime.now()
-	with open(jobdatafile,'a') as file:
-		logger.debug("Exitcode: %s",str(exitcode))
-		file.write(str(exitcode))
-		logger.debug("Time finish: %s",str(ts))
-		file.write(str(ts))
-	logger.debug("Appended to "+jobdatafile)
-	# collect env
-
-def job_run(argvlist):
-	stdout = None
-	stderr = None
-# Ideally we could capture job output here too
-	if argvlist:
-		return forkexec(argvlist),stdout,stderr
-	else:
-		return 256,stdout,stderr
-
 def get_job_var(var):
 	logger.debug("looking for %s",var)
 	a = False
@@ -154,6 +135,12 @@ def get_job_var(var):
 		logger.debug("%s not found",var)
 		return False
 	return a
+
+def dump_settings(outf):
+    print >> outf,"\nsettings.py:"
+    book = {key: value for key, value in settings.__dict__.iteritems() if not (key.startswith('__') or key.startswith('_'))}
+    for key, value in book.iteritems():
+        print >> outf,"  {:<30}{:<100}".format(key, value)
 
 def create_job_prolog(jobid, from_batch=[]):
 	metadata = {}
@@ -224,10 +211,12 @@ def merge_two_dicts(x, y):
 
 def read_job_metadata(jobdatafile):
 	data = False
-	logger.debug("Unpickling from "+jobdatafile)
+	logger.info("Unpickling from "+jobdatafile)
 	with open(jobdatafile,'rb') as file:
 		data = pickle.load(file)
 		logger.debug("Unpickled from "+jobdatafile)
+                for d in data.keys():
+                    logger.info("job_metadata[%s]: %s",d,data[d])
 	return data
 	# collect env
 
@@ -251,7 +240,7 @@ def get_job_id():
 	global global_job_id
 	return(global_job_id)
 
-def get_job_dir(hostname="", prefix="/tmp/epmt/"):
+def get_job_dir(hostname="", prefix=settings.output_prefix):
     global global_job_id
 
     if not prefix.endswith("/"):
@@ -264,19 +253,20 @@ def get_job_dir(hostname="", prefix="/tmp/epmt/"):
         dirname = t
         if not dirname.endswith("/"):
             logger.warning("missing trailing / on PAPIEX_OUTPUT variable %s",dirname);
-        dirname += "/"
+            dirname += "/"
     elif t:
         logger.error("PAPIEX_OUTPUT is set but blank")
         exit(1)
     else:
         if global_job_id == "":
-            logger.error("Unknown job id")
-            exit(1)
-        dirname = prefix+global_job_id+"/"
+            logger.warning("Unknown job id, setting output to %s",prefix)
+            dirname = prefix
+        else:
+            dirname = prefix+global_job_id+"/"
 
     return dirname
 
-def get_job_file(hostname="", prefix="/tmp/epmt/"):
+def get_job_file(hostname="", prefix=settings.output_prefix):
 	s = get_job_dir(hostname,prefix)
 	return s+"job_metadata"
 
@@ -299,11 +289,14 @@ def epmt_start(from_batch=[]):
 	jobid = get_job_id()
 	dir = create_job_dir(get_job_dir())
 	if dir is False:
-		exit(1)
+            exit(1)
 	file = get_job_file()
-	metadata = create_job_prolog(jobid,from_batch)
+        if path.exists(file):
+            logger.error("%s already exists!",file)
+            exit(1)
+        metadata = create_job_prolog(jobid,from_batch)
 	write_job_prolog(file,metadata)
-	logger.info("wrote prolog %s",file);
+	logger.info("wrote prolog to %s",file);
 	logger.debug("%s",metadata)
 	return metadata
 
@@ -315,11 +308,11 @@ def epmt_stop(from_batch=[]):
 	prolog = read_job_metadata(file)
 	if not prolog:
 		return False
-	logger.info("read prolog %s",file);
+	logger.info("read prolog from %s",file);
 	epilog = create_job_epilog(prolog,from_batch)
 	metadata = merge_two_dicts(prolog,epilog)
 	write_job_epilog(file,metadata)
-	logger.info("wrote epilog %s",file);
+	logger.info("appended epilog to %s",file);
 	logger.debug("%s",metadata)
 	return metadata
 
@@ -335,7 +328,7 @@ def epmt_test_start_stop(from_batch=[]):
 		exit(1)
 	print d4
 	
-def epmt_source(debug=False):
+def epmt_source(output_dir, options, papiex_debug=False, monitor_debug=False):
 	t = environ.get("PAPIEX_OSS_PATH")
 	if t and path.exists(t):
             logger.info("Overriding settings.install_prefix with PAPIEX_OSS_PATH=",t)
@@ -346,38 +339,35 @@ def epmt_source(debug=False):
             logger.error("Warning missing trailing / on %s",dirname);
             dirname += "/"
 
-	cmd = "PAPIEX_OPTIONS="+settings.PAPIEX_OPTIONS
-	cmd += " PAPIEX_OUTPUT="+get_job_dir()
-        if debug:
+	cmd = "PAPIEX_OPTIONS="+options
+	if output_dir:
+            cmd += " PAPIEX_OUTPUT="+output_dir
+        if papiex_debug:
             cmd += " PAPIEX_DEBUG=TRUE"
+        if monitor_debug:
+            cmd += " MONITOR_DEBUG=TRUE"
 	cmd += " LD_PRELOAD="+dirname+"lib/libpapiex.so:"+dirname+"lib/libmonitor.so"
         return cmd
 
-def epmt_run(cmdline, wrapit=False, debug=False):
+def epmt_run(cmdline, wrapit=False, dry_run=False, debug=False):
 	logger.debug(cmdline)
-	started = False
-        set_job_globals(cmdline)
-        if wrapit:
-            file = get_job_file()
-            if not path.exists(file):
-                epmt_start()
-                started = True
-            else:
-                logger.warning("%s already exists, ignoring!",file)
-        else:
-            logger.debug("Skipping epmt_start")
 
-	cmd = epmt_source(debug=debug)
+        if wrapit:
+            logger.info("Forcing epmt_start")
+            epmt_start()
+
+	cmd = epmt_source(get_job_dir(), settings.PAPIEX_OPTIONS, papiex_debug=debug, monitor_debug=debug)
         cmd += " "+" ".join(cmdline)
 
 	logger.info("Executing(%s)",cmd)
-	return_code = forkexecwait(cmd, shell=True)
-	if started:
-		epmt_stop()
-		started = False
-        else:
-            logger.debug("Skipping epmt_stop")
-        logger.debug("Exit code %d",return_code)
+	if not dry_run:
+            return_code = forkexecwait(cmd, shell=True)
+            logger.info("Exit code %d",return_code)
+
+	if wrapit:
+            logger.info("Forcing epmt_stop")
+            epmt_stop()
+
 	return return_code
 
 def db_submit_job(metadata, filedict):
@@ -386,7 +376,7 @@ def db_submit_job(metadata, filedict):
 #    logger.info("%s",filedict)
     return True
 
-def epmt_submit(directory="/tmp/epmt/",pattern=settings.input_pattern):
+def epmt_submit(directory=settings.output_prefix,pattern=settings.input_pattern,dry_run=True):
 #    if not jobid:
 #        logger.error("Job ID is empty!");
 #        exit(1);
@@ -402,62 +392,76 @@ def epmt_submit(directory="/tmp/epmt/",pattern=settings.input_pattern):
     logger.info("%d hosts found: %s",len(filedict.keys()),filedict.keys())
     for h in filedict.keys():
         logger.info("host %s: %d files",h,len(filedict[h]))
-    exit(ETL_job_dict(metadata,filedict))
+    if dry_run == True:
+        j = True
+    else:
+        j = ETL_job_dict(metadata,filedict)
+    exit(j)
+    
 
 # Use of globals here is gross. FIX!
 
 if (__name__ == "__main__"):
-	parser=argparse.ArgumentParser(description="...")
-	parser.add_argument('epmt_cmd',type=str,help="start, run, stop, submit, test");
+	parser=argparse.ArgumentParser(description="",add_help=False)
+	parser.add_argument('epmt_cmd',type=str,nargs="?",help="start, run, stop, submit");
 	parser.add_argument('other_args',nargs='*',help="Additional arguments from the calling scripts");
-	parser.add_argument('--csh',action='store_true',help="C-shell mode")
-	parser.add_argument('--bash',action='store_true',help="Bash mode")
+        parser.add_argument('-n', '--dry-run',action='store_true',help="Don't touch the database");
 	parser.add_argument('-d', '--debug',action='count',help="Increase level of verbosity/debug")
-	parser.add_argument('--auto',action='store_true',help="Do start/stop when running")
+	parser.add_argument('-h', '--help',action='store_true',help="Show this help message and exit")
+	parser.add_argument('-c', '--csh',action='store_true',help="C-shell mode")
+	parser.add_argument('-b', '--bash',action='store_true',help="Bash mode")
+	parser.add_argument('-a', '--auto',action='store_true',help="Do start/stop when running")
+
 	args = parser.parse_args()
+
         if not args.debug:
             basicConfig(level=WARNING)
         elif args.debug == 1:
-		basicConfig(level=WARNING)
-	elif args.debug == 2:
-		basicConfig(level=INFO)
-        elif args.debug >= 3:
-		basicConfig(level=DEBUG)
+            basicConfig(level=INFO)
+        elif args.debug >= 2:
+            basicConfig(level=DEBUG)
 
-	if args.auto:
+        if args.help or args.epmt_cmd == 'help':
+            parser.print_help()
+            dump_settings(stderr)
+            exit(0)
+
+        if args.auto or args.bash or args.csh:
             if not args.epmt_cmd == "run":
-                logger.error("Only valid with run command")
+                logger.error("Arguments only valid with 'run' command")
                 exit(1)
-        if args.epmt_cmd == "gjd":
-            set_job_globals(cmdline=args.other_args)
-            print get_job_dir()
-	elif args.epmt_cmd == 'start':
+
+	if args.epmt_cmd == 'start':
             set_job_globals(cmdline=args.other_args)
             epmt_start(from_batch=args.other_args)
 	elif args.epmt_cmd == 'stop':
             set_job_globals(cmdline=args.other_args)
             epmt_stop(from_batch=args.other_args)
-	elif args.epmt_cmd == 'test':
-            set_job_globals(cmdline=args.other_args)
-            epmt_test_start_stop(from_batch=args.other_args)
+#	elif args.epmt_cmd == 'test':
+#            set_job_globals(cmdline=args.other_args)
+#            epmt_test_start_stop(from_batch=args.other_args)
 	elif args.epmt_cmd == 'submit':
-# Here if we pass an argument, we assume we are not in a job context
-# but are post processing after job has completed
-            if len(args.other_args) == 1: 
-                epmt_submit(directory=args.other_args[0])
+            # Not in job context
+            if len(args.other_args) == 0: 
+                logger.info("Assuming we are inside a job!")
+                set_job_globals()
+                directory=get_job_dir()
+            elif len(args.other_args) == 1:
+                directory=args.other_args[0]
             else: 
-                set_job_globals(cmdline=args.other_args)
-                epmt_submit(directory=get_job_dir())
+                logger.error("1 or 0 arguments allowed to submit")
+                exit(1)
+            epmt_submit(directory=directory,dry_run=args.dry_run)
 	elif args.epmt_cmd == 'run':
             if args.other_args: 
-                epmt_run(args.other_args,wrapit=args.auto)
+                set_job_globals()
+                epmt_run(args.other_args,wrapit=args.auto,dry_run=args.dry_run,debug=(args.debug > 2))
             else:
                 logger.error("No command given")
                 exit(1)
 	elif args.epmt_cmd == 'source':
-                set_job_globals(cmdline=args.other_args)
-                if args.csh:
-                    logger.error("Not yet supported")
-                else:
-                    print "export "+epmt_source()
-                exit(0)
+                print epmt_source(False,settings.PAPIEX_OPTIONS,papiex_debug=(args.debug > 2),monitor_debug=(args.debug > 2))
+        else:
+            logger.error("%s is an unknown command. See -h",args.epmt_cmd)
+            exit(0)
+
