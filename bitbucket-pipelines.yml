@@ -6,7 +6,7 @@ pipelines:
         script: # Modify the commands below to build your repository.
         - pip install -r requirements.txt
         - python -m py_compile *.py models/*.py			# Compile everything
-	- PAPIEX_OUTPUT=$PWD/ python ./epmt_cmds.py -d start 	# Generate prolog
+        - PAPIEX_OUTPUT=$PWD/ python ./epmt_cmds.py -d start 	# Generate prolog
         - sleep 1	      	     		       		# wait
-	- PAPIEX_OUTPUT=$PWD/ python ./epmt_cmds.py -d stop 	# Generate epilog and append
-	- python ./epmt_job.py -d -n $PWD/	       	    	# Parse metadata
+        - PAPIEX_OUTPUT=$PWD/ python ./epmt_cmds.py -d stop 	# Generate epilog and append
+        - python ./epmt_job.py -d -n $PWD/	       	    	# Parse metadata
