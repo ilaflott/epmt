@@ -209,16 +209,19 @@ def merge_two_dicts(x, y):
     z.update(y)    # modifies z with y's keys and values & returns None
     return z
 
+def read_job_metadata_direct(file):
+        data = pickle.load(file)
+        for d in data.keys():
+            logger.info("job_metadata[%s]: %s",d,data[d])
+        logger.debug("Unpickled")
+	return data
+
 def read_job_metadata(jobdatafile):
-	data = False
 	logger.info("Unpickling from "+jobdatafile)
 	with open(jobdatafile,'rb') as file:
-		data = pickle.load(file)
-		logger.debug("Unpickled from "+jobdatafile)
-                for d in data.keys():
-                    logger.info("job_metadata[%s]: %s",d,data[d])
-	return data
-	# collect env
+            return read_job_metadata_direct(file)
+        return False
+
 
 def write_job_epilog(jobdatafile,metadata):
 	with open(jobdatafile,'w+b') as file:
@@ -376,22 +379,49 @@ def db_submit_job(metadata, filedict):
 #    logger.info("%s",filedict)
     return True
 
-def epmt_submit(directory=settings.output_prefix,pattern=settings.input_pattern,dry_run=True):
+def epmt_submit(input=settings.output_prefix,pattern=settings.input_pattern,dry_run=True):
 #    if not jobid:
 #        logger.error("Job ID is empty!");
 #        exit(1);
     from epmt_job import get_filedict, ETL_job_dict
-    logger.debug("submit %s",directory)
-    dirname = directory
-    if not dirname.endswith("/"):
-        logger.warning("missing trailing / on submit dirname %s",dirname);
-        dirname += "/"
-    metafile = dirname+"job_metadata"
-    metadata = read_job_metadata(metafile)
-    filedict = get_filedict(dirname,pattern)
+    import tarfile
+
+    logger.debug("submit %s",input)
+
+    tar = None
+    if (input.endswith("tar.gz") or input.endswith("tgz")):
+        tar = tarfile.open(input, "r:gz")
+    elif (input.endswith("tar")):
+        tar = tarfile.open(input, "r:")
+    elif not input.endswith("/"):
+        logger.warning("missing trailing / on submit dirname %s",input);
+        input += "/"
+
+    if tar:
+#        for member in tar.getmembers():
+        try:
+            info = tar.getmember("job_metadata")
+        except KeyError:
+            logger.error('ERROR: Did not find %s in tar archive' % "job_metadata")
+            exit(1)
+        else:
+            logger.info('%s is %d bytes in archive' % (info.name, info.size))
+            f = tar.extractfile(info)
+            metadata = read_job_metadata_direct(f)
+            filedict = get_filedict(None,pattern,tar)
+    else:
+        metadata = read_job_metadata(input+"job_metadata")
+        filedict = get_filedict(input,pattern)
+
     logger.info("%d hosts found: %s",len(filedict.keys()),filedict.keys())
     for h in filedict.keys():
-        logger.info("host %s: %d files",h,len(filedict[h]))
+        logger.info("host %s: %d files to import",h,len(filedict[h]))
+
+    if tar:
+        tar.close()
+        logger.error('Unsupported at the moment.')
+        exit(1)
+
     if dry_run == True:
         j = True
     else:
@@ -445,13 +475,13 @@ if (__name__ == "__main__"):
             if len(args.other_args) == 0: 
                 logger.info("Assuming we are inside a job!")
                 set_job_globals()
-                directory=get_job_dir()
+                arg=get_job_dir()
             elif len(args.other_args) == 1:
-                directory=args.other_args[0]
+                arg=args.other_args[0]
             else: 
                 logger.error("1 or 0 arguments allowed to submit")
                 exit(1)
-            epmt_submit(directory=directory,dry_run=args.dry_run)
+            epmt_submit(input=arg,dry_run=args.dry_run)
 	elif args.epmt_cmd == 'run':
             if args.other_args: 
                 set_job_globals()

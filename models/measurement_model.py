@@ -39,7 +39,7 @@ class Job(db.Entity):
 # End generic template
 	env_dict = Optional(Json)
 	submit = Optional(datetime.datetime)
-	jobid = PrimaryKey(int)
+	jobid = PrimaryKey(str)
 	jobname = Optional(str)
 	jobscriptname = Optional(str)
 	sessionid = Optional(int)

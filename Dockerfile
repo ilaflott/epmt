@@ -14,6 +14,6 @@ RUN groupadd -r app && useradd -r -g app app
 RUN chown -R app:app /home/app
 USER app
 # Default executable, using info debug level 
-ENTRYPOINT ["./epmt", "-d"]
+# ENTRYPOINT ["./epmt", "-d"]
 # When run without anything, print help
-CMD ["-h"]
+# CMD ["-h"]

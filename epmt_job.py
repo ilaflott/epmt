@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import settings
+import fnmatch
 from pony.orm import *
 from models import *
 from sys import stdout, argv, stderr
@@ -244,6 +245,8 @@ def ETL_job_dict(metadata, filedict):
     u = lookup_or_create_user(username)
     j = lookup_or_create_job(jobid,u,metadata)
     mns = {}
+    didsomething = False
+
     for hostname, files in filedict.iteritems():
         logger.debug("Processing host %s",hostname)
         h = lookup_or_create_host(hostname)
@@ -264,9 +267,11 @@ def ETL_job_dict(metadata, filedict):
                           sep=",",
 #                          dtype=dtype_dic, 
                           converters=conv_dic,
-                          skiprows=rows)
-#            print pf["path"],pf["args"]
+                          skiprows=rows, escapechar='\\')
             csvt += datetime.datetime.now() - csv
+#            print pf['path'][0]
+#            print pf['args'][0]
+#            print pf['pid'][0]
 
             if pf.empty:
                 logger.error("Something wrong with file %s, readcsv returned empty, skipping...",f)
@@ -301,15 +306,23 @@ def ETL_job_dict(metadata, filedict):
 #
 #
 #
+        if cnt:
+            didsomething = True
+
+    stdout.write('\b')            # erase the last written char
+
+    if not didsomething:
+        logger.error("Something went wrong")
+        return False
 
     j.start = earliest_process
     j.end = latest_process
     d = j.end - j.start
     j.duration = int(d.total_seconds()*1000000)
+    
 #
 #
 #
-    stdout.write('\b')            # erase the last written char
     logger.info("Earliest process start: %s",j.start)
     logger.info("Latest process end: %s",j.end)
     logger.info("Computed duration of job: %f us, %.2f m",j.duration,j.duration/60000000)
@@ -321,17 +334,23 @@ def ETL_job_dict(metadata, filedict):
     logger.info(j)
     return j
 
-def get_filedict(dirname,pattern=settings.input_pattern):
+def get_filedict(dirname,pattern=settings.input_pattern,tar=False):
     # Now get all the files in the dir
-    files = glob(dirname+pattern)
+    if tar:
+        files = fnmatch.filter(tar.getnames(), pattern)
+    else:
+        files = glob(dirname+pattern)
+
     if not files:
         logger.error("%s matched no files",dirname+pattern);
         exit(1);
-    logger.debug("%d files to submit",len(files))
+
+    logger.info("%d files to submit",len(files))
     if (len(files) > 30):
         logger.debug("Skipping printing files, too many")
     else:
         logger.debug("%s",files)
+
     # Build a hash of hosts and their data files
     filedict={}
     dumperr = False
