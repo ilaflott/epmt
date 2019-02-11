@@ -32,7 +32,7 @@ class Job(db.Entity):
 # Rollup entries, computed at insert time
 	start = Required(datetime.datetime, default=datetime.datetime.utcnow())
 	end = Required(datetime.datetime, default=datetime.datetime.fromtimestamp(0))
-	duration = Required(int, default=0)
+	duration = Required(float, default=0)
 # End rollups
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
 	info_dict = Optional(Json)
@@ -57,7 +57,7 @@ class Process(db.Entity):
 # Rollup entries, computed at insert time
 	start = Required(datetime.datetime, default=datetime.datetime.utcnow())
 	end = Required(datetime.datetime, default=datetime.datetime.fromtimestamp(0))
-	duration = Required(int, default=0)
+	duration = Required(float, default=0)
 # End rollup
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
 	info_dict = Optional(Json)
@@ -86,7 +86,7 @@ class Thread(db.Entity):
 	start = Required(datetime.datetime)
 	end = Required(datetime.datetime)
 # This is computed at insert time
-	duration = Required(int)
+	duration = Required(float)
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
 	info_dict = Optional(Json)
 # End generic template

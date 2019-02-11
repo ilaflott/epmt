@@ -163,12 +163,11 @@ def load_process_from_pandas(df, h, j, u, tags, mns):
 			latest_thread = end
 #		end = end.tz_localize(UTC)
 		duration = end-start
-#		dprint("Creating thread",str(row['tid']),"start",start,"end",end,"duration",duration)
-		t = Thread(tid=row['tid'],
-			   start=start,
-			   end=end,
-			   duration=int(float(duration.total_seconds())*float(1000000)),
-			   process=p)
+		t = Thread(tid=row['tid'],start=start,end=end,duration=float(duration.total_seconds())*float(1000000),process=p)
+                if t is None:
+                    logger.error("Thread duration error, likely corrupted CSV");
+                    return None
+
 		for metricname,obj in mns.iteritems():
                     value = row.get(metricname)
                     if value is None:
@@ -181,7 +180,7 @@ def load_process_from_pandas(df, h, j, u, tags, mns):
         
 	p.start = earliest_thread
 	p.end = latest_thread
-	p.duration = int(float((latest_thread - earliest_thread).total_seconds())*float(1000000))
+	p.duration = float((latest_thread - earliest_thread).total_seconds())*float(1000000)
 #	print "Earliest thread start:",earliest_thread,"\n","Latest thread end:",latest_thread,"\n","Computed duration of process:",(p.end-p.start).total_seconds(),"seconds","\n","Duration of process:",p.duration,"microseconds"
 	return p
 
