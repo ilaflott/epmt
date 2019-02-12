@@ -140,7 +140,7 @@ def dump_settings(outf):
     print >> outf,"\nsettings.py:"
     book = {key: value for key, value in settings.__dict__.iteritems() if not (key.startswith('__') or key.startswith('_'))}
     for key, value in book.iteritems():
-        print >> outf,"  {:<30}{:<100}".format(key, value)
+        print >> outf,"  {:<24}{:<56}".format(key, value)
 
 def create_job_prolog(jobid, from_batch=[]):
 	metadata = {}
