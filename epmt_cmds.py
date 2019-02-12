@@ -422,11 +422,15 @@ def epmt_submit(input=settings.output_prefix,pattern=settings.input_pattern,dry_
         logger.error('Unsupported at the moment.')
         exit(1)
 
-    if dry_run == True:
-        j = True
-    else:
+    if dry_run != True:
         j = ETL_job_dict(metadata,filedict)
-    exit(j)
+    else:
+        j = True
+
+    if j:
+        exit(0)
+
+    exit(1)
     
 
 # Use of globals here is gross. FIX!
