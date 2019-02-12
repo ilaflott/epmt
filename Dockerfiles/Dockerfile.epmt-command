@@ -1,0 +1,14 @@
+FROM python-epmt:latest
+
+WORKDIR /home/app
+COPY models /home/app/models
+COPY epmt EPMT.ipynb wait-for-it.sh *py /home/app/
+RUN python -m py_compile *.py models/*.py
+RUN groupadd -r app && useradd -r -g app app 
+RUN chown -R app:app /home/app
+USER app
+
+# Default executable, using info debug level 
+# ENTRYPOINT ["./epmt", "-d"]
+# When run without anything, print help
+CMD ["./epmt", "-h"]

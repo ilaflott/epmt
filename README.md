@@ -1,12 +1,24 @@
 # EPMT
 
-## How to Build & Run
+## How to Run
 
-```docker-compose up```
+```docker-compose up adminer db```
+
+## Before importing data, create the EPMT database. 
+
+From the Adminer Console:
+
+http://localhost:8080/?pgsql=db&username=postgres&database=
+
+Or using the command line:
+
+```sudo su - postgres``` to become postgres
+
+```psql -c "create database EPMT"```
 
 ## How to Shutdown
 
-```docker-compose down```
+```docker-compose down adminer db```
 
 ## Usage
 

@@ -1,6 +1,7 @@
 version: '3.1'
 
 services:
+
   # @see https://hub.docker.com/_/postgres/
   db:
     image: postgres
@@ -14,58 +15,50 @@ services:
     ports:
       - 5432:5432
 
-#  grafana:
-#    image: grafana/grafana:latest
-#    restart: always
-#    volumes: 
-#     - ./data/grafana:/var/lib/grafana
-#    ports:
-#     - 3000:3000
-
   adminer:
     image: adminer
     restart: always
     ports:
       - 8080:8080
-  
+
+  notebook:
+    image: jupyter/datascience-notebook
+    restart: always
+    volumes:
+      - ./data/jupyter:/home/jovyan/work
+      - ./:/epmt  
+    ports:
+      - 8884:8884
+    environment:
+      JUPITER_ENABLE_LAB: "yes"
+
   epmt:
-    image: epmt
-    build: .
+    image: epmt-papiex
+    volumes:
+      - ./:/epmt  
     depends_on:
       - "db"
+#    command: -d submit /epmt/TEST2
+
+  grafana:
+    image: grafana/grafana:latest
+    restart: always
+    volumes: 
+     - ./data/grafana:/var/lib/grafana
     ports:
-      - 8888:8888
-    command: >
-     bash -c "./wait-for-it.sh db:5432 -- cp settings_pg.py settings.py && jupyter notebook --ip=0.0.0.0"
-#    command: ["./wait-for-it.sh", "db:5432", "--", "python", "epmt.py"]
-#    command: ["jupyter", "notebook", "EPMT.ipynb"]
-#  db:
-#    image: postgres
-#    ports:
-#       - 5432:5432
-#version:  '3'
-#services:
-#  datascience-notebook:
-#      image:    jupyter/datascience-notebook
-#      volumes:
+     - 3000:3000
+
+#datascience-notebook:
+#  image:    jupyter/datascience-notebook
+#  volumes:
 #        - .:/home/jovyan/work
 #        - ${LOCAL_DATASETS}:/home/jovyan/work/datasets
 #        - ${LOCAL_MODULES}:/home/jovyan/work/modules
 #        - ${LOCAL_SSL_CERTS}:/etc/ssl/notebook
 #      ports:
-#        - 8888:8888
-#      container_name:   jupyter_notebook
+#       - 8888:8888
+#     container_name:   jupyter_notebook
 #      command: "start-notebook.sh"
 # \
 #        --NotebookApp.password=${ACCESS_TOKEN} \
 #        --NotebookApp.certfile=/etc/ssl/notebook/jupyter.pem"
-#   notebook:
-# #docker run --rm -p 10000:8888 -e JUPYTER_ENABLE_LAB=yes -v "$PWD":/home/jovyan/work jupyter/datascience-notebook:latest
-#     image: jupyter/datascience-notebook
-#     restart: always
-#     volumes:
-#      - ./data/jupyter:/home/jovyan/work
-#     environment:
-#      JUPITER_ENABLE_LAB: yes
-#     ports:
-#      - 8888:8888
