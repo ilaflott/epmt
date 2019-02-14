@@ -138,7 +138,10 @@ def get_job_var(var):
 
 def dump_settings(outf):
     print >> outf,"\nsettings.py:"
-    book = {key: value for key, value in settings.__dict__.iteritems() if not (key.startswith('__') or key.startswith('_'))}
+    book = {}
+    for key, value in settings.__dict__.iteritems():
+        if not (key.startswith('__') or key.startswith('_')):
+            book[key] = value
     for key, value in book.iteritems():
         print >> outf,"  {:<24}{:<56}".format(key, value)
 
