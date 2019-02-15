@@ -14,8 +14,16 @@ from pwd import getpwnam, getpwuid
 from glob import glob
 from sys import stdout, stderr
 import pickle
-import argparse
 
+# Handle crappy python 2.6 installations
+
+try:
+    import argparse
+except ImportError:
+    print >> stderr,"WARNING: system argparse not found, using our own."
+    print >> stderr,"WARNING: This python/OS is likely vulnerable to exploits!"
+    import argparse26 as argparse
+        
 def getgroups(user):
     gids = [g.gr_gid for g in getgrall() if user in g.gr_mem]
     gid = getpwnam(user).pw_gid
@@ -138,12 +146,15 @@ def get_job_var(var):
 
 def dump_settings(outf):
     print >> outf,"\nsettings.py:"
-    book = {}
+#    book = {}
     for key, value in settings.__dict__.iteritems():
         if not (key.startswith('__') or key.startswith('_')):
-            book[key] = value
-    for key, value in book.iteritems():
-        print >> outf,"  {:<24}{:<56}".format(key, value)
+            print >> outf,"%-24s%-56s" % (key,str(value))
+#        print >> outf,"  {:<24}{:<56}".format(key, value)
+
+
+#            book[key] = value
+#    for key, value in book.iteritems():
 
 def create_job_prolog(jobid, from_batch=[]):
 	metadata = {}
@@ -164,11 +175,30 @@ def create_job_prolog(jobid, from_batch=[]):
 
 	return metadata
 
+#
+#       WorkflowDB detection
+#
+
+def check_workflowdb_dict(d,pfx=""):
+    if all (k in d for k in (pfx+"name",pfx+"component",pfx+"oname",pfx+"jobname")):
+        return True
+    return False
+
+def check_and_add_workflowdb_envvars(metadata, env):
+    if check_workflowdb_dict(env):
+        logger.info("Detected name, component, oname and jobname! workflowDB!")
+        metadata["exp_name"] = env["name"]
+        metadata["exp_component"] = env["component"]
+        metadata["exp_oname"] = env["oname"]
+        metadata["exp_jobname"] = env["jobname"]
+    return metadata
+
 def create_job_epilog(prolog, from_batch=[], status="0"):
 	metadata={}
         env={}
 	ts=datetime.now()
 	stop_env=blacklist_filter(filter,**environ)
+# Compute differences in environment if detected
         start_env=prolog['job_pl_env']
         for e in start_env.keys():
             if e in stop_env.keys():
@@ -196,7 +226,11 @@ def create_job_epilog(prolog, from_batch=[], status="0"):
 	metadata['job_el_stop'] = ts
 	metadata['job_el_from_batch'] = from_batch
 	metadata['job_el_status'] = status
-
+# Merge start and stop environments
+        total_env = start_env.copy()
+        total_env.update(stop_env)
+# Check for Experiment related variables
+        metadata = check_and_add_workflowdb_envvars(metadata,total_env)
 	return metadata
 
 def write_job_prolog(jobdatafile,data):
@@ -214,8 +248,6 @@ def merge_two_dicts(x, y):
 
 def read_job_metadata_direct(file):
         data = pickle.load(file)
-        for d in data.keys():
-            logger.info("job_metadata[%s]: %s",d,data[d])
         logger.debug("Unpickled")
 	return data
 
@@ -224,7 +256,6 @@ def read_job_metadata(jobdatafile):
 	with open(jobdatafile,'rb') as file:
             return read_job_metadata_direct(file)
         return False
-
 
 def write_job_epilog(jobdatafile,metadata):
 	with open(jobdatafile,'w+b') as file:
@@ -272,7 +303,7 @@ def get_job_dir(hostname="", prefix=settings.output_prefix):
 
     return dirname
 
-def get_job_file(hostname="", prefix=settings.output_prefix):
+def get_job_metadata_file(hostname="", prefix=settings.output_prefix):
 	s = get_job_dir(hostname,prefix)
 	return s+"job_metadata"
 
@@ -296,7 +327,7 @@ def epmt_start(from_batch=[]):
 	dir = create_job_dir(get_job_dir())
 	if dir is False:
             exit(1)
-	file = get_job_file()
+	file = get_job_metadata_file()
         if path.exists(file):
             logger.error("%s already exists!",file)
             exit(1)
@@ -306,19 +337,38 @@ def epmt_start(from_batch=[]):
 	logger.debug("%s",metadata)
 	return metadata
 
+def epmt_dump_metadata_file(filelist):
+    if len(filelist) == 0:
+        set_job_globals()
+        filelist = [get_job_metadata_file()]
+
+    for file in filelist:
+        if not path.exists(file):
+            logger.error("%s does not exist!",file)
+            exit(1)
+        metadata = read_job_metadata(file)
+        if not metadata:
+            return False
+        for d in sorted(metadata.keys()):
+            print "%-24s%-56s" % (d,str(metadata[d]))
+    return True
+
 def epmt_stop(from_batch=[]):
 	jobid = get_job_id()
-	file = get_job_file()
+	file = get_job_metadata_file()
 	if file is False:
 		exit(1)
 	prolog = read_job_metadata(file)
 	if not prolog:
 		return False
 	logger.info("read prolog from %s",file);
+        if "job_el_stop" in prolog:
+            logger.error("%s is already complete!",file)
+            exit(1)
 	epilog = create_job_epilog(prolog,from_batch)
 	metadata = merge_two_dicts(prolog,epilog)
 	write_job_epilog(file,metadata)
-	logger.info("appended epilog to %s",file);
+	logger.info("rewrote %s with prolog + epilog",file);
 	logger.debug("%s",metadata)
 	return metadata
 
@@ -328,7 +378,7 @@ def epmt_test_start_stop(from_batch=[]):
 	environ['INSERTED_ENV'] = "Yessir!"
 	d2 = epmt_stop(from_batch)
  	d3 = merge_two_dicts(d1,d2)
- 	d4 = read_job_metadata(jobdatafile=get_job_file())
+ 	d4 = read_job_metadata(jobdatafile=get_job_metadata_file())
  	print "Test is",(d3 == d4)
 	if (d3 != d4):
 		exit(1)
@@ -360,7 +410,10 @@ def epmt_run(cmdline, wrapit=False, dry_run=False, debug=False):
 
         if wrapit:
             logger.info("Forcing epmt_start")
-            epmt_start()
+            if dry_run:
+                print "epmt start"
+            else:
+                epmt_start()
 
 	cmd = epmt_source(get_job_dir(), settings.PAPIEX_OPTIONS, papiex_debug=debug, monitor_debug=debug)
         cmd += " "+" ".join(cmdline)
@@ -369,10 +422,16 @@ def epmt_run(cmdline, wrapit=False, dry_run=False, debug=False):
 	if not dry_run:
             return_code = forkexecwait(cmd, shell=True)
             logger.info("Exit code %d",return_code)
+        else:
+            print cmd
+            return_code = 0
 
 	if wrapit:
             logger.info("Forcing epmt_stop")
-            epmt_stop()
+            if dry_run:
+                print "epmt stop"
+            else:
+                epmt_stop()
 
 	return return_code
 
@@ -386,7 +445,7 @@ def epmt_submit(input=settings.output_prefix,pattern=settings.input_pattern,dry_
 #    if not jobid:
 #        logger.error("Job ID is empty!");
 #        exit(1);
-    from epmt_job import get_filedict, ETL_job_dict
+    from epmt_job import get_filedict, ETL_job_dict, ETL_ppr
     import tarfile
 
     logger.debug("submit %s",input)
@@ -427,12 +486,15 @@ def epmt_submit(input=settings.output_prefix,pattern=settings.input_pattern,dry_
 
     if dry_run != True:
         j = ETL_job_dict(metadata,filedict)
+        if j and check_workflowdb_dict(metadata,pfx="exp_"):
+            e = ETL_ppr(metadata,j.jobid)
+            if not e:
+                exit(1)
     else:
-        j = True
-
-    if j:
         exit(0)
 
+    if not j:
+        exit(1)
     exit(1)
     
 
@@ -440,7 +502,7 @@ def epmt_submit(input=settings.output_prefix,pattern=settings.input_pattern,dry_
 
 if (__name__ == "__main__"):
 	parser=argparse.ArgumentParser(description="",add_help=False)
-	parser.add_argument('epmt_cmd',type=str,nargs="?",help="start, run, stop, submit");
+	parser.add_argument('epmt_cmd',type=str,nargs="?",help="start, run, stop, submit, dump");
 	parser.add_argument('other_args',nargs='*',help="Additional arguments from the calling scripts");
         parser.add_argument('-n', '--dry-run',action='store_true',help="Don't touch the database");
 	parser.add_argument('-d', '--debug',action='count',help="Increase level of verbosity/debug")
@@ -459,8 +521,8 @@ if (__name__ == "__main__"):
             basicConfig(level=DEBUG)
 
         if args.help or args.epmt_cmd == 'help':
-            parser.print_help()
-            dump_settings(stderr)
+            parser.print_help(stdout)
+            dump_settings(stdout)
             exit(0)
 
         if args.auto or args.bash or args.csh:
@@ -468,7 +530,9 @@ if (__name__ == "__main__"):
                 logger.error("Arguments only valid with 'run' command")
                 exit(1)
 
-	if args.epmt_cmd == 'start':
+	if args.epmt_cmd == 'dump':
+            epmt_dump_metadata_file(args.other_args)
+	elif args.epmt_cmd == 'start':
             set_job_globals(cmdline=args.other_args)
             epmt_start(from_batch=args.other_args)
 	elif args.epmt_cmd == 'stop':
@@ -499,6 +563,6 @@ if (__name__ == "__main__"):
 	elif args.epmt_cmd == 'source':
                 print epmt_source(False,settings.PAPIEX_OPTIONS,papiex_debug=(args.debug > 2),monitor_debug=(args.debug > 2))
         else:
-            logger.error("%s is an unknown command. See -h",args.epmt_cmd)
+            logger.error("Unknown command, %s. See -h for options.",args.epmt_cmd)
             exit(0)
 

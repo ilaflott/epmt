@@ -51,6 +51,7 @@ def lookup_or_create_job(jobid,user,metadata={}):
                     job.exitcode = metadata['job_el_status']
 # fix below
                     job.env_dict = metadata['job_pl_env']
+                    job.env_changes_dict = metadata['job_el_env_changes']
                     job.info_dict = metadata['job_pl_from_batch'] # end batch also
 ##	metadata['job_pl_id'] = global_job_id
 ##	metadata['job_pl_scriptname'] = global_job_scriptname
@@ -201,6 +202,22 @@ def extract_header_dict(jobdatafile,comment="#"):
     logger.debug("%d rows of header, dictionary is %s",rows,header_dict)
     return rows,header_dict
 
+#
+# Load experiment
+# 
+@db_session
+def ETL_ppr(metadata, jobid):
+    exp = PostProcessRun(component=metadata["exp_component"],
+                         name=metadata["exp_name"],
+                         jobname=metadata["exp_jobname"],
+                         oname=metadata["exp_oname"],
+                         user=Job[jobid].user,
+                         job=Job[jobid])
+    logger.info("Created PostProcessRun(%s,%s,%s,%s)",
+                metadata["exp_component"],
+                metadata["exp_name"],
+                metadata["exp_jobname"],
+                metadata["exp_oname"])
 #
 # Load the entire job into the DB, consisting of a job_metadata file and a dir of papiex files
 #
