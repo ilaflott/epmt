@@ -38,6 +38,7 @@ class Job(db.Entity):
 	info_dict = Optional(Json)
 # End generic template
 	env_dict = Optional(Json)
+	env_changes_dict = Optional(Json)
 	submit = Optional(datetime.datetime)
 	jobid = PrimaryKey(str)
 	jobname = Optional(str)
@@ -118,7 +119,7 @@ class User(db.Entity):
 	name = PrimaryKey(str)
 	id = Optional(int,unique=True)
 	groups = Set('Group')
-	exps = Set('Experiment')
+#	exps = Set('Experiment')
 	pprs = Set('PostProcessRun')
 	jobs = Set('Job')
 	processes = Set('Process')
