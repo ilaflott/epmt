@@ -435,11 +435,15 @@ def epmt_run(cmdline, wrapit=False, dry_run=False, debug=False):
 
 	return return_code
 
-def db_submit_job(metadata, filedict):
-    import epmt_job
-#    logger.info("%s",metadata)
-#    logger.info("%s",filedict)
-    return True
+def epmt_submit_list(stuff, dry_run=True, drop=False):
+    if dry_run and drop:
+        logger.error("You can't drop tables and do a dry run")
+        exit(1)
+        
+    from epmt_job import setup_orm_db
+    setup_orm_db(drop)
+    for f in stuff:
+        epmt_submit(input=f,dry_run=dry_run)
 
 def epmt_submit(input=settings.output_prefix,pattern=settings.input_pattern,dry_run=True):
 #    if not jobid:
@@ -448,7 +452,7 @@ def epmt_submit(input=settings.output_prefix,pattern=settings.input_pattern,dry_
     from epmt_job import get_filedict, ETL_job_dict, ETL_ppr
     import tarfile
 
-    logger.debug("submit %s",input)
+    logger.info("submit %s,%s",input,pattern)
 
     tar = None
     if (input.endswith("tar.gz") or input.endswith("tgz")):
@@ -484,18 +488,17 @@ def epmt_submit(input=settings.output_prefix,pattern=settings.input_pattern,dry_
         logger.error('Unsupported at the moment.')
         exit(1)
 
-    if dry_run != True:
-        j = ETL_job_dict(metadata,filedict)
-        if j and check_workflowdb_dict(metadata,pfx="exp_"):
-            e = ETL_ppr(metadata,j.jobid)
-            if not e:
-                exit(1)
-    else:
-        exit(0)
-
+    if dry_run:
+        return
+    
+    j = ETL_job_dict(metadata,filedict)
     if not j:
         exit(1)
-    exit(1)
+ 
+    if check_workflowdb_dict(metadata,pfx="exp_"):
+        e = ETL_ppr(metadata,j.jobid)
+        if not e:
+            exit(1)
     
 
 # Use of globals here is gross. FIX!
@@ -507,8 +510,9 @@ if (__name__ == "__main__"):
         parser.add_argument('-n', '--dry-run',action='store_true',help="Don't touch the database");
 	parser.add_argument('-d', '--debug',action='count',help="Increase level of verbosity/debug")
 	parser.add_argument('-h', '--help',action='store_true',help="Show this help message and exit")
-	parser.add_argument('-c', '--csh',action='store_true',help="C-shell mode")
-	parser.add_argument('-b', '--bash',action='store_true',help="Bash mode")
+        parser.add_argument('--drop',action='store_true',help="Drop all tables/data and recreate before importing")
+#	parser.add_argument('-c', '--csh',action='store_true',help="C-shell mode")
+#	parser.add_argument('-b', '--bash',action='store_true',help="Bash mode")
 	parser.add_argument('-a', '--auto',action='store_true',help="Do start/stop when running")
 
 	args = parser.parse_args()
@@ -525,10 +529,10 @@ if (__name__ == "__main__"):
             dump_settings(stdout)
             exit(0)
 
-        if args.auto or args.bash or args.csh:
-            if not args.epmt_cmd == "run":
-                logger.error("Arguments only valid with 'run' command")
-                exit(1)
+#        if args.auto or args.bash or args.csh:
+#            if not args.epmt_cmd == "run":
+#                logger.error("Arguments only valid with 'run' command")
+#                exit(1)
 
 	if args.epmt_cmd == 'dump':
             epmt_dump_metadata_file(args.other_args)
@@ -543,16 +547,13 @@ if (__name__ == "__main__"):
 #            epmt_test_start_stop(from_batch=args.other_args)
 	elif args.epmt_cmd == 'submit':
             # Not in job context
-            if len(args.other_args) == 0: 
+            if not args.other_args:
                 logger.info("Assuming we are inside a job!")
                 set_job_globals()
-                arg=get_job_dir()
-            elif len(args.other_args) == 1:
-                arg=args.other_args[0]
-            else: 
-                logger.error("1 or 0 arguments allowed to submit")
-                exit(1)
-            epmt_submit(input=arg,dry_run=args.dry_run)
+                a = [ get_job_dir() ]
+            else:
+                a = args.other_args
+            epmt_submit_list(a,dry_run=args.dry_run,drop=args.drop)
 	elif args.epmt_cmd == 'run':
             if args.other_args: 
                 set_job_globals()
