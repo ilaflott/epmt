@@ -34,7 +34,7 @@ def sortKeyFunc(s):
 def lookup_or_create_metricname(metricname):
 	mn = MetricName.get(name=metricname)
 	if mn is None:
-		logger.debug("Creating metric %s",metricname)
+		logger.info("Creating metricname %s",metricname)
 		mn = MetricName(name=metricname)
 	return mn
 
@@ -42,10 +42,11 @@ def lookup_or_create_metricname(metricname):
 def lookup_or_create_job(jobid,user,metadata={}):
 	job = Job.get(jobid=jobid)
 	if job is None:
-		logger.debug("Creating job %s",jobid)
+		logger.info("Creating job %s",jobid)
 		job = Job(jobid=jobid,user=user)
                 if metadata:
-                    assert metadata['job_pl_id'] == jobid
+                    if metadata['job_pl_id'] != jobid:
+                        logger.warning("metadata job id did not match job id %s vs %s, continuing anyways...",metadata['job_pl_id'],jobid)
                     job.jobname = metadata['job_pl_jobname']
                     job.jobscriptname = metadata['job_pl_scriptname']
                     job.exitcode = metadata['job_el_status']
@@ -53,6 +54,9 @@ def lookup_or_create_job(jobid,user,metadata={}):
                     job.env_dict = metadata['job_pl_env']
                     job.env_changes_dict = metadata['job_el_env_changes']
                     job.info_dict = metadata['job_pl_from_batch'] # end batch also
+        else:
+            logger.info("Found job %s",jobid)
+
 ##	metadata['job_pl_id'] = global_job_id
 ##	metadata['job_pl_scriptname'] = global_job_scriptname
 ##	metadata['job_pl_jobname'] = global_job_name
@@ -76,7 +80,7 @@ def lookup_or_create_job(jobid,user,metadata={}):
 def lookup_or_create_host(hostname):
 	host = Host.get(name=hostname)
 	if host is None:
-		logger.debug("Creating host %s",hostname)
+		logger.info("Creating host %s",hostname)
 		host = Host(name=hostname)
 	return host
 
@@ -84,7 +88,7 @@ def lookup_or_create_host(hostname):
 def lookup_or_create_user(username):
 	user = User.get(name=username)
 	if user is None:
-		logger.debug("Creating user %s",username)
+		logger.info("Creating user %s",username)
 		user = User(name=username)
 	return user
 
@@ -102,7 +106,7 @@ def lookup_or_create_tags(tagnames):
     for tagname in tagnames:
 	tag = Tag.get(name=tagname)
 	if tag is None:
-            logger.debug("Creating tag %s",tagname)
+            logger.info("Creating tag %s",tagname)
             tag = Tag(name=tagname)
         retval.append(tag)
     return retval
@@ -111,14 +115,14 @@ def lookup_or_create_tags(tagnames):
 def lookup_or_create_queue(queuename):
 	queue = Queue.get(name=queuename)
 	if queue is None:
-		logger.debug("Creating queue %s",queuename)
+		logger.info("Creating queue %s",queuename)
 		queue = Queue(name=queuename)
 	return queue
 @db_session
 def lookup_or_create_account(accountname):
 	account = account.get(name=accountname)
 	if account is None:
-		logger.debug("Creating account %s",accountname)
+		logger.info("Creating account %s",accountname)
 		account = account(name=accountname)
 	return account
 
@@ -202,22 +206,31 @@ def extract_header_dict(jobdatafile,comment="#"):
     logger.debug("%d rows of header, dictionary is %s",rows,header_dict)
     return rows,header_dict
 
+#def check_experiment_in_metadata(metadata):
+#    for i in ("exp_name","exp_component","exp_oname","exp_jobname"):
+#        if i not in metadata:
+#            return False
+#    return True
 #
 # Load experiment
 # 
 @db_session
 def ETL_ppr(metadata, jobid):
+#    if not check_experiment_in_metadata(metadata):
+#        return None
+
+    logger.info("Creating PostProcessRun(%s,%s,%s,%s)",
+                metadata["exp_component"],
+                metadata["exp_name"],
+                metadata["exp_jobname"],
+                metadata["exp_oname"])
     exp = PostProcessRun(component=metadata["exp_component"],
                          name=metadata["exp_name"],
                          jobname=metadata["exp_jobname"],
                          oname=metadata["exp_oname"],
                          user=Job[jobid].user,
                          job=Job[jobid])
-    logger.info("Created PostProcessRun(%s,%s,%s,%s)",
-                metadata["exp_component"],
-                metadata["exp_name"],
-                metadata["exp_jobname"],
-                metadata["exp_oname"])
+    return exp
 #
 # Load the entire job into the DB, consisting of a job_metadata file and a dir of papiex files
 #
@@ -249,12 +262,14 @@ def ETL_job_dict(metadata, filedict):
         'pgid':                       float,
         'sid':                        float,
         'numtids':                    float }
+
+    standards = [ "exename","path","args","pid","generation","ppid","pgid","sid","numtids","tid","start","end" ]
+
     then = datetime.datetime.now()
     csvt = datetime.timedelta()
-    ponyt = datetime.timedelta()
     earliest_process = datetime.datetime.utcnow()
     latest_process = datetime.datetime.fromtimestamp(0)
-    stdout.write('-')
+#    stdout.write('-')
 # Hostname, job, metricname objects
 # Iterate over hosts
     logger.debug("Iterating over hosts for job ID %s: %s",jobid,filedict.keys())
@@ -271,23 +286,19 @@ def ETL_job_dict(metadata, filedict):
 	for f in files:
             logger.debug("Processing file %s",f)
 #
-            stdout.write('\b')            # erase the last written char
-            stdout.write(spinner.next())  # write the next character
-            stdout.flush()                # flush stdout buffer (actual character display)
+#            stdout.write('\b')            # erase the last written char
+#            stdout.write(spinner.next())  # write the next character
+#            stdout.flush()                # flush stdout buffer (actual character display)
 #
+            csv = datetime.datetime.now()
             rows,header = extract_header_dict(f)
             tags = lookup_or_create_tags(header['tags'])
 
-            csv = datetime.datetime.now()
             pf = read_csv(f,
                           sep=",",
 #                          dtype=dtype_dic, 
                           converters=conv_dic,
                           skiprows=rows, escapechar='\\')
-            csvt += datetime.datetime.now() - csv
-#            print pf['path'][0]
-#            print pf['args'][0]
-#            print pf['pid'][0]
 
             if pf.empty:
                 logger.error("Something wrong with file %s, readcsv returned empty, skipping...",f)
@@ -296,12 +307,9 @@ def ETL_job_dict(metadata, filedict):
 # Lookup or create the necessary objects, only happens once!
             if not mns:
                 for metric in pf.columns[settings.metrics_offset:].values.tolist():
-                    logger.info("Creating metric %s",metric)
                     mns[metric] = lookup_or_create_metricname(metric)
 #
-            pony = datetime.datetime.now()
             p = load_process_from_pandas(pf, h, j, u, tags, mns)
-            ponyt += datetime.datetime.now() - pony
             if not p:
                 logger.error("Failed loading from pandas, file %s!",f);
                 continue
@@ -316,16 +324,16 @@ def ETL_job_dict(metadata, filedict):
 #
             j.processes.add(p)
             cnt += 1
-            if cntmax/100 != 0:
-                if cnt % (cntmax/100) == 0:
-                    logger.info("Did %d of %d...",cnt,cntmax)
+            csvt += datetime.datetime.now() - csv
+            if cnt % 1000 == 0:
+                    logger.info("Did %d of %d...%.2f/sec",cnt,cntmax,cnt/csvt.total_seconds())
 #
 #
 #
         if cnt:
             didsomething = True
 
-    stdout.write('\b')            # erase the last written char
+#    stdout.write('\b')            # erase the last written char
 
     if not didsomething:
         logger.error("Something went wrong")
@@ -342,12 +350,12 @@ def ETL_job_dict(metadata, filedict):
     logger.info("Earliest process start: %s",j.start)
     logger.info("Latest process end: %s",j.end)
     logger.info("Computed duration of job: %f us, %.2f m",j.duration,j.duration/60000000)
-    logger.info("%d processes imported", len(j.processes))
-    logger.info("%f processes per second",len(j.processes)/float((datetime.datetime.now() - then).total_seconds()))
-    logger.info("Import took %s seconds",datetime.datetime.now() - then)
-    logger.info("load_process_from_pandas() took %s", ponyt)
-    logger.info("read_csv took %s",csvt)
-    logger.info(j)
+    now = datetime.datetime.now() 
+    logger.info("Imported %d processes, %d threads", 
+                len(j.processes),len(j.processes.threads))
+    logger.info("Import took %s, %f processes per second",
+                now - then,len(j.processes)/float((now-then).total_seconds()))
+                
     return j
 
 def get_filedict(dirname,pattern=settings.input_pattern,tar=False):
@@ -391,20 +399,26 @@ def get_filedict(dirname,pattern=settings.input_pattern,tar=False):
 
     return filedict
 
-def setup_orm_db(drop=False):
-    logger.info("Using DB: %s", settings.db_params)
-    db.bind(**settings.db_params)
+def setup_orm_db(drop=False,create=True):
+    logger.info("Binding to DB: %s", settings.db_params)
+    try:
+        db.bind(**settings.db_params)
+    except Exception as e:
+        logger.error("%s",str(e).strip())
+        logger.error("Try creating the EPMT database!")
+        exit(1)
+
+    logger.info("Generating mapping")
     db.generate_mapping(create_tables=True)
     if drop:
+        logger.warning("DROPPING ALL DATA AND TABLES!")
         db.drop_all_tables(with_all_data=True)
         db.create_tables()
 
 #
 #
 #
-if (__name__ != "__main__"):
-    setup_orm_db(drop=False)
-else:
+if (__name__ == "__main__"):
     import argparse
     from epmt_cmds import read_job_metadata, dump_settings
 
