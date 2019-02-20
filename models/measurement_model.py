@@ -7,20 +7,20 @@ from .general import db
 import datetime
 
 class Tag(db.Entity):
-	time = Required(datetime.datetime, default=datetime.datetime.utcnow())
+#	time = Required(datetime.datetime, default=datetime.datetime.utcnow())
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
-	info_dict = Optional(Json)
+#	info_dict = Optional(Json)
 	# end template
-	name = Required(str)
-	jobs = Set('Job')
+	name = PrimaryKey(str)
 	processes = Set('Process')
+	jobs = Set('Job')
 #
 # Removing/changing hosts needs to be addressed
 #
 class Host(db.Entity):
-	time = Required(datetime.datetime, default=datetime.datetime.utcnow())
+#	time = Required(datetime.datetime, default=datetime.datetime.utcnow())
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
-	info_dict = Optional(Json)
+#	info_dict = Optional(Json)
 	# end template
 	name = PrimaryKey(str)
 	processes = Set('Process')
@@ -56,12 +56,12 @@ class Job(db.Entity):
 
 class Process(db.Entity):
 # Rollup entries, computed at insert time
-	start = Required(datetime.datetime, default=datetime.datetime.utcnow())
+	start = Required(datetime.datetime, default=datetime.datetime.fromtimestamp(0))
 	end = Required(datetime.datetime, default=datetime.datetime.fromtimestamp(0))
 	duration = Required(float, default=0)
 # End rollup
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
-	info_dict = Optional(Json)
+#	info_dict = Optional(Json)
 # End generic template
 	tags = Set('Tag')
 	job = Required('Job')
@@ -73,7 +73,7 @@ class Process(db.Entity):
 	exename = Required(str)
 	path = Required(str)
 	args = Optional(str)
-	env_dict = Optional(Json)
+#	env_dict = Optional(Json)
 # End above
 	pid = Required(int)
 	ppid = Required(int)
@@ -88,8 +88,8 @@ class Thread(db.Entity):
 	end = Required(datetime.datetime)
 # This is computed at insert time
 	duration = Required(float)
-	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
-	info_dict = Optional(Json)
+#	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
+#	info_dict = Optional(Json)
 # End generic template
 	tid = Required(int)
 	metrics = Set('Metric')

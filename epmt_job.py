@@ -249,10 +249,12 @@ def ETL_job_dict(metadata, filedict):
     logger.debug("Iterating over %d hosts for job ID %s, user %s...",len(filedict.keys()),jobid,username)
     u = lookup_or_create_user(username)
     j = lookup_or_create_job(jobid,u,metadata)
-    mns = {}
     didsomething = False
     oldcomment = None
+    mns = {}
     tags = []
+    all_tags = []
+    all_procs = []
 
     for hostname, files in filedict.iteritems():
         logger.debug("Processing host %s",hostname)
@@ -270,9 +272,12 @@ def ETL_job_dict(metadata, filedict):
             rows,comment = extract_tags_from_comment_line(f)
 # Check comment/tags cache
             if comment != oldcomment:
+                logger.info("Missed tag cache %s",comment)
                 tags = lookup_or_create_tags([comment])
                 oldcomment = comment
-                
+# Merge all tags into one list for job
+                all_tags = list(set().union(all_tags,tags))
+
             pf = read_csv(f,
                           sep=",",
 #                          dtype=dtype_dic, 
@@ -291,12 +296,7 @@ def ETL_job_dict(metadata, filedict):
             if not p:
                 logger.error("Failed loading from pandas, file %s!",f);
                 continue
-# Add tags to process and job        
-            if tags:
-                for t in tags:
-                    j.tags.add(t)
-# Add process to job
-            j.processes.add(p)
+            all_procs.append(p)
 # Compute duration of job
             if (p.start < earliest_process):
                 earliest_process = p.start
@@ -308,8 +308,6 @@ def ETL_job_dict(metadata, filedict):
             if cnt % 1000 == 0:
                     logger.info("Did %d of %d...%.2f/sec",cnt,cntmax,cnt/csvt.total_seconds())
 #
-#
-#
         if cnt:
             didsomething = True
 
@@ -318,7 +316,14 @@ def ETL_job_dict(metadata, filedict):
     if not didsomething:
         logger.error("Something went wrong")
         return False
-# Update duration of job
+# Add sum of tags to job        
+    if all_tags:
+        logger.info("Adding %d tags to job",len(all_tags))
+        j.tags.add(all_tags)
+# Add all processes to job
+    logger.info("Adding %d processes to job",len(all_procs))
+    j.processes.add(all_procs)
+# Update start/end/duration of job
     j.start = earliest_process
     j.end = latest_process
     d = j.end - j.start
