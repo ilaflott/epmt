@@ -15,19 +15,13 @@ from glob import glob
 from sys import stdout, stderr
 import pickle
 
-# Handle crappy python 2.6 installations
-
-try:
-    import argparse
-except ImportError:
-    print >> stderr,"WARNING: system argparse not found, using our own."
-    print >> stderr,"WARNING: This python/OS is likely vulnerable to exploits!"
-    import argparse26 as argparse
-        
 def getgroups(user):
     gids = [g.gr_gid for g in getgrall() if user in g.gr_mem]
+    logger.debug("Group ids: %s",str(gids))
     gid = getpwnam(user).pw_gid
-    gids.append(getgrgid(gid).gr_gid)
+    logger.debug("My id: %s",gid)
+    if gid not in gids:
+        gids.append(getgrgid(gid).gr_gid)
     return [getgrgid(gid).gr_name for gid in gids]
 
 # Done later
@@ -145,6 +139,7 @@ def get_job_var(var):
 	return a
 
 def dump_settings(outf):
+    print getgroups("philipmucci")
     print >> outf,"\nsettings.py:"
 #    book = {}
     for key, value in settings.__dict__.iteritems():
@@ -494,38 +489,28 @@ def epmt_submit(input=settings.output_prefix,pattern=settings.input_pattern,dry_
     j = ETL_job_dict(metadata,filedict)
     if not j:
         exit(1)
- 
+    logger.info("Committed job %s to database",j.jobid)
+
     if check_workflowdb_dict(metadata,pfx="exp_"):
         e = ETL_ppr(metadata,j.jobid)
         if not e:
             exit(1)
-    
-
-# Use of globals here is gross. FIX!
-
-if (__name__ == "__main__"):
-	parser=argparse.ArgumentParser(description="",add_help=False)
-	parser.add_argument('epmt_cmd',type=str,nargs="?",help="start, run, stop, submit, dump");
-	parser.add_argument('other_args',nargs='*',help="Additional arguments from the calling scripts");
-        parser.add_argument('-n', '--dry-run',action='store_true',help="Don't touch the database");
-	parser.add_argument('-d', '--debug',action='count',help="Increase level of verbosity/debug")
-	parser.add_argument('-h', '--help',action='store_true',help="Show this help message and exit")
-        parser.add_argument('--drop',action='store_true',help="Drop all tables/data and recreate before importing")
-#	parser.add_argument('-c', '--csh',action='store_true',help="C-shell mode")
-#	parser.add_argument('-b', '--bash',action='store_true',help="Bash mode")
-	parser.add_argument('-a', '--auto',action='store_true',help="Do start/stop when running")
-
-	args = parser.parse_args()
-
+        logger.info("Committed post process run to database")    
+#
+# depends on args being global
+#
+def epmt_entrypoint(args, help):
         if not args.debug:
-            basicConfig(level=WARNING)
+            basicConfig(level=ERROR)
         elif args.debug == 1:
+            basicConfig(level=WARNING)
+        elif args.debug == 2:
             basicConfig(level=INFO)
-        elif args.debug >= 2:
+        else:
             basicConfig(level=DEBUG)
 
-        if args.help or args.epmt_cmd == 'help':
-            parser.print_help(stdout)
+        if args.help or args.epmt_cmd == 'help' or not args.epmt_cmd:
+            help(stdout)
             dump_settings(stdout)
             exit(0)
 
@@ -535,29 +520,29 @@ if (__name__ == "__main__"):
 #                exit(1)
 
 	if args.epmt_cmd == 'dump':
-            epmt_dump_metadata_file(args.other_args)
+            epmt_dump_metadata_file(args.epmt_cmd_args)
 	elif args.epmt_cmd == 'start':
-            set_job_globals(cmdline=args.other_args)
-            epmt_start(from_batch=args.other_args)
+            set_job_globals(cmdline=args.epmt_cmd_args)
+            epmt_start(from_batch=args.epmt_cmd_args)
 	elif args.epmt_cmd == 'stop':
-            set_job_globals(cmdline=args.other_args)
-            epmt_stop(from_batch=args.other_args)
+            set_job_globals(cmdline=args.epmt_cmd_args)
+            epmt_stop(from_batch=args.epmt_cmd_args)
 #	elif args.epmt_cmd == 'test':
-#            set_job_globals(cmdline=args.other_args)
-#            epmt_test_start_stop(from_batch=args.other_args)
+#            set_job_globals(cmdline=args.epmt_cmd_args)
+#            epmt_test_start_stop(from_batch=args.epmt_cmd_args)
 	elif args.epmt_cmd == 'submit':
             # Not in job context
-            if not args.other_args:
+            if not args.epmt_cmd_args:
                 logger.info("Assuming we are inside a job!")
                 set_job_globals()
                 a = [ get_job_dir() ]
             else:
-                a = args.other_args
+                a = args.epmt_cmd_args
             epmt_submit_list(a,dry_run=args.dry_run,drop=args.drop)
 	elif args.epmt_cmd == 'run':
-            if args.other_args: 
+            if args.epmt_cmd_args: 
                 set_job_globals()
-                epmt_run(args.other_args,wrapit=args.auto,dry_run=args.dry_run,debug=(args.debug > 2))
+                epmt_run(args.epmt_cmd_args,wrapit=args.auto,dry_run=args.dry_run,debug=(args.debug > 2))
             else:
                 logger.error("No command given")
                 exit(1)
@@ -566,4 +551,8 @@ if (__name__ == "__main__"):
         else:
             logger.error("Unknown command, %s. See -h for options.",args.epmt_cmd)
             exit(0)
+
+# Use of globals here is gross. FIX!
+# 
+# if (__name__ == "__main__"):
 

@@ -30,15 +30,15 @@ def sortKeyFunc(s):
     t2 = t.split("-")
     return int(t2[0]+t2[1])
 
-@db_session
 def lookup_or_create_metricname(metricname):
-	mn = MetricName.get(name=metricname)
-	if mn is None:
-		logger.info("Creating metricname %s",metricname)
-		mn = MetricName(name=metricname)
-	return mn
+    mn = MetricName.get(name=metricname)
+    if mn is None:
+        logger.info("Creating metricname %s",metricname)
+        mn = MetricName(name=metricname)
+    else:
+        logger.info("Found metricname %s",metricname)
+    return mn
 
-@db_session
 def lookup_or_create_job(jobid,user,metadata={}):
 	job = Job.get(jobid=jobid)
 	if job is None:
@@ -55,7 +55,7 @@ def lookup_or_create_job(jobid,user,metadata={}):
                     job.env_changes_dict = metadata['job_el_env_changes']
                     job.info_dict = metadata['job_pl_from_batch'] # end batch also
         else:
-            logger.info("Found job %s",jobid)
+            logger.debug("Found job %s",jobid)
 
 ##	metadata['job_pl_id'] = global_job_id
 ##	metadata['job_pl_scriptname'] = global_job_scriptname
@@ -76,31 +76,24 @@ def lookup_or_create_job(jobid,user,metadata={}):
                     
 	return job
 
-@db_session
 def lookup_or_create_host(hostname):
-	host = Host.get(name=hostname)
-	if host is None:
-		logger.info("Creating host %s",hostname)
-		host = Host(name=hostname)
-	return host
+    host = Host.get(name=hostname)
+    if host is None:
+        logger.info("Creating host %s",hostname)
+        host = Host(name=hostname)
+    else:
+        logger.debug("Found host %s",hostname)
+    return host
 
-@db_session
 def lookup_or_create_user(username):
-	user = User.get(name=username)
-	if user is None:
-		logger.info("Creating user %s",username)
-		user = User(name=username)
-	return user
+    user = User.get(name=username)
+    if user is None:
+        logger.info("Creating user %s",username)
+        user = User(name=username)
+    else:
+        logger.debug("Found user %s",username)
+    return user
 
-@db_session
-def lookup_or_create_group(groupname):
-	group = Group.get(name=groupname)
-	if group is None:
-		logger.debug("Creating group %s",groupname)
-		group = Group(name=groupname)
-	return group
-
-@db_session
 def lookup_or_create_tags(tagnames):
     retval=[]
     for tagname in tagnames:
@@ -108,25 +101,11 @@ def lookup_or_create_tags(tagnames):
 	if tag is None:
             logger.info("Creating tag %s",tagname)
             tag = Tag(name=tagname)
+        else:
+            logger.debug("Found tag %s",tagname)
         retval.append(tag)
     return retval
 
-@db_session
-def lookup_or_create_queue(queuename):
-	queue = Queue.get(name=queuename)
-	if queue is None:
-		logger.info("Creating queue %s",queuename)
-		queue = Queue(name=queuename)
-	return queue
-@db_session
-def lookup_or_create_account(accountname):
-	account = account.get(name=accountname)
-	if account is None:
-		logger.info("Creating account %s",accountname)
-		account = account(name=accountname)
-	return account
-
-@db_session
 def load_process_from_pandas(df, h, j, u, tags, mns):
 # Assumes all processes are from same host
 #	dprint("Creating process",str(df['pid'][0]),"gen",str(df['generation'][0]),"exename",df['exename'][0])
@@ -145,44 +124,42 @@ def load_process_from_pandas(df, h, j, u, tags, mns):
                         job=j,
                         host=h,
                         user=u)
-        except ValueError:
-            logger.error("Data conversion error, likely corrupted CSV");
+        except Exception as e:
+            logger.error("%s",e)
+            logger.error("Corrupted CSV or invalid input type");
             return None
 
-# Add tags to process and job        
-        for t in tags:
-            p.tags.add(t)
-            j.tags.add(t)
-
-	# Add all threads
+# Add all threads in process
+        threads = []
 	for index, row in df.iterrows():
-#		dprint "Adding thread TID: "+str(row['tid']),row['start']
-#		print index,row['start']
-#		start = datetime.datetime.utcfromtimestamp(row['start'])
+# Add Thread to process
 		start = Timestamp(row['start'], unit='us')
-		if (start < earliest_thread):
-			earliest_thread = start
-#		start = start.tz_localize(UTC)
 		end = Timestamp(row['end'], unit='us')
-		if (end > latest_thread):
-			latest_thread = end
-#		end = end.tz_localize(UTC)
 		duration = end-start
 		t = Thread(tid=row['tid'],start=start,end=end,duration=float(duration.total_seconds())*float(1000000),process=p)
                 if t is None:
                     logger.error("Thread duration error, likely corrupted CSV");
                     return None
-
+                threads.append(t)
+# Add Metrics to thread
+                metrics = []
 		for metricname,obj in mns.iteritems():
                     value = row.get(metricname)
                     if value is None:
                         logger.error("Key %s not found in data",metricname)
                         return None
                     m = Metric(metricname=obj,value=value,thread=t)
-                    t.metrics.add(m)
-		p.threads.add(t)
-
-        
+                    metrics.append(m)
+                t.metrics.add(metrics)
+# Compute wallclock duration for job from threads
+  		if (start < earliest_thread):
+			earliest_thread = start
+		if (end > latest_thread):
+			latest_thread = end
+# Record tags, threads, start, end, wall clock duration for process
+        if tags:
+            p.tags.add(tags)
+        p.threads.add(threads)
 	p.start = earliest_thread
 	p.end = latest_thread
 	p.duration = float((latest_thread - earliest_thread).total_seconds())*float(1000000)
@@ -193,18 +170,15 @@ def load_process_from_pandas(df, h, j, u, tags, mns):
 # Extract a dictionary from the rows of header on the file
 #
 
-def extract_header_dict(jobdatafile,comment="#"):
+def extract_tags_from_comment_line(jobdatafile,comment="#"):
     rows=0
-    header_dict={}
     with open(jobdatafile,'r') as file:
-        for line in file:
-            line = line.strip()
-            if line.startswith(comment):
-                rows += 1
+        line = file.readline().strip()
+        if line.startswith(comment):
+            rows += 1
 # We could extend this here to support multiple tags                
-                header_dict["tags"]=[ line[1:].lstrip() ]
-    logger.debug("%d rows of header, dictionary is %s",rows,header_dict)
-    return rows,header_dict
+            return rows, line[1:].lstrip()
+    return rows, None
 
 #def check_experiment_in_metadata(metadata):
 #    for i in ("exp_name","exp_component","exp_oname","exp_jobname"):
@@ -272,11 +246,13 @@ def ETL_job_dict(metadata, filedict):
 #    stdout.write('-')
 # Hostname, job, metricname objects
 # Iterate over hosts
-    logger.debug("Iterating over hosts for job ID %s: %s",jobid,filedict.keys())
+    logger.debug("Iterating over %d hosts for job ID %s, user %s...",len(filedict.keys()),jobid,username)
     u = lookup_or_create_user(username)
     j = lookup_or_create_job(jobid,u,metadata)
     mns = {}
     didsomething = False
+    oldcomment = None
+    tags = []
 
     for hostname, files in filedict.iteritems():
         logger.debug("Processing host %s",hostname)
@@ -291,15 +267,17 @@ def ETL_job_dict(metadata, filedict):
 #            stdout.flush()                # flush stdout buffer (actual character display)
 #
             csv = datetime.datetime.now()
-            rows,header = extract_header_dict(f)
-            tags = lookup_or_create_tags(header['tags'])
-
+            rows,comment = extract_tags_from_comment_line(f)
+# Check comment/tags cache
+            if comment != oldcomment:
+                tags = lookup_or_create_tags([comment])
+                oldcomment = comment
+                
             pf = read_csv(f,
                           sep=",",
 #                          dtype=dtype_dic, 
                           converters=conv_dic,
                           skiprows=rows, escapechar='\\')
-
             if pf.empty:
                 logger.error("Something wrong with file %s, readcsv returned empty, skipping...",f)
                 continue
@@ -308,21 +286,23 @@ def ETL_job_dict(metadata, filedict):
             if not mns:
                 for metric in pf.columns[settings.metrics_offset:].values.tolist():
                     mns[metric] = lookup_or_create_metricname(metric)
-#
+# Make Process/Thread/Metrics objects in DB
             p = load_process_from_pandas(pf, h, j, u, tags, mns)
             if not p:
                 logger.error("Failed loading from pandas, file %s!",f);
                 continue
-
+# Add tags to process and job        
+            if tags:
+                for t in tags:
+                    j.tags.add(t)
+# Add process to job
+            j.processes.add(p)
+# Compute duration of job
             if (p.start < earliest_process):
                 earliest_process = p.start
             if (p.end > latest_process):
                 latest_process = p.end
-
-#
-#
-#
-            j.processes.add(p)
+# Debugging/progress
             cnt += 1
             csvt += datetime.datetime.now() - csv
             if cnt % 1000 == 0:
@@ -338,7 +318,7 @@ def ETL_job_dict(metadata, filedict):
     if not didsomething:
         logger.error("Something went wrong")
         return False
-
+# Update duration of job
     j.start = earliest_process
     j.end = latest_process
     d = j.end - j.start
@@ -351,9 +331,9 @@ def ETL_job_dict(metadata, filedict):
     logger.info("Latest process end: %s",j.end)
     logger.info("Computed duration of job: %f us, %.2f m",j.duration,j.duration/60000000)
     now = datetime.datetime.now() 
-    logger.info("Imported %d processes, %d threads", 
+    logger.info("Staged import of %d processes, %d threads", 
                 len(j.processes),len(j.processes.threads))
-    logger.info("Import took %s, %f processes per second",
+    logger.info("Staged import took %s, %f processes per second",
                 now - then,len(j.processes)/float((now-then).total_seconds()))
                 
     return j
@@ -405,11 +385,17 @@ def setup_orm_db(drop=False,create=True):
         db.bind(**settings.db_params)
     except Exception as e:
         logger.error("%s",str(e).strip())
-        logger.error("Try creating the EPMT database!")
+        logger.error("You probably need to create the EPMT database!")
         exit(1)
 
-    logger.info("Generating mapping")
-    db.generate_mapping(create_tables=True)
+    try:
+        logger.info("Generating mapping from schema...")
+        db.generate_mapping(create_tables=True)
+    except Exception as e:
+        logger.error("%s",str(e).strip())
+        logger.error("You probably need to drop and recreate the EPMT database!")
+        exit(1)
+        
     if drop:
         logger.warning("DROPPING ALL DATA AND TABLES!")
         db.drop_all_tables(with_all_data=True)

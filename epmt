@@ -1,4 +1,27 @@
-#!/bin/bash
-set -Eeuo pipefail
+#!/usr/bin/env python
 
-python ./epmt_cmds.py $*
+if (__name__ == "__main__"):
+    # Handle crappy python 2.6 installations
+    try:
+        import argparse
+    except ImportError:
+        print >> stderr,"WARNING: system argparse not found, using our own."
+        print >> stderr,"WARNING: This python/OS is likely vulnerable to exploits!"
+        import argparse26 as argparse
+        
+    parser = argparse.ArgumentParser(description="",add_help=False)
+    parser.add_argument('epmt_cmd',type=str,nargs="?",help="start, run, stop, submit, dump");
+    parser.add_argument('epmt_cmd_args',nargs='*',help="Additional arguments, command dependent");
+    parser.add_argument('-n', '--dry-run',action='store_true',help="Don't touch the database");
+    parser.add_argument('-d', '--debug',action='count',help="Increase level of verbosity/debug")
+    parser.add_argument('-h', '--help',action='store_true',help="Show this help message and exit")
+    #	parser.add_argument('-c', '--csh',action='store_true',help="C-shell mode")
+    #	parser.add_argument('-b', '--bash',action='store_true',help="Bash mode")
+    parser.add_argument('-a', '--auto',action='store_true',help="Do start/stop when running")
+    parser.add_argument('--drop',action='store_true',help="Drop all tables/data and recreate before importing")
+    args = parser.parse_args()
+    from epmt_cmds import epmt_entrypoint
+    exit(epmt_entrypoint(args,parser.print_help))
+else:
+    print >> stderr,"ERROR: This module cannot be imported."
+    exit(1)
