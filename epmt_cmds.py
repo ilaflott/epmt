@@ -139,7 +139,6 @@ def get_job_var(var):
 	return a
 
 def dump_settings(outf):
-    print getgroups("philipmucci")
     print >> outf,"\nsettings.py:"
 #    book = {}
     for key, value in settings.__dict__.iteritems():
