@@ -107,11 +107,11 @@ def set_job_globals(cmdline=[]):
 
 	global_job_groupnames = getgroups(global_job_username)
 		
-	logger.debug("ID: %s",global_job_id)
-	logger.debug("NAME: %s",global_job_name)
-	logger.debug("SCRIPTNAME: %s",global_job_scriptname)
-	logger.debug("USER: %s",global_job_username)
-	logger.debug("GROUPS: %s",global_job_groupnames)
+	logger.info("ID: %s",global_job_id)
+	logger.info("NAME: %s",global_job_name)
+	logger.info("SCRIPTNAME: %s",global_job_scriptname)
+	logger.info("USER: %s",global_job_username)
+	logger.info("GROUPS: %s",global_job_groupnames)
 	return global_job_id
 
 
@@ -138,17 +138,18 @@ def get_job_var(var):
 		return False
 	return a
 
-def dump_settings(outf):
-    print >> outf,"\nsettings.py:"
+def dump_config(outf):
+    print >> outf,"\nsettings.py (overridden by below env. vars):"
 #    book = {}
-    for key, value in settings.__dict__.iteritems():
+    for key, value in sorted(settings.__dict__.iteritems()):
         if not (key.startswith('__') or key.startswith('_')):
             print >> outf,"%-24s%-56s" % (key,str(value))
-#        print >> outf,"  {:<24}{:<56}".format(key, value)
-
-
-#            book[key] = value
-#    for key, value in book.iteritems():
+    print >> outf,"\nenvironment variables (overrides settings.py):"
+    for v in ["PAPIEX_OUTPUT"
+# "PAPIEX_OPTIONS","PAPIEX_DEBUG","PAPI_DEBUG","MONITOR_DEBUG","LIBPFM_DEBUG"
+              ]:
+        if v in environ:
+            print >> outf,"%-24s%-56s" % (v,environ[v])
 
 def create_job_prolog(jobid, from_batch=[]):
 	metadata = {}
@@ -271,7 +272,7 @@ def get_job_id():
 	global global_job_id
 	return(global_job_id)
 
-def get_job_dir(hostname="", prefix=settings.output_prefix):
+def get_job_dir(hostname="", prefix=settings.papiex_output):
     global global_job_id
 
     if not prefix.endswith("/"):
@@ -297,7 +298,7 @@ def get_job_dir(hostname="", prefix=settings.output_prefix):
 
     return dirname
 
-def get_job_metadata_file(hostname="", prefix=settings.output_prefix):
+def get_job_metadata_file(hostname="", prefix=settings.papiex_output):
 	s = get_job_dir(hostname,prefix)
 	return s+"job_metadata"
 
@@ -409,7 +410,7 @@ def epmt_run(cmdline, wrapit=False, dry_run=False, debug=False):
             else:
                 epmt_start()
 
-	cmd = epmt_source(get_job_dir(), settings.PAPIEX_OPTIONS, papiex_debug=debug, monitor_debug=debug)
+	cmd = epmt_source(get_job_dir(), settings.papiex_options, papiex_debug=debug, monitor_debug=debug)
         cmd += " "+" ".join(cmdline)
 
 	logger.info("Executing(%s)",cmd)
@@ -436,10 +437,15 @@ def epmt_submit_list(stuff, dry_run=True, drop=False):
         
     from epmt_job import setup_orm_db
     setup_orm_db(drop)
-    for f in stuff:
-        epmt_submit(input=f,dry_run=dry_run)
+    if stuff:
+        for f in stuff:
+            epmt_submit(input=f,dry_run=dry_run)
+    else:
+        print "here"
+        epmt_submit(dry_run=dry_run)
+            
 
-def epmt_submit(input=settings.output_prefix,pattern=settings.input_pattern,dry_run=True):
+def epmt_submit(input=settings.papiex_output,pattern=settings.input_pattern,dry_run=True):
 #    if not jobid:
 #        logger.error("Job ID is empty!");
 #        exit(1);
@@ -499,57 +505,58 @@ def epmt_submit(input=settings.output_prefix,pattern=settings.input_pattern,dry_
 # depends on args being global
 #
 def epmt_entrypoint(args, help):
-        if not args.debug:
-            basicConfig(level=ERROR)
-        elif args.debug == 1:
-            basicConfig(level=WARNING)
-        elif args.debug == 2:
-            basicConfig(level=INFO)
-        else:
-            basicConfig(level=DEBUG)
+    if not args.debug:
+        basicConfig(level=WARNING)
+    elif args.debug == 1:
+        basicConfig(level=INFO)
+    elif args.debug >= 2:
+        basicConfig(level=DEBUG)
+    elif settings.debug:
+        basicConfig(level=INFO)
 
-        if args.help or args.epmt_cmd == 'help' or not args.epmt_cmd:
-            help(stdout)
-            dump_settings(stdout)
-            exit(0)
+    if args.help or args.epmt_cmd == 'help' or not args.epmt_cmd:
+        help(stdout)
+        dump_config(stdout)
+        exit(0)
 
 #        if args.auto or args.bash or args.csh:
 #            if not args.epmt_cmd == "run":
 #                logger.error("Arguments only valid with 'run' command")
 #                exit(1)
 
-	if args.epmt_cmd == 'dump':
-            epmt_dump_metadata_file(args.epmt_cmd_args)
-	elif args.epmt_cmd == 'start':
-            set_job_globals(cmdline=args.epmt_cmd_args)
-            epmt_start(from_batch=args.epmt_cmd_args)
-	elif args.epmt_cmd == 'stop':
-            set_job_globals(cmdline=args.epmt_cmd_args)
-            epmt_stop(from_batch=args.epmt_cmd_args)
+    if args.epmt_cmd == 'dump':
+        epmt_dump_metadata_file(args.epmt_cmd_args)
+    elif args.epmt_cmd == 'start':
+        set_job_globals(cmdline=args.epmt_cmd_args)
+        epmt_start(from_batch=args.epmt_cmd_args)
+    elif args.epmt_cmd == 'stop':
+        set_job_globals(cmdline=args.epmt_cmd_args)
+        epmt_stop(from_batch=args.epmt_cmd_args)
 #	elif args.epmt_cmd == 'test':
 #            set_job_globals(cmdline=args.epmt_cmd_args)
 #            epmt_test_start_stop(from_batch=args.epmt_cmd_args)
-	elif args.epmt_cmd == 'submit':
-            # Not in job context
-            if not args.epmt_cmd_args:
-                logger.info("Assuming we are inside a job!")
-                set_job_globals()
-                a = [ get_job_dir() ]
-            else:
-                a = args.epmt_cmd_args
-            epmt_submit_list(a,dry_run=args.dry_run,drop=args.drop)
-	elif args.epmt_cmd == 'run':
-            if args.epmt_cmd_args: 
-                set_job_globals()
-                epmt_run(args.epmt_cmd_args,wrapit=args.auto,dry_run=args.dry_run,debug=(args.debug > 2))
-            else:
-                logger.error("No command given")
-                exit(1)
-	elif args.epmt_cmd == 'source':
-                print epmt_source(False,settings.PAPIEX_OPTIONS,papiex_debug=(args.debug > 2),monitor_debug=(args.debug > 2))
+    elif args.epmt_cmd == 'submit':
+        # Not in job context
+        if not args.epmt_cmd_args:
+            logger.info("Assuming we are inside a job!")
+            set_job_globals()
+            a = [ get_job_dir() ]
         else:
-            logger.error("Unknown command, %s. See -h for options.",args.epmt_cmd)
-            exit(0)
+            a = args.epmt_cmd_args
+        epmt_submit_list(a,dry_run=args.dry_run,drop=args.drop)
+    elif args.epmt_cmd == 'run':
+        if args.epmt_cmd_args: 
+            set_job_globals()
+            exit(epmt_run(args.epmt_cmd_args,wrapit=args.auto,dry_run=args.dry_run,debug=(args.debug > 2)))
+        else:
+            logger.error("No command given")
+            exit(1)
+    elif args.epmt_cmd == 'source':
+        print epmt_source(False,settings.papiex_options,papiex_debug=(args.debug > 2),monitor_debug=(args.debug > 2))
+    else:
+        logger.error("Unknown command, %s. See -h for options.",args.epmt_cmd)
+        exit(1)
+    exit(0)
 
 # Use of globals here is gross. FIX!
 # 
