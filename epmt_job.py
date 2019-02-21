@@ -322,7 +322,8 @@ def ETL_job_dict(metadata, filedict):
         j.tags.add(all_tags)
 # Add all processes to job
     logger.info("Adding %d processes to job",len(all_procs))
-    j.processes.add(all_procs)
+    if all_procs:
+        j.processes.add(all_procs)
 # Update start/end/duration of job
     j.start = earliest_process
     j.end = latest_process
