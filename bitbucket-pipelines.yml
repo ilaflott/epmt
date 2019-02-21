@@ -10,7 +10,7 @@ pipelines:
         - PAPIEX_OUTPUT=$PWD/ ./epmt -h			# help path 1
         - PAPIEX_OUTPUT=$PWD/ ./epmt help		# help path 2
         - PAPIEX_OUTPUT=$PWD/ ./epmt -d start 		# Generate prolog
-	- PAPIEX_OUTPUT=$PWD/ ./epmt -d source 		# Print shell command
+        - PAPIEX_OUTPUT=$PWD/ ./epmt -d source 		# Print shell command
         - PAPIEX_OUTPUT=$PWD/ ./epmt -d run sleep 1	# Run command
         - PAPIEX_OUTPUT=$PWD/ ./epmt -d stop   # Generate epilog and append
         - PAPIEX_OUTPUT=$PWD/ ./epmt -d dump   # Parse/print job_metadata
