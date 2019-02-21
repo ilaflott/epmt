@@ -107,11 +107,11 @@ def set_job_globals(cmdline=[]):
 
 	global_job_groupnames = getgroups(global_job_username)
 		
-	logger.info("ID: %s",global_job_id)
-	logger.info("NAME: %s",global_job_name)
-	logger.info("SCRIPTNAME: %s",global_job_scriptname)
-	logger.info("USER: %s",global_job_username)
-	logger.info("GROUPS: %s",global_job_groupnames)
+	logger.debug("ID: %s",global_job_id)
+	logger.debug("NAME: %s",global_job_name)
+	logger.debug("SCRIPTNAME: %s",global_job_scriptname)
+	logger.debug("USER: %s",global_job_username)
+	logger.debug("GROUPS: %s",global_job_groupnames)
 	return global_job_id
 
 
@@ -273,8 +273,6 @@ def get_job_id():
 	return(global_job_id)
 
 def get_job_dir(hostname="", prefix=settings.papiex_output):
-    global global_job_id
-
     if not prefix.endswith("/"):
         logger.warning("missing trailing / on prefix %s",prefix);
         prefix += "/"
@@ -291,10 +289,9 @@ def get_job_dir(hostname="", prefix=settings.papiex_output):
         exit(1)
     else:
         if global_job_id == "":
-            logger.warning("Unknown job id, setting output to %s",prefix)
-            dirname = prefix
-        else:
-            dirname = prefix+global_job_id+"/"
+            logger.warning("Unknown job id, trying to find it...")
+            set_job_globals()
+        dirname = prefix+global_job_id+"/"
 
     return dirname
 
@@ -439,20 +436,19 @@ def epmt_submit_list(stuff, dry_run=True, drop=False):
     setup_orm_db(drop)
     if stuff:
         for f in stuff:
-            epmt_submit(input=f,dry_run=dry_run)
+            submit_to_db(f,settings.input_pattern,dry_run=dry_run)
     else:
-        print "here"
-        epmt_submit(dry_run=dry_run)
-            
+        submit_to_db(settings.papiex_output,settings.input_pattern,
+                     dry_run=dry_run)
 
-def epmt_submit(input=settings.papiex_output,pattern=settings.input_pattern,dry_run=True):
+def submit_to_db(input,pattern,dry_run=True):
 #    if not jobid:
 #        logger.error("Job ID is empty!");
 #        exit(1);
     from epmt_job import get_filedict, ETL_job_dict, ETL_ppr
     import tarfile
 
-    logger.info("submit %s,%s",input,pattern)
+    logger.info("submit_to_db(%s,%s,%s)",input,pattern,str(dry_run))
 
     tar = None
     if (input.endswith("tar.gz") or input.endswith("tgz")):
@@ -538,8 +534,6 @@ def epmt_entrypoint(args, help):
     elif args.epmt_cmd == 'submit':
         # Not in job context
         if not args.epmt_cmd_args:
-            logger.info("Assuming we are inside a job!")
-            set_job_globals()
             a = [ get_job_dir() ]
         else:
             a = args.epmt_cmd_args

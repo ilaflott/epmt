@@ -313,16 +313,20 @@ def ETL_job_dict(metadata, filedict):
 
 #    stdout.write('\b')            # erase the last written char
 
-    if not didsomething:
-        logger.error("Something went wrong")
-        return False
+    if filedict:
+        if not didsomething:
+            logger.warning("Something went wrong in parsing CSV files")
+            return False
+    else:
+        logger.warning("Submitting job with no CSV data")
+
 # Add sum of tags to job        
     if all_tags:
         logger.info("Adding %d tags to job",len(all_tags))
         j.tags.add(all_tags)
 # Add all processes to job
-    logger.info("Adding %d processes to job",len(all_procs))
     if all_procs:
+        logger.info("Adding %d processes to job",len(all_procs))
         j.processes.add(all_procs)
 # Update start/end/duration of job
     j.start = earliest_process
@@ -352,8 +356,8 @@ def get_filedict(dirname,pattern=settings.input_pattern,tar=False):
         files = glob(dirname+pattern)
 
     if not files:
-        logger.error("%s matched no files",dirname+pattern);
-        exit(1);
+        logger.error("%s matched no files",dirname+pattern)
+        return {}
 
     logger.info("%d files to submit",len(files))
     if (len(files) > 30):

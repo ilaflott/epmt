@@ -5,7 +5,6 @@ pipelines:
     - step:
         script: # Modify the commands below to build your repository.
         - pip install -r requirements.txt
-#	- cp settings_sqllite.py settings.py		# Setup in mem sqlite
         - python -m py_compile *.py models/*.py		# Compile everything
         - PAPIEX_OUTPUT=$PWD/ ./epmt -h			# help path 1
         - PAPIEX_OUTPUT=$PWD/ ./epmt help		# help path 2
@@ -14,4 +13,5 @@ pipelines:
         - PAPIEX_OUTPUT=$PWD/ ./epmt -d run sleep 1	# Run command
         - PAPIEX_OUTPUT=$PWD/ ./epmt -d stop   # Generate epilog and append
         - PAPIEX_OUTPUT=$PWD/ ./epmt -d dump   # Parse/print job_metadata
-        - PAPIEX_OUTPUT=$PWD/ ./epmt -d -n submit # Dry run submit
+	- cp settings_sqllite.py settings.py		# Setup in mem sqlite
+        - PAPIEX_OUTPUT=$PWD/ ./epmt -d submit 		# Submit
