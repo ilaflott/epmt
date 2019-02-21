@@ -205,16 +205,6 @@ def ETL_ppr(metadata, jobid):
                          user=Job[jobid].user,
                          job=Job[jobid])
     return exp
-#
-# Load the entire job into the DB, consisting of a job_metadata file and a dir of papiex files
-#
-
-def ETL_job_dir(jobid, dir, metadata, pattern=settings.input_pattern):
-    if not dir.endswith("/"):
-        logger.warn("%s should have a trailing /",dir)
-        dir = dir+"/"
-    filedict = get_filedict(dir,pattern)
-    return(ETL_job_dict(metadata,filedict))
 
 @db_session
 def ETL_job_dict(metadata, filedict):
@@ -329,8 +319,13 @@ def ETL_job_dict(metadata, filedict):
         logger.info("Adding %d processes to job",len(all_procs))
         j.processes.add(all_procs)
 # Update start/end/duration of job
-    j.start = earliest_process
-    j.end = latest_process
+#       j.start = earliest_process
+#        j.end = latest_process
+#
+#
+#
+    j.start = metadata["job_pl_start"]
+    j.end = metadata["job_el_stop"]
     d = j.end - j.start
     j.duration = int(d.total_seconds()*1000000)
     
@@ -347,47 +342,6 @@ def ETL_job_dict(metadata, filedict):
                 now - then,len(j.processes)/float((now-then).total_seconds()))
                 
     return j
-
-def get_filedict(dirname,pattern=settings.input_pattern,tar=False):
-    # Now get all the files in the dir
-    if tar:
-        files = fnmatch.filter(tar.getnames(), pattern)
-    else:
-        files = glob(dirname+pattern)
-
-    if not files:
-        logger.error("%s matched no files",dirname+pattern)
-        return {}
-
-    logger.info("%d files to submit",len(files))
-    if (len(files) > 30):
-        logger.debug("Skipping printing files, too many")
-    else:
-        logger.debug("%s",files)
-
-    # Build a hash of hosts and their data files
-    filedict={}
-    dumperr = False
-    for f in files:
-        t = basename(f)
-        ts = t.split("papiex")
-        if len(ts) == 2:
-            if len(ts[0]) == 0:
-                host = "unknown"
-                dumperr = True
-            else:
-                host = ts[0]
-        else:
-            logger.warn("Split failed of %s, only %d parts",t,len(ts))
-            continue
-        if filedict.get(host):
-            filedict[host].append(f)
-        else:
-            filedict[host] = [ f ]
-    if dumperr:
-        logger.warn("Host not found in name split, using unknown host")
-
-    return filedict
 
 def setup_orm_db(drop=False,create=True):
     logger.info("Binding to DB: %s", settings.db_params)

@@ -5,6 +5,7 @@ if (__name__ == "__main__"):
     try:
         import argparse
     except ImportError:
+        from sys import stderr
         print >> stderr,"WARNING: system argparse not found, using our own."
         print >> stderr,"WARNING: This python/OS is likely vulnerable to exploits!"
         import argparse26 as argparse

@@ -16,36 +16,39 @@ clean distclean:
 # Testing
 check: check-python-native
 
+#
+# Native python should have all dependencies installed
+#
 check-python-native:
 	@if [ -f ./job_metadata ]; then echo "Please remove ./job_metadata first."; exit 1; fi
-	python -m py_compile *.py models/*.py			# Compile everything
-	PAPIEX_OUTPUT=$(PWD)/ python ./epmt_cmds.py -h 		# Help
-	PAPIEX_OUTPUT=$(PWD)/ python ./epmt_cmds.py start 	# Generate prolog
-	sleep 1
-	PAPIEX_OUTPUT=$(PWD)/ python ./epmt_cmds.py stop 	# Generate epilog and append
-	PAPIEX_OUTPUT=$(PWD)/ python ./epmt_cmds.py dump 	# Verify
-	PAPIEX_OUTPUT=$(PWD)/ python ./epmt_cmds.py -n run /bin/sleep 1 # run dry
-	PAPIEX_OUTPUT=$(PWD)/ python ./epmt_cmds.py -n -a run /bin/sleep 1	# run dry + auto
+	python -m py_compile *.py models/*.py         # Compile everything
+	PAPIEX_OUTPUT=$(PWD)/ ./epmt -h >/dev/null      # help path 1
+	PAPIEX_OUTPUT=$(PWD)/ ./epmt help >/dev/null    # help path 2
+	PAPIEX_OUTPUT=$(PWD)/ ./epmt -d start           # Generate prolog
+	PAPIEX_OUTPUT=$(PWD)/ ./epmt -d source          # Print shell command
+	PAPIEX_OUTPUT=$(PWD)/ ./epmt -d run sleep 1     # Run command
+	PAPIEX_OUTPUT=$(PWD)/ ./epmt -d stop            # Generate epilog and append
+	PAPIEX_OUTPUT=$(PWD)/ ./epmt -d dump            # Parse/print job_metadata
+	@rm -f settings.py; cp settings_sqllite.py settings.py  # Setup in mem sqlite
+	PAPIEX_OUTPUT=$(PWD)/ ./epmt -d submit          # Submit
 	@python -V
 	@echo "Tests pass!"
-#	python ./epmt_cmds.py -d submit $(PWD)/	       	    	# Parse metadata
 
+#
+# Assume this image has no dependencies installed so we just dry-run a submit
+#
+DOCKER_RUN_PY26=docker run -ti --rm -v $(shell pwd):/app -w /app -e PAPIEX_OUTPUT=/app/ lovato/python-2.6.6
 check-python-2.6:
-# syntax check of all
 	@if [ -f ./job_metadata ]; then echo "Please remove ./job_metadata first."; exit 1; fi
-	docker run -ti --rm -v `pwd`:/app -w /app lovato/python-2.6.6 python -m py_compile *.py models/*.py
-# just usage
-	docker run -ti --rm -v `pwd`:/app -w /app lovato/python-2.6.6 python ./epmt_cmds.py -h
-# start
-	docker run -ti --rm -v `pwd`:/app -w /app -e PAPIEX_OUTPUT=/app/ lovato/python-2.6.6 python ./epmt_cmds.py start
-# stop
-	docker run -ti --rm -v `pwd`:/app -w /app -e PAPIEX_OUTPUT=/app/ lovato/python-2.6.6 python ./epmt_cmds.py stop
-# dump
-	docker run -ti --rm -v `pwd`:/app -w /app -e PAPIEX_OUTPUT=/app/ lovato/python-2.6.6 python ./epmt_cmds.py dump
-# run dry
-	docker run -ti --rm -v `pwd`:/app -w /app -e PAPIEX_OUTPUT=/app/ lovato/python-2.6.6 python ./epmt_cmds.py -n run /bin/sleep 1
-# run dry + auto
-	docker run -ti --rm -v `pwd`:/app -w /app -e PAPIEX_OUTPUT=/app/ lovato/python-2.6.6 python ./epmt_cmds.py -n -a run /bin/sleep 1
-# version
-	@docker run -ti --rm -v `pwd`:/app -w /app lovato/python-2.6.6 python -V
+	$(DOCKER_RUN_PY26) python -m py_compile *.py models/*.py         # Compile everything
+	$(DOCKER_RUN_PY26) ./epmt -h >/dev/null      # help path 1
+	$(DOCKER_RUN_PY26) ./epmt help >/dev/null    # help path 2
+	$(DOCKER_RUN_PY26) ./epmt -d start           # Generate prolog
+	$(DOCKER_RUN_PY26) ./epmt -d source          # Print shell command
+	$(DOCKER_RUN_PY26) ./epmt -d run sleep 1     # Run command
+	$(DOCKER_RUN_PY26) ./epmt -d stop            # Generate epilog and append
+	$(DOCKER_RUN_PY26) ./epmt -d dump            # Parse/print job_metadata
+	@rm -f settings.py; cp settings_sqllite.py settings.py  # Setup in mem sqlite
+	$(DOCKER_RUN_PY26) ./epmt -n -d submit          # Submit
+	@$(DOCKER_RUN_PY26) python -V			     # Version 
 	@echo "Tests pass!"

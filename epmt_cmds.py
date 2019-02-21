@@ -176,12 +176,12 @@ def create_job_prolog(jobid, from_batch=[]):
 
 def check_workflowdb_dict(d,pfx=""):
     if all (k in d for k in (pfx+"name",pfx+"component",pfx+"oname",pfx+"jobname")):
+        logger.info("Detected name, component, oname and jobname! workflowDB!")
         return True
     return False
 
 def check_and_add_workflowdb_envvars(metadata, env):
     if check_workflowdb_dict(env):
-        logger.info("Detected name, component, oname and jobname! workflowDB!")
         metadata["exp_name"] = env["name"]
         metadata["exp_component"] = env["component"]
         metadata["exp_oname"] = env["oname"]
@@ -427,33 +427,72 @@ def epmt_run(cmdline, wrapit=False, dry_run=False, debug=False):
 
 	return return_code
 
+def get_filedict(dirname,pattern=settings.input_pattern,tar=False):
+    # Now get all the files in the dir
+    if tar:
+        files = fnmatch.filter(tar.getnames(), pattern)
+    else:
+        files = glob(dirname+pattern)
+
+    if not files:
+        logger.warning("%s matched no files",dirname+pattern)
+        return {}
+
+    logger.info("%d files to submit",len(files))
+    if (len(files) > 30):
+        logger.debug("Skipping printing files, too many")
+    else:
+        logger.debug("%s",files)
+
+    # Build a hash of hosts and their data files
+    filedict={}
+    dumperr = False
+    for f in files:
+        t = basename(f)
+        ts = t.split("papiex")
+        if len(ts) == 2:
+            if len(ts[0]) == 0:
+                host = "unknown"
+                dumperr = True
+            else:
+                host = ts[0]
+        else:
+            logger.warn("Split failed of %s, only %d parts",t,len(ts))
+            continue
+        if filedict.get(host):
+            filedict[host].append(f)
+        else:
+            filedict[host] = [ f ]
+    if dumperr:
+        logger.warn("Host not found in name split, using unknown host")
+
+    return filedict
+
 def epmt_submit_list(stuff, dry_run=True, drop=False):
     if dry_run and drop:
         logger.error("You can't drop tables and do a dry run")
         exit(1)
         
-    from epmt_job import setup_orm_db
-    setup_orm_db(drop)
     if stuff:
         for f in stuff:
-            submit_to_db(f,settings.input_pattern,dry_run=dry_run)
+            submit_to_db(f,settings.input_pattern,dry_run=dry_run,drop=drop)
     else:
         submit_to_db(settings.papiex_output,settings.input_pattern,
-                     dry_run=dry_run)
+                     dry_run=dry_run, drop=drop)
 
-def submit_to_db(input,pattern,dry_run=True):
+def submit_to_db(input,pattern, dry_run=True, drop=False):
 #    if not jobid:
 #        logger.error("Job ID is empty!");
 #        exit(1);
-    from epmt_job import get_filedict, ETL_job_dict, ETL_ppr
-    import tarfile
 
     logger.info("submit_to_db(%s,%s,%s)",input,pattern,str(dry_run))
 
     tar = None
     if (input.endswith("tar.gz") or input.endswith("tgz")):
+        import tarfile
         tar = tarfile.open(input, "r:gz")
     elif (input.endswith("tar")):
+        import tarfile
         tar = tarfile.open(input, "r:")
     elif not input.endswith("/"):
         logger.warning("missing trailing / on submit dirname %s",input);
@@ -485,8 +524,12 @@ def submit_to_db(input,pattern,dry_run=True):
         exit(1)
 
     if dry_run:
+        check_workflowdb_dict(metadata,pfx="exp_")
+        logger.info("Dry run finished, skipping DB work")
         return
     
+    from epmt_job import ETL_job_dict, ETL_ppr, setup_orm_db
+    setup_orm_db(drop)
     j = ETL_job_dict(metadata,filedict)
     if not j:
         exit(1)
