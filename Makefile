@@ -1,18 +1,26 @@
 SHELL=/bin/bash
 
-.PHONY: epmt-build epmt-test default clean distclean check check-python-native check-python-driver check-python-2.6 check-python-2.7 check-python-3
-default: epmt-build epmt-test
-epmt-build:
+.PHONY: default \\
+	epmt-build epmt-test \\
+	clean distclean \\
+	check check-python-native check-python-driver check-python-2.6 check-python-2.7 check-python-3
+
+default: epmt-build epmt-build-stack
+
+epmt-build: Dockerfiles/Dockerfile.python-epmt Dockerfiles/Dockerfile.epmt-command
 	docker build -f Dockerfiles/Dockerfile.python-epmt -t python-epmt:latest --squash .
 	docker build -f Dockerfiles/Dockerfile.epmt-command -t epmt-command:latest --squash .
-	docker build -f Dockerfiles/Dockerfile.epmt-papiex -t epmt-papiex:latest --squash .
+
+epmt-build-stack: epmt-build docker-compose.yml
 	docker-compose build
-epmt-test:
-	docker run epmt:latest
+#epmt-test:
+#	docker run epmt:latest
 #	docker-compose up
 clean distclean:
 	rm -f *~ *.pyc job_metadata *papiex*.csv
-# Testing
+# 
+# Simple python version testing with no database
+#
 check: check-python-native
 
 DOCKER_PYTHON_IMAGE=
