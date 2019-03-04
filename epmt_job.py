@@ -1,13 +1,19 @@
-import settings
-import fnmatch
 from pony.orm import *
 from models import *
 from sys import stdout, argv, stderr
 from os.path import basename
 from glob import glob
 from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
-
+import fnmatch
+from os import environ
 logger = getLogger(__name__)  # you can use other name
+
+import settings
+for k in [ "provider", "user", "password", "host", "dbname", "filename" ]:
+    t = environ.get("EPMT_DB_"+ k.upper())
+    if t:
+        settings.db_params[k] = t
+
 #
 #
 # Spinning cursor sequence

@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-import settings
-#from models import db, db_session, User, Platform, Experiment, PostProcessRun
 from logging import getLogger, basicConfig, DEBUG, INFO, WARNING, ERROR
 from datetime import datetime
 from os import environ, makedirs, errno, path, getpid, getuid, getsid
@@ -15,6 +13,12 @@ from glob import glob
 from sys import stdout, stderr
 import fnmatch
 import pickle
+
+import settings
+for k in [ "provider", "user", "password", "host", "dbname", "filename" ]:
+    t = environ.get("EPMT_DB_"+ k.upper())
+    if t:
+        settings.db_params[k] = t
 
 def getgroups(user):
     gids = [g.gr_gid for g in getgrall() if user in g.gr_mem]
