@@ -1,5 +1,5 @@
 FROM jupyter/scipy-notebook
 COPY notebook-requirements.txt /tmp
-RUN pip install --file /tmp/notebook-requirements.txt && \
+RUN pip install -r /tmp/notebook-requirements.txt && \
     fix-permissions $CONDA_DIR && \
     fix-permissions /home/$NB_USER

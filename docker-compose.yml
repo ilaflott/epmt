@@ -25,9 +25,9 @@ services:
     image: epmt-notebook
     restart: always
     volumes:
-      - ./:/home/jovyan/work
+      - ./:/home/jovyan
     ports:
-      - 8884:8884
+      - 8888:8888
     environment:
       JUPITER_ENABLE_LAB: "yes"
 
