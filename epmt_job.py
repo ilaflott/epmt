@@ -1,22 +1,18 @@
-#!/usr/bin/env python
 import settings
 import fnmatch
 from pony.orm import *
 from models import *
 from sys import stdout, argv, stderr
-# from pytz import UTC
-# from pytz import timezone
-from pandas import read_csv,Timestamp
 from os.path import basename
 from glob import glob
-from itertools import cycle
 from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
 
 logger = getLogger(__name__)  # you can use other name
 #
 #
 # Spinning cursor sequence
-spinner = cycle(['-', '/', '|', '\\'])
+#from itertools import cycle
+#spinner = cycle(['-', '/', '|', '\\'])
 
 # Construct a number from the pattern
 
@@ -39,7 +35,7 @@ def lookup_or_create_metricname(metricname):
         logger.info("Found metricname %s",metricname)
     return mn
 
-def lookup_or_create_job(jobid,user,metadata={}):
+def create_job(jobid,user,metadata={}):
 	job = Job.get(jobid=jobid)
 	if job is None:
 		logger.info("Creating job %s",jobid)
@@ -54,8 +50,10 @@ def lookup_or_create_job(jobid,user,metadata={}):
                     job.env_dict = metadata['job_pl_env']
                     job.env_changes_dict = metadata['job_el_env_changes']
                     job.info_dict = metadata['job_pl_from_batch'] # end batch also
+                return job
         else:
-            logger.debug("Found job %s",jobid)
+            logger.error("Job %s (at %s) is already in the database",job.jobid,job.start)
+            return None
 
 ##	metadata['job_pl_id'] = global_job_id
 ##	metadata['job_pl_scriptname'] = global_job_scriptname
@@ -74,7 +72,6 @@ def lookup_or_create_job(jobid,user,metadata={}):
 #	metadata['job_el_from_batch'] = from_batch
 #	metadata['job_el_status'] = status
                     
-	return job
 
 def lookup_or_create_host(hostname):
     host = Host.get(name=hostname)
@@ -109,6 +106,8 @@ def lookup_or_create_tags(tagnames):
 def load_process_from_pandas(df, h, j, u, tags, mns):
 # Assumes all processes are from same host
 #	dprint("Creating process",str(df['pid'][0]),"gen",str(df['generation'][0]),"exename",df['exename'][0])
+        from pandas import Timestamp
+
 	earliest_thread = datetime.datetime.utcnow()
 	latest_thread = datetime.datetime.fromtimestamp(0)
 
@@ -170,15 +169,27 @@ def load_process_from_pandas(df, h, j, u, tags, mns):
 # Extract a dictionary from the rows of header on the file
 #
 
-def extract_tags_from_comment_line(jobdatafile,comment="#"):
+def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
     rows=0
-    with open(jobdatafile,'r') as file:
-        line = file.readline().strip()
-        if line.startswith(comment):
-            rows += 1
-# We could extend this here to support multiple tags                
-            return rows, line[1:].lstrip()
+    if tarfile:
+        try:
+            info = tarfile.getmember(jobdatafile)
+        except KeyError:
+            logger.error('BUG: Did not find %s in tar archive' % str(tarfile))
+            exit(1)
+        else:
+            file = tarfile.extractfile(info)
+    else:
+        file = open(jobdatafile,'r')
+    
+    line = file.readline().strip()
+    if line.startswith(comment):
+        rows += 1
+        return rows, line[1:].lstrip()
+
     return rows, None
+
+#        for member in tar.getmembers():
 
 #def check_experiment_in_metadata(metadata):
 #    for i in ("exp_name","exp_component","exp_oname","exp_jobname"):
@@ -207,7 +218,7 @@ def ETL_ppr(metadata, jobid):
     return exp
 
 @db_session
-def ETL_job_dict(metadata, filedict):
+def ETL_job_dict(metadata, filedict, tarfile=None):
 # Only fields used for now
     jobid = metadata['job_pl_id']
     username = metadata['job_pl_username']
@@ -238,7 +249,12 @@ def ETL_job_dict(metadata, filedict):
 # Iterate over hosts
     logger.debug("Iterating over %d hosts for job ID %s, user %s...",len(filedict.keys()),jobid,username)
     u = lookup_or_create_user(username)
-    j = lookup_or_create_job(jobid,u,metadata)
+    j = create_job(jobid,u,metadata)
+    if not j:
+# We might have leaked a username to the database here
+# FIX!        
+        return None
+
     didsomething = False
     oldcomment = None
     mns = {}
@@ -259,7 +275,7 @@ def ETL_job_dict(metadata, filedict):
 #            stdout.flush()                # flush stdout buffer (actual character display)
 #
             csv = datetime.datetime.now()
-            rows,comment = extract_tags_from_comment_line(f)
+            rows,comment = extract_tags_from_comment_line(f,tarfile=tarfile)
 # Check comment/tags cache
             if comment != oldcomment:
                 logger.info("Missed tag cache %s",comment)
@@ -268,7 +284,14 @@ def ETL_job_dict(metadata, filedict):
 # Merge all tags into one list for job
                 all_tags = list(set().union(all_tags,tags))
 
-            pf = read_csv(f,
+            if tarfile:
+                info = tarfile.getmember(f)
+                flo = tarfile.extractfile(info)
+            else:
+                flo = f
+                
+            from pandas import read_csv
+            pf = read_csv(flo,
                           sep=",",
 #                          dtype=dtype_dic, 
                           converters=conv_dic,
