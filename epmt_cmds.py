@@ -13,6 +13,7 @@ from grp import getgrall, getgrgid
 from pwd import getpwnam, getpwuid
 from glob import glob
 from sys import stdout, stderr
+import fnmatch
 import pickle
 
 def getgroups(user):
@@ -145,7 +146,7 @@ def dump_config(outf):
         if not (key.startswith('__') or key.startswith('_')):
             print >> outf,"%-24s%-56s" % (key,str(value))
     print >> outf,"\nenvironment variables (overrides settings.py):"
-    for v in ["PAPIEX_OUTPUT"
+    for v in [ "PAPIEX_OSS_PATH", "PAPIEX_OUTPUT"
 # "PAPIEX_OPTIONS","PAPIEX_DEBUG","PAPI_DEBUG","MONITOR_DEBUG","LIBPFM_DEBUG"
               ]:
         if v in environ:
@@ -176,7 +177,8 @@ def create_job_prolog(jobid, from_batch=[]):
 
 def check_workflowdb_dict(d,pfx=""):
     if all (k in d for k in (pfx+"name",pfx+"component",pfx+"oname",pfx+"jobname")):
-        logger.info("Detected name, component, oname and jobname! workflowDB!")
+        logger.info("*** Workflow detected*** job(%s,%s)",d["job_pl_id"], d["job_pl_jobname"]);
+        logger.info("name(%s), component(%s), oname(%s) and jobname(%s)",d[pfx+"name"],d[pfx+"component"],d[pfx+"oname"],d[pfx+"jobname"])
         return True
     return False
 
@@ -338,7 +340,21 @@ def epmt_dump_metadata_file(filelist):
         if not path.exists(file):
             logger.error("%s does not exist!",file)
             exit(1)
-        metadata = read_job_metadata(file)
+
+        tar = compressed_tar(file)
+        if tar:
+            try:
+                info = tar.getmember("job_metadata")
+            except KeyError:
+                logger.error('ERROR: Did not find %s in tar archive' % "job_metadata")
+                exit(1)
+            else:
+                logger.info('%s is %d bytes in archive' % (info.name, info.size))
+                f = tar.extractfile(info)
+                metadata = read_job_metadata_direct(f)
+        else:
+            metadata = read_job_metadata(file)
+
         if not metadata:
             return False
         for d in sorted(metadata.keys()):
@@ -448,7 +464,7 @@ def get_filedict(dirname,pattern=settings.input_pattern,tar=False):
     filedict={}
     dumperr = False
     for f in files:
-        t = basename(f)
+        t = path.basename(f)
         ts = t.split("papiex")
         if len(ts) == 2:
             if len(ts[0]) == 0:
@@ -480,13 +496,7 @@ def epmt_submit_list(stuff, dry_run=True, drop=False):
         submit_to_db(settings.papiex_output,settings.input_pattern,
                      dry_run=dry_run, drop=drop)
 
-def submit_to_db(input,pattern, dry_run=True, drop=False):
-#    if not jobid:
-#        logger.error("Job ID is empty!");
-#        exit(1);
-
-    logger.info("submit_to_db(%s,%s,%s)",input,pattern,str(dry_run))
-
+def compressed_tar(input):
     tar = None
     if (input.endswith("tar.gz") or input.endswith("tgz")):
         import tarfile
@@ -494,7 +504,24 @@ def submit_to_db(input,pattern, dry_run=True, drop=False):
     elif (input.endswith("tar")):
         import tarfile
         tar = tarfile.open(input, "r:")
-    elif not input.endswith("/"):
+    return tar
+    
+def submit_to_db(input,pattern, dry_run=True, drop=False):
+#    if not jobid:
+#        logger.error("Job ID is empty!");
+#        exit(1);
+
+    logger.info("submit_to_db(%s,%s,%s)",input,pattern,str(dry_run))
+
+    tar = compressed_tar(input)
+#    None
+#    if (input.endswith("tar.gz") or input.endswith("tgz")):
+#        import tarfile
+#        tar = tarfile.open(input, "r:gz")
+#    elif (input.endswith("tar")):
+#        import tarfile
+#        tar = tarfile.open(input, "r:")
+    if not tar and not input.endswith("/"):
         logger.warning("missing trailing / on submit dirname %s",input);
         input += "/"
 
@@ -518,22 +545,27 @@ def submit_to_db(input,pattern, dry_run=True, drop=False):
     for h in filedict.keys():
         logger.info("host %s: %d files to import",h,len(filedict[h]))
 
-    if tar:
-        tar.close()
-        logger.error('Unsupported at the moment.')
-        exit(1)
-
+# Do as much as we can before bailing
     if dry_run:
         check_workflowdb_dict(metadata,pfx="exp_")
         logger.info("Dry run finished, skipping DB work")
         return
-    
-    from epmt_job import ETL_job_dict, ETL_ppr, setup_orm_db
+
+#    if tar:
+#        tar.close()
+#        logger.error('Unsupported at the moment.')
+#        exit(1)
+
+# Now we touch the Database
+    from epmt_job import setup_orm_db
     setup_orm_db(drop)
-    j = ETL_job_dict(metadata,filedict)
+
+    from epmt_job import ETL_job_dict, ETL_ppr
+    j = ETL_job_dict(metadata,filedict,tarfile=tar)
     if not j:
         exit(1)
-    logger.info("Committed job %s to database",j.jobid)
+    logger.info("Committed job %s to database: %s",j.jobid,j)
+# Check if we have anything related to an "experiment"
 
     if check_workflowdb_dict(metadata,pfx="exp_"):
         e = ETL_ppr(metadata,j.jobid)
@@ -544,11 +576,11 @@ def submit_to_db(input,pattern, dry_run=True, drop=False):
 # depends on args being global
 #
 def epmt_entrypoint(args, help):
-    if not args.debug:
+    if not args.verbose:
         basicConfig(level=WARNING)
-    elif args.debug == 1:
+    elif args.verbose == 1:
         basicConfig(level=INFO)
-    elif args.debug >= 2:
+    elif args.verbose >= 2:
         basicConfig(level=DEBUG)
     elif settings.debug:
         basicConfig(level=INFO)
@@ -584,12 +616,12 @@ def epmt_entrypoint(args, help):
     elif args.epmt_cmd == 'run':
         if args.epmt_cmd_args: 
             set_job_globals()
-            exit(epmt_run(args.epmt_cmd_args,wrapit=args.auto,dry_run=args.dry_run,debug=(args.debug > 2)))
+            exit(epmt_run(args.epmt_cmd_args,wrapit=args.auto,dry_run=args.dry_run,debug=(args.verbose > 2)))
         else:
             logger.error("No command given")
             exit(1)
     elif args.epmt_cmd == 'source':
-        print epmt_source(False,settings.papiex_options,papiex_debug=(args.debug > 2),monitor_debug=(args.debug > 2))
+        print epmt_source(False,settings.papiex_options,papiex_debug=(args.verbose > 2),monitor_debug=(args.verbose > 2))
     else:
         logger.error("Unknown command, %s. See -h for options.",args.epmt_cmd)
         exit(1)
