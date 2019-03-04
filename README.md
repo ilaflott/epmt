@@ -179,6 +179,19 @@ papiex_output           /tmp/epmt/
 environment variables (overrides settings.py):
 ```
 
+## Environment Variables
+
+The following variables replace, at run-time, the values in the **db_params** dictionary found in **settings.py**.
+
+```
+EPMT_DB_PROVIDER
+EPMT_DB_USER
+EPMT_DB_PASSWORD
+EPMT_DB_HOST
+EPMT_DB_DBNAME
+EPMT_DB_FILENAME
+```
+
 ## Debugging
 
 **EPMT** can be passed noth **-n** (dry-run) and **-v** (verbosity) to help with debugging. Add more **-v** flags to increase the level of information printed.
@@ -197,15 +210,15 @@ Another useful feature is to just use the in-memory SqlLite database, which allo
 
 
 ```
-$ ls settings_*py
+$ ls settings
 settings_pg_container.py	settings_sqlite_inmem.py
 settings_pg_localhost.py	settings_sqlite_localfile.py
 $
 $ # In memory only, disappears after run
-$ cp /path/to/install/settings_sqlite_inmem.py /path/to/install/settings.py
+$ cp /path/to/install/settings/settings_sqlite_inmem.py /path/to/install/settings.py
 $ 
 $ # Persistent and on disk
-$ cp /path/to/install/settings_sqlite_localfile.py /path/to/install/settings.py
+$ cp /path/to/install/settings/settings_sqlite_localfile.py /path/to/install/settings.py
 $ epmt -v -v submit /dir/to/jobdata
 ```
 
@@ -235,7 +248,15 @@ job_pl_submit           2019-02-20 19:58:41.274463
 job_pl_username         Foo.Bar                                        
 
 ```
-## Testing and Docker
+
+## EPMT under Docker 
+
+Lets run epmt on a local directory to submit and set the submission DB host environment variable:
+
+```
+docker run --network=host -ti --rm -v `pwd`:/app -w /app -e EPMT_DB_HOST=<hostname> epmt-command:latest -v submit <localdir/>
+```
+## Testing Python Versions under Docker
 
 One can test **EPMT** on various versions of python with the following make commands. Each will test against a minimal install of Python, without installing any dependencies. This should work for **start, stop, dump, help and submit, the latter with -n or --dry-run**. 
 
@@ -247,3 +268,4 @@ make check-python-3
 ```
 
 Python 3 support is not yet available.
+
