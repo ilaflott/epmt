@@ -37,7 +37,7 @@ check-python-native:
 
 check-python-driver:
 	@if [ -f ./job_metadata ]; then echo "Please remove ./job_metadata first."; exit 1; fi
-	@rm -f settings.py; ln -s settings_sqlite_inmem.py settings.py  # Setup in mem sqlite
+	@rm -f settings.py; ln -s settings/settings_sqlite_inmem.py settings.py  # Setup in mem sqlite
 	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) python -m py_compile *.py models/*.py         # Compile everything
 	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt -h >/dev/null      # help path 1
 	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt help >/dev/null    # help path 2
