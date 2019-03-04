@@ -19,10 +19,19 @@ class PostProcessRun(db.Entity):
 	# End
 	user = Required('User')
 	job = Required('Job')
+	detectors = Set('Detector')
 	# 
 	# component = Optional('Component')
 	# platform = Optional('Platform')
 	# experiment = Optional('Experiment')
+
+class Detector(db.Entity):
+	time = Required(datetime.datetime, default=datetime.datetime.utcnow())
+	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
+	name = PrimaryKey(str)
+	description = Optional(str)
+	pandas_json = Optional(Json)
+ 	pprs = Set('PostProcessRun')
 
 # 
 # Unused for now

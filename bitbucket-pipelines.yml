@@ -13,5 +13,5 @@ pipelines:
         - PAPIEX_OUTPUT=$PWD/ ./epmt -d run sleep 1	# Run command
         - PAPIEX_OUTPUT=$PWD/ ./epmt -d stop   	  	# Generate epilog and append
         - PAPIEX_OUTPUT=$PWD/ ./epmt -d dump   		# Parse/print job_metadata
-        - cp settings_sqllite.py settings.py		# Setup in mem sqlite
+        - cp settings_sqlite_inmem.py settings.py	# Setup in mem sqlite
         - PAPIEX_OUTPUT=$PWD/ ./epmt -d submit 		# Submit

@@ -1,0 +1,7 @@
+Add dict support for start/stop/run (info_dict)
+Manage transaction logging
+Managing unique submission of processes to jobs
+Manage .tgz handling better, single get_member/extract pass
+Fix environment variable vs. settings
+Identical job ID's with different usernames?
+Fix leaking usernames on bad job commit

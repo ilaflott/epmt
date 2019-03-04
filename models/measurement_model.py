@@ -9,7 +9,7 @@ import datetime
 class Tag(db.Entity):
 #	time = Required(datetime.datetime, default=datetime.datetime.utcnow())
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
-#	info_dict = Optional(Json)
+	info_dict = Optional(Json)
 	# end template
 	name = PrimaryKey(str)
 	processes = Set('Process')
@@ -20,7 +20,7 @@ class Tag(db.Entity):
 class Host(db.Entity):
 #	time = Required(datetime.datetime, default=datetime.datetime.utcnow())
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
-#	info_dict = Optional(Json)
+	info_dict = Optional(Json)
 	# end template
 	name = PrimaryKey(str)
 	processes = Set('Process')

@@ -197,10 +197,15 @@ Another useful feature is to just use the in-memory SqlLite database, which allo
 
 
 ```
-$ # In memory only
-$ cp /path/to/install/settings_sqllite.py /path/to/install/settings.py
+$ ls settings_*py
+settings_pg_container.py	settings_sqlite_inmem.py
+settings_pg_localhost.py	settings_sqlite_localfile.py
+$
+$ # In memory only, disappears after run
+$ cp /path/to/install/settings_sqlite_inmem.py /path/to/install/settings.py
+$ 
 $ # Persistent and on disk
-$ cp /path/to/install/settings_sqllite_localfile.py /path/to/install/settings.py
+$ cp /path/to/install/settings_sqlite_localfile.py /path/to/install/settings.py
 $ epmt -v -v submit /dir/to/jobdata
 ```
 
