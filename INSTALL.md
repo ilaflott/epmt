@@ -1,30 +1,43 @@
-## How to Run
+# EPMT Installation Guide
 
-```docker-compose up adminer db```
+## Starting the Database Daemons
 
-## Before importing data, create the EPMT database. 
+If you do not have a postgres database daemon installed and running, it's easiest to use the provided dockerized services. 
 
-From the Adminer Console:
+Using the command line, we start both the database and the administrative interface:
 
-http://localhost:8080/?pgsql=db&username=postgres&database=
+```
+$ docker-compose up adminer db
+```
+
+## Creating the Database.
+
+If you are not using the sqlite database for testing, you need to create the **EPMT** database before proceeding.
+
+Use the **Adminer** console:
+
+```
+$ firefox http://localhost:8080/?pgsql=db&username=postgres&database=
+```
 
 Or using the command line:
 
-```sudo su - postgres``` to become postgres
+```
+$ sudo su - postgres
+$ psql -c "create database EPMT"
+```
 
-```psql -c "create database EPMT"```
+## Safe Shutdown Of Daemons
 
-## How to Shutdown
+```
+$ docker-compose down adminer db
+```
 
-```docker-compose down adminer db```
+## Port Usage
 
-## Usage
-
-* Browse to 5000 for App interface
-* Browse to 8080 for DB admin interface
-* Browse to 3000 for Grafana interface
-* Connect to 5432 for PostGresQL
+* 8080 for DB admin interface
+* 5432 for PostGresQL
 
 ## Persistant Storage
 
-Persistent data and config present in the ./dat
+Persistent data and config present in the **./data** directory where the containers are started.
