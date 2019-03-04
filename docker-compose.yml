@@ -21,6 +21,16 @@ services:
     ports:
       - 8080:8080
 
+  notebook:
+    image: epmt-notebook
+    restart: always
+    volumes:
+      - ./:/home/jovyan/work
+    ports:
+      - 8884:8884
+    environment:
+      JUPITER_ENABLE_LAB: "yes"
+
 #  epmt:
 #    image: epmt-command
 #    volumes:
@@ -29,16 +39,6 @@ services:
 #      - "db"
 #    command: -d submit /epmt/
 
-#  notebook:
-#    image: jupyter/datascience-notebook
-#    restart: always
-#    volumes:
-#      - ./data/jupyter:/home/jovyan/work
-#      - ./:/epmt  
-#    ports:
-#      - 8884:8884
-#    environment:
-#      JUPITER_ENABLE_LAB: "yes"
 
 #  grafana:
 #    image: grafana/grafana:latest

@@ -7,9 +7,10 @@ SHELL=/bin/bash
 
 default: epmt-build epmt-build-stack
 
-epmt-build: Dockerfiles/Dockerfile.python-epmt Dockerfiles/Dockerfile.epmt-command
+epmt-build: Dockerfiles/Dockerfile.python-epmt Dockerfiles/Dockerfile.epmt-command Dockerfiles/Dockerfile.epmt-notebook
 	docker build -f Dockerfiles/Dockerfile.python-epmt -t python-epmt:latest --squash .
 	docker build -f Dockerfiles/Dockerfile.epmt-command -t epmt-command:latest --squash .
+	docker build -f Dockerfiles/Dockerfile.epmt-notebook -t epmt-notebook:latest --squash .
 
 epmt-build-stack: epmt-build docker-compose.yml
 	docker-compose build
