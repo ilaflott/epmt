@@ -2,7 +2,7 @@ FROM python-epmt:latest
 
 WORKDIR /home/app
 COPY models /home/app/models
-COPY epmt epmt_job.py epmt_cmds.py settings_pg_container.py /home/app/
+COPY epmt epmt_job.py epmt_cmds.py settings/settings_pg_container.py /home/app/
 RUN mv settings_pg_container.py settings.py
 RUN python -m py_compile *.py models/*.py
 RUN groupadd -r app && useradd -r -g app app 
