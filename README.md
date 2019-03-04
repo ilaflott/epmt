@@ -235,3 +235,11 @@ job_pl_submit           2019-02-20 19:58:41.274463
 job_pl_username         Foo.Bar                                        
 
 ```
+## Testing and Docker
+
+One can test **EPMT** on various versions of python with the following commands:
+```
+make check-python-native
+make check-python-2.6
+make check-python-2.7
+make check-python-latest

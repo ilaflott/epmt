@@ -36,24 +36,24 @@ def lookup_or_create_metricname(metricname):
     return mn
 
 def create_job(jobid,user,metadata={}):
-	job = Job.get(jobid=jobid)
-	if job is None:
-		logger.info("Creating job %s",jobid)
-		job = Job(jobid=jobid,user=user)
-                if metadata:
-                    if metadata['job_pl_id'] != jobid:
-                        logger.warning("metadata job id did not match job id %s vs %s, continuing anyways...",metadata['job_pl_id'],jobid)
-                    job.jobname = metadata['job_pl_jobname']
-                    job.jobscriptname = metadata['job_pl_scriptname']
-                    job.exitcode = metadata['job_el_status']
+    job = Job.get(jobid=jobid)
+    if job is None:
+        logger.info("Creating job %s",jobid)
+        job = Job(jobid=jobid,user=user)
+        if metadata:
+            if metadata['job_pl_id'] != jobid:
+                logger.warning("metadata job id did not match job id %s vs %s, continuing anyways...",metadata['job_pl_id'],jobid)
+            job.jobname = metadata['job_pl_jobname']
+            job.jobscriptname = metadata['job_pl_scriptname']
+            job.exitcode = metadata['job_el_status']
 # fix below
-                    job.env_dict = metadata['job_pl_env']
-                    job.env_changes_dict = metadata['job_el_env_changes']
-                    job.info_dict = metadata['job_pl_from_batch'] # end batch also
-                return job
-        else:
-            logger.error("Job %s (at %s) is already in the database",job.jobid,job.start)
-            return None
+            job.env_dict = metadata['job_pl_env']
+            job.env_changes_dict = metadata['job_el_env_changes']
+            job.info_dict = metadata['job_pl_from_batch'] # end batch also
+        return job
+    else:
+        logger.error("Job %s (at %s) is already in the database",job.jobid,job.start)
+        return None
 
 ##	metadata['job_pl_id'] = global_job_id
 ##	metadata['job_pl_scriptname'] = global_job_scriptname
@@ -94,8 +94,8 @@ def lookup_or_create_user(username):
 def lookup_or_create_tags(tagnames):
     retval=[]
     for tagname in tagnames:
-	tag = Tag.get(name=tagname)
-	if tag is None:
+        tag = Tag.get(name=tagname)
+        if tag is None:
             logger.info("Creating tag %s",tagname)
             tag = Tag(name=tagname)
         else:
@@ -106,12 +106,12 @@ def lookup_or_create_tags(tagnames):
 def load_process_from_pandas(df, h, j, u, tags, mns):
 # Assumes all processes are from same host
 #	dprint("Creating process",str(df['pid'][0]),"gen",str(df['generation'][0]),"exename",df['exename'][0])
-        from pandas import Timestamp
+    from pandas import Timestamp
 
-	earliest_thread = datetime.datetime.utcnow()
-	latest_thread = datetime.datetime.fromtimestamp(0)
+    earliest_thread = datetime.datetime.utcnow()
+    latest_thread = datetime.datetime.fromtimestamp(0)
 
-	try:
+    try:
             p = Process(exename=df['exename'][0],
                         args=df['args'][0],
                         path=df['path'][0],
@@ -123,48 +123,48 @@ def load_process_from_pandas(df, h, j, u, tags, mns):
                         job=j,
                         host=h,
                         user=u)
-        except Exception as e:
-            logger.error("%s",e)
-            logger.error("Corrupted CSV or invalid input type");
-            return None
+    except Exception as e:
+        logger.error("%s",e)
+        logger.error("Corrupted CSV or invalid input type");
+        return None
 
 # Add all threads in process
-        threads = []
-	for index, row in df.iterrows():
+    threads = []
+    for index, row in df.iterrows():
 # Add Thread to process
-		start = Timestamp(row['start'], unit='us')
-		end = Timestamp(row['end'], unit='us')
-		duration = end-start
-		t = Thread(tid=row['tid'],start=start,end=end,duration=float(duration.total_seconds())*float(1000000),process=p)
-                if t is None:
-                    logger.error("Thread duration error, likely corrupted CSV");
-                    return None
-                threads.append(t)
+        start = Timestamp(row['start'], unit='us')
+        end = Timestamp(row['end'], unit='us')
+        duration = end-start
+        t = Thread(tid=row['tid'],start=start,end=end,duration=float(duration.total_seconds())*float(1000000),process=p)
+        if t is None:
+            logger.error("Thread duration error, likely corrupted CSV");
+            return None
+        threads.append(t)
 # Add Metrics to thread
-                metrics = []
-		for metricname,obj in mns.iteritems():
-                    value = row.get(metricname)
-                    if value is None:
-                        logger.error("Key %s not found in data",metricname)
-                        return None
-                    m = Metric(metricname=obj,value=value,thread=t)
-                    metrics.append(m)
-                t.metrics.add(metrics)
+        metrics = []
+        for metricname,obj in mns.iteritems():
+            value = row.get(metricname)
+            if value is None:
+                logger.error("Key %s not found in data",metricname)
+                return None
+            m = Metric(metricname=obj,value=value,thread=t)
+            metrics.append(m)
+            t.metrics.add(metrics)
 # Compute wallclock duration for job from threads
-  		if (start < earliest_thread):
-			earliest_thread = start
-		if (end > latest_thread):
-			latest_thread = end
+        if (start < earliest_thread):
+            earliest_thread = start
+        if (end > latest_thread):
+            latest_thread = end
 # Record tags, threads, start, end, wall clock duration for process
-        if tags:
-            p.tags.add(tags)
-        p.threads.add(threads)
-	p.start = earliest_thread
-	p.end = latest_thread
-	p.duration = float((latest_thread - earliest_thread).total_seconds())*float(1000000)
+    if tags:
+        p.tags.add(tags)
+    p.threads.add(threads)
+    p.start = earliest_thread
+    p.end = latest_thread
+    p.duration = float((latest_thread - earliest_thread).total_seconds())*float(1000000)
 #	print "Earliest thread start:",earliest_thread,"\n","Latest thread end:",latest_thread,"\n","Computed duration of process:",(p.end-p.start).total_seconds(),"seconds","\n","Duration of process:",p.duration,"microseconds"
-	return p
-
+    return p
+    
 #
 # Extract a dictionary from the rows of header on the file
 #
@@ -267,7 +267,7 @@ def ETL_job_dict(metadata, filedict, tarfile=None):
         h = lookup_or_create_host(hostname)
         cntmax = len(files)
         cnt = 0
-	for f in files:
+        for f in files:
             logger.debug("Processing file %s",f)
 #
 #            stdout.write('\b')            # erase the last written char

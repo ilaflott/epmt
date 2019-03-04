@@ -191,26 +191,26 @@ def check_and_add_workflowdb_envvars(metadata, env):
     return metadata
 
 def create_job_epilog(prolog, from_batch=[], status="0"):
-	metadata={}
-        env={}
-	ts=datetime.now()
-	stop_env=blacklist_filter(filter,**environ)
+    metadata={}
+    env={}
+    ts=datetime.now()
+    stop_env=blacklist_filter(filter,**environ)
 # Compute differences in environment if detected
-        start_env=prolog['job_pl_env']
-        for e in start_env.keys():
-            if e in stop_env.keys():
-                if start_env[e] == stop_env[e]:
-                    logger.debug("Found "+e)
-                else:
-                    logger.debug("Different "+e)
-                    env[e] = stop_env[e]
+    start_env=prolog['job_pl_env']
+    for e in start_env.keys():
+        if e in stop_env.keys():
+            if start_env[e] == stop_env[e]:
+                logger.debug("Found "+e)
             else:
-                logger.debug("Deleted "+e)
-                env[e] = start_env[e]
-        for e in stop_env.keys():
-            if e not in start_env.keys():
-                logger.debug("Added "+e)
+                logger.debug("Different "+e)
                 env[e] = stop_env[e]
+        else:
+            logger.debug("Deleted "+e)
+            env[e] = start_env[e]
+    for e in stop_env.keys():
+        if e not in start_env.keys():
+            logger.debug("Added "+e)
+            env[e] = stop_env[e]
 #        try:
 #            find_module('dictdiffer')
 #            import dictdiffer
@@ -218,17 +218,17 @@ def create_job_epilog(prolog, from_batch=[], status="0"):
 #        except ImportError:
 #            logger.warn("dictdiffer module not found");
 #            env = env
-	metadata['job_el_env_changes_len'] = len(env)
-	metadata['job_el_env_changes'] = env
-	metadata['job_el_stop'] = ts
-	metadata['job_el_from_batch'] = from_batch
-	metadata['job_el_status'] = status
+    metadata['job_el_env_changes_len'] = len(env)
+    metadata['job_el_env_changes'] = env
+    metadata['job_el_stop'] = ts
+    metadata['job_el_from_batch'] = from_batch
+    metadata['job_el_status'] = status
 # Merge start and stop environments
-        total_env = start_env.copy()
-        total_env.update(stop_env)
+    total_env = start_env.copy()
+    total_env.update(stop_env)
 # Check for Experiment related variables
-        metadata = check_and_add_workflowdb_envvars(metadata,total_env)
-	return metadata
+    metadata = check_and_add_workflowdb_envvars(metadata,total_env)
+    return metadata
 
 def write_job_prolog(jobdatafile,data):
 	with open(jobdatafile,'w+b') as file:
@@ -244,23 +244,22 @@ def merge_two_dicts(x, y):
     return z
 
 def read_job_metadata_direct(file):
-        data = pickle.load(file)
-        logger.debug("Unpickled")
-	return data
+    data = pickle.load(file)
+    logger.debug("Unpickled")
+    return data
 
 def read_job_metadata(jobdatafile):
-	logger.info("Unpickling from "+jobdatafile)
-	with open(jobdatafile,'rb') as file:
-            return read_job_metadata_direct(file)
-        return False
+    logger.info("Unpickling from "+jobdatafile)
+    with open(jobdatafile,'rb') as file:
+        return read_job_metadata_direct(file)
+    return False
 
 def write_job_epilog(jobdatafile,metadata):
-	with open(jobdatafile,'w+b') as file:
-		pickle.dump(metadata,file)
-		logger.debug("Pickled to "+jobdatafile)
-		return True
-	return False
-	# collect env
+    with open(jobdatafile,'w+b') as file:
+        pickle.dump(metadata,file)
+        logger.debug("Pickled to "+jobdatafile)
+        return True
+    return False
 
 # Clean files from tmp storage
 def job_clean():
@@ -303,9 +302,9 @@ def get_job_metadata_file(hostname="", prefix=settings.papiex_output):
 
 def create_job_dir(dir):
 	try:
-		makedirs(dir, 0700) 
+		makedirs(dir,0700) 
 		logger.info("created dir %s",dir)
-	except OSError, e:
+	except OSError as e:
 		if e.errno != errno.EEXIST:
 			logger.error("dir %s: %s",dir,e)
 			return False
@@ -317,19 +316,19 @@ def create_job_dir(dir):
 #
 #db.bind(**settings.db_params)
 def epmt_start(from_batch=[]):
-	jobid = get_job_id()
-	dir = create_job_dir(get_job_dir())
-	if dir is False:
-            exit(1)
-	file = get_job_metadata_file()
-        if path.exists(file):
-            logger.error("%s already exists!",file)
-            exit(1)
-        metadata = create_job_prolog(jobid,from_batch)
-	write_job_prolog(file,metadata)
-	logger.info("wrote prolog to %s",file);
-	logger.debug("%s",metadata)
-	return metadata
+    jobid = get_job_id()
+    dir = create_job_dir(get_job_dir())
+    if dir is False:
+        exit(1)
+    file = get_job_metadata_file()
+    if path.exists(file):
+        logger.error("%s already exists!",file)
+        exit(1)
+    metadata = create_job_prolog(jobid,from_batch)
+    write_job_prolog(file,metadata)
+    logger.info("wrote prolog to %s",file);
+    logger.debug("%s",metadata)
+    return metadata
 
 def epmt_dump_metadata_file(filelist):
     if len(filelist) == 0:

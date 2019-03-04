@@ -31,7 +31,7 @@ class Detector(db.Entity):
 	name = PrimaryKey(str)
 	description = Optional(str)
 	pandas_json = Optional(Json)
- 	pprs = Set('PostProcessRun')
+	pprs = Set('PostProcessRun')
 
 # 
 # Unused for now
