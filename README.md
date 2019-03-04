@@ -237,9 +237,13 @@ job_pl_username         Foo.Bar
 ```
 ## Testing and Docker
 
-One can test **EPMT** on various versions of python with the following commands:
+One can test **EPMT** on various versions of python with the following make commands. Each will test against a minimal install of Python, without installing any dependencies. This should work for **start, stop, dump, help and submit, the latter with -n or --dry-run**. 
+
 ```
 make check-python-native
 make check-python-2.6
 make check-python-2.7
-make check-python-latest
+make check-python-3
+```
+
+Python 3 support is not yet available.
