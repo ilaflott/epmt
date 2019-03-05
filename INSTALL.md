@@ -1,6 +1,15 @@
 # EPMT Installation Guide
 
-## Starting the Database Daemons
+## Requirements
+
+First download the most recent source tree.
+
+```
+$ git clone https://<user>@bitbucket.org/minimalmetrics/epmt.git
+$ cd epmt
+```
+
+## Start the Database
 
 If you do not have a postgres database daemon installed and running, it's easiest to use the provided dockerized services. 
 
@@ -10,7 +19,7 @@ Using the command line, we start both the database and the administrative interf
 $ docker-compose up adminer db
 ```
 
-## Creating the Database.
+## Create the Database
 
 If you are not using the sqlite database for testing, you need to create the **EPMT** database before proceeding.
 
@@ -30,7 +39,7 @@ $ psql -c "create database EPMT"
 ## Safe Shutdown Of Daemons
 
 ```
-$ docker-compose down adminer db
+$ docker-compose down 
 ```
 
 ## Port Usage

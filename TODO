@@ -5,3 +5,18 @@ Manage .tgz handling better, single get_member/extract pass
 Fix environment variable vs. settings
 Identical job ID's with different usernames?
 Fix leaking usernames on bad job commit
+Turn metrics into MetricArray/MetricSet
+Add submit host to metadata and database
+Fix submit job id
+Fix global variable handling
+Fix environment variable handling (PAPIEX_OPTIONS, PAPIEX_DEBUG, PAPIEX_OUTPUT, PAPIEX_INSTALL?)
+Make install target
+Make virtual environment
+
+
+Outlier detection and averaging
+- Allow multiple methods
+  - Quartiles
+  - N * (X-mu/stddev)
+- Reduce single queries
+- Use bulk Pandas processing
