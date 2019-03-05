@@ -251,21 +251,24 @@ job_pl_username         Foo.Bar
 
 ## EPMT under Docker 
 
-Lets run epmt on a local directory to submit and set the submission DB host environment variable:
+Run epmt on a local directory to submit and set the submission DB host environment variable:
 
 ```
 docker run --network=host -ti --rm -v `pwd`:/app -w /app -e EPMT_DB_HOST=<hostname> epmt-command:latest -v submit <localdir/>
 ```
-## Testing Python Versions under Docker
 
-One can test **EPMT** on various versions of python with the following make commands. Each will test against a minimal install of Python, without installing any dependencies. This should work for **start, stop, dump, help and submit, the latter with -n or --dry-run**. 
+## Analysis of EPMT Data using Jupyter
+
+Current analytics are performed in an iPython notebook, specifically the SciPy-Notebook as described on their homepage. [https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html]()
+
+If you have Jupyter installed locally **and** you have installed the prerequisite Python modules (see **INSTALL.md**), there is no need to use the Docker image. 
+
+However, it is recommended to use the Docker image as it contains all recent updates to the relevant dependencies. **You must be in the source directory!**
 
 ```
-make check-python-native
-make check-python-2.6
-make check-python-2.7
-make check-python-3
+docker-compose up notebook
 ```
 
-Python 3 support is not yet available.
+Follow the instructions printed to the screen to navigate to the directory containing **EPMT.ipynb**. 
+
 
