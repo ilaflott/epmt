@@ -3,15 +3,17 @@ image: python:2.7.13
 pipelines:
   default:
     - step:
+        caches:
+          - pip
         script: # Modify the commands below to build your repository.
-        - pip install -r requirements.txt
-        - cp settings/settings_sqlite_inmem.py settings.py	# Setup in mem sqlite
-        - python -m py_compile *.py models/*.py		# Compile everything
-        - PAPIEX_OUTPUT=$PWD/ ./epmt -h			# help path 1
-        - PAPIEX_OUTPUT=$PWD/ ./epmt help		# help path 2
-        - PAPIEX_OUTPUT=$PWD/ ./epmt start 		# Generate prolog
-        - PAPIEX_OUTPUT=$PWD/ ./epmt source 		# Print shell command
-        - PAPIEX_OUTPUT=$PWD/ ./epmt run sleep 1	# Run command
-        - PAPIEX_OUTPUT=$PWD/ ./epmt stop   	  	# Generate epilog and append
-        - PAPIEX_OUTPUT=$PWD/ ./epmt dump   		# Parse/print job_metadata
-        - PAPIEX_OUTPUT=$PWD/ ./epmt submit 		# Submit
+          - pip install -r requirements.txt
+          - cp settings/settings_sqlite_inmem.py settings.py	# Setup in mem sqlite
+          - python -m py_compile *.py models/*.py		# Compile everything
+          - PAPIEX_OUTPUT=$PWD/ ./epmt -h			# help path 1
+          - PAPIEX_OUTPUT=$PWD/ ./epmt help		# help path 2
+          - PAPIEX_OUTPUT=$PWD/ ./epmt start 		# Generate prolog
+          - PAPIEX_OUTPUT=$PWD/ ./epmt source 		# Print shell command
+          - PAPIEX_OUTPUT=$PWD/ ./epmt run sleep 1	# Run command
+          - PAPIEX_OUTPUT=$PWD/ ./epmt stop   	  	# Generate epilog and append
+          - PAPIEX_OUTPUT=$PWD/ ./epmt dump   		# Parse/print job_metadata
+          - PAPIEX_OUTPUT=$PWD/ ./epmt submit 		# Submit
