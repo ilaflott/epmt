@@ -17,8 +17,10 @@ epmt-build-stack: epmt-build docker-compose.yml
 #epmt-test:
 #	docker run epmt:latest
 #	docker-compose up
-clean distclean:
+clean:
 	rm -f *~ *.pyc job_metadata *papiex*.csv
+distclean: clean
+	rm -f settings.py; ln -s settings/settings_sqlite_inmem.py settings.py  # Setup in mem sqlite
 # 
 # Simple python version testing with no database
 #
