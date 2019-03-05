@@ -44,12 +44,12 @@ check-python-driver:
 	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) python -m py_compile *.py models/*.py         # Compile everything
 	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt -h >/dev/null      # help path 1
 	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt help >/dev/null    # help path 2
-	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt -v start           # Generate prolog
-	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt -v source          # Print shell command
-	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt -v run sleep 1     # Run command
-	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt -v stop            # Generate epilog and append
-	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt -v dump            # Parse/print job_metadata
-	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt -n -v submit       # Submit
+	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt start           # Generate prolog
+	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt source          # Print shell command
+	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt run sleep 1     # Run command
+	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt stop            # Generate epilog and append
+	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt dump            # Parse/print job_metadata
+	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt -n submit       # Submit
 	@$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) python -V	             # Version 
 	@echo "Tests pass!"
 	@rm ./job_metadata
