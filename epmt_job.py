@@ -1,6 +1,6 @@
 from pony.orm import *
 from models import *
-from sys import stdout, argv, stderr
+from sys import stdout, argv, stderr, exit
 from os.path import basename
 from glob import glob
 from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
@@ -377,17 +377,23 @@ def setup_orm_db(drop=False,create=True):
     try:
         db.bind(**settings.db_params)
     except Exception as e:
-        logger.error("%s",str(e).strip())
-        logger.error("You probably need to create the EPMT database!")
-        exit(1)
+        if (type(e).__name__ == "BindingError"):
+            pass
+        else:
+            logger.error("Binding to DB, check database existance and connection parameters")
+            logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
+            exit(1)
 
     try:
         logger.info("Generating mapping from schema...")
         db.generate_mapping(create_tables=True)
     except Exception as e:
-        logger.error("%s",str(e).strip())
-        logger.error("You probably need to drop and recreate the EPMT database!")
-        exit(1)
+        if (type(e).__name__ == "BindingError"):
+            pass
+        else:
+            logger.error("Mapping to DB, did the schema change? Perhaps drop and create?")
+            logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
+            exit(1)
         
     if drop:
         logger.warning("DROPPING ALL DATA AND TABLES!")
