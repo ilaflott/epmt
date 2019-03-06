@@ -283,7 +283,7 @@ def ETL_job_dict(metadata, filedict, tarfile=None):
             csv = datetime.datetime.now()
             rows,comment = extract_tags_from_comment_line(f,tarfile=tarfile)
 # Check comment/tags cache
-            if comment != oldcomment:
+            if comment and comment != oldcomment:
                 logger.info("Missed tag cache %s",comment)
                 tags = lookup_or_create_tags([comment])
                 oldcomment = comment
