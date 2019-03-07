@@ -2,7 +2,6 @@
 
 The software contained in this repository was written by Philip Mucci of Minimal Metrics LLC.
 
-## Let's go!
 
 Before you start:
 
@@ -21,7 +20,7 @@ A basic Linux (or container image) with:
 * 	gcc
 * git 
 
-For a stock Ubuntu 16.04 box:
+For a stock Ubuntu 16.04 (or container):
 
 ```
 $ apt-get update
@@ -29,7 +28,7 @@ $ apt-get install -y python python-pip git gcc
 
 ```
 
-### System settings
+## System settings
 
 For detailed hardware and software performance metrics to collected by non-privileged users, the following setting must be verified/modified:
 
@@ -44,7 +43,7 @@ For detailed hardware and software performance metrics to collected by non-privi
 
 This isn't necessary unless one would like to collect metrics exposed by [PAPI](http://icl.utk.edu/papi/), [libpfm](http://perfmon2.sourceforge.net/) and the [perfevent](http://web.eece.maine.edu/~vweaver/projects/perf_events/) subsystems. But collecting this data is, after all, the entire point of this tool. See [Stack Overflow](https://stackoverflow.com/questions/51911368/what-restriction-is-perf-event-paranoid-1-actually-putting-on-x86-perf) for a discussion of the setting. A setting of 1 is perfectly safe for production systems.
 
-### Data Collection Libraries (aka papiex)
+## Data Collection Libraries (aka papiex)
 
 ```
 $ git clone https://bitbucket.org/minimalmetrics/papiex-oss.git -b papiex-epmt
@@ -109,20 +108,44 @@ $ ls papiex-oss-install/
 bin  include  lib  share  tmp
 ```
 
-### EPMT installation
+## Installation of EPMT
 
-As there is no virtual environment at the moment, the source tree should be copied to the default machines. Here we use ```build/epmt``` as our source dir.
+As there is no virtual environment at the moment, the source tree should be copied in its entirety to the target machines. Here we use ```build/epmt``` as our source dir, parallel to ```build/papiex-oss``` as above. 
+
+```
+$ cd build
+$ git clone https://<user>@bitbucket.org/minimalmetrics/epmt.git
+$ cd epmt
+```
 
 There are three modes to **EPMT** usage, collection, submission and analysis:
 
 * **Collection** only requires minimal Python installation of 2.6.x or higher
 * **Submission** requires python packages for data and database interaction
-* **Analysis** requires [Jupyter](https://jupyter.org), an iPython notebook environment, as well as additional python data analysis libraries.   
+* **Analysis** requires [Jupyter](https://jupyter.org), an iPython notebook environment, as well as additional python data analysis libraries.
 
-First we run the basic **collection** tests:
+### Configuration
+  
+All three modes reference the **settings.py** file as well as **environment variables**. EPMT uses uses a in-memory, temporary database by default, see **Configuring a Database**.  
 
 ```
-$ cd ../epmt
+$ cat settings.py
+db_params = {'provider': 'sqlite', 'filename': ':memory:'}
+papiex_options = "PERF_COUNT_SW_CPU_CLOCK"
+papiex_output = "/tmp/epmt/"
+debug = False
+input_pattern = "*-papiex-[0-9]*-[0-9]*.csv"
+install_prefix = "../papiex-oss/papiex-oss-install/"
+# DO NOT TOUCH THIS
+metrics_offset = 12
+```
+ 
+
+### Collection
+
+Immediately after installation, run the **collection** regression tests using ```make check```.
+
+```
 $ make check
 make[1]: Entering directory '/build/epmt'
 PAPIEX_OUTPUT=/build/epmt  python -m py_compile *.py models/*.py         # Compile everything
@@ -140,27 +163,17 @@ Python 2.7.12
 Tests pass! 
 ```
 
-All three modes reference the **settings.py** file as well as **environment variables**. The shipped version uses a in-memory, ephemeral database for testing. 
+We can now collect some test data.  
 
 ```
-$ cat settings.py
-db_params = {'provider': 'sqlite', 'filename': ':memory:'}
-papiex_options = "PERF_COUNT_SW_CPU_CLOCK"
-papiex_output = "/tmp/epmt/"
-debug = False
-input_pattern = "*-papiex-[0-9]*-[0-9]*.csv"
-install_prefix = "../papiex-oss/papiex-oss-install/"
-# DO NOT TOUCH THIS
-metrics_offset = 12
-```
-
-Let's collect some data on an interactive run and treat it as an entire job (using **--a**). 
-
-```
-$ ./epmt -a run sleep 10
+$ ./epmt -a run firefox
 $ ls /tmp/epmt/1/
 job_metadata  linuxkit-025000000001-papiex-14346-0.csv
 ```
+
+If this fails, then it's likely the papiex installation is either missing or misconfigured in **settings.py**. The **-a** flag tells **EPMT** to treat this run as an entire **job**. See **README.md** for further details.
+
+### Submission
 
 In order to submit data to the database, we need to install the dependencies. It is recommended that one use the Docker image which contains all the dependencies and **requires no user setup**. However, one may install these in a Python virtual environment, to the system Python or the user's local repository, using **pip install** as below:
 
@@ -172,7 +185,7 @@ psycopg2-binary==2.7.5
 $ pip install --user -r requirements.txt
 ```
 
-Now we can submit:
+Now we can submit our previous job to the default, in-memory, database defined in **settings.py**:
 
 ```
 $ ./epmt -v submit /tmp/epmt/1/
@@ -222,10 +235,23 @@ INFO:epmt_job:Staged import took 0:00:00.189151, 5.286781 processes per second
 INFO:epmt_cmds:Committed job 1 to database: Job[u'1']
 ```
 
-If you've made it this far, you are ready to configure a real database.
+You are ready to configure a real database.
 
+### Configuring a Database
 
-## Start the Database Services
+There is a prebuilt settings.py file to connect to the localhost.
+
+```
+$ rm settings.py settings.pyc
+$ ln -s settings/settings_pg_localhost.py settings.py
+$ grep db_params settings.py
+db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'localhost', 'dbname': 'EPMT'}
+
+```
+
+The database is ready to go.
+
+## Database Services
 
 If you do not have a postgres database daemon installed and running, it's easiest to use the provided Docker Compose recipe for both the database and the administrative interface:
 
@@ -245,21 +271,7 @@ These services will export the following ports:
 
 After these are running, one can examine the database using the provided **Adminer** console: [http://localhost:8080/?pgsql=db&username=postgres&db=EPMT&ns=public](). 
 
-### Configuring a Database
-
-There is a prebuilt settings.py file to connect to the localhost.
-
-```
-$ rm settings.py settings.pyc
-$ ln -s settings/settings_pg_localhost.py settings.py
-$ grep db_params settings.py
-db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'localhost', 'dbname': 'EPMT'}
-
-```
-
-The database is ready to go.
-
-### Database Container and Storage onfiguration
+### Database Service Configuration
 
 Persistent data and config present in **./data/postgres**. See the below **docker-compose.yml** file:
 
@@ -294,9 +306,10 @@ $ sudo su - postgres
 $ psql -c "create database EPMT"
 ```
 
-## Analysis and Visualization with Jupyter
+## Analysis and Visualization
 
-For this, we need to build the container images. In the source tree:
+
+Here we need a working **ipython notebook** data analytics environment along with **EPMT**'s dependencies. It's easiest to build/use the existing the **epmt-notebook** container image, which uses the supported [jupyter/scipy-notebook]() container image from Docker Hub. 
 
 ```
 $ make
@@ -310,7 +323,7 @@ epmt-command             latest              530fe3198a1d        About a minute 
 python-epmt              latest              5b99ede4828d        About a minute ago   1.1GB
 ```
 
-In the source tree:
+Once **epmt-notebook** is built, one starts the notebook via the command line. 
 
 ```
 $ docker-compose up notebook
@@ -330,15 +343,17 @@ notebook_1  |     to login with a token:
 notebook_1  |         http://(9a7974f0ffb9 or 127.0.0.1):8888/?token=c9d7cb543a82a7a278197b874c789da99a7ed91cd2f84016
 ```
 
-and then load and execute the **EPMT.ipynb** file.
+and then login and load the **EPMT.ipynb** file.
 
-## Docker Images for the EPMT command
+# Appendix
 
-The make builds the various **EPMT** images. The image **epmt-command** is the image that contains a working **EPMT** and all it's dependencies. It's mean to be run as a command with arguments via **docker run**.
+## Docker Images for the running the EPMT command
+
+The image **epmt-command** is the image that contains a working **epmt** install and all it's dependencies. It's mean to be run as a command with arguments via **docker run**. See **README.md** for more details.
 
 ## Testing EPMT Collection with Various Python Versions under Docker
 
-One can test **EPMT** on various versions of python with the following make commands. Each will test against a minimal install of Python, without installing any dependencies. This should work for **start, stop, dump, help and submit, the latter with -n or --dry-run**. 
+One can test **EPMT** on various versions of python with the following make commands. Each will test against a minimal install of Python, without installing any dependencies. 
 
 ```
 make check-python-native

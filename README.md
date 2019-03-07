@@ -53,14 +53,7 @@ epmt stop
 
 Let's skip all the markup, as we can do it with only environment variables. **EPMT** can provide the configuration to export to the environment. The following example is for **BASH**.
 
-When run interactively, **epmt source** just prints the required environment variables:
-
-```
-$ epmt source
-PAPIEX_OPTIONS=PERF_COUNT_SW_CPU_CLOCK LD_PRELOAD=../papiex-oss/papiex-oss-install/lib/libpapiex.so:../papiex-oss/papiex-oss-install/lib/libmonitor.so
-```
-
-But it's real use is in a job file. **Please note the unset of LD_PRELOAD before stop:**
+The use for this is in a job file. **Please note the unset of LD_PRELOAD before stop:**
 
 ```
 $ cat my_job_epmt_2.sh
@@ -81,6 +74,13 @@ epmt stop
 ```
 
 The **unset LD_PRELOAD** line is to prevent the data collection routine from running on **epmt stop** itself.
+
+When run interactively, **epmt source** just prints the required environment variables in **Bash** format:
+
+```
+$ epmt source
+PAPIEX_OPTIONS=PERF_COUNT_SW_CPU_CLOCK LD_PRELOAD=../papiex-oss/papiex-oss-install/lib/libpapiex.so:../papiex-oss/papiex-oss-install/lib/libmonitor.so
+```
 
 ## Importing Data Into the Database
 
@@ -105,7 +105,9 @@ There is also a mode where the current environment is used to determine where to
 
 This might happen at the end of the day via a cron job:
 
-```epmt submit <dir>/*tgz```
+```
+$ epmt submit <dir>/*tgz
+```
 
 ### Submitting data directly from within a job
 
@@ -147,7 +149,7 @@ $ epmt submit
 
 To initialize a new session leader, consider using the **setsid** command. 
 
-## Configuration
+## Usage and Configuration
 
 **EPMT** gets all of it's configuration from two places, environment variables and the **settings.py** file. One can examine all the current settings by passing the **--help** option.
 
@@ -192,22 +194,9 @@ EPMT_DB_DBNAME
 EPMT_DB_FILENAME
 ```
 
-## Debugging
+## settings.py
 
-**EPMT** can be passed noth **-n** (dry-run) and **-v** (verbosity) to help with debugging. Add more **-v** flags to increase the level of information printed.
-
-```
-$ epmt -v start
-```
-
-Or to attempt a submit without touching the database:
-
-```
-$ epmt -v -v -n submit /dir/to/jobdata
-```
- 
-Another useful feature is to just use the in-memory SqlLite database, which allows full submit and query testing. There are two prebuilt settings files for this.
-
+There are a number of example files provided. See **INSTALL.md** for more details.
 
 ```
 $ ls settings
@@ -220,6 +209,20 @@ $
 $ # Persistent and on disk
 $ cp /path/to/install/settings/settings_sqlite_localfile.py /path/to/install/settings.py
 $ epmt -v -v submit /dir/to/jobdata
+```
+
+## Debugging
+
+**EPMT** can be passed noth **-n** (dry-run) and **-v** (verbosity) to help with debugging. Add more **-v** flags to increase the level of information printed.
+
+```
+$ epmt -v start
+```
+
+Or to attempt a submit without touching the database:
+
+```
+$ epmt -v -v -n submit /dir/to/jobdata
 ```
 
 Also, one can decode and dump the job_metadata file in a dir or compressed dir.
@@ -251,24 +254,27 @@ job_pl_username         Foo.Bar
 
 ## EPMT under Docker 
 
-Run epmt on a local directory to submit and set the submission DB host environment variable:
+Using the epmt-command docker image, we run **epmt** on a local directory to submit and set the submission DB host environment variable:
 
 ```
-docker run --network=host -ti --rm -v `pwd`:/app -w /app -e EPMT_DB_HOST=<hostname> epmt-command:latest -v submit <localdir/>
+$ docker run --network=host -ti --rm -v `pwd`:/app -w /app -e EPMT_DB_HOST=<hostname> epmt-command:latest -v submit <localdir/>
 ```
 
-## Analysis of EPMT Data using Jupyter
+This could be easilt aliased for convenience.
 
-Current analytics are performed in an iPython notebook, specifically the SciPy-Notebook as described on their homepage. [https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html]()
+# Analysis of EPMT Data 
 
-If you have Jupyter installed locally **and** you have installed the prerequisite Python modules (see **INSTALL.md**), there is no need to use the Docker image. 
+Current analytics are performed in an iPython notebook, specifically the SciPy-Notebook as described on [their homepage](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html).  
 
-However, it is recommended to use the Docker image as it contains all recent updates to the relevant dependencies. **You must be in the source directory!**
+If you have Jupyter installed locally **and** you have installed the prerequisite Python modules (see **INSTALL.md**), there is no need to use the Docker image. You can simply load the **EPMT.ipynb** from the source directory in your environment and begin.
+
+However, for those without an environment, using Docker (and assuming you build the images as described in **INSTALL.md**):
 
 ```
-docker-compose up notebook
+$ docker-compose up notebook
 ```
 
-Follow the instructions printed to the screen to navigate to the directory containing **EPMT.ipynb**. 
+Follow the instructions printed to the screen to navigate to **EPMT.ipynb** or try this link [http://localhost:8888/notebooks/EPMT.ipynb]() and enter the encryption key. You must be in the directory where EPMT.ipynb exists when you start the notebook service. Further documentation exists in that file.
+
 
 
