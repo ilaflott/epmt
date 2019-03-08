@@ -276,5 +276,77 @@ $ docker-compose up notebook
 
 Follow the instructions printed to the screen to navigate to **EPMT.ipynb** or try this link [http://localhost:8888/notebooks/EPMT.ipynb]() and enter the encryption key. You must be in the directory where EPMT.ipynb exists when you start the notebook service. Further documentation exists in that file.
 
+## Data Dictionary
 
+EPMT collects data both from the job runtime and the applications run in that environment. See the **models/** directory for what fixed data is stored related to each object. Metric data is stored differently and the data collector's data directionary can be found in papiex-oss/README.md. At the time of this writing it looked like this:
 
+```
+Key                     Source							Description
+-------------------------------------------------------------------------------------------------------------------------------------
+exename			PAPI							Name of the application, usually argv[0]
+path			PAPI							Path to the application
+args			monitor							All arguments to the application not including argv[0]
+pid			getpid()						Process id
+generation		monitor 						Incremented after every exec()
+ppid			getppid()						Parent process id
+pgid			getpgid()						Process group id
+sid			getsid()						Process session id
+numtids			monitor							Number of threads caught by instrumentation
+tid			gettid()						Thread id
+start			gettimeofday() 						Microsecond timestamp at start
+end			gettimeofday() 						Microsecond timestamp at end
+usertime		getrusage(RUSAGE_THREAD) 				Microsecond user time 
+systemtime		getrusage(RUSAGE_THREAD) 				Microsecond system time
+rssmax			getrusage(RUSAGE_THREAD) 				Kb max resident set size
+minflt			getrusage(RUSAGE_THREAD) 				Minor faults (TLB misses/new page frames)
+majflt			getrusage(RUSAGE_THREAD) 				Major page faults (requiring I/O)
+inblock			getrusage(RUSAGE_THREAD) 				512B blocks read from I/O 
+outblock		getrusage(RUSAGE_THREAD) 				512B blocks written to I/O 
+vol_ctxsw		getrusage(RUSAGE_THREAD) 				Boluntary context switches (yields)
+invol_ctxsw		getrusage(RUSAGE_THREAD) 				Involuntary context switches (preemptions)
+num_threads		/proc/<pid>/task/<tid>/stat field 20 	     	 	Threads in process at finish
+starttime		/proc/<pid>/task/<tid>/stat field 22 	     	      	Timestamp in jiffies after boot thread was started
+processor		/proc/<pid>/task/<tid>/stat field 39 	     	      	CPU this thread last ran on
+delayacct_blkio_time	/proc/<pid>/task/<tid>/stat field 42 	     	      	Jiffies process was blocked in D state on I/O device
+guest_time		/proc/<pid>/task/<tid>/stat field 43 	     	      	Jiffies running a virtual CPU for a guest OS
+rchar			/proc/<pid>/task/<tid>/io line 1  		      	Bytes read via syscall (may come from pagecache not I/O device)
+wchar			/proc/<pid>/task/<tid>/io line 2  		      	Bytes written via syscall (may go to pagecache not I/O device)
+syscr			/proc/<pid>/task/<tid>/io line 3  		      	Read syscalls 
+syscw			/proc/<pid>/task/<tid>/io line 4  		      	Write syscalls
+read_bytes		/proc/<pid>/task/<tid>/io line 4  		      	Bytes read from I/O device
+write_bytes		/proc/<pid>/task/<tid>/io line 4  		      	Bytes written to I/O device
+cancelled_write_bytes	/proc/<pid>/task/<tid>/io line 4  		      	Number of bytes discarded by truncation
+time_oncpu		/proc/<pid>/task/<tid>/schedstat		      	Time in jiffies spent running the CPI
+time_waiting		/proc/<pid>/task/<tid>/schedstat		      	Time in jiffies waiting for a run queue while runnable
+timeslices		/proc/<pid>/task/<tid>/schedstat		      	Number of run periods on CPU
+rdtsc_duration		<Hardware RDTSC>				      	Real time cycle counter duration of thread
+```
+
+Additional metrics can be configured either in two ways:
+* The papiex_options string In **settings.py** if using ```epmt run``` or ```epmt source```
+* The value of the **PAPIEX_OPTIONS** environment variable if using ```LD_PRELOAD``` directly.
+
+The value of these should be a comma separated string:
+```
+$ export PAPIEX_OPTIONS="PERF_COUNT_SW_CPU_CLOCK,PAPI_CYCLES"
+```
+
+To list available and functioning metrics, use one of the included command line tools:
+ * papi_avail
+ * papi_native_avail
+ * check_events (libpfm)
+ * showevtinfo (libpfm)
+ * perf list (linux)
+
+**The PERF_COUNT_SW_* events should work on any system that has the proper /proc/sys/kernel/perf_event_paranoid setting**.
+
+One should verify the functionality of the metric using the ```papi_command_line``` tool:
+
+```
+$ papi_command_line PERF_COUNT_SW_CPU_CLOCK
+
+$ papi_command_line CYCLES
+
+```
+
+Note that often in virtual environments, hardware counters are not often available in the VM. 

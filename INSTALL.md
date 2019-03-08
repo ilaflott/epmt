@@ -139,11 +139,10 @@ install_prefix = "../papiex-oss/papiex-oss-install/"
 # DO NOT TOUCH THIS
 metrics_offset = 12
 ```
- 
 
 ### Collection
 
-Immediately after installation, run the **collection** regression tests using ```make check```.
+Immediately after installation, but before configuration of **settings.py** , run the **collection** regression tests using ```make check```.
 
 ```
 $ make check

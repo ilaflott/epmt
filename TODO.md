@@ -1,3 +1,10 @@
+# For Delivery
+
+Default data collected
+Document configuration of settings.py
+Adding/changing PERF events
+What happens if error
+
 # Todo
 
 Add duration to metric array (fix and import)
@@ -46,7 +53,11 @@ Outlier detection and averaging
 # EPMT Functionality
 
 Additional command line options:
+- List hardware events
+- List data dictionary for collection and for job
 - List job(s) 
 - Delete job(s)
 - Database check
+- Collector check
+- PAPIEX check
 - Config settings.py
