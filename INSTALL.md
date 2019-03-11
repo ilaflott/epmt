@@ -1,15 +1,14 @@
-# EPMT Installation Guide
+# EPMT Installation
+
+Experiment Performance Management Tool a.k.a Workflow DB
+
+This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes. This tool uses **papiex** to perform the process monitoring. This tool is targeted at batch or ephemeral jobs, not daemon processes. 
 
 The software contained in this repository was written by Philip Mucci of Minimal Metrics LLC.
 
+## Table of Contents
 
-Before you start:
-
-```
-$ mkdir build
-$ cd build/
-$ git clone https://<user>@bitbucket.org/minimalmetrics/epmt.git
-```
+[TOC]
 
 ## Requirements
 
@@ -28,22 +27,17 @@ $ apt-get install -y python python-pip git gcc
 
 ```
 
-## System settings
+## Source Code
 
-For detailed hardware and software performance metrics to collected by non-privileged users, the following setting must be verified/modified:
+Before you start, please make sure you have a copy of **EPMT** in a directory called **build**:
 
 ```
- # A value of 3 means the system is totally disabled
- $ cat /proc/sys/kernel/perf_event_paranoid
- 3 
- $ # Allow root and non-root users to use the perf subsystem
- $ echo 1 > /proc/sys/kernel/perf_event_paranoid 
- 1
+$ mkdir build
+$ cd build/
+$ git clone https://<user>@bitbucket.org/minimalmetrics/epmt.git
 ```
 
-This isn't necessary unless one would like to collect metrics exposed by [PAPI](http://icl.utk.edu/papi/), [libpfm](http://perfmon2.sourceforge.net/) and the [perfevent](http://web.eece.maine.edu/~vweaver/projects/perf_events/) subsystems. But collecting this data is, after all, the entire point of this tool. See [Stack Overflow](https://stackoverflow.com/questions/51911368/what-restriction-is-perf-event-paranoid-1-actually-putting-on-x86-perf) for a discussion of the setting. A setting of 1 is perfectly safe for production systems.
-
-## Data Collection Libraries (aka papiex)
+You also need the **papiex** data collection libraries in the **build** directory:
 
 ```
 $ git clone https://bitbucket.org/minimalmetrics/papiex-oss.git -b papiex-epmt
@@ -54,11 +48,18 @@ remote: Total 5274 (delta 2964), reused 3986 (delta 1909)
 Receiving objects: 100% (5274/5274), 8.54 MiB | 1.70 MiB/s, done.
 Resolving deltas: 100% (2964/2964), done.
 Checking connectivity... done.
+```
+
+## Installation of the Data Collection Libraries
+
+Compile the data collection libraries used by **EPMT**:
+
+```
 $ cd papiex-oss/
 $ make
 ```
 
-Run the tests and examine any failures. *Some may be SKIPPED if the target binary cannot be found*.
+The we run the data collection tests. If a test is *SKIPPED*, the test suite will still report a failure. 
 
 ```
 $ make check
@@ -108,20 +109,40 @@ $ ls papiex-oss-install/
 bin  include  lib  share  tmp
 ```
 
+If there are errors, often it is a problem with the a Linux setting that prevents access to performance data, see the next section:
+
+### Perf Event System Setting
+
+For detailed hardware and software performance metrics to collected by non-privileged users, the following setting must be verified/modified:
+
+```
+ # A value of 3 means the system is totally disabled
+ $ cat /proc/sys/kernel/perf_event_paranoid
+ 3 
+ $ # Allow root and non-root users to use the perf subsystem
+ $ echo 1 > /proc/sys/kernel/perf_event_paranoid 
+ 1
+```
+
+This isn't necessary unless one would like to collect metrics exposed by [PAPI](http://icl.utk.edu/papi/), [libpfm](http://perfmon2.sourceforge.net/) and the [perfevent](http://web.eece.maine.edu/~vweaver/projects/perf_events/) subsystems. But collecting this data is, after all, the entire point of this tool. See [Stack Overflow](https://stackoverflow.com/questions/51911368/what-restriction-is-perf-event-paranoid-1-actually-putting-on-x86-perf) for a discussion of the setting. A setting of 1 is perfectly safe for production systems.
+
+
 ## Installation of EPMT
 
 As there is no virtual environment at the moment, the source tree should be copied in its entirety to the target machines. Here we use ```build/epmt``` as our source dir, parallel to ```build/papiex-oss``` as above. 
 
 ```
 $ cd build
-$ git clone https://<user>@bitbucket.org/minimalmetrics/epmt.git
+$ # 
+$ # We already did this above
+$ # git clone https://<user>@bitbucket.org/minimalmetrics/epmt.git
 $ cd epmt
 ```
 
-There are three modes to **EPMT** usage, collection, submission and analysis:
+There are three modes to **EPMT** usage, collection, submission and analysis, and have an increasing number of dependencies:
 
-* **Collection** only requires minimal Python installation of 2.6.x or higher
-* **Submission** requires python packages for data and database interaction
+* **Collection** only requires a minimal Python installation of 2.6.x or higher
+* **Submission** requires Python packages for data and database interaction
 * **Analysis** requires [Jupyter](https://jupyter.org), an iPython notebook environment, as well as additional python data analysis libraries.
 
 ### Configuration

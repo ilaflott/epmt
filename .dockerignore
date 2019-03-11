@@ -1,5 +1,11 @@
+__pycache__
 data
 old
 .git
 *.pyc
 *~
+.ipynb_checkpoints
+.cache
+.ipython
+.jupyter
+.local

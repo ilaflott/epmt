@@ -1,10 +1,14 @@
 # EPMT
 
-Experiment Performance Management Tool a.k.a Workflow DB
+**Experiment Performance Management Tool** a.k.a **WorkflowDB** a.k.a. **PerfMiner**
 
 This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes. This tool uses **papiex** to perform the process monitoring. This tool is targeted at batch or ephemeral jobs, not daemon processes. 
 
-Questions/Comments to the Author: *phil@minimalmetrics.com*
+The software contained in this repository was written by Philip Mucci of Minimal Metrics LLC.
+
+## Table of Contents
+
+[TOC]
 
 ## Collecting Performance Data
 

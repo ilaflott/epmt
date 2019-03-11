@@ -43,3 +43,7 @@
 ehthumbs.db
 Thumbs.db
 data
+.cache
+.ipython
+.jupyter
+.local
