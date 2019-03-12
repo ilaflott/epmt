@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from logging import getLogger, basicConfig, DEBUG, INFO, WARNING, ERROR
 from datetime import datetime
-from os import environ, makedirs, errno, path, getpid, getuid, getsid
+from os import environ, makedirs, mkdir, errno, path, getpid, getuid, getsid
 from socket import gethostname
 #from json import dumps as dict_to_json
 from subprocess import call as forkexecwait
@@ -307,7 +307,7 @@ def get_job_metadata_file(hostname="", prefix=settings.papiex_output):
 
 def create_job_dir(dir):
 	try:
-		makedirs(dir,0700) 
+		makedirs(dir) 
 		logger.info("created dir %s",dir)
 	except OSError as e:
 		if e.errno != errno.EEXIST:
