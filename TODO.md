@@ -7,6 +7,7 @@ What happens if error
 
 # Todo
 
+Consider recording argv[0] as well
 Add duration to metric array (fix and import)
 Add 2 boxplots for reference data vs cleaned reference data for metric
 Add boxplots/scatter plot for cleaned data with outliers
