@@ -7,6 +7,7 @@ What happens if error
 
 # Todo
 
+Move settings just to command driver
 Consider recording argv[0] as well
 Add duration to metric array (fix and import)
 Add 2 boxplots for reference data vs cleaned reference data for metric
@@ -46,6 +47,7 @@ Outlier detection and averaging
 # Bugs
 
 - Deleting a job, CASCADE?
+- Input pattern not configurable like it should be
 
 # Performance
 

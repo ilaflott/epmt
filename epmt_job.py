@@ -3,16 +3,10 @@ from models import *
 from sys import stdout, argv, stderr, exit
 from os.path import basename
 from glob import glob
-from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
 import fnmatch
 from os import environ
+from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
 logger = getLogger(__name__)  # you can use other name
-
-import settings
-for k in [ "provider", "user", "password", "host", "dbname", "filename" ]:
-    t = environ.get("EPMT_DB_"+ k.upper())
-    if t:
-        settings.db_params[k] = t
 
 #
 #
@@ -224,7 +218,7 @@ def ETL_ppr(metadata, jobid):
     return exp
 
 @db_session
-def ETL_job_dict(metadata, filedict, tarfile=None):
+def ETL_job_dict(metadata, filedict, settings, tarfile=None):
 # Only fields used for now
     jobid = metadata['job_pl_id']
     username = metadata['job_pl_username']
@@ -372,7 +366,7 @@ def ETL_job_dict(metadata, filedict, tarfile=None):
                 
     return j
 
-def setup_orm_db(drop=False,create=True):
+def setup_orm_db(settings,drop=False,create=True):
     logger.info("Binding to DB: %s", settings.db_params)
     try:
         db.bind(**settings.db_params)
@@ -382,7 +376,7 @@ def setup_orm_db(drop=False,create=True):
         else:
             logger.error("Binding to DB, check database existance and connection parameters")
             logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
-            exit(1)
+            return False
 
     try:
         logger.info("Generating mapping from schema...")
@@ -393,12 +387,13 @@ def setup_orm_db(drop=False,create=True):
         else:
             logger.error("Mapping to DB, did the schema change? Perhaps drop and create?")
             logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
-            exit(1)
+            return False
         
     if drop:
         logger.warning("DROPPING ALL DATA AND TABLES!")
         db.drop_all_tables(with_all_data=True)
         db.create_tables()
+    return True
 
 #
 #
@@ -456,7 +451,9 @@ if (__name__ == "__main__"):
             logger.warning("Forcing job id to be %s from command line",args.jobid)
             metadata['job_pl_id'] = args.jobid
 
-    setup_orm_db(args.drop)
+    if setup_orm_db(args.drop) == False:
+        exit(1)
+
     if args.dry_run:
         logger.info("Skipping ETL...")
     else:

@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-from logging import getLogger, basicConfig, DEBUG, INFO, WARNING, ERROR
 from datetime import datetime
 from os import environ, makedirs, mkdir, errno, path, getpid, getuid, getsid
 from socket import gethostname
@@ -13,12 +12,18 @@ from glob import glob
 from sys import stdout, stderr
 import fnmatch
 import pickle
-
+from logging import getLogger, basicConfig, DEBUG, INFO, WARNING, ERROR
+logger = getLogger(__name__)  # you can use other name
 import settings
-for k in [ "provider", "user", "password", "host", "dbname", "filename" ]:
-    t = environ.get("EPMT_DB_"+ k.upper())
-    if t:
-        settings.db_params[k] = t
+
+def init_settings():
+    global settings
+    for k in [ "provider", "user", "password", "host", "dbname", "filename" ]:
+        name = "EPMT_DB_"+ k.upper()
+        t = environ.get(name)
+        if t:
+            logger.info("%s found, setting %s:%s now %s:%s",name,k,settings.db_params[k],k,t)
+            settings.db_params[k] = t
 
 def getgroups(user):
     gids = [g.gr_gid for g in getgrall() if user in g.gr_mem]
@@ -31,8 +36,6 @@ def getgroups(user):
 
 # Done later
 #from dictdiffer import diff
-
-logger = getLogger(__name__)  # you can use other name
 
 #
 #
@@ -320,6 +323,122 @@ def create_job_dir(dir):
 #
 #
 #db.bind(**settings.db_params)
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+def PrintFail():
+    print "\t" + bcolors.FAIL + "Fail" + bcolors.ENDC
+def PrintPass():
+    print "\t" + bcolors.OKBLUE + "Pass" + bcolors.ENDC
+
+def verify_install_prefix():
+    str = settings.install_prefix
+    print "settings.install_prefix =",str
+    retval = True
+# Check for bad stuff and shortcut
+    if "*" in str or "?" in str:
+        logger.error("Found wildcards in value!",str)
+        PrintFail()
+        return False
+    for e in [ "bin/monitor-run","lib/libpapiex.so","lib/libmonitor.so",
+               "lib/libpapi.so","lib/libpfm.so","bin/papi_command_line" ]:
+        cmd = "ls -l "+str+e+">/dev/null"
+        print("\t"+cmd)
+        return_code = forkexecwait(cmd, shell=True)
+        if return_code != 0:
+            PrintFail()
+            retval = False
+    if retval == True:
+        PrintPass()
+    return retval
+    
+def verify_papiex_output():
+    str = settings.papiex_output
+    print "settings.papiex_output =",str
+    retval = True
+# Check for bad stuff and shortcut
+    if "*" in str or "?" in str:
+        logger.error("Found wildcards in value!",str)
+        PrintFail()
+        return False
+# Print and create dir
+    def testdir(str2):
+        print("\tmkdir -p "+str2)
+        return(create_job_dir(str2))
+# Test create (or if it exists)
+    if testdir(str) == False:
+        PrintFail()
+        retval = False
+# Test make a subdir
+    if testdir(str+"tmp") == False:
+        PrintFail()
+        retval = False
+# Test to make sure we can access it
+    cmd = "ls -lR "+str+">/dev/null"    
+    print("\t"+cmd)
+    return_code = forkexecwait(cmd, shell=True)
+    if return_code != 0:
+        PrintFail()
+        retval = False
+# Remove the created tmp dir
+    cmd = "rm -rf "+str+"tmp"
+    print("\t"+cmd)
+    return_code = forkexecwait(cmd, shell=True)
+    if return_code != 0:
+        PrintFail()
+        retval = False
+# Cleanup
+    if retval == True:
+       PrintPass()
+    return retval
+
+
+def verify_papiex_options():
+    str = settings.papiex_options
+    print "settings.papiex_options =",str
+    retval = True
+    eventlist = str.split(',')
+    for e in eventlist:
+        cmd = settings.install_prefix+"bin/papi_command_line "+e
+        print("\t"+cmd)
+        return_code = forkexecwait(cmd, shell=True)
+        if return_code != 0:
+            PrintFail()
+            retval = False
+    if retval == True:
+        PrintPass()
+    return retval
+
+def verify_db_params():
+    print "settings.db_params =",str(settings.db_params)
+    from epmt_job import setup_orm_db
+    if setup_orm_db(settings) == False:
+        PrintFail()
+        return False
+    else:
+        PrintPass()
+        return True
+    
+
+def epmt_check():
+    retval = True
+    if verify_db_params() == False:
+        retval = False
+    if verify_install_prefix() == False:
+        retval = False
+    if verify_papiex_options() == False:
+        retval = False
+    if verify_papiex_output() == False:
+        retval = False
+    return retval
+
 def epmt_start(from_batch=[]):
     jobid = get_job_id()
     dir = create_job_dir(get_job_dir())
@@ -385,17 +504,6 @@ def epmt_stop(from_batch=[]):
 	return metadata
 
 
-def epmt_test_start_stop(from_batch=[]):
-	d1 = epmt_start(from_batch)
-	environ['INSERTED_ENV'] = "Yessir!"
-	d2 = epmt_stop(from_batch)
- 	d3 = merge_two_dicts(d1,d2)
- 	d4 = read_job_metadata(jobdatafile=get_job_metadata_file())
- 	print "Test is",(d3 == d4)
-	if (d3 != d4):
-		exit(1)
-	print d4
-	
 def epmt_source(output_dir, options, papiex_debug=False, monitor_debug=False):
 	t = environ.get("PAPIEX_OSS_PATH")
 	if t and path.exists(t):
@@ -561,11 +669,10 @@ def submit_to_db(input,pattern, dry_run=True, drop=False):
 #        exit(1)
 
 # Now we touch the Database
-    from epmt_job import setup_orm_db
-    setup_orm_db(drop)
-
-    from epmt_job import ETL_job_dict, ETL_ppr
-    j = ETL_job_dict(metadata,filedict,tarfile=tar)
+    from epmt_job import setup_orm_db, ETL_job_dict, ETL_ppr
+    if setup_orm_db(settings) == False:
+        exit(1)
+    j = ETL_job_dict(metadata,filedict,settings,tarfile=tar)
     if not j:
         exit(1)
     logger.info("Committed job %s to database: %s",j.jobid,j)
@@ -589,6 +696,7 @@ def epmt_entrypoint(args, help):
     elif settings.debug:
         basicConfig(level=INFO)
 
+    init_settings()
     if args.help or args.epmt_cmd == 'help' or not args.epmt_cmd:
         help(stdout)
         dump_config(stdout)
@@ -607,9 +715,6 @@ def epmt_entrypoint(args, help):
     elif args.epmt_cmd == 'stop':
         set_job_globals(cmdline=args.epmt_cmd_args)
         epmt_stop(from_batch=args.epmt_cmd_args)
-#	elif args.epmt_cmd == 'test':
-#            set_job_globals(cmdline=args.epmt_cmd_args)
-#            epmt_test_start_stop(from_batch=args.epmt_cmd_args)
     elif args.epmt_cmd == 'submit':
         # Not in job context
         if not args.epmt_cmd_args:
@@ -626,6 +731,8 @@ def epmt_entrypoint(args, help):
             exit(1)
     elif args.epmt_cmd == 'source':
         print epmt_source(False,settings.papiex_options,papiex_debug=(args.verbose > 2),monitor_debug=(args.verbose > 2))
+    elif args.epmt_cmd == 'check':
+        exit(epmt_check() == False)
     else:
         logger.error("Unknown command, %s. See -h for options.",args.epmt_cmd)
         exit(1)
