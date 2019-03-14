@@ -25,6 +25,22 @@ def init_settings():
             logger.info("%s found, setting %s:%s now %s:%s",name,k,settings.db_params[k],k,t)
             settings.db_params[k] = t
 
+    t = environ.get("PAPIEX_OSS_PATH")
+    if t and len(t) and path.exists(t):
+        if not t.endswith("/"):
+            logger.warning("missing trailing / on PAPIEX_OSS_PATH variable");
+            t += "/"
+        logger.info("Overriding settings.install_prefix with PAPIEX_OSS_PATH=",t)
+        settings.install_prefix = t
+
+    t = environ.get("PAPIEX_OUTPUT")
+    if t and len(t) and path.exists(t):
+        if not t.endswith("/"):
+            logger.warning("missing trailing / on PAPIEX_OUTPUT variable");
+            t += "/"
+        logger.info("Overriding settings.papiex_output with PAPIEX_OUTPUT=",t)
+        settings.papiex_output = t
+
 def getgroups(user):
     gids = [g.gr_gid for g in getgrall() if user in g.gr_mem]
     logger.debug("Group ids: %s",str(gids))
@@ -147,7 +163,7 @@ def get_job_var(var):
 	return a
 
 def dump_config(outf):
-    print >> outf,"\nsettings.py (overridden by below env. vars):"
+    print >> outf,"\nsettings.py (affected by the below env. vars):"
 #    book = {}
     for key, value in sorted(settings.__dict__.iteritems()):
         if not (key.startswith('__') or key.startswith('_')):
@@ -282,26 +298,11 @@ def get_job_id():
 	return(global_job_id)
 
 def get_job_dir(hostname="", prefix=settings.papiex_output):
-    if not prefix.endswith("/"):
-        logger.warning("missing trailing / on prefix %s",prefix);
-        prefix += "/"
-
-    dirname = ""
-    t = environ.get("PAPIEX_OUTPUT")
-    if t and len(t) > 0:
-        dirname = t
-        if not dirname.endswith("/"):
-            logger.warning("missing trailing / on PAPIEX_OUTPUT variable %s",dirname);
-            dirname += "/"
-    elif t:
-        logger.error("PAPIEX_OUTPUT is set but blank")
-        exit(1)
-    else:
-        if global_job_id == "":
-            logger.warning("Unknown job id, trying to find it...")
-            set_job_globals()
+    dirname=prefix
+    if global_job_id == "":
+        logger.warning("Unknown job id, trying to find it...")
+        set_job_globals()
         dirname = prefix+global_job_id+"/"
-
     return dirname
 
 def get_job_metadata_file(hostname="", prefix=settings.papiex_output):
@@ -337,6 +338,8 @@ def PrintFail():
     print "\t" + bcolors.FAIL + "Fail" + bcolors.ENDC
 def PrintPass():
     print "\t" + bcolors.OKBLUE + "Pass" + bcolors.ENDC
+def PrintWarning():
+    print "\t" + bcolors.WARNING + "Pass" + bcolors.ENDC
 
 def verify_install_prefix():
     str = settings.install_prefix
@@ -353,10 +356,12 @@ def verify_install_prefix():
         print("\t"+cmd)
         return_code = forkexecwait(cmd, shell=True)
         if return_code != 0:
-            PrintFail()
             retval = False
+
     if retval == True:
         PrintPass()
+    else:
+        PrintFail()
     return retval
     
 def verify_papiex_output():
@@ -374,29 +379,27 @@ def verify_papiex_output():
         return(create_job_dir(str2))
 # Test create (or if it exists)
     if testdir(str) == False:
-        PrintFail()
         retval = False
 # Test make a subdir
     if testdir(str+"tmp") == False:
-        PrintFail()
         retval = False
 # Test to make sure we can access it
     cmd = "ls -lR "+str+">/dev/null"    
     print("\t"+cmd)
     return_code = forkexecwait(cmd, shell=True)
     if return_code != 0:
-        PrintFail()
         retval = False
 # Remove the created tmp dir
     cmd = "rm -rf "+str+"tmp"
     print("\t"+cmd)
     return_code = forkexecwait(cmd, shell=True)
     if return_code != 0:
-        PrintFail()
         retval = False
 # Cleanup
     if retval == True:
-       PrintPass()
+        PrintPass()
+    else:
+        PrintFail()
     return retval
 
 
@@ -410,10 +413,11 @@ def verify_papiex_options():
         print("\t"+cmd)
         return_code = forkexecwait(cmd, shell=True)
         if return_code != 0:
-            PrintFail()
             retval = False
     if retval == True:
         PrintPass()
+    else:
+        PrintFail()
     return retval
 
 def verify_db_params():
@@ -426,6 +430,29 @@ def verify_db_params():
         PrintPass()
         return True
     
+def verify_perf():
+    f="/proc/sys/kernel/perf_event_paranoid"
+    try:
+        with open(f, 'r') as content_file:
+            value = int(content_file.read())
+            print f,"=",str(value)
+            if value == 3:
+                logger.error("bad %s value of %d! perf event disabled!",f,value)
+                PrintFail()
+                return False
+            logger.info("perf_event_paranoid is %d",value)
+            PrintPass()
+            return True
+    except Exception as e:
+        print f,"="
+        print >> stderr,str(e)
+        PrintFail()
+    return False
+
+def verify_papiex():
+    print "collector library working"
+    PrintPass()
+    return True
 
 def epmt_check():
     retval = True
@@ -436,6 +463,10 @@ def epmt_check():
     if verify_papiex_options() == False:
         retval = False
     if verify_papiex_output() == False:
+        retval = False
+    if verify_perf() == False:
+        retval = False
+    if verify_papiex() == False:
         retval = False
     return retval
 
@@ -505,16 +536,7 @@ def epmt_stop(from_batch=[]):
 
 
 def epmt_source(output_dir, options, papiex_debug=False, monitor_debug=False):
-	t = environ.get("PAPIEX_OSS_PATH")
-	if t and path.exists(t):
-            logger.info("Overriding settings.install_prefix with PAPIEX_OSS_PATH=",t)
-            dirname = t
-        else:
-            dirname = settings.install_prefix
-        if not dirname.endswith("/"):
-            logger.error("Warning missing trailing / on %s",dirname);
-            dirname += "/"
-
+        dirname = settings.install_prefix
 	cmd = "PAPIEX_OPTIONS="+options
 	if output_dir:
             cmd += " PAPIEX_OUTPUT="+output_dir
