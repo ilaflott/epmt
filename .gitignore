@@ -47,3 +47,4 @@ data
 .ipython
 .jupyter
 .local
+OutliersData/*.dir
