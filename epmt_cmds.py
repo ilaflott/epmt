@@ -450,8 +450,8 @@ def verify_perf():
     return False
 
 def verify_papiex():
-    print "collector library working"
-    PrintPass()
+#    print "collector library working"
+#    PrintPass()
     return True
 
 def epmt_check():
@@ -460,11 +460,11 @@ def epmt_check():
         retval = False
     if verify_install_prefix() == False:
         retval = False
-    if verify_papiex_options() == False:
-        retval = False
     if verify_papiex_output() == False:
         retval = False
     if verify_perf() == False:
+        retval = False
+    if verify_papiex_options() == False:
         retval = False
     if verify_papiex() == False:
         retval = False
