@@ -30,7 +30,7 @@ def init_settings():
         if not t.endswith("/"):
             logger.warning("missing trailing / on PAPIEX_OSS_PATH variable");
             t += "/"
-        logger.info("Overriding settings.install_prefix with PAPIEX_OSS_PATH=",t)
+        logger.info("Overriding settings.install_prefix with PAPIEX_OSS_PATH=%s",t)
         settings.install_prefix = t
 
     t = environ.get("PAPIEX_OUTPUT")
@@ -38,7 +38,7 @@ def init_settings():
         if not t.endswith("/"):
             logger.warning("missing trailing / on PAPIEX_OUTPUT variable");
             t += "/"
-        logger.info("Overriding settings.papiex_output with PAPIEX_OUTPUT=",t)
+        logger.info("Overriding settings.papiex_output with PAPIEX_OUTPUT=%s",t)
         settings.papiex_output = t
 
 def getgroups(user):
@@ -297,16 +297,23 @@ def get_job_id():
 	global global_job_id
 	return(global_job_id)
 
-def get_job_dir(hostname="", prefix=settings.papiex_output):
-    dirname=prefix
+def get_job_dir():
+    t = environ.get("PAPIEX_OUTPUT")
+    if t and len(t):
+        if not t.endswith("/"):
+            logger.warning("missing trailing / on PAPIEX_OUTPUT variable");
+            t += "/"
+        logger.info("Overriding settings.papiex_output with PAPIEX_OUTPUT=%s",t)
+        return t
+
     if global_job_id == "":
-        logger.warning("Unknown job id, trying to find it...")
         set_job_globals()
-        dirname = prefix+global_job_id+"/"
+
+    dirname=settings.papiex_output+global_job_id+"/"
     return dirname
 
-def get_job_metadata_file(hostname="", prefix=settings.papiex_output):
-	s = get_job_dir(hostname,prefix)
+def get_job_metadata_file():
+	s = get_job_dir()
 	return s+"job_metadata"
 
 def create_job_dir(dir):
@@ -472,7 +479,8 @@ def epmt_check():
 
 def epmt_start(from_batch=[]):
     jobid = get_job_id()
-    dir = create_job_dir(get_job_dir())
+    foo = get_job_dir()
+    dir = create_job_dir(foo)
     if dir is False:
         exit(1)
     file = get_job_metadata_file()
@@ -719,6 +727,7 @@ def epmt_entrypoint(args, help):
         basicConfig(level=INFO)
 
     init_settings()
+
     if args.help or args.epmt_cmd == 'help' or not args.epmt_cmd:
         help(stdout)
         dump_config(stdout)
