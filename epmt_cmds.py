@@ -10,6 +10,7 @@ from grp import getgrall, getgrgid
 from pwd import getpwnam, getpwuid
 from glob import glob
 from sys import stdout, stderr
+from shutil import rmtree
 import fnmatch
 import pickle
 from logging import getLogger, basicConfig, DEBUG, INFO, WARNING, ERROR
@@ -285,30 +286,13 @@ def write_job_epilog(jobdatafile,metadata):
         return True
     return False
 
-# Clean files from tmp storage
-def job_clean():
-	return True
-
-# Gather files from tmp storage to persistant storage
-def job_gather():
-	return True
-
 def get_job_id():
 	global global_job_id
 	return(global_job_id)
 
 def get_job_dir():
-    t = environ.get("PAPIEX_OUTPUT")
-    if t and len(t):
-        if not t.endswith("/"):
-            logger.warning("missing trailing / on PAPIEX_OUTPUT variable");
-            t += "/"
-        logger.info("Overriding settings.papiex_output with PAPIEX_OUTPUT=%s",t)
-        return t
-
     if global_job_id == "":
         set_job_globals()
-
     dirname=settings.papiex_output+global_job_id+"/"
     return dirname
 
@@ -391,7 +375,7 @@ def verify_papiex_output():
     if testdir(str+"tmp") == False:
         retval = False
 # Test to make sure we can access it
-    cmd = "ls -lR "+str+">/dev/null"    
+    cmd = "ls -lR "+str+" >/dev/null"    
     print("\t"+cmd)
     return_code = forkexecwait(cmd, shell=True)
     if return_code != 0:
@@ -414,13 +398,21 @@ def verify_papiex_options():
     str = settings.papiex_options
     print "settings.papiex_options =",str
     retval = True
+# Check for any components
+    cmd = settings.install_prefix+"bin/papi_component_avail"+"| sed -n -e '/Active/,$p' | grep perf_event >/dev/null"
+    print("\t"+cmd)
+    return_code = forkexecwait(cmd, shell=True)
+    if return_code != 0:
+        retval = False
+# Now check events
     eventlist = str.split(',')
     for e in eventlist:
-        cmd = settings.install_prefix+"bin/papi_command_line "+e
+        cmd = settings.install_prefix+"bin/papi_command_line "+e+"| sed -n -e '/PERF_COUNT_SW_CPU_CLOCK\ :/,$p' | grep PERF_COUNT_SW_CPU_CLOCK > /dev/null"
         print("\t"+cmd)
         return_code = forkexecwait(cmd, shell=True)
         if return_code != 0:
             retval = False
+# End
     if retval == True:
         PrintPass()
     else:
@@ -429,13 +421,18 @@ def verify_papiex_options():
 
 def verify_db_params():
     print "settings.db_params =",str(settings.db_params)
-    from epmt_job import setup_orm_db
-    if setup_orm_db(settings) == False:
+    try:
+        from epmt_job import setup_orm_db
+        if setup_orm_db(settings) == False:
+            PrintFail()
+            return False
+        else:
+            PrintPass()
+            return True
+    except ImportError:
+        logger.error("pony module not installed, see INSTALL.md");
         PrintFail()
         return False
-    else:
-        PrintPass()
-        return True
     
 def verify_perf():
     f="/proc/sys/kernel/perf_event_paranoid"
@@ -444,9 +441,11 @@ def verify_perf():
             value = int(content_file.read())
             print f,"=",str(value)
             if value == 3:
-                logger.error("bad %s value of %d! perf event disabled!",f,value)
+                logger.error("bad %s value of %d, perf event disabled!",f,value)
                 PrintFail()
                 return False
+            if value == 2 or value == 1:
+                logger.warning("restrictive %s value of %d, should be 0 for non-privileged users",f,value)
             logger.info("perf_event_paranoid is %d",value)
             PrintPass()
             return True
@@ -456,9 +455,25 @@ def verify_perf():
         PrintFail()
     return False
 
-def verify_papiex():
-#    print "collector library working"
-#    PrintPass()
+def verify_papiex(dir):
+    print "collect functionality (papiex+epmt)"
+    print("\tepmt run -a /bin/sleep 1")
+    retval = epmt_run(["/bin/sleep","1"],wrapit=True)
+    if retval != 0:
+        PrintFail()
+        return False
+    files = glob(dir+settings.input_pattern)
+    if len(files) != 1:
+        logger.error("%s matched %d papiex CSV output files instead of 1",dir+settings.input_pattern,len(files))
+        PrintFail()
+        return False
+    files = glob(dir+"job_metadata")
+    if len(files) != 1:
+        logger.error("%s matched %d job_metadata files instead of 1",dir+job_metadata,len(files))
+        PrintFail()
+        return False
+    rmtree(dir)
+    PrintPass()
     return True
 
 def epmt_check():
@@ -473,25 +488,24 @@ def epmt_check():
         retval = False
     if verify_papiex_options() == False:
         retval = False
-    if verify_papiex() == False:
+    if verify_papiex(get_job_dir()) == False:
         retval = False
     return retval
 
 def epmt_start(from_batch=[]):
     jobid = get_job_id()
-    foo = get_job_dir()
-    dir = create_job_dir(foo)
+    dir = create_job_dir(get_job_dir())
     if dir is False:
-        exit(1)
+        return False
     file = get_job_metadata_file()
     if path.exists(file):
         logger.error("%s already exists!",file)
-        exit(1)
+        return False
     metadata = create_job_prolog(jobid,from_batch)
     write_job_prolog(file,metadata)
     logger.info("wrote prolog to %s",file);
     logger.debug("%s",metadata)
-    return metadata
+    return True
 
 def epmt_dump_metadata_file(filelist):
     if len(filelist) == 0:
@@ -552,7 +566,9 @@ def epmt_source(output_dir, options, papiex_debug=False, monitor_debug=False):
             cmd += " PAPIEX_DEBUG=TRUE"
         if monitor_debug:
             cmd += " MONITOR_DEBUG=TRUE"
-	cmd += " LD_PRELOAD="+dirname+"lib/libpapiex.so:"+dirname+"lib/libmonitor.so"
+        cmd += " LD_PRELOAD="
+        for l in [ "libpapiex.so:","libpapi.so:","libpfm.so:","libmonitor.so" ]:
+            cmd += dirname+"lib/"+l
         return cmd
 
 def epmt_run(cmdline, wrapit=False, dry_run=False, debug=False):
@@ -563,7 +579,8 @@ def epmt_run(cmdline, wrapit=False, dry_run=False, debug=False):
             if dry_run:
                 print "epmt start"
             else:
-                epmt_start()
+                if not epmt_start():
+                    return 1
 
 	cmd = epmt_source(get_job_dir(), settings.papiex_options, papiex_debug=debug, monitor_debug=debug)
         cmd += " "+" ".join(cmdline)
@@ -727,7 +744,6 @@ def epmt_entrypoint(args, help):
         basicConfig(level=INFO)
 
     init_settings()
-
     if args.help or args.epmt_cmd == 'help' or not args.epmt_cmd:
         help(stdout)
         dump_config(stdout)
@@ -742,7 +758,8 @@ def epmt_entrypoint(args, help):
         epmt_dump_metadata_file(args.epmt_cmd_args)
     elif args.epmt_cmd == 'start':
         set_job_globals(cmdline=args.epmt_cmd_args)
-        epmt_start(from_batch=args.epmt_cmd_args)
+        if not epmt_start(from_batch=args.epmt_cmd_args):
+            exit(1)
     elif args.epmt_cmd == 'stop':
         set_job_globals(cmdline=args.epmt_cmd_args)
         epmt_stop(from_batch=args.epmt_cmd_args)
@@ -761,7 +778,7 @@ def epmt_entrypoint(args, help):
             logger.error("No command given")
             exit(1)
     elif args.epmt_cmd == 'source':
-        print epmt_source(False,settings.papiex_options,papiex_debug=(args.verbose > 2),monitor_debug=(args.verbose > 2))
+        print epmt_source(get_job_dir(),settings.papiex_options,papiex_debug=(args.verbose > 2),monitor_debug=(args.verbose > 2))
     elif args.epmt_cmd == 'check':
         exit(epmt_check() == False)
     else:
