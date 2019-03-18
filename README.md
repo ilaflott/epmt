@@ -1,6 +1,8 @@
 # EPMT
 
-**Experiment Performance Management Tool** a.k.a **WorkflowDB** a.k.a. **PerfMiner**
+**Experiment Performance Management Tool**  aka  
+**WorkflowDB** aka  
+**PerfMiner**
 
 This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes. This tool uses **papiex** to perform the process monitoring. This tool is targeted at batch or ephemeral jobs, not daemon processes. 
 
@@ -9,6 +11,44 @@ The software contained in this repository was written by Philip Mucci of Minimal
 ## Table of Contents
 
 [TOC]
+
+## Verifying Installation 
+
+It is best to check your installation and configuration using the ```epmt check``` command. Here is an example run from docker via the source tree:
+
+```
+$ docker run --privileged -it --rm -v $PWD/..:/tmp/foo -w /tmp/foo/epmt.git python-epmt:latest ./epmt check
+settings.db_params = {'filename': ':memory:', 'provider': 'sqlite'}
+		   Pass
+settings.install_prefix = ../papiex-oss/papiex-oss-install/
+			ls -l ../papiex-oss/papiex-oss-install/bin/monitor-run>/dev/null
+			ls -l ../papiex-oss/papiex-oss-install/lib/libpapiex.so>/dev/null
+			ls -l ../papiex-oss/papiex-oss-install/lib/libmonitor.so>/dev/null
+			ls -l ../papiex-oss/papiex-oss-install/lib/libpapi.so>/dev/null
+			ls -l ../papiex-oss/papiex-oss-install/lib/libpfm.so>/dev/null
+			ls -l ../papiex-oss/papiex-oss-install/bin/papi_command_line>/dev/null
+			Pass
+settings.papiex_output = /tmp/epmt/
+		   mkdir -p /tmp/epmt/
+		   mkdir -p /tmp/epmt/tmp
+		   ls -lR /tmp/epmt/ >/dev/null
+		   rm -rf /tmp/epmt/tmp
+		   Pass
+/proc/sys/kernel/perf_event_paranoid = 2
+WARNING:epmt_cmds:restrictive /proc/sys/kernel/perf_event_paranoid value of 2, should be 0 for non-privileged users
+			Pass
+settings.papiex_options = PERF_COUNT_SW_CPU_CLOCK
+			../papiex-oss/papiex-oss-install/bin/papi_component_avail| sed -n -e '/Active/,$p' | grep perf_event >/dev/null
+			../papiex-oss/papiex-oss-install/bin/papi_command_line PERF_COUNT_SW_CPU_CLOCK| sed -n -e '/PERF_COUNT_SW_CPU_CLOCK\ :/,$p' | grep PERF_COUNT_SW_CPU_CLOCK > /dev/null
+			Pass
+WARNING:epmt_cmds:JOB_ID unset: Using session id 1 as JOB_ID
+WARNING:epmt_cmds:JOB_NAME unset: Using job id 1 as JOB_NAME
+WARNING:epmt_cmds:JOB_SCRIPTNAME unset: Using process name 1 as JOB_SCRIPTNAME
+WARNING:epmt_cmds:JOB_USER unset: Using username root as JOB_USER
+collect functionality (papiex+epmt)
+	       epmt run -a /bin/sleep 1
+	       Pass
+```
 
 ## Collecting Performance Data
 
