@@ -365,6 +365,14 @@ notebook_1  |         http://(9a7974f0ffb9 or 127.0.0.1):8888/?token=c9d7cb543a8
 
 and then login and load the **EPMT.ipynb** file.
 
+# Troubleshooting
+
+### Error: `version GLIBC_x.xx not found`
+
+The successful deployment of the collector libraries depends on the run-time environment of the target system. More plainly, this means, **do not compile papiex in your development environment, compile it with your target distributions environment. Each target environment should have their own separate `papiex-oss-install` directory. 
+
+If you need to do otherwise, there are solutions involving deploying copies of additional libraries
+. 
 # Appendix
 
 ## Docker Images for the running the EPMT command
