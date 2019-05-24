@@ -1,0 +1,15 @@
+# Only use spaces to indent your .yml configuration.
+
+# Should be in sync with bitbucket-pipelines.yml, minus install of csh
+
+image: python-epmt:latest
+
+#aliases:
+# bb-pipeline: 
+#   script:
+#     - make install
+#     - make check
+# check:
+#   script:
+#     - make check
+# build: make 
