@@ -14,10 +14,10 @@ The software contained in this repository was written by Philip Mucci of Minimal
 
 ## Verifying Installation 
 
-It is best to check your installation and configuration using the ```epmt check``` command. Here is an example run from docker via the source tree:
+It is best to check your installation and configuration using the ```epmt check``` command. Here is an example run from docker via the source tree. You will notice that we bind-mount the parent-directory of `epmt` to the container. This allows `epmt` to find the `papiex` install directory, lying adjacent to the `epmt` directory.
 
 ```
-$ docker run --privileged -it --rm -v $PWD/..:/tmp/foo -w /tmp/foo/epmt.git python-epmt:latest ./epmt check
+$ docker run --privileged -it --rm -v $PWD/..:/tmp/foo -w /tmp/foo/epmt python-epmt:latest ./epmt check
 settings.db_params = {'filename': ':memory:', 'provider': 'sqlite'}
 		   Pass
 settings.install_prefix = ../papiex-oss/papiex-oss-install/
