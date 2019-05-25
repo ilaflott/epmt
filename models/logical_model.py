@@ -7,8 +7,8 @@ from .general import db
 import datetime
 
 class PostProcessRun(db.Entity):
-	time = Required(datetime.datetime, default=datetime.datetime.utcnow())
-	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
+	time = Required(datetime.datetime, default=datetime.datetime.utcnow)
+	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	info_dict = Optional(Json)
 	# end template
 	# The following four are from the environment currently
@@ -26,8 +26,8 @@ class PostProcessRun(db.Entity):
 	# experiment = Optional('Experiment')
 
 class Detector(db.Entity):
-	time = Required(datetime.datetime, default=datetime.datetime.utcnow())
-	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
+	time = Required(datetime.datetime, default=datetime.datetime.utcnow)
+	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	name = PrimaryKey(str)
 	description = Optional(str)
 	pandas_json = Optional(Json)
@@ -38,8 +38,8 @@ class Detector(db.Entity):
 #
 
 #class Experiment(db.Entity):
-# 	time = Required(datetime.datetime, default=datetime.datetime.utcnow())
-# 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
+# 	time = Required(datetime.datetime, default=datetime.datetime.utcnow)
+# 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 # 	info_dict = Optional(Json)
 # 	# end template
 # 	experiment_name = Required(str)
@@ -53,8 +53,8 @@ class Detector(db.Entity):
 # # Unused for now
 # #
 # class Platform(db.Entity):
-# 	time = Required(datetime.datetime, default=datetime.datetime.utcnow())
-# 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
+# 	time = Required(datetime.datetime, default=datetime.datetime.utcnow)
+# 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 # 	info_dict = Optional(Json)
 # 	# end template
 # 	platform_name = PrimaryKey(str)

@@ -7,8 +7,8 @@ from .general import db
 import datetime
 
 class Tag(db.Entity):
-#	time = Required(datetime.datetime, default=datetime.datetime.utcnow())
-	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
+#	time = Required(datetime.datetime, default=datetime.datetime.utcnow)
+	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	info_dict = Optional(Json)
 	# end template
 	name = PrimaryKey(str)
@@ -18,8 +18,8 @@ class Tag(db.Entity):
 # Removing/changing hosts needs to be addressed
 #
 class Host(db.Entity):
-#	time = Required(datetime.datetime, default=datetime.datetime.utcnow())
-	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
+#	time = Required(datetime.datetime, default=datetime.datetime.utcnow)
+	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	info_dict = Optional(Json)
 	# end template
 	name = PrimaryKey(str)
@@ -30,11 +30,11 @@ class Host(db.Entity):
 #
 class Job(db.Entity):
 # Rollup entries, computed at insert time
-	start = Required(datetime.datetime, default=datetime.datetime.utcnow())
-	end = Required(datetime.datetime, default=datetime.datetime.fromtimestamp(0))
+	start = Required(datetime.datetime, default=datetime.datetime.utcnow)
+	end = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	duration = Required(float, default=0)
 # End rollups
-	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
+	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	info_dict = Optional(Json)
 # End generic template
 	env_dict = Optional(Json)
@@ -56,11 +56,11 @@ class Job(db.Entity):
 
 class Process(db.Entity):
 # Rollup entries, computed at insert time
-	start = Required(datetime.datetime, default=datetime.datetime.fromtimestamp(0))
-	end = Required(datetime.datetime, default=datetime.datetime.fromtimestamp(0))
+	start = Required(datetime.datetime, default=datetime.datetime.utcnow)
+	end = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	duration = Required(float, default=0)
 # End rollup
-	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
+	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 #	info_dict = Optional(Json)
 # End generic template
 	tags = Set('Tag')
@@ -88,7 +88,7 @@ class Thread(db.Entity):
 	end = Required(datetime.datetime)
 # This is computed at insert time
 	duration = Required(float)
-#	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
+#	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 #	info_dict = Optional(Json)
 # End generic template
 	tid = Required(int)
@@ -112,8 +112,8 @@ class Metric(db.Entity):
 	thread = Required(Thread)
 
 class User(db.Entity):
-	time = Required(datetime.datetime, default=datetime.datetime.utcnow())
-	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
+	time = Required(datetime.datetime, default=datetime.datetime.utcnow)
+	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	info_dict = Optional(Json)
 	# end template
 	name = PrimaryKey(str)
@@ -125,8 +125,8 @@ class User(db.Entity):
 	processes = Set('Process')
 
 class Group(db.Entity):
-	time = Required(datetime.datetime, default=datetime.datetime.utcnow())
-	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
+	time = Required(datetime.datetime, default=datetime.datetime.utcnow)
+	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	info_dict = Optional(Json)
 	# end template
 	name = PrimaryKey(str)
@@ -136,8 +136,8 @@ class Group(db.Entity):
 	users = Set('User')
 
 class Queue(db.Entity):
-	time = Required(datetime.datetime, default=datetime.datetime.utcnow())
-	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
+	time = Required(datetime.datetime, default=datetime.datetime.utcnow)
+	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	info_dict = Optional(Json)
 	# end template
 	name = PrimaryKey(str)
@@ -145,8 +145,8 @@ class Queue(db.Entity):
 	jobs = Set('Job')	
 
 class Account(db.Entity):
-	time = Required(datetime.datetime, default=datetime.datetime.utcnow())
-	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow())
+	time = Required(datetime.datetime, default=datetime.datetime.utcnow)
+	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	info_dict = Optional(Json)
 	# end template
 	name = PrimaryKey(str)
