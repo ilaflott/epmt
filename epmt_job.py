@@ -141,15 +141,24 @@ def load_process_from_pandas(df, h, j, u, tags, mns):
             return None
         threads.append(t)
 # Add Metrics to thread
-        metrics = []
-        for metricname,obj in mns.iteritems():
+        # metrics = []
+        # for metricname,obj in mns.iteritems():
+        #     value = row.get(metricname)
+        #     if value is None:
+        #         logger.error("Key %s not found in data",metricname)
+        #         return None
+        #     m = Metric(metricname=obj,value=value,thread=t)
+        #     metrics.append(m)
+        #     t.metrics.add(metrics)
+        metrics = {}
+        for metricname in mns:
             value = row.get(metricname)
             if value is None:
                 logger.error("Key %s not found in data",metricname)
                 return None
-            m = Metric(metricname=obj,value=value,thread=t)
-            metrics.append(m)
-            t.metrics.add(metrics)
+            metrics[metricname] = value
+        t.metrics = metrics
+
 # Compute wallclock duration for job from threads
         if (start < earliest_thread):
             earliest_thread = start
@@ -257,7 +266,7 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
 
     didsomething = False
     oldcomment = None
-    mns = {}
+    mns = []
     tags = []
     all_tags = []
     all_procs = []
@@ -302,8 +311,9 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
 
 # Lookup or create the necessary objects, only happens once!
             if not mns:
-                for metric in pf.columns[settings.metrics_offset:].values.tolist():
-                    mns[metric] = lookup_or_create_metricname(metric)
+                # for metric in pf.columns[settings.metrics_offset:].values.tolist():
+                #     mns[metric] = lookup_or_create_metricname(metric)
+                mns = pf.columns[settings.metrics_offset:].values.tolist()
 # Make Process/Thread/Metrics objects in DB
             p = load_process_from_pandas(pf, h, j, u, tags, mns)
             if not p:

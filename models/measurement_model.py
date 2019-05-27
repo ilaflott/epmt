@@ -92,7 +92,7 @@ class Thread(db.Entity):
 #	info_dict = Optional(Json)
 # End generic template
 	tid = Required(int)
-	metrics = Set('Metric')
+	metrics = Optional(Json)
 	process = Required(Process)
 #	calipers = Set('Calipers')
 
@@ -102,14 +102,14 @@ class Thread(db.Entity):
 #   duration = Required(datetime.timedelta)
 #	parent = Required(Thread) # Fix: Could be process or host
 
-class MetricName(db.Entity):
-	name = PrimaryKey(str)
-	metrics = Set('Metric')
+# class MetricName(db.Entity):
+# 	name = PrimaryKey(str)
+# 	metrics = Set('Metric')
 
-class Metric(db.Entity):
-	metricname = Required('MetricName')
-	value = Required(float)
-	thread = Required(Thread)
+# class Metric(db.Entity):
+# 	metricname = Required('MetricName')
+# 	value = Required(float)
+# 	thread = Required(Thread)
 
 class User(db.Entity):
 	time = Required(datetime.datetime, default=datetime.datetime.utcnow)
