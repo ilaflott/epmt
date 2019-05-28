@@ -178,7 +178,7 @@ def load_process_from_pandas(df, h, j, u, tags, mns):
     # { columns: ['exename', 'path', args',...], data: ['tcsh', '/bin/tcsh']}
     # thus it preserves the column order. Remember when reading the json
     # into a dataframe, do it as:
-    #   df = pd.read_json(orient='split')
+    #   df = pd.read_json(json_str, orient='split')
     # We probably should be removing redundant fields that are process-specific
     # such as: exename, args, path, etc. We will do so in a following commit..
     p.threads_df = df.to_json(orient='split')
@@ -352,7 +352,7 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
             csvt += datetime.datetime.now() - csv
             if cnt % 1000 == 0:
                     logger.info("Did %d of %d...%.2f/sec",cnt,cntmax,cnt/csvt.total_seconds())
-                    break
+
 #
         if cnt:
             didsomething = True
