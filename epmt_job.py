@@ -391,8 +391,7 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
     logger.info("Latest process end: %s",j.end)
     logger.info("Computed duration of job: %f us, %.2f m",j.duration,j.duration/60000000)
     now = datetime.datetime.now() 
-    logger.info("Staged import of %d processes, %d threads", 
-                len(j.processes),len(j.processes.threads))
+    logger.info("Staged import of %d processes", len(j.processes))
     logger.info("Staged import took %s, %f processes per second",
                 now - then,len(j.processes)/float((now-then).total_seconds()))
                 
