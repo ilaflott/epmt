@@ -352,6 +352,7 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
             csvt += datetime.datetime.now() - csv
             if cnt % 1000 == 0:
                     logger.info("Did %d of %d...%.2f/sec",cnt,cntmax,cnt/csvt.total_seconds())
+                    break
 #
         if cnt:
             didsomething = True
