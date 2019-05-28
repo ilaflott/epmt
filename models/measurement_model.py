@@ -68,7 +68,8 @@ class Process(db.Entity):
 	host = Required('Host')
 	user = Required('User')
 	group = Optional('Group')
-	threads = Set('Thread')
+	# threads = Set('Thread')
+	threads_df = Optional(Json)
 # These should probably be abstracted/reduced
 	exename = Required(str)
 	path = Required(str)
@@ -82,19 +83,19 @@ class Process(db.Entity):
 	gen = Required(int)
 	exitcode = Optional(int)
 
-class Thread(db.Entity):
-# These are measured
-	start = Required(datetime.datetime)
-	end = Required(datetime.datetime)
-# This is computed at insert time
-	duration = Required(float)
-#	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
-#	info_dict = Optional(Json)
-# End generic template
-	tid = Required(int)
-	metrics = Optional(Json)
-	process = Required(Process)
-#	calipers = Set('Calipers')
+# class Thread(db.Entity):
+# # These are measured
+# 	start = Required(datetime.datetime)
+# 	end = Required(datetime.datetime)
+# # This is computed at insert time
+# 	duration = Required(float)
+# #	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
+# #	info_dict = Optional(Json)
+# # End generic template
+# 	tid = Required(int)
+# 	metrics = Optional(Json)
+# 	process = Required(Process)
+# #	calipers = Set('Calipers')
 
 #class Caliper(db.Entity):
 #	name = Required(str)

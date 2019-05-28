@@ -26,14 +26,14 @@ def sortKeyFunc(s):
     t2 = t.split("-")
     return int(t2[0]+t2[1])
 
-def lookup_or_create_metricname(metricname):
-    mn = MetricName.get(name=metricname)
-    if mn is None:
-        logger.info("Creating metricname %s",metricname)
-        mn = MetricName(name=metricname)
-    else:
-        logger.info("Found metricname %s",metricname)
-    return mn
+# def lookup_or_create_metricname(metricname):
+#     mn = MetricName.get(name=metricname)
+#     if mn is None:
+#         logger.info("Creating metricname %s",metricname)
+#         mn = MetricName(name=metricname)
+#     else:
+#         logger.info("Found metricname %s",metricname)
+#     return mn
 
 def create_job(jobid,user,metadata={}):
     job = Job.get(jobid=jobid)
@@ -108,8 +108,8 @@ def load_process_from_pandas(df, h, j, u, tags, mns):
 #	dprint("Creating process",str(df['pid'][0]),"gen",str(df['generation'][0]),"exename",df['exename'][0])
     from pandas import Timestamp
 
-    earliest_thread = datetime.datetime.utcnow()
-    latest_thread = datetime.datetime.fromtimestamp(0)
+    # earliest_thread = datetime.datetime.utcnow()
+    # latest_thread = datetime.datetime.fromtimestamp(0)
 
     try:
             p = Process(exename=df['exename'][0],
@@ -128,49 +128,71 @@ def load_process_from_pandas(df, h, j, u, tags, mns):
         logger.error("Corrupted CSV or invalid input type");
         return None
 
-# Add all threads in process
-    threads = []
-    for index, row in df.iterrows():
-# Add Thread to process
-        start = Timestamp(row['start'], unit='us')
-        end = Timestamp(row['end'], unit='us')
-        duration = end-start
-        t = Thread(tid=row['tid'],start=start,end=end,duration=float(duration.total_seconds())*float(1000000),process=p)
-        if t is None:
-            logger.error("Thread duration error, likely corrupted CSV");
-            return None
-        threads.append(t)
-# Add Metrics to thread
-        # metrics = []
-        # for metricname,obj in mns.iteritems():
-        #     value = row.get(metricname)
-        #     if value is None:
-        #         logger.error("Key %s not found in data",metricname)
-        #         return None
-        #     m = Metric(metricname=obj,value=value,thread=t)
-        #     metrics.append(m)
-        #     t.metrics.add(metrics)
-        metrics = {}
-        for metricname in mns:
-            value = row.get(metricname)
-            if value is None:
-                logger.error("Key %s not found in data",metricname)
-                return None
-            metrics[metricname] = value
-        t.metrics = metrics
+# We can skip the commented out portion, as we now store the
+# entire threads dataframe in process attribute. To figure out
+# process start and finish time, we use the min/max function
+# on the threads dataframe directly.
 
-# Compute wallclock duration for job from threads
-        if (start < earliest_thread):
-            earliest_thread = start
-        if (end > latest_thread):
-            latest_thread = end
+# Add all threads in process
+#     threads = []
+#     for index, row in df.iterrows():
+# # Add Thread to process
+#         start = Timestamp(row['start'], unit='us')
+#         end = Timestamp(row['end'], unit='us')
+#         duration = end-start
+#         t = Thread(tid=row['tid'],start=start,end=end,duration=float(duration.total_seconds())*float(1000000),process=p)
+#         if t is None:
+#             logger.error("Thread duration error, likely corrupted CSV");
+#             return None
+#         threads.append(t)
+# # Add Metrics to thread
+#         # metrics = []
+#         # for metricname,obj in mns.iteritems():
+#         #     value = row.get(metricname)
+#         #     if value is None:
+#         #         logger.error("Key %s not found in data",metricname)
+#         #         return None
+#         #     m = Metric(metricname=obj,value=value,thread=t)
+#         #     metrics.append(m)
+#         #     t.metrics.add(metrics)
+#         metrics = {}
+#         for metricname in mns:
+#             value = row.get(metricname)
+#             if value is None:
+#                 logger.error("Key %s not found in data",metricname)
+#                 return None
+#             metrics[metricname] = value
+#         t.metrics = metrics
+
+# # Compute wallclock duration for job from threads
+#         if (start < earliest_thread):
+#             earliest_thread = start
+#         if (end > latest_thread):
+#             latest_thread = end
 # Record tags, threads, start, end, wall clock duration for process
     if tags:
         p.tags.add(tags)
-    p.threads.add(threads)
-    p.start = earliest_thread
-    p.end = latest_thread
-    p.duration = float((latest_thread - earliest_thread).total_seconds())*float(1000000)
+
+    # convert the threads dataframe to a json
+    # using the 'split' argument creates a json of the form:
+    # { columns: ['exename', 'path', args',...], data: ['tcsh', '/bin/tcsh']}
+    # thus it preserves the column order. Remember when reading the json
+    # into a dataframe, do it as:
+    #   df = pd.read_json(orient='split')
+    # We probably should be removing redundant fields that are process-specific
+    # such as: exename, args, path, etc. We will do so in a following commit..
+    p.threads_df = df.to_json(orient='split')
+
+    try:
+        earliest_thread_start = Timestamp(df['start'].min(), unit='us')
+        latest_thread_finish = Timestamp(df['end'].max(), unit='us')
+        p.start = earliest_thread_start.to_pydatetime()
+        p.end = latest_thread_finish.to_pydatetime()
+        p.duration = float((latest_thread_finish - earliest_thread_start).total_seconds())*float(1000000)
+    except Exception as e:
+        logger.error("%s",e)
+        logger.error("missing or invalid value for thread start/end time");
+
 #	print "Earliest thread start:",earliest_thread,"\n","Latest thread end:",latest_thread,"\n","Computed duration of process:",(p.end-p.start).total_seconds(),"seconds","\n","Duration of process:",p.duration,"microseconds"
     return p
     
