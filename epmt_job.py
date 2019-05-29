@@ -185,11 +185,28 @@ def load_process_from_pandas(df, h, j, u, tags, settings):
     # { columns: ['exename', 'path', args',...], data: [['tcsh', '/bin/tcsh'..], [..]}
     # thus it preserves the column order. Remember when reading the json
     # into a dataframe, do it as:
-    #   df = pd.read_json(process.threads['df'], orient='split')
+    #
+    #   df = pd.read_json(p.threads['df'], orient='split')
+    #
+    # where 'p' is a Process object
+    #
     # Notice, that for 'metric_sums', we do not use orient='split', as
     # we save it in a flat json such as {"usetime": 1000, "systime": 200,..}
-    # To load the metrics sums, we would do:
-    #   metrics_sums = pd.read_json(process.threads['metric_sums'])
+    #
+    # To load the metrics sums into pandas, we would do:
+    #
+    #   metrics_sums = pd.read_json(p.threads['metric_sums'], typ='series')
+    #
+    # 
+    # or you can make a Python dict, by doing:
+    #
+    # >>> import json
+    # >>> d = json.loads(p.threads['metric_sums'])
+    # >>> d
+    # {u'majflt': 0, u'read_bytes': 0, u'cancelled_write_bytes': 0, u'rssmax': 28396, u'minflt': 2263, u'time_oncpu': 20528552, u'delayacct_blkio_time': 0, u'systemtime': 6998, u'invol_ctxsw': 4, u'inblock': 0, u'vol_ctxsw': 55, u'PERF_COUNT_SW_CPU_CLOCK': 2119464, u'wchar': 56, u'guest_time': 0, u'write_bytes': 0, u'timeslices': 63, u'rdtsc_duration': 2264831152, u'usertime': 11998, u'outblock': 0, u'starttime': 9792390780000, u'time_waiting': 24907, u'syscr': 266, u'rchar': 2059838, u'syscw': 7, u'processor': 13}
+    # >>> d['rssmax']
+    # 28396
+
     p.threads = { "df": df.to_json(orient='split'), "metric_sums": thread_metric_sums.to_json() }
     p.numtids = df.shape[0]
 
