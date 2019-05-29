@@ -7,4 +7,7 @@ input_pattern = "*-papiex-[0-9]*-[0-9]*.csv"
 install_prefix = "../papiex-oss/papiex-oss-install/"
 # DO NOT TOUCH THIS
 metrics_offset = 12
-
+# we remove per_process_fields from the threads dataframe
+# when computing sums for thread metrics, we fields mentioned in skip_for_thread_metric_sums
+per_process_fields = [ "exename","path","args","pid","generation","ppid","pgid","sid","numtids" ]
+skip_for_thread_metric_sums = ["tid", "start", "end", "num_threads"]

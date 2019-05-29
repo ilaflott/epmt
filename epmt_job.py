@@ -103,7 +103,7 @@ def lookup_or_create_tags(tagnames):
         retval.append(tag)
     return retval
 
-def load_process_from_pandas(df, h, j, u, tags, mns):
+def load_process_from_pandas(df, h, j, u, tags, settings):
 # Assumes all processes are from same host
 #	dprint("Creating process",str(df['pid'][0]),"gen",str(df['generation'][0]),"exename",df['exename'][0])
     from pandas import Timestamp
@@ -173,15 +173,25 @@ def load_process_from_pandas(df, h, j, u, tags, mns):
     if tags:
         p.tags.add(tags)
 
+    # remove per-process fields from the threads dataframe
+    df = df.drop(labels=settings.per_process_fields, axis=1)
+
+    # compute sums for each column, but skip ones that we know should not be summed
+    thread_metric_sums = df.drop(labels=settings.skip_for_thread_metric_sums, axis=1).sum(axis=0)
+
+
     # convert the threads dataframe to a json
     # using the 'split' argument creates a json of the form:
-    # { columns: ['exename', 'path', args',...], data: ['tcsh', '/bin/tcsh']}
+    # { columns: ['exename', 'path', args',...], data: [['tcsh', '/bin/tcsh'..], [..]}
     # thus it preserves the column order. Remember when reading the json
     # into a dataframe, do it as:
-    #   df = pd.read_json(json_str, orient='split')
-    # We probably should be removing redundant fields that are process-specific
-    # such as: exename, args, path, etc. We will do so in a following commit..
-    p.threads_df = df.to_json(orient='split')
+    #   df = pd.read_json(process.threads['df'], orient='split')
+    # Notice, that for 'metric_sums', we do not use orient='split', as
+    # we save it in a flat json such as {"usetime": 1000, "systime": 200,..}
+    # To load the metrics sums, we would do:
+    #   metrics_sums = pd.read_json(process.threads['metric_sums'])
+    p.threads = { "df": df.to_json(orient='split'), "metric_sums": thread_metric_sums.to_json() }
+    p.numtids = df.shape[0]
 
     try:
         earliest_thread_start = Timestamp(df['start'].min(), unit='us')
@@ -288,7 +298,7 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
 
     didsomething = False
     oldcomment = None
-    mns = []
+    # mns = []
     tags = []
     all_tags = []
     all_procs = []
@@ -332,12 +342,12 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
                 continue
 
 # Lookup or create the necessary objects, only happens once!
-            if not mns:
-                # for metric in pf.columns[settings.metrics_offset:].values.tolist():
-                #     mns[metric] = lookup_or_create_metricname(metric)
-                mns = pf.columns[settings.metrics_offset:].values.tolist()
+            # if not mns:
+            #     # for metric in pf.columns[settings.metrics_offset:].values.tolist():
+            #     #     mns[metric] = lookup_or_create_metricname(metric)
+            #     mns = pf.columns[settings.metrics_offset:].values.tolist()
 # Make Process/Thread/Metrics objects in DB
-            p = load_process_from_pandas(pf, h, j, u, tags, mns)
+            p = load_process_from_pandas(pf, h, j, u, tags, settings)
             if not p:
                 logger.error("Failed loading from pandas, file %s!",f);
                 continue
