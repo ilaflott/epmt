@@ -156,15 +156,35 @@ def _get_tags_for_list(l):
     for t in l:
         tags[t] = TAG_DEFAULT_VALUE
     return tags
+
+# This is a generator function that will yield
+# the next process dataframe from the collated file dataframe.
+# It uses the numtids field to figure out where the process dataframe ends
+def _get_process_df(df):
+    index = 0
+    nrows = df.shape[0]
+    while (index < nrows):
+        thr_count = int(df['numtids'][index])
+        if (thr_count < 1):
+            logger.error('invalid value set for numtids in dataframe: {0}'.format(thr_count))
+            return
+        # now yield a dataframe from df[index:index+thr_count]
+        # make sure the yielded dataframe has it's index reset to 0
+        yield df[index:index+thr_count].reset_index(drop=True)
+        index += thr_count
             
 
-def load_process_from_pandas(df, h, j, u, settings):
+def load_process_from_pandas(df, j, u, settings):
 # Assumes all processes are from same host
 #	dprint("Creating process",str(df['pid'][0]),"gen",str(df['generation'][0]),"exename",df['exename'][0])
     from pandas import Timestamp
 
     # earliest_thread = datetime.datetime.utcnow()
     # latest_thread = datetime.datetime.fromtimestamp(0)
+    if 'hostname' in df.columns:
+        host = lookup_or_create_host(df['hostname'][0])
+    else:
+        host = lookup_or_create_host('unknown')
 
     try:
             p = Process(exename=df['exename'][0],
@@ -175,13 +195,14 @@ def load_process_from_pandas(df, h, j, u, settings):
                         pgid=int(df['pgid'][0]),
                         sid=int(df['sid'][0]),
                         gen=int(df['generation'][0]),
+                        host=host,
                         job=j,
-                        host=lookup_or_create_host(df['hostname'][0]) if 'hostname' in df.columns else h,
                         user=u)
     except Exception as e:
         logger.error("%s",e)
         logger.error("Corrupted CSV or invalid input type");
         return None
+
 
     if 'exitcode' in df.columns:
         p.exitcode = int(df['exitcode'][0])
@@ -334,8 +355,8 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
     all_procs = []
 
     for hostname, files in filedict.iteritems():
-        logger.debug("Processing host %s",hostname)
-        h = lookup_or_create_host(hostname)
+        # logger.debug("Processing host %s",hostname)
+        # h = lookup_or_create_host(hostname)
         cntmax = len(files)
         cnt = 0
         for f in files:
@@ -359,31 +380,34 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
                 flo = f
                 
             from pandas import read_csv
-            pf = read_csv(flo,
-                          sep=",",
-#                          dtype=dtype_dic, 
-                          converters=conv_dic,
-                          skiprows=rows, escapechar='\\')
-            if pf.empty:
+            collated_df = read_csv(flo,
+                                   sep=",",
+#                                   dtype=dtype_dic, 
+                                   converters=conv_dic,
+                                   skiprows=rows, escapechar='\\')
+            if collated_df.empty:
                 logger.error("Something wrong with file %s, readcsv returned empty, skipping...",f)
                 continue
 
 # Make Process/Thread/Metrics objects in DB
-            p = load_process_from_pandas(pf, h, j, u, settings)
-            if not p:
-                logger.error("Failed loading from pandas, file %s!",f);
-                continue
-            all_procs.append(p)
+            # there are 1 or more process dataframes in the collated df
+            # let's iterate over them
+            for df in _get_process_df(collated_df):
+                p = load_process_from_pandas(df, j, u, settings)
+                if not p:
+                    logger.error("Failed loading from pandas, file %s!",f);
+                    continue
+                all_procs.append(p)
 # Compute duration of job
-            if (p.start < earliest_process):
-                earliest_process = p.start
-            if (p.end > latest_process):
-                latest_process = p.end
-# Debugging/progress
-            cnt += 1
-            csvt += datetime.datetime.now() - csv
-            if cnt % 1000 == 0:
-                    logger.info("Did %d of %d...%.2f/sec",cnt,cntmax,cnt/csvt.total_seconds())
+                if (p.start < earliest_process):
+                    earliest_process = p.start
+                if (p.end > latest_process):
+                    latest_process = p.end
+# Debugging/    progress
+                cnt += 1
+                csvt += datetime.datetime.now() - csv
+                if cnt % 1000 == 0:
+                        logger.info("Did %d of %d...%.2f/sec",cnt,cntmax,cnt/csvt.total_seconds())
 
 #
         if cnt:
