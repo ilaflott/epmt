@@ -8,6 +8,14 @@ from os import environ
 from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
 logger = getLogger(__name__)  # you can use other name
 
+# delimiter separates one tag from another
+# separator separates the key-value pair
+# A tag should be like:
+#   tags = "app:TimeAvg;pprun:combine;runtime:100"
+# TODO: See, which of these should instead be set from settings.py
+TAG_DELIMITER = ';'
+TAG_SEPARATOR = ':'
+TAG_DEFAULT_VALUE = '1'
 #
 #
 # Spinning cursor sequence
@@ -91,19 +99,66 @@ def lookup_or_create_user(username):
         logger.debug("Found user %s",username)
     return user
 
-def lookup_or_create_tags(tagnames):
-    retval=[]
-    for tagname in tagnames:
-        tag = Tag.get(name=tagname)
-        if tag is None:
-            logger.info("Creating tag %s",tagname)
-            tag = Tag(name=tagname)
-        else:
-            logger.debug("Found tag %s",tagname)
-        retval.append(tag)
-    return retval
+# def lookup_or_create_tags(tagnames):
+#     retval=[]
+#     for tagname in tagnames:
+#         tag = Tag.get(name=tagname)
+#         if tag is None:
+#             logger.info("Creating tag %s",tagname)
+#             tag = Tag(name=tagname)
+#         else:
+#             logger.debug("Found tag %s",tagname)
+#         retval.append(tag)
+#     return retval
 
-def load_process_from_pandas(df, h, j, u, tags, settings):
+# we assume tags is of the format:
+#  "key1:value1 ; key2:value2"
+# where the whitespace is optional and discarded. The output would be:
+# { "key1": value1, "key2": value2 }
+#
+# We can also handle the case where a value is not set for
+# a key, by assigning a default value for the key
+# For example, for the input:
+# "multitheaded;app=fft" and a TAG_DEFAULT_VALUE="1"
+# the output would be:
+# { "multithreaded": "1", "app": "fft" }
+#
+# Note, both key and values will be strings and no attempt will be made to
+# guess the type for integer/floats
+def _get_tags_from_string(s):
+    tags = {}
+    for t in s.split(TAG_DELIMITER):
+        t = t.strip()
+        if TAG_SEPARATOR in t:
+            try:
+                (k,v) = t.split(':')
+                k = k.strip()
+                v = v.strip()
+                tags[k] = v
+            except Exception as e:
+                logger.warning('ignoring key/value pair as it has an invalid format: {0}'.format(t))
+                logger.warning("%s",e)
+                continue
+        else:
+            # tag is not of the format k:v
+            # it's probably a simple label, so use the default value for it
+            tags[t] = TAG_DEFAULT_VALUE
+    return tags
+
+# this assumes a list of labels like:
+# ["abc", "def", "ghi"] and generates an output like:
+# { "abc": "1", "def": "1", "ghi": "1" }, where the "1" comes
+# from TAG_DEFAULT_VALUE
+# We probably should remove this function once the job tag
+# is read in as key-value pair instead of a list of comments.
+def _get_tags_for_list(l):
+    tags = {}
+    for t in l:
+        tags[t] = TAG_DEFAULT_VALUE
+    return tags
+            
+
+def load_process_from_pandas(df, h, j, u, settings):
 # Assumes all processes are from same host
 #	dprint("Creating process",str(df['pid'][0]),"gen",str(df['generation'][0]),"exename",df['exename'][0])
     from pandas import Timestamp
@@ -121,57 +176,18 @@ def load_process_from_pandas(df, h, j, u, tags, settings):
                         sid=int(df['sid'][0]),
                         gen=int(df['generation'][0]),
                         job=j,
-                        host=h,
+                        host=lookup_or_create_host(df['hostname'][0]) if 'hostname' in df.columns else h,
                         user=u)
     except Exception as e:
         logger.error("%s",e)
         logger.error("Corrupted CSV or invalid input type");
         return None
 
-# We can skip the commented out portion, as we now store the
-# entire threads dataframe in process attribute. To figure out
-# process start and finish time, we use the min/max function
-# on the threads dataframe directly.
+    if 'exitcode' in df.columns:
+        p.exitcode = int(df['exitcode'][0])
 
-# Add all threads in process
-#     threads = []
-#     for index, row in df.iterrows():
-# # Add Thread to process
-#         start = Timestamp(row['start'], unit='us')
-#         end = Timestamp(row['end'], unit='us')
-#         duration = end-start
-#         t = Thread(tid=row['tid'],start=start,end=end,duration=float(duration.total_seconds())*float(1000000),process=p)
-#         if t is None:
-#             logger.error("Thread duration error, likely corrupted CSV");
-#             return None
-#         threads.append(t)
-# # Add Metrics to thread
-#         # metrics = []
-#         # for metricname,obj in mns.iteritems():
-#         #     value = row.get(metricname)
-#         #     if value is None:
-#         #         logger.error("Key %s not found in data",metricname)
-#         #         return None
-#         #     m = Metric(metricname=obj,value=value,thread=t)
-#         #     metrics.append(m)
-#         #     t.metrics.add(metrics)
-#         metrics = {}
-#         for metricname in mns:
-#             value = row.get(metricname)
-#             if value is None:
-#                 logger.error("Key %s not found in data",metricname)
-#                 return None
-#             metrics[metricname] = value
-#         t.metrics = metrics
-
-# # Compute wallclock duration for job from threads
-#         if (start < earliest_thread):
-#             earliest_thread = start
-#         if (end > latest_thread):
-#             latest_thread = end
-# Record tags, threads, start, end, wall clock duration for process
-    if tags:
-        p.tags.add(tags)
+    if 'tags' in df.columns:
+        p.tags = _get_tags_from_string(df['tags'][0])
 
     # remove per-process fields from the threads dataframe
     df = df.drop(labels=settings.per_process_fields, axis=1)
@@ -314,10 +330,7 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
         return None
 
     didsomething = False
-    oldcomment = None
-    # mns = []
-    tags = []
-    all_tags = []
+    all_tags = set([])
     all_procs = []
 
     for hostname, files in filedict.iteritems():
@@ -335,12 +348,9 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
             csv = datetime.datetime.now()
             rows,comment = extract_tags_from_comment_line(f,tarfile=tarfile)
 # Check comment/tags cache
-            if comment and comment != oldcomment:
-                logger.info("Missed tag cache %s",comment)
-                tags = lookup_or_create_tags([comment])
-                oldcomment = comment
+            if comment:
 # Merge all tags into one list for job
-                all_tags = list(set().union(all_tags,tags))
+                all_tags.add(comment)
 
             if tarfile:
                 info = tarfile.getmember(f)
@@ -358,13 +368,8 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
                 logger.error("Something wrong with file %s, readcsv returned empty, skipping...",f)
                 continue
 
-# Lookup or create the necessary objects, only happens once!
-            # if not mns:
-            #     # for metric in pf.columns[settings.metrics_offset:].values.tolist():
-            #     #     mns[metric] = lookup_or_create_metricname(metric)
-            #     mns = pf.columns[settings.metrics_offset:].values.tolist()
 # Make Process/Thread/Metrics objects in DB
-            p = load_process_from_pandas(pf, h, j, u, tags, settings)
+            p = load_process_from_pandas(pf, h, j, u, settings)
             if not p:
                 logger.error("Failed loading from pandas, file %s!",f);
                 continue
@@ -396,7 +401,9 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
 # Add sum of tags to job        
     if all_tags:
         logger.info("Adding %d tags to job",len(all_tags))
-        j.tags.add(all_tags)
+        # once the tags becomes a string of key/value pairs, then
+        # just use _get_tags_from_string instead of what we do below
+        j.tags = _get_tags_for_list(all_tags)
 # Add all processes to job
     if all_procs:
         logger.info("Adding %d processes to job",len(all_procs))

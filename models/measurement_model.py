@@ -6,14 +6,14 @@ from pony.orm import *
 from .general import db
 import datetime
 
-class Tag(db.Entity):
-#	time = Required(datetime.datetime, default=datetime.datetime.utcnow)
-	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
-	info_dict = Optional(Json)
-	# end template
-	name = PrimaryKey(str)
-	processes = Set('Process')
-	jobs = Set('Job')
+# class Tag(db.Entity):
+# #	time = Required(datetime.datetime, default=datetime.datetime.utcnow)
+# 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
+# 	info_dict = Optional(Json)
+# 	# end template
+# 	name = PrimaryKey(str)
+# 	processes = Set('Process')
+# 	jobs = Set('Job')
 #
 # Removing/changing hosts needs to be addressed
 #
@@ -49,7 +49,7 @@ class Job(db.Entity):
 	groups = Set('Group')
 	hosts = Set('Host')
 	processes = Set('Process')
-	tags = Set('Tag')
+	tags = Optional(Json)
 	account = Optional('Account')
 	queue = Optional('Queue')
 	ppr = Optional('PostProcessRun')
@@ -63,7 +63,7 @@ class Process(db.Entity):
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 #	info_dict = Optional(Json)
 # End generic template
-	tags = Set('Tag')
+	tags = Optional(Json)
 	job = Required('Job')
 	host = Required('Host')
 	user = Required('User')
