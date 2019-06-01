@@ -201,7 +201,7 @@ def load_process_from_pandas(df, j, u, settings):
             p.tags = _get_tags_from_string(tags)
 
     # remove per-process fields from the threads dataframe
-    df = df.drop(labels=settings.per_process_fields, axis=1)
+    df = df.drop(labels=settings.per_process_fields, axis=1, errors = 'ignore')
 
     # compute sums for each column, but skip ones that we know should not be summed
     thread_metric_sums = df.drop(labels=settings.skip_for_thread_metric_sums, axis=1).sum(axis=0)
@@ -302,6 +302,32 @@ def ETL_ppr(metadata, jobid):
                          job=Job[jobid])
     return exp
 
+# walk up the process tree starting from the supplied ancestor
+# and ensure  that every ancestor of the supplied process(proc) includes
+# proc in its descendants, and proc.ancestors includes all ancestors
+def _proc_ancestors(pid_map, proc, ancestor_pid):
+    if ancestor_pid in pid_map:
+        ancestor = pid_map[ancestor_pid]
+        ancestor.descendants.add(proc)
+        proc.ancestors.add(ancestor)
+        # now that we have done this node let's go to its parent
+        _proc_ancestors(pid_map, proc, ancestor.ppid)
+
+
+def _create_process_tree(pid_map):
+    logger.info("creating process tree..")
+    for (pid, proc) in pid_map.items():
+        ppid = proc.ppid
+        if ppid in pid_map:
+            parent = pid_map[ppid]
+            proc.parent = parent
+            parent.children.add(proc)
+    logger.info("done connecting parent/child processes")
+    for (pid, proc) in pid_map.items():
+        ppid = proc.ppid
+        _proc_ancestors(pid_map, proc, ppid)
+    logger.info("process tree created")
+
 @db_session
 def ETL_job_dict(metadata, filedict, settings, tarfile=None):
 # Only fields used for now
@@ -327,7 +353,8 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
     #     'sid':                        float,
     #     'numtids':                    float }
 
-    standards = [ "exename","path","args","pid","generation","ppid","pgid","sid","numtids","tid","start","end" ]
+    # not used anywhere
+    # standards = [ "exename","path","args","pid","generation","ppid","pgid","sid","numtids","tid","start","end" ]
 
     then = datetime.datetime.now()
     csvt = datetime.timedelta()
@@ -348,12 +375,16 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
     all_tags = set([])
     all_procs = []
 
+    # a pid_map is used to create the process graph
+    pid_map = {}  # maps pids to process objects
+
     for hostname, files in filedict.iteritems():
         # logger.debug("Processing host %s",hostname)
         # h = lookup_or_create_host(hostname)
         cntmax = len(files)
         cnt = 0
         for f in files:
+            if cnt > 1000: break
             logger.debug("Processing file %s",f)
 #
 #            stdout.write('\b')            # erase the last written char
@@ -391,6 +422,7 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
                 if not p:
                     logger.error("Failed loading from pandas, file %s!",f);
                     continue
+                pid_map[p.pid] = p
                 all_procs.append(p)
 # Compute duration of job
                 if (p.start < earliest_process):
@@ -401,7 +433,8 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
                 cnt += 1
                 csvt += datetime.datetime.now() - csv
                 if cnt % 1000 == 0:
-                        logger.info("Did %d of %d...%.2f/sec",cnt,cntmax,cnt/csvt.total_seconds())
+                    logger.info("Did %d of %d...%.2f/sec",cnt,cntmax,cnt/csvt.total_seconds())
+                    break
 
 #
         if cnt:
@@ -424,6 +457,7 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
         j.tags = _get_tags_for_list(all_tags)
 # Add all processes to job
     if all_procs:
+        _create_process_tree(pid_map)
         logger.info("Adding %d processes to job",len(all_procs))
         j.processes.add(all_procs)
 # Update start/end/duration of job

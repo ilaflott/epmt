@@ -82,6 +82,13 @@ class Process(db.Entity):
 	sid = Required(int)
 	gen = Required(int)
 	exitcode = Optional(int)
+# for creating a process graph
+# a child process is also included in the list of descendants
+# while parent is included in the ancestors
+        parent = Optional('Process', reverse="children")
+        children = Set('Process', reverse="parent")
+        ancestors = Set('Process', reverse="descendants")
+        descendants = Set('Process', reverse="ancestors")
 
 # class Thread(db.Entity):
 # # These are measured
