@@ -13,3 +13,12 @@ install_prefix = "../papiex-oss/papiex-oss-install/"
 # when computing sums for thread metrics, we fields mentioned in skip_for_thread_metric_sums
 per_process_fields = ["tags","hostname","exename","path","args","exitcode","pid","generation","ppid","pgid","sid","numtids"]
 skip_for_thread_metric_sums = ["tid", "start", "end", "num_threads"]
+
+# tags
+# delimiter separates one tag key/value pair from another
+# separator separates the key-value within a par
+# A tag should be like:
+#   "app:TimeAvg;pprun:combine;runtime:100"
+tag_delimiter = ';'
+tag_kv_separator = ':'
+tag_default_value = '1'

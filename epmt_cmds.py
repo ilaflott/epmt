@@ -42,6 +42,14 @@ def init_settings():
         logger.info("Overriding settings.papiex_output with PAPIEX_OUTPUT=%s",t)
         settings.papiex_output = t
 
+    if not hasattr(settings, 'tag_delimiter'):
+        settings.tag_delimiter = ';'
+    if not hasattr(settings, 'tag_kv_separator'):
+        settings.tag_kv_separator = ':'
+    if not hasattr(settings, 'tag_default_value'):
+        settings.tag_default_value = "1"
+
+
 def getgroups(user):
     gids = [g.gr_gid for g in getgrall() if user in g.gr_mem]
     logger.debug("Group ids: %s",str(gids))

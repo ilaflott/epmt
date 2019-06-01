@@ -6,17 +6,9 @@ from glob import glob
 import fnmatch
 from os import environ
 from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
+import settings
 logger = getLogger(__name__)  # you can use other name
 
-# delimiter separates one tag from another
-# separator separates the key-value pair
-# A tag should be like:
-#   tags = "app:TimeAvg;pprun:combine;runtime:100"
-# TODO: See, which of these should instead be set from settings.py
-TAG_DELIMITER = ';'
-TAG_SEPARATOR = ':'
-TAG_DEFAULT_VALUE = '1'
-#
 #
 # Spinning cursor sequence
 #from itertools import cycle
@@ -99,17 +91,6 @@ def lookup_or_create_user(username):
         logger.debug("Found user %s",username)
     return user
 
-# def lookup_or_create_tags(tagnames):
-#     retval=[]
-#     for tagname in tagnames:
-#         tag = Tag.get(name=tagname)
-#         if tag is None:
-#             logger.info("Creating tag %s",tagname)
-#             tag = Tag(name=tagname)
-#         else:
-#             logger.debug("Found tag %s",tagname)
-#         retval.append(tag)
-#     return retval
 
 # we assume tags is of the format:
 #  "key1:value1 ; key2:value2"
@@ -119,19 +100,22 @@ def lookup_or_create_user(username):
 # We can also handle the case where a value is not set for
 # a key, by assigning a default value for the key
 # For example, for the input:
-# "multitheaded;app=fft" and a TAG_DEFAULT_VALUE="1"
+# "multitheaded;app=fft" and a tag_default_value="1"
 # the output would be:
 # { "multithreaded": "1", "app": "fft" }
 #
 # Note, both key and values will be strings and no attempt will be made to
 # guess the type for integer/floats
-def _get_tags_from_string(s):
+def _get_tags_from_string(s, 
+                          delim = settings.tag_delimiter, 
+                          sep = settings.tag_kv_separator, 
+                          tag_default_value = settings.tag_default_value):
     tags = {}
-    for t in s.split(TAG_DELIMITER):
+    for t in s.split(delim):
         t = t.strip()
-        if TAG_SEPARATOR in t:
+        if sep in t:
             try:
-                (k,v) = t.split(':')
+                (k,v) = t.split(sep)
                 k = k.strip()
                 v = v.strip()
                 tags[k] = v
@@ -142,36 +126,42 @@ def _get_tags_from_string(s):
         else:
             # tag is not of the format k:v
             # it's probably a simple label, so use the default value for it
-            tags[t] = TAG_DEFAULT_VALUE
+            tags[t] = tag_default_value
     return tags
 
 # this assumes a list of labels like:
 # ["abc", "def", "ghi"] and generates an output like:
 # { "abc": "1", "def": "1", "ghi": "1" }, where the "1" comes
-# from TAG_DEFAULT_VALUE
+# from the default value of a tag
 # We probably should remove this function once the job tag
 # is read in as key-value pair instead of a list of comments.
-def _get_tags_for_list(l):
+def _get_tags_for_list(l, tag_default_value = settings.tag_default_value):
     tags = {}
     for t in l:
-        tags[t] = TAG_DEFAULT_VALUE
+        tags[t] = tag_default_value
     return tags
 
 # This is a generator function that will yield
 # the next process dataframe from the collated file dataframe.
 # It uses the numtids field to figure out where the process dataframe ends
 def _get_process_df(df):
-    index = 0
+    row = 0
     nrows = df.shape[0]
-    while (index < nrows):
-        thr_count = int(df['numtids'][index])
-        if (thr_count < 1):
-            logger.error('invalid value set for numtids in dataframe: {0}'.format(thr_count))
+    while (row < nrows):
+        try:
+            thr_count = int(df['numtids'][row])
+        except Exception as e:
+            logger.error("%s", e)
+            logger.error("invalid or no value set for numtids in dataframe at index %d", row)
             return
-        # now yield a dataframe from df[index:index+thr_count]
+        if (thr_count < 1):
+            logger.error('invalid value({0}) set for numtids in dataframe at index {1}'.format(thr_count, row))
+            return
+        # now yield a dataframe from df[row ... row+thr_count]
         # make sure the yielded dataframe has it's index reset to 0
-        yield df[index:index+thr_count].reset_index(drop=True)
-        index += thr_count
+        yield df[row:row+thr_count].reset_index(drop=True)
+        # advance row pointer
+        row += thr_count
             
 
 def load_process_from_pandas(df, j, u, settings):
@@ -179,8 +169,6 @@ def load_process_from_pandas(df, j, u, settings):
 #	dprint("Creating process",str(df['pid'][0]),"gen",str(df['generation'][0]),"exename",df['exename'][0])
     from pandas import Timestamp
 
-    # earliest_thread = datetime.datetime.utcnow()
-    # latest_thread = datetime.datetime.fromtimestamp(0)
     if 'hostname' in df.columns:
         host = lookup_or_create_host(df['hostname'][0])
     else:
@@ -208,7 +196,9 @@ def load_process_from_pandas(df, j, u, settings):
         p.exitcode = int(df['exitcode'][0])
 
     if 'tags' in df.columns:
-        p.tags = _get_tags_from_string(df['tags'][0])
+        tags = df['tags'][0]
+        if tags:
+            p.tags = _get_tags_from_string(tags)
 
     # remove per-process fields from the threads dataframe
     df = df.drop(labels=settings.per_process_fields, axis=1)
@@ -326,14 +316,16 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
                  'path':str, 
                  'args':str,
                  'tags':str,
-                 'hostname':str } 
-    dtype_dic = { 
-        'pid':                        float,
-        'generation':                 float,
-        'ppid':                       float,
-        'pgid':                       float,
-        'sid':                        float,
-        'numtids':                    float }
+                 'hostname':str }
+
+    # below dictionary isn't used anymore
+    # dtype_dic = { 
+    #     'pid':                        float,
+    #     'generation':                 float,
+    #     'ppid':                       float,
+    #     'pgid':                       float,
+    #     'sid':                        float,
+    #     'numtids':                    float }
 
     standards = [ "exename","path","args","pid","generation","ppid","pgid","sid","numtids","tid","start","end" ]
 
@@ -428,7 +420,7 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
     if all_tags:
         logger.info("Adding %d tags to job",len(all_tags))
         # once the tags becomes a string of key/value pairs, then
-        # just use _get_tags_from_string instead of what we do below
+        # just use _get_tags_from_string instead of _get_tags_for_list
         j.tags = _get_tags_for_list(all_tags)
 # Add all processes to job
     if all_procs:
