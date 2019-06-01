@@ -324,7 +324,9 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
 # Damn NAN's for empty strings require converters, and empty integers need floats
     conv_dic = { 'exename':str, 
                  'path':str, 
-                 'args':str } 
+                 'args':str,
+                 'tags':str,
+                 'hostname':str } 
     dtype_dic = { 
         'pid':                        float,
         'generation':                 float,
