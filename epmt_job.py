@@ -164,7 +164,7 @@ def _get_process_df(df):
         row += thr_count
             
 
-def load_process_from_pandas(df, j, u, settings):
+def load_process_from_pandas(df, h, j, u, settings):
 # Assumes all processes are from same host
 #	dprint("Creating process",str(df['pid'][0]),"gen",str(df['generation'][0]),"exename",df['exename'][0])
     from pandas import Timestamp
@@ -172,7 +172,8 @@ def load_process_from_pandas(df, j, u, settings):
     if 'hostname' in df.columns:
         host = lookup_or_create_host(df['hostname'][0])
     else:
-        host = lookup_or_create_host('unknown')
+        # fallback to the host read from the filename
+        host = lookup_or_create_host(h)
 
     try:
             p = Process(exename=df['exename'][0],
@@ -379,7 +380,9 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
     pid_map = {}  # maps pids to process objects
 
     for hostname, files in filedict.iteritems():
-        # logger.debug("Processing host %s",hostname)
+        logger.debug("Processing host %s",hostname)
+        # we only need to a lookup_or_create_host if papiex doesn't
+        # have a hostname column
         # h = lookup_or_create_host(hostname)
         cntmax = len(files)
         cnt = 0
@@ -418,7 +421,9 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
             # there are 1 or more process dataframes in the collated df
             # let's iterate over them
             for df in _get_process_df(collated_df):
-                p = load_process_from_pandas(df, j, u, settings)
+                # we provide the hostname argument as a fallback in case
+                # the papiex data doesn't have a hostname column
+                p = load_process_from_pandas(df, hostname, j, u, settings)
                 if not p:
                     logger.error("Failed loading from pandas, file %s!",f);
                     continue
