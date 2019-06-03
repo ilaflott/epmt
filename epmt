@@ -11,8 +11,9 @@ if (__name__ == "__main__"):
         import argparse26 as argparse
         
     parser = argparse.ArgumentParser(description="",add_help=False)
-    parser.add_argument('epmt_cmd',type=str,nargs="?",help="start, run, stop, submit, dump, check");
+    parser.add_argument('epmt_cmd',type=str,nargs="?",help="help, start, source, run, stop, dump, stage, submit, check");
     parser.add_argument('epmt_cmd_args',nargs='*',help="Additional arguments, command dependent");
+    parser.add_argument('-j', '--jobid',help="Force job ID instead of getting it from the environment");
     parser.add_argument('-n', '--dry-run',action='store_true',help="Don't touch the database");
     parser.add_argument('-v', '--verbose',action='count',help="Increase level of verbosity/debug")
     parser.add_argument('-h', '--help',action='store_true',help="Show this help message and exit")
