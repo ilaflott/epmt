@@ -205,7 +205,13 @@ def load_process_from_pandas(df, h, j, u, settings):
     df = df.drop(labels=settings.per_process_fields, axis=1, errors = 'ignore')
 
     # compute sums for each column, but skip ones that we know should not be summed
-    thread_metric_sums = df.drop(labels=settings.skip_for_thread_metric_sums, axis=1).sum(axis=0)
+    # we then convert the pandas series of sums to a Python dict
+    thread_metric_sums = df.drop(labels=settings.skip_for_thread_metric_sums, axis=1).sum(axis=0).to_dict()
+    # we add a composite metric comprising of user+system time as this
+    # is needed in queries, and Pony doesn't allow operations on json fields
+    # in a Query
+    # TODO: can this be removed?
+    thread_metric_sums['user+system'] = thread_metric_sums.get('usertime', 0) + thread_metric_sums.get('systemtime', 0)
 
 
     # convert the threads dataframe to a json
@@ -223,7 +229,7 @@ def load_process_from_pandas(df, h, j, u, settings):
     #
 
     p.threads_df = df.to_json(orient='split')
-    p.threads_sums = thread_metric_sums.to_dict()
+    p.threads_sums = thread_metric_sums
     p.numtids = df.shape[0]
 
     try:
