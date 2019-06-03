@@ -68,7 +68,8 @@ class Process(db.Entity):
 	host = Required('Host')
 	user = Required('User')
 	group = Optional('Group')
-	threads = Optional(Json)
+	threads_df = Optional(Json)
+	threads_sums = Optional(Json)
 	numtids = Required(int, default=0)
 # These should probably be abstracted/reduced
 	exename = Required(str)

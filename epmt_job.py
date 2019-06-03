@@ -214,7 +214,7 @@ def load_process_from_pandas(df, h, j, u, settings):
     # thus it preserves the column order. Remember when reading the json
     # into a dataframe, do it as:
     #
-    #   df = pd.read_json(p.threads['df'], orient='split')
+    #   df = pd.read_json(p.threads_df, orient='split')
     #
     # where 'p' is a Process object
     #
@@ -222,7 +222,8 @@ def load_process_from_pandas(df, h, j, u, settings):
     # complex queries in Pony using metrics in the 'metric_sums' dict.
     #
 
-    p.threads = { "df": df.to_json(orient='split'), "metric_sums": thread_metric_sums.to_dict() }
+    p.threads_df = df.to_json(orient='split')
+    p.threads_sums = thread_metric_sums.to_dict()
     p.numtids = df.shape[0]
 
     try:
