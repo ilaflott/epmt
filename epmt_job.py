@@ -218,24 +218,11 @@ def load_process_from_pandas(df, h, j, u, settings):
     #
     # where 'p' is a Process object
     #
-    # Notice, that for 'metric_sums', we do not use orient='split', as
-    # we save it in a flat json such as {"usetime": 1000, "systime": 200,..}
+    # We pass metric_sums as a python dictionary to Pony so we can do
+    # complex queries in Pony using metrics in the 'metric_sums' dict.
     #
-    # To load the metrics sums into pandas, we would do:
-    #
-    #   metrics_sums = pd.read_json(p.threads['metric_sums'], typ='series')
-    #
-    # 
-    # or you can make a Python dict, by doing:
-    #
-    # >>> import json
-    # >>> d = json.loads(p.threads['metric_sums'])
-    # >>> d
-    # {u'majflt': 0, u'read_bytes': 0, u'cancelled_write_bytes': 0, u'rssmax': 28396, u'minflt': 2263, u'time_oncpu': 20528552, u'delayacct_blkio_time': 0, u'systemtime': 6998, u'invol_ctxsw': 4, u'inblock': 0, u'vol_ctxsw': 55, u'PERF_COUNT_SW_CPU_CLOCK': 2119464, u'wchar': 56, u'guest_time': 0, u'write_bytes': 0, u'timeslices': 63, u'rdtsc_duration': 2264831152, u'usertime': 11998, u'outblock': 0, u'starttime': 9792390780000, u'time_waiting': 24907, u'syscr': 266, u'rchar': 2059838, u'syscw': 7, u'processor': 13}
-    # >>> d['rssmax']
-    # 28396
 
-    p.threads = { "df": df.to_json(orient='split'), "metric_sums": thread_metric_sums.to_json() }
+    p.threads = { "df": df.to_json(orient='split'), "metric_sums": thread_metric_sums.to_dict() }
     p.numtids = df.shape[0]
 
     try:
@@ -387,7 +374,7 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
         cntmax = len(files)
         cnt = 0
         for f in files:
-            if cnt > 1000: break
+            # if cnt > 1000: break # for debugging
             logger.debug("Processing file %s",f)
 #
 #            stdout.write('\b')            # erase the last written char
@@ -439,7 +426,7 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
                 csvt += datetime.datetime.now() - csv
                 if cnt % 1000 == 0:
                     logger.info("Did %d of %d...%.2f/sec",cnt,cntmax,cnt/csvt.total_seconds())
-                    break
+                    # break
 
 #
         if cnt:
