@@ -25,10 +25,10 @@ PROC_EXCLUDE_FIELDS = ['threads_df']
 #        objects would be if you want to use the objects
 #        for chaining further queries. 
 #
-# example, to get all processes for a particular Job(j), which
+# example, to get all processes for a particular Job, with jobid '32046', which
 # are multithreaded, you would do:
 #
-#   filter_processes(j.processes, fltr = 'p.numtids > 1')
+#   filter_processes(jobs = ['32046'], fltr = 'p.numtids > 1')
 #
 # To filter all processes that have tags = {'app': 'fft'}, you would do:
 # filter_processes(tags = {'app': 'fft'})
@@ -36,14 +36,33 @@ PROC_EXCLUDE_FIELDS = ['threads_df']
 # And, if you want to chain filters, you can choose to not convert
 # the returned ORM objects into Python lists/dictionaries:
 # qs1 = filter_processes(tags = {'app': 'fft'}, conv_orm_objects = False)
-# qs2 = filter_processes(qs1, tags = {'app': 'fft'})
 #
-def filter_processes(process_set = None, tags = {}, fltr = None, conv_orm_objects = True, limit = 0):
-    qs = (process_set or Process).select()
+def filter_processes(jobs = [], tags = {}, fltr = None, conv_orm_objects = True, limit = 0):
+    if jobs:
+        # is jobs a collection of Job IDs or actual Job objects?
+        if type(jobs[0]) == str or type(jobs[0]) == unicode:
+            # jobs is a list of job IDs
+            qs = Process.select(lambda p: p.job.jobid in jobs)
+        else:
+            # jobs is a list of Job objects
+            qs = Process.select(lambda p: p.job in jobs)
+    else:
+        # no jobs set, so expand the scope to all Process objects
+        qs = Process.select()
+
+    # filter using tags if set
     for (k,v) in tags.items():
         qs = qs.filter(lambda p: p.tags[k] == v)
+
+    # if fltr is a lambda function or a string apply it
     if fltr:
         qs = qs.filter(fltr)
+
+    # finally set limits on the number of processes returned
     if limit:
         qs = qs.limit(int(limit))
-    return [ p.to_dict(exclude = PROC_EXCLUDE_FIELDS) for p in qs ] if conv_orm_objects else qs
+
+    # return a list of processes, but first make sure we
+    # convert each of the Process objects to a dictionary unless 
+    # conv_orm_objects is False
+    return [ p.to_dict(exclude = PROC_EXCLUDE_FIELDS) for p in qs ] if conv_orm_objects else qs[:]
