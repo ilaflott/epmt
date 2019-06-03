@@ -17,13 +17,12 @@ PROC_EXCLUDE_FIELDS = ['threads_df']
 #        'p.duration > 1000 and p.numtids < 4'
 # 'limit' if set, limits the total number of results
 # 
-# 'conv_orm_objects': This is true by default, and filter_processes
-#        returns a list of matching processes that satisfy the
-#        filters. All objects are converted to Python lists
-#        or dictionaries. If set to False, then no conversions
-#        will be performed. One reason to not convert ORM
-#        objects would be if you want to use the objects
-#        for chaining further queries. 
+# 'out_fmt': Output format, is one of 'dict', 'orm', 'pandas'
+#            The default is 'dict', which case each process is
+#            output as a python dictionary, and the output is 
+#            a list of dictionaries.
+#            'pandas': output is a pandas dataframe
+#            'orm': output is a list of ORM objects
 #
 # example, to get all processes for a particular Job, with jobid '32046', which
 # are multithreaded, you would do:
@@ -33,11 +32,10 @@ PROC_EXCLUDE_FIELDS = ['threads_df']
 # To filter all processes that have tags = {'app': 'fft'}, you would do:
 # filter_processes(tags = {'app': 'fft'})
 #
-# And, if you want to chain filters, you can choose to not convert
-# the returned ORM objects into Python lists/dictionaries:
-# qs1 = filter_processes(tags = {'app': 'fft'}, conv_orm_objects = False)
+# to get a pandas dataframe:
+# qs1 = filter_processes(tags = {'app': 'fft'}, out_fmt = 'pandas')
 #
-def filter_processes(jobs = [], tags = {}, fltr = None, conv_orm_objects = True, limit = 0):
+def filter_processes(jobs = [], tags = {}, fltr = None, limit = 0, out_fmt='dict'):
     if jobs:
         # is jobs a collection of Job IDs or actual Job objects?
         if type(jobs[0]) == str or type(jobs[0]) == unicode:
@@ -63,6 +61,12 @@ def filter_processes(jobs = [], tags = {}, fltr = None, conv_orm_objects = True,
         qs = qs.limit(int(limit))
 
     # return a list of processes, but first make sure we
-    # convert each of the Process objects to a dictionary unless 
-    # conv_orm_objects is False
-    return [ p.to_dict(exclude = PROC_EXCLUDE_FIELDS) for p in qs ] if conv_orm_objects else qs[:]
+    # convert each of the Process objects to a dictionary (excluding blacklisted
+    # fields) unless conv_orm_objects is False
+    proc_exclude_fields = settings.query_process_fields_exclude if hasattr(settings, 'query_process_fields_exclude') else []
+    if out_fmt == 'orm': return qs[:]
+    out_list = [ p.to_dict(exclude = proc_exclude_fields) for p in qs ]
+    if out_fmt == 'pandas':
+        from pandas import DataFrame
+        return DataFrame(out_list)
+    return out_list # just return a list of python dictionaries

@@ -22,3 +22,6 @@ skip_for_thread_metric_sums = ["tid", "start", "end", "num_threads"]
 tag_delimiter = ';'
 tag_kv_separator = ':'
 tag_default_value = '1'
+
+# query api
+query_process_fields_exclude = ['threads_df']
