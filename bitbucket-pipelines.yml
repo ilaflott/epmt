@@ -17,4 +17,4 @@ pipelines:
           - PAPIEX_OUTPUT=/tmp/epmt/ SLURM_JOB_ID=1 ./epmt stop   	  	# Generate epilog and append
           - PAPIEX_OUTPUT=/tmp/epmt/ SLURM_JOB_ID=1 ./epmt dump   		# Parse/print job_metadata
           - PAPIEX_OUTPUT=/tmp/epmt/ SLURM_JOB_ID=1 ./epmt stage		# Move to medium term storage
-#          - PAPIEX_OUTPUT=/tmp/epmt/ SLURM_JOB_ID=1 ./epmt submit 		# Submit
+          - PAPIEX_OUTPUT=/tmp/epmt/ SLURM_JOB_ID=1 ./epmt submit ./1/ 		# Submit

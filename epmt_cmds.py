@@ -42,6 +42,9 @@ def init_settings():
         logger.info("Overriding settings.papiex_output with PAPIEX_OUTPUT=%s",t)
         settings.papiex_output = t
 
+    if not hasattr(settings, 'job_tags_env'):
+        logger.warning("missing settings.job_tags_env")
+        settings.job_tags_env = 'EPMT_JOB_TAGS'
     if not hasattr(settings, 'tag_delimiter'):
         logger.warning("missing settings.tag_delimiter")
         settings.tag_delimiter = ';'
@@ -90,20 +93,6 @@ def blacklist_filter(filter=None, **env):
 		if not k.startswith("_"):
 			env2[k] = v
 	return env2
-
-def get_job_var(var):
-	logger.debug("looking for %s",var)
-	a = False
-	if var in key2pbs:
-		logger.debug("looking for %s",key2pbs[var])
-		a=environ.get(key2pbs[var])
-	if not a and var in key2slurm:
-		logger.debug("looking for %s",key2slurm[var])
-		a=environ.get(key2slurm[var])
-	if not a:
-		logger.debug("%s not found",var)
-		return False
-	return a
 
 def dump_config(outf):
     print >> outf,"\nsettings.py (affected by the below env. vars):"
@@ -345,29 +334,34 @@ def epmt_check():
         retval = False
     return retval
 
+#
+# These two functions should match _check_and_create_metadata!
+#
+
 def create_start_job_metadata(jobid, submit_ts, from_batch=[]):
 	ts=datetime.now()
 	metadata = {}
 	start_env=blacklist_filter(filter,**environ)
 #	print env
 	metadata['job_pl_id'] = jobid
-	metadata['job_pl_hostname'] = gethostname()
-	metadata['job_pl_start_ts'] = ts
+#	metadata['job_pl_hostname'] = gethostname()
         if submit_ts == False:
             metadata['job_pl_submit_ts'] = ts
         else:
             metadata['job_pl_submit_ts'] = submit_ts
+	metadata['job_pl_start_ts'] = ts
 	metadata['job_pl_env'] = start_env
+#        metadata['job_pl_from_batch'] = from_batch
 	return metadata
 
 def merge_stop_job_metadata(metadata, exitcode, reason, from_batch=[]):
     ts=datetime.now()
     stop_env=blacklist_filter(filter,**environ)
-    metadata['job_el_env'] = stop_env
     metadata['job_el_stop_ts'] = ts
-    metadata['job_el_from_batch'] = from_batch
+#    metadata['job_el_from_batch'] = from_batch
     metadata['job_el_exitcode'] = exitcode
     metadata['job_el_reason'] = reason
+    metadata['job_el_env'] = stop_env
     return metadata
 
 def get_jobid():

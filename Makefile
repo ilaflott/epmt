@@ -51,7 +51,8 @@ check-python-driver:
 	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt run sleep 1     # Run command, if no papiex just run command silently
 	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt stop            # Generate epilog and append
 	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt dump >/dev/null # Parse/print job_metadata
+#	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt submit          # Submit from tmp area
 	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt stage           # Move to medium term storage
-#	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt -n submit       # Submit
-	@$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) python -V	             # Version 
+	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt submit ./$(SLURM_FAKE_JOB_ID)/ # Submit from staged storage
+	@$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) python -V	            # Version 
 	@echo "Tests pass!"

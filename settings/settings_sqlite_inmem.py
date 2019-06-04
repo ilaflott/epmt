@@ -13,3 +13,5 @@ metrics_offset = 12
 tag_kv_separator = ':'
 tag_default_value = "1"
 tag_delimiter = ';'
+job_tags_env = 'EPMT_JOB_TAGS'
+
