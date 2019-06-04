@@ -53,6 +53,7 @@ class Job(db.Entity):
 	account = Optional('Account')
 	queue = Optional('Queue')
 	ppr = Optional('PostProcessRun')
+        cpu_time = Optional(int)
 
 class Process(db.Entity):
 # Rollup entries, computed at insert time

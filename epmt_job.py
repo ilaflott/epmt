@@ -473,7 +473,9 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
     j.end = metadata["job_el_stop"]
     d = j.end - j.start
     j.duration = int(d.total_seconds()*1000000)
-    
+    # the cpu time for a job is the sum of the exclusive times
+    # of all processes in the job
+    j.cpu_time = sum(j.processes.exclusive_cpu_time)
 #
 #
 #

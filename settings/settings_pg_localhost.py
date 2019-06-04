@@ -25,3 +25,5 @@ tag_default_value = '1'
 
 # query api
 query_process_fields_exclude = ['threads_df']
+# env_dict adds a lot of output, for now we skip returning it in queries
+query_job_fields_exclude = ['env_dict']

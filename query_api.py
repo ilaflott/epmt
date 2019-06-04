@@ -1,5 +1,6 @@
 from models import *
 from epmt_job import setup_orm_db
+from pprint import pprint
 import settings
 print(settings.db_params)
 setup_orm_db(settings)
@@ -36,7 +37,39 @@ THR_SUMS_FIELD = 'threads_sums'
 #                  pony job objects.
 #
 def filter_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict'):
-    pass
+    if jobids:
+        qs = Job.select(lambda j: j.jobid in jobs)
+    else:
+        qs = Job.select()
+
+    # filter using tags if set
+    for (k,v) in tags.items():
+        qs = qs.filter(lambda j: j.tags[k] == v)
+
+    # if fltr is a lambda function or a string apply it
+    if fltr:
+        qs = qs.filter(fltr)
+
+    if order:
+        qs = qs.order_by(order)
+
+    # finally set limits on the number of jobs returned
+    if limit:
+        qs = qs.limit(int(limit))
+
+    if fmt == 'orm':
+        return qs[:]
+
+    # convert the ORM into a list of dictionaries, excluding blacklisted fields
+    exclude_fields = (settings.query_job_fields_exclude or '') if hasattr(settings, 'query_job_fields_exclude') else ''
+    out_list = [ j.to_dict(exclude = exclude_fields) for j in qs ]
+
+    if fmt == 'pandas':
+        from pandas import DataFrame
+        return DataFrame(out_list)
+
+    # we assume the user wants the output in the form of a list of dicts
+    return out_list
 
 # Filter a supplied list of jobs to find a match
 # by tags or some primary keys. If no jobs list is provided,
@@ -124,7 +157,7 @@ def filter_processes(jobs = [], tags = {}, fltr = None, order = '', limit = 0, f
         return qs[:]
 
     # convert the ORM into a list of dictionaries, excluding blacklisted fields
-    proc_exclude_fields = settings.query_process_fields_exclude if hasattr(settings, 'query_process_fields_exclude') else []
+    proc_exclude_fields = (settings.query_process_fields_exclude or '') if hasattr(settings, 'query_process_fields_exclude') else ''
     out_list = [ p.to_dict(exclude = proc_exclude_fields) for p in qs ]
 
     # do we need to merge threads' sum fields into the process?
