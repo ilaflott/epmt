@@ -212,7 +212,7 @@ def load_process_from_pandas(df, h, j, u, settings):
     # in a Query
     # TODO: can this be removed?
     thread_metric_sums['user+system'] = thread_metric_sums.get('usertime', 0) + thread_metric_sums.get('systemtime', 0)
-
+    p.exclusive_cpu_time = thread_metric_sums['user+system']
 
     # convert the threads dataframe to a json
     # using the 'split' argument creates a json of the form:

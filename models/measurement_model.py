@@ -71,6 +71,8 @@ class Process(db.Entity):
 	threads_df = Optional(Json)
 	threads_sums = Optional(Json)
 	numtids = Required(int, default=0)
+# save some useful timing information for threads
+        exclusive_cpu_time = Optional(int)
 # These should probably be abstracted/reduced
 	exename = Required(str)
 	path = Required(str)
