@@ -30,16 +30,17 @@ THR_SUMS_FIELD = 'threads_sums'
 #
 # limit  : Restrict the output list a specified number of jobs
 #
-# fmt    : Control the output format. One of 'dict', 'pandas' or 'orm'
+# fmt    : Control the output format. One of 'dict', 'pandas', 'orm', 'terse'
 #          'dict': each job object is converted to a dict, and the entire
 #                  output is a list of dictionaries
 #          'pandas': Output a pandas dataframe with one row for each matching job
 #          'orm':  each job is Pony object, and the entire output is a list of 
 #                  pony job objects.
+#          'terse': In this format only the primary key ID is printed for each job
 #
-def filter_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict'):
+def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict'):
     if jobids:
-        qs = Job.select(lambda j: j.jobid in jobs)
+        qs = Job.select(lambda j: j.jobid in jobids)
     else:
         qs = Job.select()
 
@@ -60,6 +61,9 @@ def filter_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dic
 
     if fmt == 'orm':
         return qs[:]
+
+    if fmt == 'terse':
+        return [ j.jobid for j in qs ]
 
     # convert the ORM into a list of dictionaries, excluding blacklisted fields
     exclude_fields = (settings.query_job_fields_exclude or '') if hasattr(settings, 'query_job_fields_exclude') else ''
@@ -86,46 +90,47 @@ def filter_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dic
 #
 # limit: if set, limits the total number of results
 # 
-# fmt :   Output format, is one of 'dict', 'orm', 'pandas'
+# fmt :   Output format, is one of 'dict', 'orm', 'pandas', 'terse'
 #         'dict': This is the default, and in this case
 #                 each process is output as a python dictionary, 
 #                 and the entire output is a list of dictionaries.
 #         'pandas': output is a pandas dataframe
 #         'orm': output is a list of ORM objects
+#         'terse': output contains only the database ids of matching processes
 #
-# merge_sum_fields: By default, this is True, and this means threads sums are
+# merge_threads_sums: By default, this is True, and this means threads sums are
 #          are folded into the process. If set to False, the threads'
 #          sums will be available as a separate field THR_SUMS_FIELD.
 #          Flattening makes subsequent processing easier as all the
 #          thread aggregates such as 'usertime', 'systemtime' are available
 #          as first-class members of the process. This option is silently
 #          ignored if output format 'fmt' is set to 'orm', and ORM
-#          objects will not be merge_sum_fieldsed.
+#          objects will not be merge_threads_sumsed.
 #
 # For example, to get all processes for a particular Job, with jobid '32046', which
 # are multithreaded, you would do:
 #
-#   filter_processes(jobs = ['32046'], fltr = 'p.numtids > 1')
+#   get_procs(jobs = ['32046'], fltr = 'p.numtids > 1')
 #
 # To filter all processes that have tags = {'app': 'fft'}, you would do:
-# filter_processes(tags = {'app': 'fft'})
+# get_procs(tags = {'app': 'fft'})
 #
 # to get a pandas dataframe:
-# qs1 = filter_processes(tags = {'app': 'fft'}, fmt = 'pandas')
+# qs1 = get_procs(tags = {'app': 'fft'}, fmt = 'pandas')
 #
 # to filter processes for a job '1234' and order by process duration,
 # getting the top 10 results, and keeping the final output in ORM format:
 # 
-# q = filter_processes(['1234'], order = 'desc(p.duration)', limit=10, fmt='orm')
+# q = get_procs(['1234'], order = 'desc(p.duration)', limit=10, fmt='orm')
 #
 # now, let's filter processes with duration > 100000 and order them by user+system time,
 # and let's get the output into a pandas dataframe:
-# q = filter_processes(fltr = (lambda p: p.duration > 100000), order = 'desc(p.threads_sums["user+system"]', fmt='pandas')
+# q = get_procs(fltr = (lambda p: p.duration > 100000), order = 'desc(p.threads_sums["user+system"]', fmt='pandas')
 # Observe, that while 'user+system' is a metric available in the threads_sums field,
-# by using the default merge_sum_fields=True, it will be available as column in the output
+# by using the default merge_threads_sums=True, it will be available as column in the output
 # dataframe. The output will be pre-sorted on this field because we have set 'order'
 #
-def filter_processes(jobs = [], tags = {}, fltr = None, order = '', limit = 0, fmt='dict', merge_sum_fields=True):
+def get_procs(jobs = [], tags = {}, fltr = None, order = '', limit = 0, fmt='dict', merge_threads_sums=True):
     if jobs:
         # is jobs a collection of Job IDs or actual Job objects?
         if type(jobs[0]) == str or type(jobs[0]) == unicode:
@@ -156,15 +161,18 @@ def filter_processes(jobs = [], tags = {}, fltr = None, order = '', limit = 0, f
     if fmt == 'orm':
         return qs[:]
 
+    if fmt == 'terse':
+        return [ p.id for p in qs ]
+
     # convert the ORM into a list of dictionaries, excluding blacklisted fields
     proc_exclude_fields = (settings.query_process_fields_exclude or '') if hasattr(settings, 'query_process_fields_exclude') else ''
     out_list = [ p.to_dict(exclude = proc_exclude_fields) for p in qs ]
 
     # do we need to merge threads' sum fields into the process?
-    if merge_sum_fields:
+    if merge_threads_sums:
         for p in out_list:
             p.update(p[THR_SUMS_FIELD])
-        del p[THR_SUMS_FIELD]
+            del p[THR_SUMS_FIELD]
 
     if fmt == 'pandas':
         return pd.DataFrame(out_list)
