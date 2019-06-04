@@ -6,14 +6,51 @@ setup_orm_db(settings)
 
 
 THR_SUMS_FIELD = 'threads_sums'
-# Filter a supplied set of Process objects to find a match
-# by tags or some primary keys. If the process_set is not
-# specified then the query will be run against all processes.
-# 'tags' is a key/value pair and is optional.
-# 'fltr' is a lambda expression or a string of the form:
-#        lambda p: p.duration > 1000
+
+# This function returns a list of jobs based on some filtering and ordering.
+# The output format can be set to pandas dataframe, list of dicts or list
+# of ORM objects. See 'fmt' option.
+#
+#
+# jobids : Optional list of jobids to narrow the search space
+#
+# tags   : Optional dictionary of key/value pairs
+#
+# fltr   : Optional filter in the form of a lamdba function or a string
+#          e.g., lambda j: count(j.processes) > 100 will filter jobs more than 100 processes
+#          or, 'j.duration > 100000' will filter jobs whose duration is more than 100000
+#
+# order  : Optionally sort the output by setting this to a lambda function or string
+#          e.g, to sort by job duration descending:
+#               order = 'desc(j.duration)'
+#          or, to sort jobs by the sum of durations of their processes, do:
+#               order = lambda j: sum(j.processes.duration)
+#
+# limit  : Restrict the output list a specified number of jobs
+#
+# fmt    : Control the output format. One of 'dict', 'pandas' or 'orm'
+#          'dict': each job object is converted to a dict, and the entire
+#                  output is a list of dictionaries
+#          'pandas': Output a pandas dataframe with one row for each matching job
+#          'orm':  each job is Pony object, and the entire output is a list of 
+#                  pony job objects.
+#
+def filter_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict'):
+    pass
+
+# Filter a supplied list of jobs to find a match
+# by tags or some primary keys. If no jobs list is provided,
+# then the query will be run against all processes.
+#
+# All fields are optional and sensible defaults are assumed.
+#
+# tags : is a dictionary of key/value pairs and is optional.
+#
+# fltr: is a lambda expression or a string of the form:
+#       lambda p: p.duration > 1000
 #        OR
-#        'p.duration > 1000 and p.numtids < 4'
+#       'p.duration > 1000 and p.numtids < 4'
+#
 # limit: if set, limits the total number of results
 # 
 # fmt :   Output format, is one of 'dict', 'orm', 'pandas'
