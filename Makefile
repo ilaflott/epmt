@@ -29,7 +29,7 @@ check: check-python-native
 SLURM_FAKE_JOB_ID=1
 TMP_OUTPUT_DIR=/tmp/epmt/
 DOCKER_PYTHON_IMAGE=
-DOCKER_RUN_PYTHON=docker run -ti --rm -v $(shell pwd):/app -w /app -e PAPIEX_OUTPUT=$(TMP_OUTPUT_DIR) -e SLURM_JOB_ID=$(SLURM_FAKE_JOB_ID)
+DOCKER_RUN_PYTHON=docker run -ti --rm -v $(shell pwd):/app -w /app -e PAPIEX_OUTPUT=$(TMP_OUTPUT_DIR) -e SLURM_JOB_ID=$(SLURM_FAKE_JOB_ID) -e EPMT_JOB_TAGS=operation:test
 
 check-python-2.6: 
 	@$(MAKE) DOCKER_PYTHON_IMAGE=lovato/python-2.6.6 check-python-driver
@@ -38,7 +38,7 @@ check-python-2.7:
 check-python-3: 
 	@$(MAKE) DOCKER_PYTHON_IMAGE=python:3 check-python-driver
 check-python-native:
-	@$(MAKE) DOCKER_RUN_PYTHON="PAPIEX_OUTPUT=$(TMP_OUTPUT_DIR) SLURM_JOB_ID=$(SLURM_FAKE_JOB_ID)"  DOCKER_PYTHON_IMAGE="" check-python-driver
+	@$(MAKE) DOCKER_RUN_PYTHON="PAPIEX_OUTPUT=$(TMP_OUTPUT_DIR) SLURM_JOB_ID=$(SLURM_FAKE_JOB_ID) EPMT_JOB_TAGS=operation:test"  DOCKER_PYTHON_IMAGE="" check-python-driver
 
 check-python-driver:
 	@rm -fr $(TMP_OUTPUT_DIR) $(SLURM_FAKE_JOB_ID);

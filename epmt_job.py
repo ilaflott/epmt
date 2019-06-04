@@ -562,7 +562,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             logger.warning("Something went wrong in parsing CSV files")
             return False
     else:
-        logger.warning("Submitting job with no CSV data")
+        logger.warning("Submitting job with no CSV data, tags %s",str(job_tags))
 
 # Add sum of tags to job        
 #    if all_tags:
