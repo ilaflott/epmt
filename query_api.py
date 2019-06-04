@@ -1,5 +1,6 @@
 from models import *
 from epmt_job import setup_orm_db
+import pandas as pd
 from pprint import pprint
 import settings
 print(settings.db_params)
@@ -65,8 +66,7 @@ def filter_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dic
     out_list = [ j.to_dict(exclude = exclude_fields) for j in qs ]
 
     if fmt == 'pandas':
-        from pandas import DataFrame
-        return DataFrame(out_list)
+        return pd.DataFrame(out_list)
 
     # we assume the user wants the output in the form of a list of dicts
     return out_list
@@ -167,8 +167,32 @@ def filter_processes(jobs = [], tags = {}, fltr = None, order = '', limit = 0, f
         del p[THR_SUMS_FIELD]
 
     if fmt == 'pandas':
-        from pandas import DataFrame
-        return DataFrame(out_list)
+        return pd.DataFrame(out_list)
 
     # we assume the user wants the output in the form of a list of dicts
     return out_list
+
+
+# returns thread metrics dataframe for one or more processes
+# where each process is specified as either as a Process object or 
+# the database ID of a process.
+# If multiple processes are specified then dataframes are concatenated
+# using pandas into a single dataframe
+def get_thread_metrics(*processes):
+    # handle the case where the user supplied a python list rather
+    # spread out arguments
+    if type(processes[0]) == list:
+        processes = processes[0]
+
+    df_list = []
+    for proc in processes:
+        if type(proc) == int:
+            # user supplied database id of process
+            p = Process.select(lambda p: p.id == proc).first()
+        else:
+            # user supplied process objects directly
+            p = proc
+        df_list.append(pd.read_json(p.threads_df, orient='split'))
+
+    # if we have only one dataframe then no concatenation is needed
+    return pd.concat(df_list) if len(df_list) > 1 else df_list[0]
