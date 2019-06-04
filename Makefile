@@ -27,8 +27,9 @@ distclean: clean
 check: check-python-native
 
 SLURM_FAKE_JOB_ID=1
+TMP_OUTPUT_DIR=/tmp/epmt/
 DOCKER_PYTHON_IMAGE=
-DOCKER_RUN_PYTHON=docker run -ti --rm -v $(shell pwd):/app -w /app -e PAPIEX_OUTPUT=/app/ -e SLURM_JOB_ID=$(SLURM_FAKE_JOB_ID)
+DOCKER_RUN_PYTHON=docker run -ti --rm -v $(shell pwd):/app -w /app -e PAPIEX_OUTPUT=$(TMP_OUTPUT_DIR) -e SLURM_JOB_ID=$(SLURM_FAKE_JOB_ID)
 
 check-python-2.6: 
 	@$(MAKE) DOCKER_PYTHON_IMAGE=lovato/python-2.6.6 check-python-driver
@@ -37,20 +38,20 @@ check-python-2.7:
 check-python-3: 
 	@$(MAKE) DOCKER_PYTHON_IMAGE=python:3 check-python-driver
 check-python-native:
-	@$(MAKE) DOCKER_RUN_PYTHON="PAPIEX_OUTPUT=/tmp/epmt/ SLURM_JOB_ID=$(SLURM_FAKE_JOB_ID)"  DOCKER_PYTHON_IMAGE="" check-python-driver
+	@$(MAKE) DOCKER_RUN_PYTHON="PAPIEX_OUTPUT=$(TMP_OUTPUT_DIR) SLURM_JOB_ID=$(SLURM_FAKE_JOB_ID)"  DOCKER_PYTHON_IMAGE="" check-python-driver
 
 check-python-driver:
-	@if [ -f $(SLURM_FAKE_JOB_ID)/ ]; then echo "Please remove $(SLURM_FAKE_JOB_ID)"; exit 1; fi
+	@rm -fr $(TMP_OUTPUT_DIR) $(SLURM_FAKE_JOB_ID);
 	@rm -f settings.py; ln -s settings/settings_sqlite_inmem.py settings.py  # Setup in mem sqlite
-	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) python -m py_compile *.py models/*.py         # Compile everything
+	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) python -m py_compile epmt *.py models/*.py         # Compile everything
 	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt -h >/dev/null      # help path 1
 	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt help >/dev/null    # help path 2
 	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt start           # Generate prolog
 	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt source          # Print shell command
-	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt run sleep 1     # Run command
+	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt run sleep 1     # Run command, if no papiex just run command silently
 	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt stop            # Generate epilog and append
-	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt dump            # Parse/print job_metadata
-	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt stage           # Parse/print job_metadata
+	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt dump >/dev/null # Parse/print job_metadata
+	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt stage           # Move to medium term storage
 #	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt -n submit       # Submit
 	@$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) python -V	             # Version 
 	@echo "Tests pass!"
