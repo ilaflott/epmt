@@ -306,10 +306,12 @@ def verify_perf():
         PrintFail()
     return False
 
-def verify_papiex(dir):
+def verify_papiex():
     print "collect functionality (papiex+epmt)"
     print("\tepmt run -a /bin/sleep 1")
-    retval = epmt_run(["/bin/sleep","1"],wrapit=True)
+    fake_job_id = "1"
+    dir = settings.papiex_output+fake_job_id+"/"
+    retval = epmt_run(fake_job_id,["/bin/sleep","1"],wrapit=True)
     if retval != 0:
         PrintFail()
         return False
@@ -339,7 +341,7 @@ def epmt_check():
         retval = False
     if verify_papiex_options() == False:
         retval = False
-    if verify_papiex(get_job_dir()) == False:
+    if verify_papiex() == False:
         retval = False
     return retval
 
@@ -527,7 +529,7 @@ def epmt_run(forced_jobid, cmdline, wrapit=False, dry_run=False, debug=False):
         if dry_run:
             print "epmt start"
         else:
-            if not epmt_start(forced_jobid):
+            if not epmt_start_job(forced_jobid):
                 return 1
 
     cmd = epmt_source(forced_jobid, papiex_debug=debug, monitor_debug=debug, add_export=False)
@@ -546,7 +548,7 @@ def epmt_run(forced_jobid, cmdline, wrapit=False, dry_run=False, debug=False):
         if dry_run:
             print "epmt stop"
         else:
-            epmt_stop(forced_jobid)
+            epmt_stop_job(forced_jobid)
 
     return return_code
 
@@ -591,17 +593,25 @@ def get_filedict(dirname,pattern=settings.input_pattern,tar=False):
 
     return filedict
 
-def epmt_submit_list(stuff, dry_run=True, drop=False):
+def epmt_submit(stuff, forced_jobid, dry_run=True, drop=False):
     if dry_run and drop:
         logger.error("You can't drop tables and do a dry run")
-        exit(1)
-        
-    if stuff:
+        return(False)
+    if stuff and forced_jobid:
+        logger.error("You can't force a job id and provide a list of directories")
+        return(False)
+    if stuff: # specified list of dirs
         for f in stuff:
-            submit_to_db(f,settings.input_pattern,dry_run=dry_run,drop=drop)
+            r = submit_to_db(f,settings.input_pattern,dry_run=dry_run,drop=drop)
+            if r is False:
+                return(r)
+        return(True)
     else:
-        submit_to_db(settings.papiex_output,settings.input_pattern,
-                     dry_run=dry_run, drop=drop)
+        jobid,dir,file = setup_vars(forced_jobid)
+        if jobid is False:
+            return(False)
+        return(submit_to_db(dir,settings.input_pattern,dry_run=dry_run,drop=drop))
+        
 
 def compressed_tar(input):
     tar = None
@@ -620,7 +630,7 @@ def compressed_tar(input):
 # Check for Experiment related variables
 #    metadata = check_and_add_workflowdb_envvars(metadata,total_env)
 
-def submit_to_db(input,pattern, dry_run=True, drop=False):
+def submit_to_db(input, pattern, dry_run=True, drop=False):
 #    if not jobid:
 #        logger.error("Job ID is empty!");
 #        exit(1);
@@ -739,26 +749,13 @@ def epmt_entrypoint(args, help):
             logger.error("No command given")
             return(1)
         return(epmt_run(args.jobid,args.epmt_cmd_args,wrapit=args.auto,dry_run=args.dry_run,debug=(args.verbose > 2)))
-    
+    if args.epmt_cmd == 'submit':
+        return(epmt_submit(args.epmt_cmd_args,args.jobid,dry_run=args.dry_run,drop=args.drop) == False)
+    if args.epmt_cmd == 'check':
+        return(epmt_check() == False)
 
-#        if args.auto or args.bash or args.csh:
-#            if not args.epmt_cmd == "run":
-#                logger.error("Arguments only valid with 'run' command")
-#                exit(1)
-
-    elif args.epmt_cmd == 'submit':
-        # Not in job context
-        if not args.epmt_cmd_args:
-            a = [ get_job_dir() ]
-        else:
-            a = args.epmt_cmd_args
-        epmt_submit_list(a,dry_run=args.dry_run,drop=args.drop)
-    elif args.epmt_cmd == 'check':
-        exit(epmt_check() == False)
-    else:
-        logger.error("Unknown command, %s. See -h for options.",args.epmt_cmd)
-        exit(1)
-    exit(0)
+    logger.error("Unknown command, %s. See -h for options.",args.epmt_cmd)
+    exit(1)
 
 # Use of globals here is gross. FIX!
 # 
