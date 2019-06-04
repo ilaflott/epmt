@@ -457,6 +457,10 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
 # Add all processes to job
     if all_procs:
         _create_process_tree(pid_map)
+        # computing process inclusive times
+        logger.info("computing incl. process times..")
+        for proc in all_procs:
+            proc.inclusive_cpu_time = proc.exclusive_cpu_time + sum(proc.descendants.exclusive_cpu_time)
         logger.info("Adding %d processes to job",len(all_procs))
         j.processes.add(all_procs)
 # Update start/end/duration of job

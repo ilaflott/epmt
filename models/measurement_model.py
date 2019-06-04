@@ -73,6 +73,8 @@ class Process(db.Entity):
 	numtids = Required(int, default=0)
 # save some useful timing information for threads
         exclusive_cpu_time = Optional(int)
+# sum of cpu times of all descendants + process_cpu_time
+        inclusive_cpu_time = Optional(int)
 # These should probably be abstracted/reduced
 	exename = Required(str)
 	path = Required(str)
