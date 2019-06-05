@@ -1,10 +1,15 @@
 # settings.py
+
 db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'localhost', 'dbname': 'EPMT'}
+jobid_env_list = [ "SLURM_JOB_ID", "SLURM_JOBID", "PBS_JOB_ID" ]
 papiex_options = "PERF_COUNT_SW_CPU_CLOCK"
 papiex_output = "/tmp/epmt/"
-debug = False
+stage_command = "mv"
+stage_command_dest = "./"
+verbose = 1
 input_pattern = "*-papiex-[0-9]*-[0-9]*.csv"
 install_prefix = "../papiex-oss/papiex-oss-install/"
+
 # DO NOT TOUCH BELOW THIS LINE
 #
 tag_kv_separator = ':'
