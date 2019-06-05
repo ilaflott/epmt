@@ -218,7 +218,6 @@ db_params               {'host': 'localhost', 'password': 'example', 'user': 'po
 debug                   False                                                   
 input_pattern           *-papiex-[0-9]*-[0-9]*.csv                              
 install_prefix          ../papiex-oss/papiex-oss-install/                       
-metrics_offset          12                                                      
 papiex_options          PERF_COUNT_SW_CPU_CLOCK                                 
 papiex_output           /tmp/epmt/                                              
 

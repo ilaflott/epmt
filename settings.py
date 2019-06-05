@@ -1,1 +1,1 @@
-settings/settings_sqlite_inmem.py
+settings/settings_pg_localhost.py
