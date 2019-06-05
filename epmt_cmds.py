@@ -491,30 +491,38 @@ def epmt_source(forced_jobid, papiex_debug=False, monitor_debug=False, add_expor
 
     if add_export:
         cmd = "export "
-    cmd += "PAPIEX_OPTIONS="+settings.papiex_options+" "
+    cmd += "PAPIEX_OPTIONS="+settings.papiex_options
     if add_export:
         cmd += "\n"
-
+    else:
+        cmd += " "
+    
     if output_dir:
         if add_export:
             cmd += "export "
-        cmd += "PAPIEX_OUTPUT="+output_dir+" "
+        cmd += "PAPIEX_OUTPUT="+output_dir
         if add_export:
             cmd += "\n"
+        else:
+            cmd += " "
 
     if papiex_debug:
         if add_export:
             cmd += "export "
-        cmd += "PAPIEX_DEBUG=TRUE "
+        cmd += "PAPIEX_DEBUG=TRUE"
         if add_export:
             cmd += "\n"
+        else:
+            cmd += " "
 
     if monitor_debug:
         if add_export:
             cmd += "export "
-        cmd += "MONITOR_DEBUG=TRUE "
+        cmd += "MONITOR_DEBUG=TRUE"
         if add_export:
             cmd += "\n"
+        else:
+            cmd += " "
 
     if add_export:
         cmd += "export "
