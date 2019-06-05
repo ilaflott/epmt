@@ -7,6 +7,8 @@ import fnmatch
 from os import environ
 from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
 import settings
+from os import getuid
+from pwd import getpwnam, getpwuid
 logger = getLogger(__name__)  # you can use other name
 
 #
@@ -35,25 +37,15 @@ def sortKeyFunc(s):
 #         logger.info("Found metricname %s",metricname)
 #     return mn
 
-def create_job(jobid,user,metadata={}):
+def create_job(jobid,user):
     job = Job.get(jobid=jobid)
     if job is None:
         logger.info("Creating job %s",jobid)
         job = Job(jobid=jobid,user=user)
-        if metadata:
-            if metadata['job_pl_id'] != jobid:
-                logger.warning("metadata job id did not match job id %s vs %s, continuing anyways...",metadata['job_pl_id'],jobid)
-            job.jobname = metadata['job_pl_jobname']
-            job.jobscriptname = metadata['job_pl_scriptname']
-            job.exitcode = metadata['job_el_status']
-# fix below
-            job.env_dict = metadata['job_pl_env']
-            job.env_changes_dict = metadata['job_el_env_changes']
-            job.info_dict = metadata['job_pl_from_batch'] # end batch also
-        return job
     else:
         logger.error("Job %s (at %s) is already in the database",job.jobid,job.start)
         return None
+    return job
 
 ##	metadata['job_pl_id'] = global_job_id
 ##	metadata['job_pl_scriptname'] = global_job_scriptname
@@ -110,6 +102,8 @@ def _get_tags_from_string(s,
                           delim = settings.tag_delimiter, 
                           sep = settings.tag_kv_separator, 
                           tag_default_value = settings.tag_default_value):
+    if not s or len(s) == 0:
+        return None
     tags = {}
     for t in s.split(delim):
         t = t.strip()
@@ -135,11 +129,11 @@ def _get_tags_from_string(s,
 # from the default value of a tag
 # We probably should remove this function once the job tag
 # is read in as key-value pair instead of a list of comments.
-def _get_tags_for_list(l, tag_default_value = settings.tag_default_value):
-    tags = {}
-    for t in l:
-        tags[t] = tag_default_value
-    return tags
+#def _get_tags_for_list(l, tag_default_value = settings.tag_default_value):
+#    tags = {}
+#    for t in l:
+#        tags[t] = tag_default_value
+#    return tags
 
 # This is a generator function that will yield
 # the next process dataframe from the collated file dataframe.
@@ -242,7 +236,8 @@ def load_process_from_pandas(df, h, j, u, settings):
         logger.error("%s",e)
         logger.error("missing or invalid value for thread start/end time");
 
-#	print "Earliest thread start:",earliest_thread,"\n","Latest thread end:",latest_thread,"\n","Computed duration of process:",(p.end-p.start).total_seconds(),"seconds","\n","Duration of process:",p.duration,"microseconds"
+    logger.debug("Earliest thread start: %s, Latest thread end: %s",str(earliest_thread_start),str(latest_thread_finish))
+    logger.debug("Process wallclock: %s, Computed process wallclock: %s s.",str(p.duration),str((p.end-p.start).total_seconds()))
     return p
     
 #
@@ -250,7 +245,9 @@ def load_process_from_pandas(df, h, j, u, settings):
 #
 
 def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
-    rows=0
+    rows = 0
+    retstr = None
+
     if tarfile:
         try:
             info = tarfile.getmember(jobdatafile)
@@ -262,12 +259,18 @@ def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
     else:
         file = open(jobdatafile,'r')
     
-    line = file.readline().strip()
-    if line.startswith(comment):
-        rows += 1
-        return rows, line[1:].lstrip()
+    line = file.readline()
+    while line:
+        line = line.strip()
+        if len(line) == 0 or line.startswith(comment):
+            if rows == 0:
+                retstr = line[1:].lstrip()
+            rows += 1
+            line = file.readline()
+        else:
+            return rows, retstr
 
-    return rows, None
+    return rows, retstr
 
 #        for member in tar.getmembers():
 
@@ -310,25 +313,135 @@ def _proc_ancestors(pid_map, proc, ancestor_pid):
 
 
 def _create_process_tree(pid_map):
-    logger.info("creating process tree..")
+    logger.debug("creating process tree...")
     for (pid, proc) in pid_map.items():
         ppid = proc.ppid
         if ppid in pid_map:
             parent = pid_map[ppid]
             proc.parent = parent
             parent.children.add(proc)
-    logger.info("done connecting parent/child processes")
+    logger.debug("done connecting parent/child processes")
     for (pid, proc) in pid_map.items():
         ppid = proc.ppid
         _proc_ancestors(pid_map, proc, ppid)
-    logger.info("process tree created")
+    logger.debug("process tree created")
+
+# This function takes as input raw metadata from the start/stop and produces
+# extended dictionary of additional fields used in the ETL. This created
+# structure is never stored and just used for information exchange
+
+# The following raw fields are stored during start/stop
+#    metadata['job_pl_id'] = jobid
+#    metadata['job_pl_hostname'] = gethostname()
+#    metadata['job_pl_start_ts'] = ts
+#    metadata['job_pl_submit_ts'] = submit_ts
+#    metadata['job_pl_env'] = start_env
+#    metadata['job_el_env'] = stop_env
+#    metadata['job_el_stop_ts'] = ts
+#    metadata['job_el_from_batch'] = from_batch
+#    metadata['job_el_exitcode'] = exitcode
+#    metadata['job_el_reason'] = reason
+
+def get_batch_envvar(var,where):
+# Torque
+# http://docs.adaptivecomputing.com/torque/4-1-7/Content/topics/2-jobs/exportedBatchEnvVar.htm
+    key2pbs = {
+        "JOB_NAME":"PBS_JOBNAME",
+        "JOB_USER":"PBS_O_LOGNAME"
+        }
+# Slurm
+# http://hpcc.umd.edu/hpcc/help/slurmenv.html
+    key2slurm = {
+        "JOB_NAME":"SLURM_JOB_NAME", 
+        "JOB_USER":"SLURM_JOB_USER"
+        }
+
+    logger.debug("looking for %s",var)
+    a = False
+    if var in key2pbs:
+        logger.debug("looking for %s",key2pbs[var])
+        a=where.get(key2pbs[var])
+    if not a and var in key2slurm:
+        logger.debug("looking for %s",key2slurm[var])
+        a=where.get(key2slurm[var])
+    if not a:
+        logger.debug("%s not found",var)
+        return False
+    return a
+
+def _check_and_create_metadata(raw_metadata):
+# First check what should be here
+    for n in [ 'job_pl_id', 'job_pl_submit_ts', 'job_pl_start_ts', 'job_pl_env', 
+               'job_el_stop_ts', 'job_el_exitcode', 'job_el_reason', 'job_el_env' ]:
+        s = str(raw_metadata.get(n))
+        if not s:
+            logger.error("Could not find %s in job metadata, job incomplete?",n)
+            return False
+        if len(s) == 0:
+            logger.error("Null value of %s in job metadata, corrupt data?",n)
+            return False
+# Now look up any batch environment variables we may use
+    username = get_batch_envvar("JOB_USER",raw_metadata['job_pl_env'])
+    if username is False:
+        username = getpwuid(getuid()).pw_name
+        logger.warning("No job username found, defaulting to %s",username)
+    jobname = get_batch_envvar("JOB_NAME",raw_metadata['job_pl_env'])
+    if jobname is False:
+        jobname = username+"-"+"interactive"
+        logger.warning("No job name found, defaulting to %s",jobname)
+# Look up job tags from stop environment
+    job_tags = _get_tags_from_string(raw_metadata['job_el_env'].get(settings.job_tags_env))
+    logger.info("job_tags: %s",str(job_tags))
+# Compute difference in start vs stop environment
+    env={}
+    start_env=raw_metadata['job_pl_env']
+    stop_env=raw_metadata['job_el_env']
+    for e in start_env.keys():
+        if e in stop_env.keys():
+            if start_env[e] == stop_env[e]:
+                logger.debug("Found "+e)
+            else:
+                logger.debug("Different "+e)
+                env[e] = stop_env[e]
+        else:
+            logger.debug("Deleted "+e)
+            env[e] = start_env[e]
+    for e in stop_env.keys():
+        if e not in start_env.keys():
+            logger.debug("Added "+e)
+            env[e] = stop_env[e]
+    env_changes = env
+# Augment the metadata
+    metadata = raw_metadata
+    metadata['job_username'] = username
+    metadata['job_jobname'] = jobname
+    metadata['job_env_changes'] = env_changes
+    metadata['job_tags'] = job_tags
+
+    return metadata
 
 @db_session
-def ETL_job_dict(metadata, filedict, settings, tarfile=None):
-# Only fields used for now
+def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
+# Synthesize what we need
+    metadata = _check_and_create_metadata(raw_metadata)
+    if metadata is False:
+        return False
+
+# Fields used in this function
     jobid = metadata['job_pl_id']
-    username = metadata['job_pl_username']
-#
+    username = metadata['job_username']
+    start_ts = metadata['job_pl_start_ts']
+    stop_ts = metadata['job_el_stop_ts']
+    submit_ts = metadata['job_pl_submit_ts']
+    jobname = metadata['job_jobname']
+    exitcode = metadata['job_el_exitcode']
+    reason = metadata['job_el_reason']
+    env_dict = metadata['job_pl_env']
+    env_changes_dict = metadata['job_env_changes']
+    job_tags = metadata['job_tags']
+
+#    info_dict = metadata['job_pl_from_batch'] # end batch also
+
     logger.info("Processing job id %s",jobid)
     hostname = ""
     file = ""
@@ -351,20 +464,31 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
     # not used anywhere
     # standards = [ "exename","path","args","pid","generation","ppid","pgid","sid","numtids","tid","start","end" ]
 
+    # Initialize elements used in compute
     then = datetime.datetime.now()
     csvt = datetime.timedelta()
     earliest_process = datetime.datetime.utcnow()
     latest_process = datetime.datetime.fromtimestamp(0)
+
 #    stdout.write('-')
 # Hostname, job, metricname objects
 # Iterate over hosts
+
     logger.debug("Iterating over %d hosts for job ID %s, user %s...",len(filedict.keys()),jobid,username)
+
+#
+# Create user and job object
+#
     u = lookup_or_create_user(username)
-    j = create_job(jobid,u,metadata)
-    if not j:
-# We might have leaked a username to the database here
-# FIX!        
+    j = create_job(jobid,u)
+    if not j: # FIX! We might have leaked a username to the database here
         return None
+    j.jobname = jobname
+    j.exitcode = exitcode
+# fix below
+    j.env_dict = env_dict
+    j.env_changes_dict = env_changes_dict
+#    j.info_dict = info_dict
 
     didsomething = False
     all_tags = set([])
@@ -389,11 +513,14 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
 #            stdout.flush()                # flush stdout buffer (actual character display)
 #
             csv = datetime.datetime.now()
-            rows,comment = extract_tags_from_comment_line(f,tarfile=tarfile)
+# We need rows to skip
+# oldproctag (after comment char) is outdated as a process tag but kept for posterities sake
+            rows,oldproctag = extract_tags_from_comment_line(f,tarfile=tarfile)
+            logger.debug("%s had %d comment rows, oldproctags %s",f,rows,oldproctag)
 # Check comment/tags cache
-            if comment:
+#            if comment:
 # Merge all tags into one list for job
-                all_tags.add(comment)
+#                all_tags.add(comment)
 
             if tarfile:
                 info = tarfile.getmember(f)
@@ -404,7 +531,7 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
             from pandas import read_csv
             collated_df = read_csv(flo,
                                    sep=",",
-#                                   dtype=dtype_dic, 
+                                   #dtype=dtype_dic, 
                                    converters=conv_dic,
                                    skiprows=rows, escapechar='\\')
             if collated_df.empty:
@@ -421,6 +548,10 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
                 if not p:
                     logger.error("Failed loading from pandas, file %s!",f);
                     continue
+# If using old version of papiex, process tags are in the comment field
+                if not p.tags and oldproctag:
+                    p.tags = _get_tags_from_string(oldproctag)
+
                 pid_map[p.pid] = p
                 all_procs.append(p)
 # Compute duration of job
@@ -446,14 +577,14 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
             logger.warning("Something went wrong in parsing CSV files")
             return False
     else:
-        logger.warning("Submitting job with no CSV data")
+        logger.warning("Submitting job with no CSV data, tags %s",str(job_tags))
 
 # Add sum of tags to job        
-    if all_tags:
-        logger.info("Adding %d tags to job",len(all_tags))
+#    if all_tags:
+#        logger.info("Adding %d tags to job",len(all_tags))
         # once the tags becomes a string of key/value pairs, then
         # just use _get_tags_from_string instead of _get_tags_for_list
-        j.tags = _get_tags_for_list(all_tags)
+#        j.tags = _get_tags_for_list(all_tags)
 # Add all processes to job
     if all_procs:
         _create_process_tree(pid_map)
@@ -469,13 +600,16 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
 #
 #
 #
-    j.start = metadata["job_pl_start"]
-    j.end = metadata["job_el_stop"]
+    j.start = start_ts
+    j.end = stop_ts
+    j.submit = submit_ts # Wait time is start - submit and should probably be stored
     d = j.end - j.start
     j.duration = int(d.total_seconds()*1000000)
     # the cpu time for a job is the sum of the exclusive times
     # of all processes in the job
     j.cpu_time = sum(j.processes.exclusive_cpu_time)
+    if job_tags:
+        j.tags = job_tags
 #
 #
 #
@@ -486,7 +620,7 @@ def ETL_job_dict(metadata, filedict, settings, tarfile=None):
     logger.info("Staged import of %d processes", len(j.processes))
     logger.info("Staged import took %s, %f processes per second",
                 now - then,len(j.processes)/float((now-then).total_seconds()))
-                
+    print "Imported successfully - job:",jobid,"processes:",len(j.processes),"rate:",len(j.processes)/float((now-then).total_seconds())
     return j
 
 def setup_orm_db(settings,drop=False,create=True):
@@ -519,7 +653,7 @@ def setup_orm_db(settings,drop=False,create=True):
     return True
 
 #
-#
+# We should remove below here
 #
 if (__name__ == "__main__"):
     import argparse
