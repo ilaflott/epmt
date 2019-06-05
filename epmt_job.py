@@ -200,7 +200,7 @@ def load_process_from_pandas(df, h, j, u, settings):
 
     # compute sums for each column, but skip ones that we know should not be summed
     # we then convert the pandas series of sums to a Python dict
-    thread_metric_sums = df.drop(labels=settings.skip_for_thread_metric_sums, axis=1).sum(axis=0).to_dict()
+    thread_metric_sums = df.drop(labels=settings.skip_for_thread_sums, axis=1).sum(axis=0).to_dict()
     # we add a composite metric comprising of user+system time as this
     # is needed in queries, and Pony doesn't allow operations on json fields
     # in a Query
