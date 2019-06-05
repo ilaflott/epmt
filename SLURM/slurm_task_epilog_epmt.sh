@@ -1,3 +1,6 @@
 #!/bin/bash
-unset LD_PRELOAD
-/opt/epmt/epmt stop
+EPMT_PATH=/opt/epmt/epmt
+if [ -x $EPMT_PATH ]; then
+    unset LD_PRELOAD
+    $EPMT_PATH stop
+fi
