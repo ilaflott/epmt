@@ -13,3 +13,19 @@ For SLURM 17 and below
 https://github.com/giovtorres/docker-centos6-slurm
 docker pull giovtorres/docker-centos6-slurm:latest
 docker run -it -h ernie giovtorres/docker-centos6-slurm:latest
+
+# Environment build
+cd ../..
+docker build -f epmt.git/SLURM/Dockerfile.slurm -t slurm-epmt-papiex:latest .
+
+# Environment run
+scuba -r -d=-h -d=ernie -d=--privileged --image slurm-epmt-papiex
+
+# Environment test
+[root@ernie GFDL]# srun -n1 sleep 10
+[root@ernie GFDL]# ls /tmp/epmt/3/
+ernie-papiex-806-0.csv  job_metadata
+[root@ernie GFDL]# srun -n1 hostname
+ernie
+[root@ernie GFDL]# ls /tmp/epmt/4
+ernie-papiex-848-0.csv  job_metadata
