@@ -68,10 +68,10 @@ def init_settings():
         settings.stage_command_dest = "."
     if not hasattr(settings, 'per_process_fields'):
         logger.warning("missing settings.per_process_fields")
-        per_process_fields = ["tags","hostname","exename","path","args","exitcode","pid","generation","ppid","pgid","sid","numtids"]
+        settings.per_process_fields = ["tags","hostname","exename","path","args","exitcode","pid","generation","ppid","pgid","sid","numtids"]
     if not hasattr(settings, 'skip_for_thread_sums'):
         logger.warning("missing settings.skip_for_thread_sums")
-        skip_for_thread_metric_sums = ["tid", "start", "end", "num_threads"]
+        settings.skip_for_thread_sums = ["tid", "start", "end", "num_threads"]
 
 def find_diffs_in_envs(start_env,stop_env):
     env = {}
