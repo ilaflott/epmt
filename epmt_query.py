@@ -40,6 +40,9 @@ THR_SUMS_FIELD = 'threads_sums'
 #
 def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict'):
     if jobids:
+        if (type(jobids) == str) or (type(jobid) == unicode):
+            # user either gave the job id directly instead of passing a list
+            jobids = jobids.split(',')
         qs = Job.select(lambda j: j.jobid in jobids)
     else:
         qs = Job.select()
@@ -132,6 +135,9 @@ def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict')
 #
 def get_procs(jobs = [], tags = {}, fltr = None, order = '', limit = 0, fmt='dict', merge_threads_sums=True):
     if jobs:
+        if type(jobs) != list:
+            # user probably passed a single job, and forgot to wrap it in a list
+            jobs = [jobs]
         # is jobs a collection of Job IDs or actual Job objects?
         if type(jobs[0]) == str or type(jobs[0]) == unicode:
             # jobs is a list of job IDs
