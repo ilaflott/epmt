@@ -236,7 +236,8 @@ def load_process_from_pandas(df, h, j, u, settings):
         logger.error("%s",e)
         logger.error("missing or invalid value for thread start/end time");
 
-#	print "Earliest thread start:",earliest_thread,"\n","Latest thread end:",latest_thread,"\n","Computed duration of process:",(p.end-p.start).total_seconds(),"seconds","\n","Duration of process:",p.duration,"microseconds"
+    logger.debug("Earliest thread start: %s, Latest thread end: %s",str(earliest_thread_start),str(latest_thread_finish))
+    logger.debug("Process wallclock: %s, Computed process wallclock: %s s.",str(p.duration),str((p.end-p.start).total_seconds()))
     return p
     
 #
@@ -244,7 +245,9 @@ def load_process_from_pandas(df, h, j, u, settings):
 #
 
 def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
-    rows=0
+    rows = 0
+    retstr = None
+
     if tarfile:
         try:
             info = tarfile.getmember(jobdatafile)
@@ -256,12 +259,18 @@ def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
     else:
         file = open(jobdatafile,'r')
     
-    line = file.readline().strip()
-    if line.startswith(comment):
-        rows += 1
-        return rows, line[1:].lstrip()
+    line = file.readline()
+    while line:
+        line = line.strip()
+        if len(line) == 0 or line.startswith(comment):
+            if rows == 0:
+                retstr = line[1:].lstrip()
+            rows += 1
+            line = file.readline()
+        else:
+            return rows, retstr
 
-    return rows, None
+    return rows, retstr
 
 #        for member in tar.getmembers():
 
@@ -304,18 +313,18 @@ def _proc_ancestors(pid_map, proc, ancestor_pid):
 
 
 def _create_process_tree(pid_map):
-    logger.info("creating process tree..")
+    logger.debug("creating process tree...")
     for (pid, proc) in pid_map.items():
         ppid = proc.ppid
         if ppid in pid_map:
             parent = pid_map[ppid]
             proc.parent = parent
             parent.children.add(proc)
-    logger.info("done connecting parent/child processes")
+    logger.debug("done connecting parent/child processes")
     for (pid, proc) in pid_map.items():
         ppid = proc.ppid
         _proc_ancestors(pid_map, proc, ppid)
-    logger.info("process tree created")
+    logger.debug("process tree created")
 
 # This function takes as input raw metadata from the start/stop and produces
 # extended dictionary of additional fields used in the ETL. This created
@@ -504,7 +513,10 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 #            stdout.flush()                # flush stdout buffer (actual character display)
 #
             csv = datetime.datetime.now()
-#            rows,comment = extract_tags_from_comment_line(f,tarfile=tarfile)
+# We need rows to skip
+# oldproctag (after comment char) is outdated as a process tag but kept for posterities sake
+            rows,oldproctag = extract_tags_from_comment_line(f,tarfile=tarfile)
+            logger.debug("%s had %d comment rows, oldproctags %s",f,rows,oldproctag)
 # Check comment/tags cache
 #            if comment:
 # Merge all tags into one list for job
@@ -521,8 +533,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                                    sep=",",
                                    #dtype=dtype_dic, 
                                    converters=conv_dic,
-                                   #skiprows=rows, escapechar='\\')
-                                   escapechar='\\')
+                                   skiprows=rows, escapechar='\\')
             if collated_df.empty:
                 logger.error("Something wrong with file %s, readcsv returned empty, skipping...",f)
                 continue
@@ -537,6 +548,10 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 if not p:
                     logger.error("Failed loading from pandas, file %s!",f);
                     continue
+# If using old version of papiex, process tags are in the comment field
+                if not p.tags and oldproctag:
+                    p.tags = _get_tags_from_string(oldproctag)
+
                 pid_map[p.pid] = p
                 all_procs.append(p)
 # Compute duration of job
@@ -598,7 +613,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     logger.info("Staged import of %d processes", len(j.processes))
     logger.info("Staged import took %s, %f processes per second",
                 now - then,len(j.processes)/float((now-then).total_seconds()))
-                
+    print "Imported successfully - job:",jobid,"processes:",len(j.processes),"rate:",len(j.processes)/float((now-then).total_seconds())
     return j
 
 def setup_orm_db(settings,drop=False,create=True):
