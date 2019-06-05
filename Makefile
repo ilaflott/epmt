@@ -18,7 +18,8 @@ epmt-build-stack: epmt-build docker-compose.yml
 #	docker run epmt:latest
 #	docker-compose up
 clean:
-	rm -f *~ *.pyc job_metadata *papiex*.csv
+	rm -f *~ *.pyc 
+	rm -rf __pycache__
 distclean: clean
 	rm -f settings.py; ln -s settings/settings_sqlite_inmem.py settings.py  # Setup in mem sqlite
 # 
