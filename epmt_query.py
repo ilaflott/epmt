@@ -1,7 +1,7 @@
 from models import *
 from epmt_job import setup_orm_db
 import pandas as pd
-from pprint import pprint
+from pony.orm.core import Query
 import settings
 print(settings.db_params)
 setup_orm_db(settings)
@@ -34,8 +34,7 @@ THR_SUMS_FIELD = 'threads_sums'
 #          'dict': each job object is converted to a dict, and the entire
 #                  output is a list of dictionaries
 #          'pandas': Output a pandas dataframe with one row for each matching job
-#          'orm':  each job is Pony object, and the entire output is a list of 
-#                  pony job objects.
+#          'orm':  returns a Pony Query object (ADVANCED)
 #          'terse': In this format only the primary key ID is printed for each job
 #
 def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict'):
@@ -63,7 +62,7 @@ def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict')
         qs = qs.limit(int(limit))
 
     if fmt == 'orm':
-        return qs[:]
+        return qs
 
     if fmt == 'terse':
         return [ j.jobid for j in qs ]
@@ -98,7 +97,7 @@ def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict')
 #                 each process is output as a python dictionary, 
 #                 and the entire output is a list of dictionaries.
 #         'pandas': output is a pandas dataframe
-#         'orm': output is a list of ORM objects
+#         'orm': output is an ORM Query object (ADVANCED)
 #         'terse': output contains only the database ids of matching processes
 #
 # merge_threads_sums: By default, this is True, and this means threads sums are
@@ -135,6 +134,10 @@ def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict')
 #
 def get_procs(jobs = [], tags = {}, fltr = None, order = '', limit = 0, fmt='dict', merge_threads_sums=True):
     if jobs:
+        if isinstance(jobs, Query):
+            # convert the pony query object to a list
+            jobs = jobs[:]
+
         if type(jobs) != list:
             # user probably passed a single job, and forgot to wrap it in a list
             jobs = [jobs]
@@ -165,7 +168,7 @@ def get_procs(jobs = [], tags = {}, fltr = None, order = '', limit = 0, fmt='dic
         qs = qs.limit(int(limit))
 
     if fmt == 'orm':
-        return qs[:]
+        return qs
 
     if fmt == 'terse':
         return [ p.id for p in qs ]
