@@ -96,8 +96,11 @@ def blacklist_filter(filter=None, **env):
 #	print env
 	env2 = {}
 	for k, v in env.iteritems():
-		if not k.startswith("_"):
-			env2[k] = v
+		if k.startswith("_"):
+                    continue
+		if k == "LS_COLORS":
+                    continue
+                env2[k] = v
 	return env2
 
 def dump_config(outf):
