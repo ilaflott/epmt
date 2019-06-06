@@ -1,3 +1,7 @@
+## BUGS
+
+* We only handle ONE job step in SLURM allocations, that is the submitted script.
+
 # Environment build
 cd ../..
 docker build -f epmt.git/SLURM/Dockerfile.slurm -t slurm-epmt-papiex:latest .
