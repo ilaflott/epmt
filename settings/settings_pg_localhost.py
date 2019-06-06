@@ -1,4 +1,5 @@
 # settings.py
+from os import path
 
 db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'localhost', 'dbname': 'EPMT'}
 jobid_env_list = [ "SLURM_JOB_ID", "SLURM_JOBID", "PBS_JOB_ID" ]
@@ -8,7 +9,7 @@ stage_command = "mv"
 stage_command_dest = "./"
 verbose = 1
 input_pattern = "*-papiex-[0-9]*-[0-9]*.csv"
-install_prefix = "../papiex-oss/papiex-oss-install/"
+install_prefix = path.dirname(path.realpath(__file__)) +  "/../../papiex-oss/papiex-oss-install/"
 
 # DO NOT TOUCH BELOW THIS LINE
 #
