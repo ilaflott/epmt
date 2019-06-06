@@ -206,7 +206,7 @@ def load_process_from_pandas(df, h, j, u, settings):
     # in a Query
     # TODO: can this be removed?
     thread_metric_sums['user+system'] = thread_metric_sums.get('usertime', 0) + thread_metric_sums.get('systemtime', 0)
-    p.exclusive_cpu_time = thread_metric_sums['user+system']
+    p.exclusive_cpu_time = int(thread_metric_sums['user+system'])
 
     # convert the threads dataframe to a json
     # using the 'split' argument creates a json of the form:
@@ -591,7 +591,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         # computing process inclusive times
         logger.info("computing incl. process times..")
         for proc in all_procs:
-            proc.inclusive_cpu_time = proc.exclusive_cpu_time + sum(proc.descendants.exclusive_cpu_time)
+            proc.inclusive_cpu_time = int(proc.exclusive_cpu_time + sum(proc.descendants.exclusive_cpu_time))
         logger.info("Adding %d processes to job",len(all_procs))
         j.processes.add(all_procs)
 # Update start/end/duration of job
