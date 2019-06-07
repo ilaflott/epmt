@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from datetime import datetime
-from os import environ, makedirs, mkdir, errno, path, getpid, getuid, getsid
+from os import environ, makedirs, mkdir, errno, path, getpid, getuid, getsid, getcwd, chdir
 from socket import gethostname
 #from json import dumps as dict_to_json
 from subprocess import call as forkexecwait
@@ -737,53 +737,61 @@ def stage_job(jid,dir,file,collate):
         if collate:
             from epmt_concat import csvjoiner
             logger.debug("csvjoiner(%s)",dir)
-            collated_file = csvjoiner(dir,debug="true")
+            hack_dir = getcwd()
+            collated_file = csvjoiner(dir,debug="false")
+            chdir(hack_dir)
             if not collated_file:
                 return False
-            cmd = "mkdir "+dir+".collated" 
+            logger.info("Collated file is %s",collated_file)
+            newdir = path.dirname(dir)+".collated"
+            cmd = "mkdir "+newdir
             logger.debug(cmd)
             return_code = forkexecwait(cmd, shell=True)
             if return_code != 0:
                 return False
-            cmd = "cp -p "+dir+"/job_metadata "+dir+".collated"
+            cmd = "cp -p "+dir+"job_metadata "+newdir
             logger.debug(cmd)
             return_code = forkexecwait(cmd, shell=True)
             if return_code != 0:
                 return False
-            cmd = "cp -p "+collated_file+" "+dir+".collated"
+            cmd = "cp -p "+collated_file+" "+newdir
             logger.debug(cmd)
             return_code = forkexecwait(cmd, shell=True)
             if return_code != 0:
                 return False
-            cmd = "mv "+dir+" "+dir+".original" 
+            cmd = "mv "+path.dirname(dir)+" "+path.dirname(dir)+".original" 
             logger.debug(cmd)
             return_code = forkexecwait(cmd, shell=True)
             if return_code != 0:
                 return False
-            cmd = "mv "+dir+".collated "+dir
+            cmd = "mv "+path.dirname(dir)+".collated "+path.dirname(dir)
             logger.debug(cmd)
             return_code = forkexecwait(cmd, shell=True)
             if return_code != 0:
                 return False
-            cmd = "echo rm -rf "+dir+".original"
+            cmd = "rm -rf "+path.dirname(dir)+".original"
             logger.debug(cmd)
             return_code = forkexecwait(cmd, shell=True)
             if return_code != 0:
                 return False
-        else:
-            cmd = settings.stage_command + " " + dir + " " + settings.stage_command_dest
-            logger.debug(cmd)
-            return_code = forkexecwait(cmd, shell=True)
-            if return_code != 0:
-                return False
-    print(settings.stage_command_dest+path.basename(path.dirname(file)))
+        cmd = settings.stage_command + " " + dir + " " + settings.stage_command_dest
+        logger.debug(cmd)
+        return_code = forkexecwait(cmd, shell=True)
+        if return_code != 0:
+            return False
+        print(settings.stage_command_dest+path.basename(path.dirname(file)))
+    return True
 
-def epmt_stage(other_dirs, forced_jobid, collate=False):
+def epmt_stage(other_dirs, forced_jobid, collate=True):
     logger.debug("epmt_stage(%s,%s,%s)",forced_jobid,other_dirs,str(collate))
     if other_dirs:
         for dir in other_dirs:
-            jobid = path.basename(dir)
-            file = dir + "/job_metadata"
+            if not dir.endswith("/"):
+                logger.warning("missing trailing / on %s",dir)
+                dir += "/"
+            jobid = path.basename(path.dirname(dir))
+            print jobid
+            file = dir + "job_metadata"
             r = stage_job(jobid,dir,file,collate)
             if r is False:
                 return False
