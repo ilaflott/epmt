@@ -614,15 +614,15 @@ def get_filedict(dirname,pattern=settings.input_pattern,tar=False):
 
     return filedict
 
-def epmt_submit(stuff, forced_jobid, dry_run=True, drop=False):
+def epmt_submit(other_dirs, forced_jobid, dry_run=True, drop=False):
     if dry_run and drop:
         logger.error("You can't drop tables and do a dry run")
         return(False)
-    if stuff and forced_jobid:
+    if other_dirs and forced_jobid:
         logger.error("You can't force a job id and provide a list of directories")
         return(False)
-    if stuff: # specified list of dirs
-        for f in stuff:
+    if other_dirs: # specified list of dirs
+        for f in other_dirs:
             r = submit_to_db(f,settings.input_pattern,dry_run=dry_run,drop=drop)
             if r is False:
                 return(r)
@@ -725,17 +725,72 @@ def set_logging(intlvl):
     elif intlvl >= 2:
         basicConfig(level=DEBUG)
 
-def epmt_stage(forced_jobid,misc):
-    jobid,dir,file = setup_vars(forced_jobid)
-    if jobid == False:
-        return False;
-    cmd = settings.stage_command + " " + dir + " " + settings.stage_command_dest
-    logger.debug(cmd)
-    return_code = forkexecwait(cmd, shell=True)
-    if return_code != 0:
+def stage_job(jid,dir,file,collate):
+    logger.debug("stage_job(%s,%s,%s,%s)",jid,dir,file,str(collate))
+    if not jid or len(jid) < 1:
         return False
+    if not dir or len(dir) < 1:
+        return False
+    if not file or len(file) < 1:
+        return False
+    if settings.stage_command and len(settings.stage_command) and settings.stage_command_dest and len(settings.stage_command_dest):
+        if collate:
+            from epmt_concat import csvjoiner
+            logger.debug("csvjoiner(%s)",dir)
+            collated_file = csvjoiner(dir,debug="true")
+            if not collated_file:
+                return False
+            cmd = "mkdir "+dir+".collated" 
+            logger.debug(cmd)
+            return_code = forkexecwait(cmd, shell=True)
+            if return_code != 0:
+                return False
+            cmd = "cp -p "+dir+"/job_metadata "+dir+".collated"
+            logger.debug(cmd)
+            return_code = forkexecwait(cmd, shell=True)
+            if return_code != 0:
+                return False
+            cmd = "cp -p "+collated_file+" "+dir+".collated"
+            logger.debug(cmd)
+            return_code = forkexecwait(cmd, shell=True)
+            if return_code != 0:
+                return False
+            cmd = "mv "+dir+" "+dir+".original" 
+            logger.debug(cmd)
+            return_code = forkexecwait(cmd, shell=True)
+            if return_code != 0:
+                return False
+            cmd = "mv "+dir+".collated "+dir
+            logger.debug(cmd)
+            return_code = forkexecwait(cmd, shell=True)
+            if return_code != 0:
+                return False
+            cmd = "echo rm -rf "+dir+".original"
+            logger.debug(cmd)
+            return_code = forkexecwait(cmd, shell=True)
+            if return_code != 0:
+                return False
+        else:
+            cmd = settings.stage_command + " " + dir + " " + settings.stage_command_dest
+            logger.debug(cmd)
+            return_code = forkexecwait(cmd, shell=True)
+            if return_code != 0:
+                return False
     print(settings.stage_command_dest+path.basename(path.dirname(file)))
-    return True
+
+def epmt_stage(other_dirs, forced_jobid, collate=False):
+    logger.debug("epmt_stage(%s,%s,%s)",forced_jobid,other_dirs,str(collate))
+    if other_dirs:
+        for dir in other_dirs:
+            jobid = path.basename(dir)
+            file = dir + "/job_metadata"
+            r = stage_job(jobid,dir,file,collate)
+            if r is False:
+                return False
+        return True
+    else:
+        jobid,dir,file = setup_vars(forced_jobid)
+        return(stage_job(jobid,dir,file,collate))
 
 #
 # depends on args being global
@@ -764,7 +819,7 @@ def epmt_entrypoint(args, help):
             return 0
         return 1
     if args.epmt_cmd == "stage":
-        return(epmt_stage(args.jobid,args.epmt_cmd_args) == False)
+        return(epmt_stage(args.epmt_cmd_args,args.jobid) == False)
     if args.epmt_cmd == 'run':
         if not args.epmt_cmd_args: 
             logger.error("No command given")
