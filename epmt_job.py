@@ -206,7 +206,7 @@ def load_process_from_pandas(df, h, j, u, settings):
     # in a Query
     # TODO: can this be removed?
     thread_metric_sums['user+system'] = thread_metric_sums.get('usertime', 0) + thread_metric_sums.get('systemtime', 0)
-    p.exclusive_cpu_time = int(thread_metric_sums['user+system'])
+    p.exclusive_cpu_time = float(thread_metric_sums['user+system'])
 
     # convert the threads dataframe to a json
     # using the 'split' argument creates a json of the form:
@@ -313,18 +313,18 @@ def _proc_ancestors(pid_map, proc, ancestor_pid):
 
 
 def _create_process_tree(pid_map):
-    logger.debug("creating process tree...")
+    logger.info("creating process tree..")
     for (pid, proc) in pid_map.items():
         ppid = proc.ppid
         if ppid in pid_map:
             parent = pid_map[ppid]
             proc.parent = parent
             parent.children.add(proc)
-    logger.debug("done connecting parent/child processes")
+    logger.info("parent/child processes done")
     for (pid, proc) in pid_map.items():
         ppid = proc.ppid
         _proc_ancestors(pid_map, proc, ppid)
-    logger.debug("process tree created")
+    logger.info("process tree complete")
 
 # This function takes as input raw metadata from the start/stop and produces
 # extended dictionary of additional fields used in the ETL. This created
@@ -561,9 +561,9 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                     latest_process = p.end
 # Debugging/    progress
                 cnt += 1
-                csvt += datetime.datetime.now() - csv
+                csvt = datetime.datetime.now() - csv
                 if cnt % 1000 == 0:
-                    logger.info("Did %d of %d...%.2f/sec",cnt,cntmax,cnt/csvt.total_seconds())
+                    logger.info("Did %d (%d in this file)...%.2f/sec",cnt,collated_df.shape[0],cnt/csvt.total_seconds())
                     # break
 
 #
@@ -591,7 +591,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         # computing process inclusive times
         logger.info("computing incl. process times..")
         for proc in all_procs:
-            proc.inclusive_cpu_time = int(proc.exclusive_cpu_time + sum(proc.descendants.exclusive_cpu_time))
+            proc.inclusive_cpu_time = float(proc.exclusive_cpu_time + sum(proc.descendants.exclusive_cpu_time))
         logger.info("Adding %d processes to job",len(all_procs))
         j.processes.add(all_procs)
 # Update start/end/duration of job
