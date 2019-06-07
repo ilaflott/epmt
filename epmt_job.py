@@ -136,6 +136,14 @@ def get_tags_from_string(s,
 #        tags[t] = tag_default_value
 #    return tags
 
+
+# return the sum of keys across two dictionaries
+# x = {'both1':1, 'both2':2, 'only_x': 100 }
+# y = {'both1':10, 'both2': 20, 'only_y':200 }
+# {'only_y': 200, 'both2': 22, 'both1': 11, 'only_x': 100}
+def _sum_dicts(x, y):
+    return { k: x.get(k, 0) + y.get(k, 0) for k in set(x) | set(y) }
+
 # This is a generator function that will yield
 # the next process dataframe from the collated file dataframe.
 # It uses the numtids field to figure out where the process dataframe ends
@@ -585,25 +593,32 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 
     # Add sum of tags to job
     if all_tags:
-        logger.debug("found %d distinct process tags",len(all_tags))
+        logger.info("found %d distinct sets of process tags",len(all_tags))
         # convert each of the pickled tags back into a dict
         j.proc_aggregates['tags'] = [ loads(t) for t in all_tags ]
     else:
         logger.debug('no process tags found')
         
-    # Add all processes to job
+    # Add all processes to job and compute process totals to add to
+    # job.proc_aggregates field
     nthreads = 0
+    threads_sums_across_procs = {}
     if all_procs:
         _create_process_tree(pid_map)
         # computing process inclusive times
-        logger.info("computing incl. process times..")
+        logger.info("synthesizing aggregates across job processes..")
         for proc in all_procs:
             proc.inclusive_cpu_time = float(proc.exclusive_cpu_time + sum(proc.descendants.exclusive_cpu_time))
             nthreads += proc.numtids
+            threads_sums_across_procs = sum_dicts(threads_sums_across_procs, proc.threads_sums)
         logger.info("Adding %d processes to job",len(all_procs))
         j.processes.add(all_procs)
     j.proc_aggregates['num_procs'] = len(all_procs)
     j.proc_aggregates['num_threads'] = nthreads
+    # merge the threads sums across all processes in the proc_aggregates json
+    for (k, v) in threads_sums_across_procs.items():
+        j.proc_aggregates[k] = v
+
 # Update start/end/duration of job
 #       j.start = earliest_process
 #        j.end = latest_process
