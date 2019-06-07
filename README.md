@@ -95,18 +95,18 @@ epmt run ./postprocess_the_world
 epmt stop
 ```
 
-Let's skip all the markup, as we can do it with only environment variables. **EPMT** can provide the configuration to export to the environment. The following example is for **BASH**.
+Let's skip all the markup, as we can do it with only environment variables. **EPMT** provides the configuration to export to the environment through the **source** command. The use for this is in a job file and is meant to be evaluated by the running shell, be that some form of Bash or Csh. **epmt source** just prints the required environment variables in Bash format **unless either the "SHELL" or "_" environment variable ends in csh**. 
 
-The use for this is in a job file. **Please note the unset of LD_PRELOAD before stop:**
+**Note the unset of LD_PRELOAD before stop!** This line is to prevent the data collection routine from running on **epmt stop** itself.
 
 ```
-$ cat my_job_epmt_2.sh
+$ cat my_job_bash.sh
 #!/bin/bash
 # Example job script for Torque or SLURM
 # 
 # Preamble, collect job metadata and monitor all processes/threads  
 epmt start
-export `epmt source`
+eval `epmt source`
 #
 ./initialize_the_world --random 
 ./compute_the_world 
@@ -117,13 +117,15 @@ unset LD_PRELOAD
 epmt stop
 ```
 
-The **unset LD_PRELOAD** line is to prevent the data collection routine from running on **epmt stop** itself.
+Here's an example for Csh, when run interactively, 
 
-When run interactively, **epmt source** just prints the required environment variables in **Bash** format:
 
 ```
-$ epmt source
-PAPIEX_OPTIONS=PERF_COUNT_SW_CPU_CLOCK LD_PRELOAD=../papiex-oss/papiex-oss-install/lib/libpapiex.so:../papiex-oss/papiex-oss-install/lib/libmonitor.so
+$ /bin/csh
+> epmt -j1 source
+setenv PAPIEX_OPTIONS PERF_COUNT_SW_CPU_CLOCK;
+setenv PAPIEX_OUTPUT /tmp/epmt/1/;
+setenv LD_PRELOAD /Users/phil/Work/GFDL/epmt.git/../papiex-oss/papiex-oss-install/lib/libpapiex.so:/Users/phil/Work/GFDL/epmt.git/../papiex-oss/papiex-oss-install/lib/libpapi.so:/Users/phil/Work/GFDL/epmt.git/../papiex-oss/papiex-oss-install/lib/libpfm.so:/Users/phil/Work/GFDL/epmt.git/../papiex-oss/papiex-oss-install/lib/libmonitor.so
 ```
 
 ## Importing Data Into the Database

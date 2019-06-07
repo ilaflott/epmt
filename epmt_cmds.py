@@ -487,49 +487,59 @@ def epmt_dump_metadata(forced_jobid, filelist=[]):
     return True
 
 def epmt_source(forced_jobid, papiex_debug=False, monitor_debug=False, add_export=True):
+    export="export "
+    equals="="
+    cmd_sep="\n"
+    shell_name = environ.get("_")
+    shell_name2 = environ.get("SHELL")
+    if ( shell_name and shell_name.endswith("csh")) or (shell_name2 and shell_name2.endswith("csh")):
+        export="setenv "
+        equals=" "
+        cmd_sep=";\n"
+    
     cmd=""
     jobid,output_dir,file = setup_vars(forced_jobid)
     if jobid == False:
         return False;
 
     if add_export:
-        cmd = "export "
-    cmd += "PAPIEX_OPTIONS="+settings.papiex_options
+        cmd = export
+    cmd += "PAPIEX_OPTIONS"+equals+settings.papiex_options
     if add_export:
-        cmd += "\n"
+        cmd += cmd_sep
     else:
         cmd += " "
     
     if output_dir:
         if add_export:
-            cmd += "export "
-        cmd += "PAPIEX_OUTPUT="+output_dir
+            cmd += export
+        cmd += "PAPIEX_OUTPUT"+equals+output_dir
         if add_export:
-            cmd += "\n"
+            cmd += cmd_sep
         else:
             cmd += " "
 
     if papiex_debug:
         if add_export:
-            cmd += "export "
-        cmd += "PAPIEX_DEBUG=TRUE"
+            cmd += export
+        cmd += "PAPIEX_DEBUG"+equals+"TRUE"
         if add_export:
-            cmd += "\n"
+            cmd += cmd_sep
         else:
             cmd += " "
 
     if monitor_debug:
         if add_export:
-            cmd += "export "
-        cmd += "MONITOR_DEBUG=TRUE"
+            cmd += export
+        cmd += "MONITOR_DEBUG"+equals+"TRUE"
         if add_export:
-            cmd += "\n"
+            cmd += cmd_sep
         else:
             cmd += " "
 
     if add_export:
-        cmd += "export "
-    cmd += "LD_PRELOAD="
+        cmd += export
+    cmd += "LD_PRELOAD"+equals
     for l in [ "libpapiex.so:","libpapi.so:","libpfm.so:","libmonitor.so" ]:
         cmd += settings.install_prefix+"lib/"+l
     return cmd
