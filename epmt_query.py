@@ -37,7 +37,13 @@ THR_SUMS_FIELD = 'threads_sums'
 #          'orm':  returns a Pony Query object (ADVANCED)
 #          'terse': In this format only the primary key ID is printed for each job
 #
-def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict'):
+# exact_tags_only: If set, tags will be considered matched if saved tags have
+#          to identically match the passed tags. The default is False, which
+#          means if the tags in the database are a superset of the passed
+#          tags a match will considered.
+#              
+#
+def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict', exact_tags_only = False):
     if jobids:
         if (type(jobids) == str) or (type(jobid) == unicode):
             # user either gave the job id directly instead of passing a list
@@ -49,8 +55,13 @@ def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict')
     # filter using tags if set
     if type(tags) == str:
         tags = get_tags_from_string(tags)
-    for (k,v) in tags.items():
-        qs = qs.filter(lambda j: j.tags[k] == v)
+    if exact_tags_only:
+        qs = qs.filter(lambda j: j.tags == tags)
+    else:
+        # we consider a match if the job tags are a superset
+        # of the passed tags
+        for (k,v) in tags.items():
+            qs = qs.filter(lambda j: j.tags.get(k,'') == v)
 
     # if fltr is a lambda function or a string apply it
     if fltr:
@@ -111,6 +122,11 @@ def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict')
 #          ignored if output format 'fmt' is set to 'orm', and ORM
 #          objects will not be merge_threads_sumsed.
 #
+# exact_tags_only: If set, tags will be considered matched if saved tags have
+#          to identically match the passed tags. The default is False, which
+#          means if the tags in the database are a superset of the passed
+#          tags a match will considered.
+#
 # For example, to get all processes for a particular Job, with jobid '32046', which
 # are multithreaded, you would do:
 #
@@ -134,7 +150,7 @@ def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict')
 # by using the default merge_threads_sums=True, it will be available as column in the output
 # dataframe. The output will be pre-sorted on this field because we have set 'order'
 #
-def get_procs(jobs = [], tags = {}, fltr = None, order = '', limit = 0, fmt='dict', merge_threads_sums=True):
+def get_procs(jobs = [], tags = {}, fltr = None, order = '', limit = 0, fmt='dict', merge_threads_sums=True, exact_tags_only = False):
     if jobs:
         if isinstance(jobs, Query):
             # convert the pony query object to a list
@@ -157,8 +173,13 @@ def get_procs(jobs = [], tags = {}, fltr = None, order = '', limit = 0, fmt='dic
     # filter using tags if set
     if type(tags) == str:
         tags = get_tags_from_string(tags)
-    for (k,v) in tags.items():
-        qs = qs.filter(lambda p: p.tags[k] == v)
+    if exact_tags_only:
+        qs = qs.filter(lambda p: p.tags == tags)
+    else:
+        # we consider a match if the job tags are a superset
+        # of the passed tags
+        for (k,v) in tags.items():
+            qs = qs.filter(lambda p: p.tags.get(k,'') == v)
 
     # if fltr is a lambda function or a string apply it
     if fltr:

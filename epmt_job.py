@@ -8,6 +8,7 @@ from os import environ
 from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
 import settings
 from os import getuid
+from json import dumps, loads
 from pwd import getpwnam, getpwuid
 logger = getLogger(__name__)  # you can use other name
 
@@ -491,7 +492,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 #    j.info_dict = info_dict
 
     didsomething = False
-    all_tags = set([])
+    all_tags = set()
     all_procs = []
 
     # a pid_map is used to create the process graph
@@ -517,10 +518,6 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 # oldproctag (after comment char) is outdated as a process tag but kept for posterities sake
             rows,oldproctag = extract_tags_from_comment_line(f,tarfile=tarfile)
             logger.debug("%s had %d comment rows, oldproctags %s",f,rows,oldproctag)
-# Check comment/tags cache
-#            if comment:
-# Merge all tags into one list for job
-#                all_tags.add(comment)
 
             if tarfile:
                 info = tarfile.getmember(f)
@@ -552,6 +549,11 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 if not p.tags and oldproctag:
                     p.tags = get_tags_from_string(oldproctag)
 
+                if p.tags:
+                    # pickle and add tag dictionaries to a set
+                    # remember to sort_keys during the pickle!
+                    all_tags.add(dumps(p.tags, sort_keys=True))
+
                 pid_map[p.pid] = p
                 all_procs.append(p)
 # Compute duration of job
@@ -579,21 +581,28 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     else:
         logger.warning("Submitting job with no CSV data, tags %s",str(job_tags))
 
-# Add sum of tags to job        
-#    if all_tags:
-#        logger.info("Adding %d tags to job",len(all_tags))
-        # once the tags becomes a string of key/value pairs, then
-        # just use get_tags_from_string instead of _get_tags_for_list
-#        j.tags = _get_tags_for_list(all_tags)
-# Add all processes to job
+    j.proc_aggregates = {}
+
+    # Add sum of tags to job
+    if all_tags:
+        logger.debug("found %d distinct process tags",len(all_tags))
+        j.proc_aggregates['tags'] = loads(list(all_tags))
+    else:
+        logger.debug('no process tags found')
+        
+    # Add all processes to job
+    nthreads = 0
     if all_procs:
         _create_process_tree(pid_map)
         # computing process inclusive times
         logger.info("computing incl. process times..")
         for proc in all_procs:
             proc.inclusive_cpu_time = float(proc.exclusive_cpu_time + sum(proc.descendants.exclusive_cpu_time))
+            nthreads += proc.numtids
         logger.info("Adding %d processes to job",len(all_procs))
         j.processes.add(all_procs)
+    j.proc_aggregates['num_procs'] = len(all_procs)
+    j.proc_aggregates['num_threads'] = nthreads
 # Update start/end/duration of job
 #       j.start = earliest_process
 #        j.end = latest_process
@@ -610,7 +619,6 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     j.cpu_time = sum(j.processes.exclusive_cpu_time)
     if job_tags:
         j.tags = job_tags
-#
 #
 #
     logger.info("Earliest process start: %s",j.start)
