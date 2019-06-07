@@ -15,7 +15,7 @@ RUN rm -f requirements.txt
 # EPMT Install
 WORKDIR /opt/epmt
 COPY epmt.git/models /opt/epmt/models
-COPY epmt.git/epmt epmt.git/epmt_job.py epmt.git/epmt_cmds.py /opt/epmt/
+COPY epmt.git/epmt epmt.git/epmt_concat.py epmt.git/epmt_query.py epmt.git/epmt_job.py epmt.git/epmt_cmds.py /opt/epmt/
 COPY epmt.git/SLURM/settings_slurm_test.py /opt/epmt/settings.py
 RUN python -m py_compile epmt *.py models/*.py
 # SLURM integration
