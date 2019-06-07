@@ -98,7 +98,7 @@ def lookup_or_create_user(username):
 #
 # Note, both key and values will be strings and no attempt will be made to
 # guess the type for integer/floats
-def _get_tags_from_string(s, 
+def get_tags_from_string(s, 
                           delim = settings.tag_delimiter, 
                           sep = settings.tag_kv_separator, 
                           tag_default_value = settings.tag_default_value):
@@ -193,7 +193,7 @@ def load_process_from_pandas(df, h, j, u, settings):
     if 'tags' in df.columns:
         tags = df['tags'][0]
         if tags:
-            p.tags = _get_tags_from_string(tags)
+            p.tags = get_tags_from_string(tags)
 
     # remove per-process fields from the threads dataframe
     df = df.drop(labels=settings.per_process_fields, axis=1, errors = 'ignore')
@@ -390,7 +390,7 @@ def _check_and_create_metadata(raw_metadata):
         jobname = username+"-"+"interactive"
         logger.warning("No job name found, defaulting to %s",jobname)
 # Look up job tags from stop environment
-    job_tags = _get_tags_from_string(raw_metadata['job_el_env'].get(settings.job_tags_env))
+    job_tags = get_tags_from_string(raw_metadata['job_el_env'].get(settings.job_tags_env))
     logger.info("job_tags: %s",str(job_tags))
 # Compute difference in start vs stop environment
     env={}
@@ -550,7 +550,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                     continue
 # If using old version of papiex, process tags are in the comment field
                 if not p.tags and oldproctag:
-                    p.tags = _get_tags_from_string(oldproctag)
+                    p.tags = get_tags_from_string(oldproctag)
 
                 pid_map[p.pid] = p
                 all_procs.append(p)
@@ -583,7 +583,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 #    if all_tags:
 #        logger.info("Adding %d tags to job",len(all_tags))
         # once the tags becomes a string of key/value pairs, then
-        # just use _get_tags_from_string instead of _get_tags_for_list
+        # just use get_tags_from_string instead of _get_tags_for_list
 #        j.tags = _get_tags_for_list(all_tags)
 # Add all processes to job
     if all_procs:

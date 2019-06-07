@@ -1,5 +1,5 @@
 from models import *
-from epmt_job import setup_orm_db
+from epmt_job import setup_orm_db, get_tags_from_string
 import pandas as pd
 from pony.orm.core import Query
 import settings
@@ -16,7 +16,7 @@ THR_SUMS_FIELD = 'threads_sums'
 #
 # jobids : Optional list of jobids to narrow the search space
 #
-# tags   : Optional dictionary of key/value pairs
+# tags   : Optional dictionary or string of key/value pairs
 #
 # fltr   : Optional filter in the form of a lamdba function or a string
 #          e.g., lambda j: count(j.processes) > 100 will filter jobs more than 100 processes
@@ -47,6 +47,8 @@ def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict')
         qs = Job.select()
 
     # filter using tags if set
+    if type(tags) == str:
+        tags = get_tags_from_string(tags)
     for (k,v) in tags.items():
         qs = qs.filter(lambda j: j.tags[k] == v)
 
@@ -83,7 +85,7 @@ def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict')
 #
 # All fields are optional and sensible defaults are assumed.
 #
-# tags : is a dictionary of key/value pairs and is optional.
+# tags : is a dictionary or string of key/value pairs and is optional.
 #
 # fltr: is a lambda expression or a string of the form:
 #       lambda p: p.duration > 1000
@@ -153,6 +155,8 @@ def get_procs(jobs = [], tags = {}, fltr = None, order = '', limit = 0, fmt='dic
         qs = Process.select()
 
     # filter using tags if set
+    if type(tags) == str:
+        tags = get_tags_from_string(tags)
     for (k,v) in tags.items():
         qs = qs.filter(lambda p: p.tags[k] == v)
 
@@ -213,3 +217,11 @@ def get_thread_metrics(*processes):
 
     # if we have only one dataframe then no concatenation is needed
     return pd.concat(df_list) if len(df_list) > 1 else df_list[0]
+
+
+# gets all the unique tags across all processes of a job
+def get_all_tags_in_job(job):
+    if type(job) == str or type(job) == unicode:
+        job = Job[job]
+    import numpy as np
+    return np.unique(np.array(job.processes.tags)).tolist()
