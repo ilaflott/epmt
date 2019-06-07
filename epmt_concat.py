@@ -203,8 +203,9 @@ def verifyOut(indir, outfile):
         print("Files(headers removed - 1)" + str(headers2Remove))
         print("Output Lines: " + str(outputLines))
     elif(result == outputLines):
-        print(result, " Lines Wrote and verified to ", outfile)
-        return
+#        logger.info("%d lines written and verified to %s", result, outfile)
+#        print(result, " Lines Wrote and verified to ", outfile)
+        return True
 
 
 def file_len(fname):
@@ -258,7 +259,7 @@ def csvjoiner(indir,
         try:
             if(path.isfile(outfile)):
                         print("File ", outfile, " already there, exiting")
-                        raise SystemError
+                        return False, ""
         except:
             raise SystemError
         try:
@@ -268,7 +269,10 @@ def csvjoiner(indir,
             raise SystemError
         fileList = glob("*.csv")
         if(len(fileList) < 2):
-            print("Found less than 2 csv files, exiting\nPlease provide directory to collate containing csv files")
+            # logger.debug()            
+#            print("Found less than 2 csv files, exiting\nPlease provide directory to collate containing csv files")
+            return True,""
+
             raise SystemError
         try:
             jobid = indir.split("/")[-2].split("_")[-1].split("/")[0]
@@ -278,14 +282,14 @@ def csvjoiner(indir,
             helpDoc()
             raise SystemError
         if(outfile is ""):
-            outfile = indir + host + "-papiex-" + jobid + ".csv"
+            outfile = indir + host + "-collated" + "-papiex-" + jobid + "-0.csv"
             # Verify concat does not exist, break if does
             if any(outfile.rsplit("/", 1)[1] in FL.lower() for FL in fileList):
                 print("File: ", outfile, " already exists remove to collate again")
                 raise SystemError
         else:
             # still verify concat hasn't already been done
-            tempoutfile = indir + host + "-papiex-" + jobid + ".csv"
+            tempoutfile = indir + host + "-collated" + "-papiex-" + jobid + "-0.csv"
             # Verify concat does not exist, break if does
             if any(tempoutfile.rsplit("/", 1)[1] in FL.lower() for FL in fileList):
                 print("File: ", tempoutfile, " already exists remove to collate again")
@@ -310,8 +314,8 @@ def csvjoiner(indir,
                 jobid = indir[0].split("/")[-2].split("_")[-1].split("/")[0]
                 host = fileList[0].rsplit("/")[-1].split("-")[0]
                 if(outfile is ""):
-                    outfile = indir[0].rsplit("/", 1)[0] + "/" + host + "-papiex-" + jobid + ".csv"
-                tempoutfile = indir[0].rsplit("/", 1)[0] + "/" + host + "-papiex-" + jobid + ".csv"
+                    outfile = indir[0].rsplit("/", 1)[0] + "/" + host + "-collated" + "-papiex-" + jobid + "-0.csv"
+                tempoutfile = indir[0].rsplit("/", 1)[0] + "/" + host + "-collated" + "-papiex-" + jobid + "-0.csv"
 
             except IndexError as E:
                 print("CSV name not formatted properly(jobid or host?)\n")
@@ -347,7 +351,7 @@ def csvjoiner(indir,
     chdir(cwd)
     writeOut(outfile, commentsList, masterHeader, dataList)
     verifyOut(indir, outfile)
-    return outfile
+    return True,outfile
 
 # Wish I knew about this earlier 
 # https://docs.python.org/3.6/library/argparse.html#module-argparse
