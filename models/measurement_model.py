@@ -53,7 +53,7 @@ class Job(db.Entity):
 	account = Optional('Account')
 	queue = Optional('Queue')
 	ppr = Optional('PostProcessRun')
-        cpu_time = Optional(int)
+        cpu_time = Optional(float)
 
 class Process(db.Entity):
 # Rollup entries, computed at insert time
@@ -73,9 +73,9 @@ class Process(db.Entity):
 	threads_sums = Optional(Json)
 	numtids = Required(int, default=0)
 # save some useful timing information for threads
-        exclusive_cpu_time = Optional(int)
+        exclusive_cpu_time = Optional(float)
 # sum of cpu times of all descendants + process_cpu_time
-        inclusive_cpu_time = Optional(int)
+        inclusive_cpu_time = Optional(float)
 # These should probably be abstracted/reduced
 	exename = Required(str)
 	path = Required(str)
