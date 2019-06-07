@@ -610,12 +610,12 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         for proc in all_procs:
             proc.inclusive_cpu_time = float(proc.exclusive_cpu_time + sum(proc.descendants.exclusive_cpu_time))
             nthreads += proc.numtids
-            threads_sums_across_procs = sum_dicts(threads_sums_across_procs, proc.threads_sums)
+            threads_sums_across_procs = _sum_dicts(threads_sums_across_procs, proc.threads_sums)
         logger.info("Adding %d processes to job",len(all_procs))
         j.processes.add(all_procs)
     j.proc_aggregates['num_procs'] = len(all_procs)
     j.proc_aggregates['num_threads'] = nthreads
-    # merge the threads sums across all processes in the proc_aggregates json
+    # merge the threads sums across all processes in the job.proc_aggregates dict
     for (k, v) in threads_sums_across_procs.items():
         j.proc_aggregates[k] = v
 
