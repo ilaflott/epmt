@@ -586,7 +586,8 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     # Add sum of tags to job
     if all_tags:
         logger.debug("found %d distinct process tags",len(all_tags))
-        j.proc_aggregates['tags'] = loads(list(all_tags))
+        # convert each of the pickled tags back into a dict
+        j.proc_aggregates['tags'] = [ loads(t) for t in all_tags ]
     else:
         logger.debug('no process tags found')
         
