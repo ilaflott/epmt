@@ -10,7 +10,7 @@ pipelines:
           - apt-get update && apt-get install -y csh tcsh
           - rm -f settings.py; ln -s settings/settings_sqlite_inmem.py settings.py  # Setup in mem sqlite
           - python -m py_compile epmt *.py models/*.py		# Compile everything
-          - PATH=${PWD}:${PATH} /bin/bash -x epmt-check.anysh
-          - PATH=${PWD}:${PATH} /bin/sh -x epmt-check.anysh
+          - env -i PATH=${PWD}:${PATH} /bin/bash -x epmt-check.anysh
+          - env -i PATH=${PWD}:${PATH} /bin/sh -x epmt-check.anysh
           - env -i PATH=${PWD}:${PATH} /bin/tcsh -v epmt-check.anysh
           - env -i PATH=${PWD}:${PATH} /bin/csh -v epmt-check.anysh

@@ -44,7 +44,7 @@ check-python-native:
 
 check-python-driver-bash:
 	@echo; echo "Testing /bin/bash..."
-	PATH=$(PWD):$$PATH /bin/bash -x epmt-check.anysh
+	env -i PATH=$(PWD):$$PATH /bin/bash -x epmt-check.anysh
 check-python-driver-sh:
 	@echo; echo "Testing /bin/sh..."
 	env -i PATH=$(PWD):$$PATH /bin/sh -v epmt-check.anysh
