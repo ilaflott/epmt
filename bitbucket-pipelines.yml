@@ -7,10 +7,12 @@ pipelines:
           - pip
         script: # Modify the commands below to build your repository.
           - pip install -r requirements.txt
+	  - apt-get update && apt-get install -y csh tcsh 
           - rm -f settings.py; ln -s settings/settings_sqlite_inmem.py settings.py  # Setup in mem sqlite
           - python -m py_compile epmt *.py models/*.py		# Compile everything
-          - env -i PATH=${PWD}:${PATH} /bin/csh epmt-check.anysh
-          - PATH=${PWD}:${PATH} /bin/bash epmt-check.anysh
+          - env -i PATH=${PWD}:${PATH} /bin/csh -v epmt-check.anysh
+          - env -i PATH=${PWD}:${PATH} /bin/tcsh -v epmt-check.anysh
+          - PATH=${PWD}:${PATH} /bin/bash -x epmt-check.anysh
 #          - PAPIEX_OUTPUT=/tmp/epmt/ SLURM_JOB_ID=1 EPMT_JOB_TAGS=operation:test ./epmt -h >/dev/null		# help path 1
 #          - PAPIEX_OUTPUT=/tmp/epmt/ SLURM_JOB_ID=1 EPMT_JOB_TAGS=operation:test ./epmt help >/dev/null		# help path 2
 ##          - PAPIEX_OUTPUT=/tmp/epmt/ SLURM_JOB_ID=1 EPMT_JOB_TAGS=operation:test ./epmt start 		# Generate prolog
