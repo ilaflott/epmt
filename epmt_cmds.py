@@ -486,21 +486,33 @@ def epmt_dump_metadata(forced_jobid, filelist=[]):
             print "%-24s%-56s" % (d,str(metadata[d]))
     return True
 
-def epmt_source(forced_jobid, papiex_debug=False, monitor_debug=False, add_export=True):
+def epmt_source(forced_jobid, papiex_debug=False, monitor_debug=False, add_export=True, run_cmd=False):
     export="export "
     equals="="
     cmd_sep="\n"
+    cmd=""
+
+    # For CSH, for source:
+    # setenv FOO bar;
+    # For CSH, for run:
+    # env FOO=bar
+
     shell_name = environ.get("_")
     shell_name2 = environ.get("SHELL")
-    if ( shell_name and shell_name.endswith("csh")) or (shell_name2 and shell_name2.endswith("csh")):
-        export="setenv "
-        equals=" "
-        cmd_sep=";\n"
+    if ( shell_name2 and shell_name2.endswith("csh")) or (shell_name and shell_name.endswith("csh")):
+        logger.debug("Detected CSH - please read CSH considered harmful")
+        if run_cmd:
+            cmd = "env "
+            export = ""
+            equals = "="
+        else:
+            export="setenv "
+            equals= " "
+            cmd_sep=";\n"
     
-    cmd=""
     jobid,output_dir,file = setup_vars(forced_jobid)
     if jobid == False:
-        return False;
+        return None;
 
     if add_export:
         cmd = export
@@ -545,6 +557,7 @@ def epmt_source(forced_jobid, papiex_debug=False, monitor_debug=False, add_expor
     return cmd
 
 def epmt_run(forced_jobid, cmdline, wrapit=False, dry_run=False, debug=False):
+    logger.debug("epmt_run(%s, %s, %s, %s, %s)",forced_jobid, cmdline, str(wrapit), str(dry_run), str(debug))
     if wrapit:
         logger.info("Forcing epmt_start")
         if dry_run:
@@ -553,7 +566,9 @@ def epmt_run(forced_jobid, cmdline, wrapit=False, dry_run=False, debug=False):
             if not epmt_start_job(forced_jobid):
                 return 1
 
-    cmd = epmt_source(forced_jobid, papiex_debug=debug, monitor_debug=debug, add_export=False)
+    cmd = epmt_source(forced_jobid, papiex_debug=debug, monitor_debug=debug, add_export=False, run_cmd=True)
+    if not cmd:
+        return 1 
     cmd += " "+" ".join(cmdline)
 
     logger.info("Executing(%s)",cmd)
