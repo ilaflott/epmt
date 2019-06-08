@@ -26,7 +26,7 @@ distclean: clean
 # 
 # Simple python version testing with no database
 #
-check: check-python-native
+check: check-python-driver-csh check-python-driver-bash
 
 SLURM_FAKE_JOB_ID=1
 TMP_OUTPUT_DIR=/tmp/epmt/
