@@ -71,13 +71,16 @@ def init_settings():
         settings.per_process_fields = ["tags","hostname","exename","path","args","exitcode","pid","generation","ppid","pgid","sid","numtids"]
     if not hasattr(settings, 'skip_for_thread_sums'):
         logger.warning("missing settings.skip_for_thread_sums")
-        settings.skip_for_thread_sums = ["tid", "start", "end", "num_threads"]
+        settings.skip_for_thread_sums = ["tid", "start", "end", "num_threads", "starttime"]
     if not hasattr(settings, 'proc_sums_field_in_job'):
         logger.warning("missing settings.proc_sums_field_in_job")
         settings.proc_sums_field_in_job = 'proc_sums'
     if not hasattr(settings, 'thread_sums_field_in_proc'):
         logger.warning("missing settings.thread_sums_field_in_proc")
         settings.thread_sums_field_in_proc = 'threads_sums'
+    if not hasattr(settings, 'all_tags_field'):
+        logger.warning("missing settings.all_tags_field")
+        settings.all_tags_field = 'all_proc_tags'
 
 def find_diffs_in_envs(start_env,stop_env):
     env = {}

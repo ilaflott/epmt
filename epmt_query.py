@@ -93,7 +93,7 @@ def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict',
     if merge_proc_sums:
         for j in out_list:
             j.update(j[settings.proc_sums_field_in_job])
-            del p[settings.proc_sums_field_in_job]
+            del j[settings.proc_sums_field_in_job]
 
     if fmt == 'pandas':
         return pd.DataFrame(out_list)
@@ -255,5 +255,9 @@ def get_thread_metrics(*processes):
 def get_all_tags_in_job(job):
     if type(job) == str or type(job) == unicode:
         job = Job[job]
+    proc_sums = getattr(job, settings.proc_sums_field_in_job, {})
+    if proc_sums:
+        return proc_sums[settings.all_tags_field]
+    # if we haven't found it the easy way, do the heavy compute
     import numpy as np
     return np.unique(np.array(job.processes.tags)).tolist()
