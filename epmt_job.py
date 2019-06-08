@@ -589,18 +589,18 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     else:
         logger.warning("Submitting job with no CSV data, tags %s",str(job_tags))
 
-    j.proc_aggregates = {}
+    j.proc_sums = {}
 
     # Add sum of tags to job
     if all_tags:
         logger.info("found %d distinct sets of process tags",len(all_tags))
         # convert each of the pickled tags back into a dict
-        j.proc_aggregates['tags'] = [ loads(t) for t in all_tags ]
+        j.proc_sums['tags'] = [ loads(t) for t in all_tags ]
     else:
         logger.debug('no process tags found')
         
     # Add all processes to job and compute process totals to add to
-    # job.proc_aggregates field
+    # job.proc_sums field
     nthreads = 0
     threads_sums_across_procs = {}
     if all_procs:
@@ -613,11 +613,11 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             threads_sums_across_procs = _sum_dicts(threads_sums_across_procs, proc.threads_sums)
         logger.info("Adding %d processes to job",len(all_procs))
         j.processes.add(all_procs)
-    j.proc_aggregates['num_procs'] = len(all_procs)
-    j.proc_aggregates['num_threads'] = nthreads
-    # merge the threads sums across all processes in the job.proc_aggregates dict
+    j.proc_sums['num_procs'] = len(all_procs)
+    j.proc_sums['num_threads'] = nthreads
+    # merge the threads sums across all processes in the job.proc_sums dict
     for (k, v) in threads_sums_across_procs.items():
-        j.proc_aggregates[k] = v
+        j.proc_sums[k] = v
 
 # Update start/end/duration of job
 #       j.start = earliest_process

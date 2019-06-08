@@ -21,3 +21,5 @@ per_process_fields = ["tags","hostname","exename","path","args","exitcode","pid"
 skip_for_thread_sums = ["tid", "start", "end", "num_threads"]
 query_process_fields_exclude = ['threads_df']
 # query_job_fields_exclude = ['env_dict']
+proc_sums_field_in_job = 'proc_sums'
+thread_sums_field_in_proc = 'threads_sums'

@@ -7,8 +7,6 @@ print(settings.db_params)
 setup_orm_db(settings)
 
 
-THR_SUMS_FIELD = 'threads_sums'
-
 # This function returns a list of jobs based on some filtering and ordering.
 # The output format can be set to pandas dataframe, list of dicts or list
 # of ORM objects. See 'fmt' option.
@@ -37,13 +35,20 @@ THR_SUMS_FIELD = 'threads_sums'
 #          'orm':  returns a Pony Query object (ADVANCED)
 #          'terse': In this format only the primary key ID is printed for each job
 #
+# merge_proc_sums: By default True, which means the fields inside job.proc_sums
+#          will be hoisted up one level to become first-class members of the job.
+#          This will make aggregates across processes appear as part of the job
+#          If False, the job will contain job.proc_sums, which will be a dict
+#          of key/value pairs, where each is an process attribute, such as numtids,
+#          and the value is the sum acorss all processes of the job.
+#
 # exact_tags_only: If set, tags will be considered matched if saved tags have
 #          to identically match the passed tags. The default is False, which
 #          means if the tags in the database are a superset of the passed
 #          tags a match will considered.
 #              
 #
-def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict', exact_tags_only = False):
+def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict', merge_proc_sums=True, exact_tags_only = False):
     if jobids:
         if (type(jobids) == str) or (type(jobid) == unicode):
             # user either gave the job id directly instead of passing a list
@@ -84,6 +89,12 @@ def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict',
     exclude_fields = (settings.query_job_fields_exclude or '') if hasattr(settings, 'query_job_fields_exclude') else ''
     out_list = [ j.to_dict(exclude = exclude_fields) for j in qs ]
 
+    # do we need to merge threads' sum fields into the process?
+    if merge_proc_sums:
+        for j in out_list:
+            j.update(j[settings.proc_sums_field_in_job])
+            del p[settings.proc_sums_field_in_job]
+
     if fmt == 'pandas':
         return pd.DataFrame(out_list)
 
@@ -115,7 +126,7 @@ def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict',
 #
 # merge_threads_sums: By default, this is True, and this means threads sums are
 #          are folded into the process. If set to False, the threads'
-#          sums will be available as a separate field THR_SUMS_FIELD.
+#          sums will be available as a separate field settings.thread_sums_field_in_proc.
 #          Flattening makes subsequent processing easier as all the
 #          thread aggregates such as 'usertime', 'systemtime' are available
 #          as first-class members of the process. This option is silently
@@ -205,8 +216,8 @@ def get_procs(jobs = [], tags = {}, fltr = None, order = '', limit = 0, fmt='dic
     # do we need to merge threads' sum fields into the process?
     if merge_threads_sums:
         for p in out_list:
-            p.update(p[THR_SUMS_FIELD])
-            del p[THR_SUMS_FIELD]
+            p.update(p[settings.thread_sums_field_in_proc])
+            del p[settings.thread_sums_field_in_proc]
 
     if fmt == 'pandas':
         return pd.DataFrame(out_list)

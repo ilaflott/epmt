@@ -72,6 +72,12 @@ def init_settings():
     if not hasattr(settings, 'skip_for_thread_sums'):
         logger.warning("missing settings.skip_for_thread_sums")
         settings.skip_for_thread_sums = ["tid", "start", "end", "num_threads"]
+    if not hasattr(settings, 'proc_sums_field_in_job'):
+        logger.warning("missing settings.proc_sums_field_in_job")
+        settings.proc_sums_field_in_job = 'proc_sums'
+    if not hasattr(settings, 'thread_sums_field_in_proc'):
+        logger.warning("missing settings.thread_sums_field_in_proc")
+        settings.thread_sums_field_in_proc = 'threads_sums'
 
 def find_diffs_in_envs(start_env,stop_env):
     env = {}

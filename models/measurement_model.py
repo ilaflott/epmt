@@ -33,7 +33,8 @@ class Job(db.Entity):
 	start = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	end = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	duration = Required(float, default=0)
-        proc_aggregates = Optional(Json)
+        # proc_sums contains aggregates across processes
+        proc_sums = Optional(Json)
 # End rollups
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	info_dict = Optional(Json)
