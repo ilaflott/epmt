@@ -7,7 +7,7 @@ pipelines:
           - pip
         script: # Modify the commands below to build your repository.
           - pip install -r requirements.txt
-          - apt-get update && apt-get install csh
+          - apt-get update && apt-get install csh tcsh
           - rm -f settings.py; ln -s settings/settings_sqlite_inmem.py settings.py  # Setup in mem sqlite
           - python -m py_compile epmt *.py models/*.py		# Compile everything
           - env -i PATH=${PWD}:${PATH} /bin/csh -v epmt-check.anysh
