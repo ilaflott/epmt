@@ -468,7 +468,7 @@ def epmt_dump_metadata(forced_jobid, filelist=[]):
         tar = compressed_tar(file)
         if tar:
             try:
-                info = tar.getmember("job_metadata")
+                info = tar.getmember("./job_metadata")
             except KeyError:
                 logger.error('ERROR: Did not find %s in tar archive' % "job_metadata")
                 exit(1)
@@ -688,7 +688,7 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
     if tar:
 #        for member in tar.getmembers():
         try:
-            info = tar.getmember("job_metadata")
+            info = tar.getmember("./job_metadata")
         except KeyError:
             logger.error('ERROR: Did not find %s in tar archive' % "job_metadata")
             exit(1)
@@ -740,7 +740,7 @@ def set_logging(intlvl):
     elif intlvl >= 2:
         basicConfig(level=DEBUG)
 
-def stage_job(jid,dir,file,collate):
+def stage_job(jid,dir,file,collate,compress_and_tar=True):
     logger.debug("stage_job(%s,%s,%s,%s)",jid,dir,file,str(collate))
     if not jid or len(jid) < 1:
         return False
@@ -788,12 +788,19 @@ def stage_job(jid,dir,file,collate):
                 return_code = forkexecwait(cmd, shell=True)
                 if return_code != 0:
                     return False
+        if compress_and_tar:
+            cmd = "tar -C "+dir+" -cz -f "+path.dirname(dir)+".tgz ."
+            logger.debug(cmd)
+            return_code = forkexecwait(cmd, shell=True)
+            if return_code != 0:
+                return False
+            dir=path.dirname(dir)+".tgz "
         cmd = settings.stage_command + " " + dir + " " + settings.stage_command_dest
         logger.debug(cmd)
         return_code = forkexecwait(cmd, shell=True)
         if return_code != 0:
             return False
-        print(settings.stage_command_dest+path.basename(path.dirname(file)))
+        print(settings.stage_command_dest+path.basename(dir))
     return True
 
 def epmt_stage(other_dirs, forced_jobid, collate=True):
