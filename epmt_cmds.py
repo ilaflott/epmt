@@ -588,7 +588,8 @@ def epmt_run(forced_jobid, cmdline, wrapit=False, dry_run=False, debug=False):
 
     return return_code
 
-def get_filedict(dirname,pattern=settings.input_pattern,tar=False):
+def get_filedict(dirname,pattern,tar=False):
+    logger.debug("get_filedict(%s,%s,tar=%s)",dirname,pattern,str(tar))
     # Now get all the files in the dir
     if tar:
         files = fnmatch.filter(tar.getnames(), pattern)
@@ -596,7 +597,7 @@ def get_filedict(dirname,pattern=settings.input_pattern,tar=False):
         files = glob(dirname+pattern)
 
     if not files:
-        logger.warning("%s matched no files",dirname+pattern)
+        logger.info("%s matched no files",pattern)
         return {}
 
     logger.info("%d files to submit",len(files))
@@ -696,10 +697,10 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
             logger.info('%s is %d bytes in archive' % (info.name, info.size))
             f = tar.extractfile(info)
             metadata = read_job_metadata_direct(f)
-            filedict = get_filedict(None,pattern,tar)
+            filedict = get_filedict(None,settings.input_pattern,tar)
     else:
         metadata = read_job_metadata(input+"job_metadata")
-        filedict = get_filedict(input,pattern)
+        filedict = get_filedict(input,settings.input_pattern)
 
     logger.info("%d hosts found: %s",len(filedict.keys()),filedict.keys())
     for h in filedict.keys():
