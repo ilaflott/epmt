@@ -26,7 +26,7 @@ distclean: clean
 # 
 # Simple python version testing with no database
 #
-check: check-python-driver-bash check-python-driver-sh check-python-driver-tcsh check-python-driver-csh
+check: check-python-driver-bash check-python-driver-sh check-python-driver-tcsh check-python-driver-csh check-example-csh
 
 SLURM_FAKE_JOB_ID=1
 TMP_OUTPUT_DIR=/tmp/epmt/
@@ -54,7 +54,9 @@ check-python-driver-tcsh:
 check-python-driver-csh:
 	@echo; echo "Testing /bin/csh..."
 	env -i PATH=$(PWD):$$PATH /bin/csh -v epmt-check.anysh
-
+check-example-csh:
+	@echo; echo "Testing /bin/csh with epmt-example.csh..."
+	env -i PATH=$(PWD):$(PATH) /bin/csh -v epmt-example.csh
 check-python-driver:
 #	@rm -fr $(TMP_OUTPUT_DIR) $(SLURM_FAKE_JOB_ID);
 	@rm -f settings.py; ln -s settings/settings_sqlite_inmem.py settings.py  # Setup in mem sqlite

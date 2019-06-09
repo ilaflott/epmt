@@ -14,3 +14,4 @@ pipelines:
           - env -i PATH=${PWD}:${PATH} /bin/sh -x epmt-check.anysh
           - env -i PATH=${PWD}:${PATH} /bin/tcsh -v epmt-check.anysh
           - env -i PATH=${PWD}:${PATH} /bin/csh -v epmt-check.anysh
+          - env -i PATH=${PWD}:${PATH} /bin/csh -v epmt-example.csh

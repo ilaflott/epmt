@@ -26,22 +26,6 @@ def init_settings():
             logger.info("%s found, setting %s:%s now %s:%s",name,k,settings.db_params[k],k,t)
             settings.db_params[k] = t
 
-    t = environ.get("PAPIEX_OSS_PATH")
-    if t and len(t) and path.exists(t):
-        if not t.endswith("/"):
-            logger.warning("missing trailing / on PAPIEX_OSS_PATH variable");
-            t += "/"
-        logger.info("Overriding settings.install_prefix with PAPIEX_OSS_PATH=%s",t)
-        settings.install_prefix = t
-
-    t = environ.get("PAPIEX_OUTPUT")
-    if t and len(t) and path.exists(t):
-        if not t.endswith("/"):
-            logger.warning("missing trailing / on PAPIEX_OUTPUT variable");
-            t += "/"
-        logger.info("Overriding settings.papiex_output with PAPIEX_OUTPUT=%s",t)
-        settings.papiex_output = t
-
     if not hasattr(settings, 'job_tags_env'):
         logger.warning("missing settings.job_tags_env")
         settings.job_tags_env = 'EPMT_JOB_TAGS'
