@@ -1,3 +1,5 @@
+from __future__ import print_function
+#from __future__ import unicode_literals
 from pony.orm import *
 from models import *
 from sys import stdout, argv, stderr, exit
@@ -648,7 +650,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     logger.info("Staged import of %d processes", len(j.processes))
     logger.info("Staged import took %s, %f processes per second",
                 now - then,len(j.processes)/float((now-then).total_seconds()))
-    print "Imported successfully - job:",jobid,"processes:",len(j.processes),"rate:",len(j.processes)/float((now-then).total_seconds())
+    print("Imported successfully - job:",jobid,"processes:",len(j.processes),"rate:",len(j.processes)/float((now-then).total_seconds()))
     logger.info("Committing job to database..")
     return j
 

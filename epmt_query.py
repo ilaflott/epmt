@@ -1,8 +1,9 @@
 from sys import stderr
+#from __future__ import print_function
 from models import *
 from epmt_job import setup_orm_db, get_tags_from_string, _sum_dicts
 import pandas as pd
-from pony.orm.core import Query
+from pony.orm.core import Query, set_sql_debug
 from pony.orm import select, sum, count, avg, group_concat
 from json import loads
 import settings
