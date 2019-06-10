@@ -1,7 +1,8 @@
+#from __future__ import print_function
 from models import *
 from epmt_job import setup_orm_db, get_tags_from_string
 import pandas as pd
-from pony.orm.core import Query
+from pony.orm.core import Query, set_sql_debug
 import settings
 print(settings.db_params)
 setup_orm_db(settings)
