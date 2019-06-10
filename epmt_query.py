@@ -245,7 +245,11 @@ def get_thread_metrics(*processes):
         else:
             # user supplied process objects directly
             p = proc
-        df_list.append(pd.read_json(p.threads_df, orient='split'))
+        df = pd.read_json(p.threads_df, orient='split')
+        # add a synthetic column set to the primary key of the process
+        df['process_pk'] = p.id
+
+        df_list.append(df)
 
     # if we have only one dataframe then no concatenation is needed
     return pd.concat(df_list) if len(df_list) > 1 else df_list[0]
