@@ -1,26 +1,4 @@
 # settings.py
-from os import path
+from defaults import *
 
 db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'localhost', 'dbname': 'EPMT'}
-jobid_env_list = [ "SLURM_JOB_ID", "SLURM_JOBID", "PBS_JOB_ID" ]
-papiex_options = "PERF_COUNT_SW_CPU_CLOCK"
-papiex_output = "/tmp/epmt/"
-stage_command = "mv"
-stage_command_dest = "./"
-verbose = 1
-input_pattern = "*-papiex-[0-9]*-[0-9]*.csv"
-install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-oss-install/"
-
-# DO NOT TOUCH BELOW THIS LINE
-#
-tag_kv_separator = ':'
-tag_default_value = '1'
-tag_delimiter = ';'
-job_tags_env = 'EPMT_JOB_TAGS'
-per_process_fields = ["tags","hostname","exename","path","args","exitcode","pid","generation","ppid","pgid","sid","numtids"]
-skip_for_thread_sums = ["tid", "start", "end", "num_threads", "starttime"]
-query_process_fields_exclude = ['threads_df']
-# query_job_fields_exclude = ['env_dict']
-proc_sums_field_in_job = 'proc_sums'
-thread_sums_field_in_proc = 'threads_sums'
-all_tags_field = 'all_proc_tags'
