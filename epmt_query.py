@@ -1,8 +1,11 @@
+from sys import stderr
 #from __future__ import print_function
 from models import *
-from epmt_job import setup_orm_db, get_tags_from_string
+from epmt_job import setup_orm_db, get_tags_from_string, _sum_dicts
 import pandas as pd
 from pony.orm.core import Query, set_sql_debug
+from pony.orm import select, sum, count, avg, group_concat
+from json import loads
 import settings
 print(settings.db_params)
 setup_orm_db(settings)
@@ -272,3 +275,61 @@ def get_all_tags_in_job(job):
     # if we haven't found it the easy way, do the heavy compute
     import numpy as np
     return np.unique(np.array(job.processes.tags)).tolist()
+
+# returns a list of dicts (or dataframe), each row is of the form:
+# <job-id>,<tag>, metric1, metric2, etc..
+# You pass as argument a job or a list of jobs, and
+# tags is passed in as a list of strings or dictionaries. You
+# may optionally pass a single tag as a string or dict.
+# If exatct_tags_only is set (default False), then a match
+# means there is an exact match of the tag dictionaries
+# In this function, fmt is only allowed 'pandas' or 'dict'
+#
+def agg_metrics_by_tags(jobs = [], tags = [], exact_tags_only = False, fmt='pandas', sql_debug = False):
+    set_sql_debug(sql_debug)
+
+    if type(jobs) == str or type(jobs) == unicode:
+        jobs = [jobs]
+
+    if not tags:
+       if (len(jobs) > 1):
+           print("You must specify tags as non-empty string or dictionary", stderr)
+           return None
+       # as we have only a single job, let's figure out all the
+       # tags for the job
+       tags = get_all_tags_in_job(jobs[0])
+
+    # do we have a single tag in string or dict form? 
+    if type(tags) == str:
+        tags = [get_tags_from_string(tags)]
+    elif type(tags) == dict:
+        tags = [tags]
+
+    all_procs = []
+    # we iterate over tags, where each tag is dictionary
+    for t in tags:
+        procs = get_procs(jobs, tags = t, exact_tags_only = exact_tags_only, sql_debug = sql_debug, fmt='orm')
+        # group the Query response we got by jobid
+        # we use group_concat to join the thread_sums json into a giant string
+        procs_grp_by_job = select((p.job, count(p.id), sum(p.duration), sum(p.exclusive_cpu_time), sum(p.numtids), group_concat(p.threads_sums, sep='@@@')) for p in procs)
+        for row in procs_grp_by_job:
+            (j, nprocs, duration, excl_cpu, ntids, threads_sums_str) = row
+            # convert from giant string to array of strings where each list
+            # list element is a json of a threads_sums dict
+            _l1 = threads_sums_str.split('@@@')
+            # get back the dicts
+            thr_sums_dicts = [loads(s) for s in _l1]
+            # now aggregate across the dicts
+            sum_dict = {}
+            for d in thr_sums_dicts:
+                sum_dict = _sum_dicts(sum_dict, d)
+            # add some useful fields so we can back-reference and
+            # also add some sums we obtained in the query
+            sum_dict.update({'job': j.jobid, 'tags': t, 'num_procs': nprocs, 'num_tids': ntids, 'exclusive_cpu_time': excl_cpu, 'duration': duration})
+            all_procs.append(sum_dict)
+
+    if fmt == 'pandas':
+        return pd.DataFrame(all_procs)
+
+    # we assume the user wants the output in the form of a list of dicts
+    return all_procs
