@@ -16,8 +16,8 @@ PAPIEX_TAGS="operation:extract;operation_count:2;instance:1" tar -xf linux-5.1.7
 cd linux-5.1.7
 
 # configure
-cp -v /boot/config-$(uname -r) .config
-PAPIEX_TAGS="operation:configure;operation_count:3;instance:1" make olddefconfig
+# cp -v /boot/config-$(uname -r) .config
+PAPIEX_TAGS="operation:configure;operation_count:3;instance:1" make tinyconfig
 
 # build
 PAPIEX_TAGS="operation:build;operation_count:4;instance:1" make -j $(nproc)

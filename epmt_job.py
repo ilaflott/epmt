@@ -513,9 +513,10 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         # h = lookup_or_create_host(hostname)
         cntmax = len(files)
         cnt = 0
+        fileno = 0
         for f in files:
-            # if cnt > 1000: break # for debugging
-            logger.debug("Processing file %s",f)
+            fileno += 1
+            logger.debug("Processing file %s (%d of %d)",f, fileno, cntmax)
 #
 #            stdout.write('\b')            # erase the last written char
 #            stdout.write(spinner.next())  # write the next character
@@ -573,7 +574,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 cnt += 1
                 csvt = datetime.datetime.now() - csv
                 if cnt % 1000 == 0:
-                    logger.info("Did %d (%d in this file)...%.2f/sec",cnt,collated_df.shape[0],cnt/csvt.total_seconds())
+                    logger.info("Did %d (%d in file %d/%d)...%.2f/sec",cnt,collated_df.shape[0],fileno, cntmax,cnt/csvt.total_seconds())
                     # break
 
 #
@@ -645,6 +646,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     logger.info("Staged import took %s, %f processes per second",
                 now - then,len(j.processes)/float((now-then).total_seconds()))
     print "Imported successfully - job:",jobid,"processes:",len(j.processes),"rate:",len(j.processes)/float((now-then).total_seconds())
+    logger.info("Committing job to database..")
     return j
 
 def setup_orm_db(settings,drop=False,create=True):
