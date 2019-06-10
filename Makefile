@@ -1,4 +1,5 @@
-SHELL=/bin/bash
+SHELL=/bin/sh
+#export SHELL
 
 .PHONY: default \\
 	epmt-build epmt-test \\
@@ -25,7 +26,7 @@ distclean: clean
 # 
 # Simple python version testing with no database
 #
-check: check-python-native
+check: check-python-driver-bash check-python-driver-sh check-python-driver-tcsh check-python-driver-csh check-example-csh check-example-stage-submit
 
 SLURM_FAKE_JOB_ID=1
 TMP_OUTPUT_DIR=/tmp/epmt/
@@ -41,8 +42,26 @@ check-python-3:
 check-python-native:
 	@$(MAKE) DOCKER_RUN_PYTHON="PAPIEX_OUTPUT=$(TMP_OUTPUT_DIR) SLURM_JOB_ID=$(SLURM_FAKE_JOB_ID) EPMT_JOB_TAGS=operation:test"  DOCKER_PYTHON_IMAGE="" check-python-driver
 
+check-python-driver-bash:
+	@echo; echo "Testing /bin/bash..."
+	env -i PATH=$(PWD):$$PATH /bin/bash -x epmt-check.anysh
+check-python-driver-sh:
+	@echo; echo "Testing /bin/sh..."
+	env -i PATH=$(PWD):$$PATH /bin/sh -x epmt-check.anysh
+check-python-driver-tcsh:
+	@echo; echo "Testing /bin/tcsh..."
+	env -i PATH=$(PWD):$$PATH /bin/csh -v epmt-check.anysh
+check-python-driver-csh:
+	@echo; echo "Testing /bin/csh..."
+	env -i PATH=$(PWD):$$PATH /bin/csh -v epmt-check.anysh
+check-example-csh:
+	@echo; echo "Testing /bin/csh with epmt-example.csh..."
+	env -i PATH=$(PWD):$(PATH) /bin/csh -v epmt-example.csh
+check-example-stage-submit:
+	@echo; echo "Testing sample data stage/submit with epmt-example-stage-submit.sh..."
+	env -i PATH=$(PWD):$(PATH) /bin/sh -x epmt-example-stage-submit.sh
 check-python-driver:
-	@rm -fr $(TMP_OUTPUT_DIR) $(SLURM_FAKE_JOB_ID);
+#	@rm -fr $(TMP_OUTPUT_DIR) $(SLURM_FAKE_JOB_ID);
 	@rm -f settings.py; ln -s settings/settings_sqlite_inmem.py settings.py  # Setup in mem sqlite
 	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) python -m py_compile epmt *.py models/*.py         # Compile everything
 	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt -h >/dev/null      # help path 1
@@ -52,8 +71,7 @@ check-python-driver:
 	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt run sleep 1     # Run command, if no papiex just run command silently
 	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt stop            # Generate epilog and append
 	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt dump >/dev/null # Parse/print job_metadata
-#	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt submit          # Submit from tmp area
 	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt stage           # Move to medium term storage
-	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt submit ./$(SLURM_FAKE_JOB_ID)/ # Submit from staged storage
+	$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) ./epmt submit ./$(SLURM_FAKE_JOB_ID).tgz # Submit from staged storage
 	@$(DOCKER_RUN_PYTHON) $(DOCKER_PYTHON_IMAGE) python -V	            # Version 
 	@echo "Tests pass!"

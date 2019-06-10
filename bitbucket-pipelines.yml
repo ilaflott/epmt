@@ -1,4 +1,4 @@
-image: python:2.7.13
+image: python:2.7
 
 pipelines:
   default:
@@ -7,14 +7,12 @@ pipelines:
           - pip
         script: # Modify the commands below to build your repository.
           - pip install -r requirements.txt
+          - apt-get update && apt-get install -y csh tcsh
           - rm -f settings.py; ln -s settings/settings_sqlite_inmem.py settings.py  # Setup in mem sqlite
           - python -m py_compile epmt *.py models/*.py		# Compile everything
-          - PAPIEX_OUTPUT=/tmp/epmt/ SLURM_JOB_ID=1 EPMT_JOB_TAGS=operation:test ./epmt -h >/dev/null		# help path 1
-          - PAPIEX_OUTPUT=/tmp/epmt/ SLURM_JOB_ID=1 EPMT_JOB_TAGS=operation:test ./epmt help >/dev/null		# help path 2
-          - PAPIEX_OUTPUT=/tmp/epmt/ SLURM_JOB_ID=1 EPMT_JOB_TAGS=operation:test ./epmt start 		# Generate prolog
-          - PAPIEX_OUTPUT=/tmp/epmt/ SLURM_JOB_ID=1 EPMT_JOB_TAGS=operation:test ./epmt source >/dev/null # Print shell command
-          - PAPIEX_OUTPUT=/tmp/epmt/ SLURM_JOB_ID=1 EPMT_JOB_TAGS=operation:test ./epmt run sleep 1	# Run command
-          - PAPIEX_OUTPUT=/tmp/epmt/ SLURM_JOB_ID=1 EPMT_JOB_TAGS=operation:test ./epmt stop   	  	# Generate epilog and append
-          - PAPIEX_OUTPUT=/tmp/epmt/ SLURM_JOB_ID=1 EPMT_JOB_TAGS=operation:test ./epmt dump   		# Parse/print job_metadata
-          - PAPIEX_OUTPUT=/tmp/epmt/ SLURM_JOB_ID=1 EPMT_JOB_TAGS=operation:test ./epmt stage		# Move to medium term storage
-          - PAPIEX_OUTPUT=/tmp/epmt/ SLURM_JOB_ID=1 EPMT_JOB_TAGS=operation:test ./epmt submit ./1/ 		# Submit
+          - env -i PATH=${PWD}:${PATH} /bin/bash -x epmt-check.anysh
+          - env -i PATH=${PWD}:${PATH} /bin/sh -x epmt-check.anysh
+          - env -i PATH=${PWD}:${PATH} /bin/tcsh -v epmt-check.anysh
+          - env -i PATH=${PWD}:${PATH} /bin/csh -v epmt-check.anysh
+          - env -i PATH=${PWD}:${PATH} /bin/csh -v epmt-example.csh
+          - env -i PATH=${PWD}:${PATH} /bin/sh -x epmt-example-stage-submit.sh
