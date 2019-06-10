@@ -266,15 +266,31 @@ def get_thread_metrics(*processes):
 
 
 # gets all the unique tags across all processes of a job
-def get_all_tags_in_job(job):
+# If 'fold' is set (default), then tags will be merged to compact the output
+# otherwise, the expanded list of dictionaries is returned
+def get_all_tags_in_job(job, fold=True):
     if type(job) == str or type(job) == unicode:
         job = Job[job]
     proc_sums = getattr(job, settings.proc_sums_field_in_job, {})
+    tags = []
     if proc_sums:
-        return proc_sums[settings.all_tags_field]
-    # if we haven't found it the easy way, do the heavy compute
-    import numpy as np
-    return np.unique(np.array(job.processes.tags)).tolist()
+        tags = proc_sums[settings.all_tags_field]
+    else:
+        # if we haven't found it the easy way, do the heavy compute
+        import numpy as np
+        tags = np.unique(np.array(job.processes.tags)).tolist()
+
+    if fold:
+        merged_tags = {}
+        for t in tags:
+            for (k,v) in t.items():
+                if not (k in merged_tags):
+                    merged_tags[k] = set()
+                merged_tags[k].add(v)
+        return { k: list(v) if len(v) > 1 else v.pop() for (k,v) in merged_tags.items() }
+    else:
+        return tags
+
 
 # returns a list of dicts (or dataframe), each row is of the form:
 # <job-id>,<tag>, metric1, metric2, etc..
@@ -297,7 +313,7 @@ def agg_metrics_by_tags(jobs = [], tags = [], exact_tags_only = False, fmt='pand
            return None
        # as we have only a single job, let's figure out all the
        # tags for the job
-       tags = get_all_tags_in_job(jobs[0])
+       tags = get_all_tags_in_job(jobs[0], fold=False)
 
     # do we have a single tag in string or dict form? 
     if type(tags) == str:
