@@ -329,11 +329,9 @@ def _create_process_tree(pid_map):
             parent = pid_map[ppid]
             proc.parent = parent
             parent.children.add(proc)
-    logger.info("parent/child processes done")
     for (pid, proc) in pid_map.items():
         ppid = proc.ppid
         _proc_ancestors(pid_map, proc, ppid)
-    logger.info("process tree complete")
 
 # This function takes as input raw metadata from the start/stop and produces
 # extended dictionary of additional fields used in the ETL. This created
@@ -514,6 +512,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         cntmax = len(files)
         cnt = 0
         fileno = 0
+        csv = datetime.datetime.now()
         for f in files:
             fileno += 1
             logger.debug("Processing file %s (%d of %d)",f, fileno, cntmax)
@@ -522,7 +521,6 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 #            stdout.write(spinner.next())  # write the next character
 #            stdout.flush()                # flush stdout buffer (actual character display)
 #
-            csv = datetime.datetime.now()
 # We need rows to skip
 # oldproctag (after comment char) is outdated as a process tag but kept for posterities sake
             rows,oldproctag = extract_tags_from_comment_line(f,tarfile=tarfile)
@@ -574,7 +572,12 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 cnt += 1
                 csvt = datetime.datetime.now() - csv
                 if cnt % 1000 == 0:
-                    logger.info("Did %d (%d in file %d/%d)...%.2f/sec",cnt,collated_df.shape[0],fileno, cntmax,cnt/csvt.total_seconds())
+                    if cntmax > 1:
+                        # many small files each with a single process
+                        logger.info("Did %d (%d/%d files)...%.2f/sec",cnt,fileno, cntmax,cnt/csvt.total_seconds())
+                    else:
+                        # collated file
+                        logger.info("Did %d (%d in file)...%.2f/sec",cnt,collated_df.shape[0],cnt/csvt.total_seconds())
                     # break
 
 #
