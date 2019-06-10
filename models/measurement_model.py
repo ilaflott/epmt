@@ -33,8 +33,7 @@ class Job(db.Entity):
 	start = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	end = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	duration = Required(float, default=0)
-        # proc_sums contains aggregates across processes
-        proc_sums = Optional(Json)
+	proc_sums = Optional(Json) # proc_sums contains aggregates across processes
 # End rollups
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	info_dict = Optional(Json)
@@ -55,7 +54,7 @@ class Job(db.Entity):
 	account = Optional('Account')
 	queue = Optional('Queue')
 	ppr = Optional('PostProcessRun')
-        cpu_time = Optional(float)
+	cpu_time = Optional(float)
 
 class Process(db.Entity):
 # Rollup entries, computed at insert time
@@ -75,9 +74,9 @@ class Process(db.Entity):
 	threads_sums = Optional(Json)
 	numtids = Required(int, default=0)
 # save some useful timing information for threads
-        exclusive_cpu_time = Optional(float)
+	exclusive_cpu_time = Optional(float)
 # sum of cpu times of all descendants + process_cpu_time
-        inclusive_cpu_time = Optional(float)
+	inclusive_cpu_time = Optional(float)
 # These should probably be abstracted/reduced
 	exename = Required(str)
 	path = Required(str)
@@ -93,10 +92,10 @@ class Process(db.Entity):
 # for creating a process graph
 # a child process is also included in the list of descendants
 # while parent is included in the ancestors
-        parent = Optional('Process', reverse="children")
-        children = Set('Process', reverse="parent")
-        ancestors = Set('Process', reverse="descendants")
-        descendants = Set('Process', reverse="ancestors")
+	parent = Optional('Process', reverse="children")
+	children = Set('Process', reverse="parent")
+	ancestors = Set('Process', reverse="descendants")
+	descendants = Set('Process', reverse="ancestors")
 
 # class Thread(db.Entity):
 # # These are measured
