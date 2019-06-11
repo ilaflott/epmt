@@ -36,6 +36,21 @@ def sortKeyFunc(s):
     t2 = t.split("-")
     return int(t2[0]+t2[1])
 
+# from list of dictionaries, get the unique ones
+# exclude keys is an optional list of keys that are removed
+# from 
+def unique_dicts(dicts, exclude_keys=[]):
+    new_dicts = []
+    if exclude_keys:
+        for d in dicts:
+            new_d = { x: d[x] for x in d if not x in exclude_keys }
+            new_dicts.append(new_d)
+    else:
+        new_dicts = dicts
+    from numpy import unique, array
+    return unique(array(new_dicts)).tolist()
+         
+
 # def lookup_or_create_metricname(metricname):
 #     mn = MetricName.get(name=metricname)
 #     if mn is None:

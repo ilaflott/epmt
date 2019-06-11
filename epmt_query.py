@@ -1,7 +1,7 @@
 from sys import stderr
 #from __future__ import print_function
 from models import *
-from epmt_job import setup_orm_db, get_tags_from_string, _sum_dicts
+from epmt_job import setup_orm_db, get_tags_from_string, _sum_dicts, unique_dicts
 import pandas as pd
 from pony.orm.core import Query, set_sql_debug
 from pony.orm import select, sum, count, avg, group_concat
@@ -276,7 +276,8 @@ def get_thread_metrics(*processes):
 # job: is a single job id or a Job object
 # If 'fold' is set (default), then tags will be merged to compact the output
 # otherwise, the expanded list of dictionaries is returned
-def get_all_tags_in_job(job, fold=True):
+# 'exclude' is an optional list of keys to exclude from each tag (if present)
+def get_all_tags_in_job(job, exclude=[], fold=True):
     if type(job) == str or type(job) == unicode:
         job = Job[job]
     proc_sums = getattr(job, settings.proc_sums_field_in_job, {})
@@ -287,6 +288,10 @@ def get_all_tags_in_job(job, fold=True):
         # if we haven't found it the easy way, do the heavy compute
         import numpy as np
         tags = np.unique(np.array(job.processes.tags)).tolist()
+
+    # get unique dicts after removing exclude keys
+    if exclude:
+        tags = unique_dicts(tags, exclude)
 
     if fold:
         merged_tags = {}
