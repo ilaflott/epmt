@@ -64,7 +64,7 @@ def detect_outlier_ops(ops, trained_model=None, features = ['duration','exclusiv
         outlier_rows = outliers_iqr(ops[c])[0]
 #        print(c,outlier_rows)
         retval.loc[outlier_rows,c] = True
-    retval['jobid'] = ops['jobid']
+    retval['jobid'] = ops['job']
     retval = retval[['jobid']+features]
     return retval
 
