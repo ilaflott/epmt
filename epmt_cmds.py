@@ -15,7 +15,12 @@ import fnmatch
 import pickle
 from logging import getLogger, basicConfig, DEBUG, INFO, WARNING, ERROR
 logger = getLogger(__name__)  # you can use other name
-import settings
+
+if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
+    logger.info('Overriding settings.py and using defaults in epmt_default_settings')
+    import epmt_default_settings as settings
+else:
+    import settings
 
 def init_settings():
     global settings

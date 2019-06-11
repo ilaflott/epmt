@@ -8,11 +8,16 @@ from glob import glob
 import fnmatch
 from os import environ
 from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
-import settings
 from os import getuid
 from json import dumps, loads
 from pwd import getpwnam, getpwuid
 logger = getLogger(__name__)  # you can use other name
+
+if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
+    logger.info('Overriding settings.py and using defaults in epmt_default_settings')
+    import epmt_default_settings as settings
+else:
+    import settings
 
 #
 # Spinning cursor sequence
@@ -30,6 +35,32 @@ def sortKeyFunc(s):
 # append instance number 
     t2 = t.split("-")
     return int(t2[0]+t2[1])
+
+# from list of dictionaries, get the unique ones
+# exclude keys is an optional list of keys that are removed
+# from 
+def unique_dicts(dicts, exclude_keys=[]):
+    new_dicts = []
+    if exclude_keys:
+        for d in dicts:
+            new_d = { x: d[x] for x in d if not x in exclude_keys }
+            new_dicts.append(new_d)
+    else:
+        new_dicts = dicts
+    from numpy import unique, array
+    return unique(array(new_dicts)).tolist()
+
+# fold a list of dictionaries such as:
+# INPUT: [{'abc': 100, 'def': 200}, {'abc': 150, 'ghi': 10}
+# OUTPUT: { 'abc': [100, 150], 'def': 200, 'ghi': 10 }
+def fold_dicts(dicts):
+    folded_dict = {}
+    for d in dicts:
+        for (k,v) in d.items():
+            if not (k in folded_dict):
+                folded_dict[k] = set()
+            folded_dict[k].add(v)
+    return { k: list(v) if len(v) > 1 else v.pop() for (k,v) in folded_dict.items() }
 
 # def lookup_or_create_metricname(metricname):
 #     mn = MetricName.get(name=metricname)
