@@ -57,7 +57,7 @@ setup_orm_db(settings)
 def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict', merge_proc_sums=True, exact_tags_only = False, sql_debug = False):
     set_sql_debug(sql_debug)
     if jobids:
-        if (type(jobids) == str) or (type(jobid) == unicode):
+        if (type(jobids) == str) or (type(jobids) == unicode):
             # user either gave the job id directly instead of passing a list
             jobids = jobids.split(',')
         qs = Job.select(lambda j: j.jobid in jobids)
