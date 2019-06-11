@@ -266,6 +266,7 @@ def get_thread_metrics(*processes):
 
 
 # gets all the unique tags across all processes of a job
+# job: is a single job id or a Job object
 # If 'fold' is set (default), then tags will be merged to compact the output
 # otherwise, the expanded list of dictionaries is returned
 def get_all_tags_in_job(job, fold=True):
