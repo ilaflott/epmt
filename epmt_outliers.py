@@ -58,12 +58,15 @@ def detect_outlier_jobs(jobs, trained_model=None, features = ['duration','cpu_ti
     retval = retval[['jobid']+features]
     return retval
 
-def detect_outlier_ops(ops, trained_model=None, features = ['duration','exclusive_cpu_time','num_procs']):
+def detect_outlier_ops(ops, tags, trained_model=None, features = ['duration','exclusive_cpu_time','num_procs']):
+    
     retval = pd.DataFrame(False, columns=features, index=ops.index)
-    for c in features:
-        outlier_rows = outliers_iqr(ops[c])[0]
-#        print(c,outlier_rows)
-        retval.loc[outlier_rows,c] = True
+    for tag in tags:
+        # select only those rows with matching tag
+        rows = ops[ops.tags == tag]
+        for c in features:
+            outlier_rows = outliers_iqr(rows[c])[0]
+            retval.loc[outlier_rows,c] = True
     retval['jobid'] = ops['job']
     retval['tags'] = ops['tags']
     retval = retval[['jobid', 'tags']+features]
