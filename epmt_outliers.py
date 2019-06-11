@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import epmt_query as eq
+from pony.orm.core import Query
 
 # These all return a tuple containing a list of indicies
 # For 1-D this is just a tuple with one element that is a list of rows
@@ -37,20 +39,29 @@ def get_outliers_operations(df,columns=["duration","cputime"]):
 def get_outliers_processes(df,columns=["duration","exclusive_cpu_time"]):
     return None
 
+# jobs is either a pandas dataframe of job(s) or a list of job ids
+# or a Pony Query object
 def detect_outlier_jobs(jobs, trained_model=None, features = ['duration','cpu_time','num_procs']):
-    retval = pd.DataFrame(columns=features, index=jobs.index)
+    # if we have a non-empty list of job ids then get a pandas df
+    # using get_jobs to convert the format
+    if type(jobs) == list or type(jobs) == Query:
+        jobs = eq.get_jobs(jobs, fmt='pandas')
+
+    # initialize a df with all values set to False
+    retval = pd.DataFrame(False, columns=features, index=jobs.index)
     for c in features:
-        outlier_rows = eod.outliers_iqr(jobs[c])[0]
+        outlier_rows = outliers_iqr(jobs[c])[0]
 #        print(c,outlier_rows)
         retval.loc[outlier_rows,c] = True
+    # add a jobid column to the output dataframe
     retval['jobid'] = jobs['jobid']
     retval = retval[['jobid']+features]
     return retval
 
 def detect_outlier_ops(ops, trained_model=None, features = ['duration','exclusive_cpu_time','num_procs']):
-    retval = pd.DataFrame(columns=features, index=ops.index)
+    retval = pd.DataFrame(False, columns=features, index=ops.index)
     for c in features:
-        outlier_rows = eod.outliers_iqr(ops[c])[0]
+        outlier_rows = outliers_iqr(ops[c])[0]
 #        print(c,outlier_rows)
         retval.loc[outlier_rows,c] = True
     retval['jobid'] = ops['jobid']
@@ -58,9 +69,9 @@ def detect_outlier_ops(ops, trained_model=None, features = ['duration','exclusiv
     return retval
 
 def detect_outlier_processes(processes, trained_model=None, features=['duration','exclusive_cpu_time']):
-    retval = pd.DataFrame(columns=features, index=processes.index)
+    retval = pd.DataFrame(False, columns=features, index=processes.index)
     for c in features:
-        outlier_rows = eod.outliers_iqr(processes[c])[0]
+        outlier_rows = outliers_iqr(processes[c])[0]
         print(c,outlier_rows)
         retval.loc[outlier_rows,c] = True
     retval['id'] = processes['id']

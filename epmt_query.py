@@ -8,6 +8,10 @@ from pony.orm import select, sum, count, avg, group_concat
 from json import loads
 from os import environ
 
+from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
+logger = getLogger(__name__)  # you can use other name
+
+
 if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
     logger.info('Overriding settings.py and using defaults in epmt_default_settings')
     import epmt_default_settings as settings
@@ -23,7 +27,9 @@ setup_orm_db(settings)
 # of ORM objects. See 'fmt' option.
 #
 #
-# jobids : Optional list of jobids to narrow the search space
+# jobids : Optional list of jobids to narrow the search space. The jobids can
+#          a list of jobids (i.e., list of strings), or the result of a Pony
+#          query on Job (i.e., a Query object)
 #
 # tags   : Optional dictionary or string of key/value pairs
 #
@@ -67,7 +73,10 @@ def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict',
         if (type(jobids) == str) or (type(jobids) == unicode):
             # user either gave the job id directly instead of passing a list
             jobids = jobids.split(',')
-        qs = Job.select(lambda j: j.jobid in jobids)
+        if type(jobids) == list:
+            qs = Job.select(lambda j: j.jobid in jobids)
+        elif type(jobids) == Query:
+            qs = jobids
     else:
         qs = Job.select()
 
