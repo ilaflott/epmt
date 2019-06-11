@@ -1,7 +1,7 @@
 from sys import stderr
 #from __future__ import print_function
 from models import *
-from epmt_job import setup_orm_db, get_tags_from_string, _sum_dicts, unique_dicts
+from epmt_job import setup_orm_db, get_tags_from_string, _sum_dicts, unique_dicts, fold_dicts
 import pandas as pd
 from pony.orm.core import Query, set_sql_debug
 from pony.orm import select, sum, count, avg, group_concat
@@ -272,12 +272,41 @@ def get_thread_metrics(*processes):
     return pd.concat(df_list) if len(df_list) > 1 else df_list[0]
 
 
-# gets all the unique tags across all processes of a job
-# job: is a single job id or a Job object
-# If 'fold' is set (default), then tags will be merged to compact the output
+# gets all the unique tags across all processes of a job or list of jobs
+# jobs: is a single job id or a Job object, or a list of jobids/list of job objects
+# If 'fold' is set, then tags will be merged to compact the output
 # otherwise, the expanded list of dictionaries is returned
 # 'exclude' is an optional list of keys to exclude from each tag (if present)
-def get_all_tags_in_job(job, exclude=[], fold=True):
+def get_unique_process_tags(jobs = [], exclude=[], fold=True):
+    if jobs:
+        if isinstance(jobs, Query):
+            # convert the pony query object to a list
+            jobs = list(jobs[:])
+    else:
+        # all Jobs
+        jobs = list(Job.select()[:])
+
+    if type(jobs) != list:
+        # wrap jobs into a list. It's either a string jobid or Job object
+        jobs = [jobs]
+
+    # at this point jobs is a list of job ids or Job objects
+    # let's make sure it's a list of Job objects
+    jobs = [ Job[j] if (type(j) == str or type(j) == unicode) else j for j in jobs ]
+    tags = []
+    for j in jobs:
+        unique_tags_for_job = _get_unique_process_tags_for_single_job(j, exclude, fold = False)
+        tags.extend(unique_tags_for_job)
+    # remove duplicates
+    tags = unique_dicts(tags, exclude)
+    return fold_dicts(tags) if fold else tags
+
+
+# This is a low-level function that finds the unique process
+# tags for a job (job is either a job id or a Job object). 
+# See also: get_unique_process_tags, which does the same
+# for a list of jobs
+def _get_unique_process_tags_for_single_job(job, exclude=[], fold=True):
     if type(job) == str or type(job) == unicode:
         job = Job[job]
     proc_sums = getattr(job, settings.proc_sums_field_in_job, {})
@@ -293,16 +322,7 @@ def get_all_tags_in_job(job, exclude=[], fold=True):
     if exclude:
         tags = unique_dicts(tags, exclude)
 
-    if fold:
-        merged_tags = {}
-        for t in tags:
-            for (k,v) in t.items():
-                if not (k in merged_tags):
-                    merged_tags[k] = set()
-                merged_tags[k].add(v)
-        return { k: list(v) if len(v) > 1 else v.pop() for (k,v) in merged_tags.items() }
-    else:
-        return tags
+    return fold_dicts(tags) if fold else tags
 
 
 # returns a list of dicts (or dataframe), each row is of the form:
