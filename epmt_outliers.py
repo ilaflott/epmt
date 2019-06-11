@@ -65,7 +65,8 @@ def detect_outlier_ops(ops, trained_model=None, features = ['duration','exclusiv
 #        print(c,outlier_rows)
         retval.loc[outlier_rows,c] = True
     retval['jobid'] = ops['job']
-    retval = retval[['jobid']+features]
+    retval['tags'] = ops['tags']
+    retval = retval[['jobid', 'tags']+features]
     return retval
 
 def detect_outlier_processes(processes, trained_model=None, features=['duration','exclusive_cpu_time']):
