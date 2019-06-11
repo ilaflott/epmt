@@ -8,11 +8,16 @@ from glob import glob
 import fnmatch
 from os import environ
 from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
-import settings
 from os import getuid
 from json import dumps, loads
 from pwd import getpwnam, getpwuid
 logger = getLogger(__name__)  # you can use other name
+
+if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
+    logger.info('Overriding settings.py and using defaults in epmt_default_settings')
+    import epmt_default_settings as settings
+else:
+    import settings
 
 #
 # Spinning cursor sequence

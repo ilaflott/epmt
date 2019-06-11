@@ -6,7 +6,14 @@ import pandas as pd
 from pony.orm.core import Query, set_sql_debug
 from pony.orm import select, sum, count, avg, group_concat
 from json import loads
-import settings
+from os import environ
+
+if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
+    logger.info('Overriding settings.py and using defaults in epmt_default_settings')
+    import epmt_default_settings as settings
+else:
+    import settings
+
 print(settings.db_params)
 setup_orm_db(settings)
 

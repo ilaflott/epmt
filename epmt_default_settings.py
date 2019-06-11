@@ -4,10 +4,11 @@
 # Instead, create your own settings.py that imports
 # from this file, and only overrides what you care about
 #
-# in your settings.py:
+# in your settings.py, do:
 #
-# from defaults import *
+# from epmt_default_settings import *
 # verbose = 0
+#
 #
 from os import path
 
@@ -32,3 +33,6 @@ query_process_fields_exclude = ['threads_df']
 proc_sums_field_in_job = 'proc_sums'
 thread_sums_field_in_proc = 'threads_sums'
 all_tags_field = 'all_proc_tags'
+
+# we expect the following to be overriden in settings.py
+db_params = {'provider': 'sqlite', 'filename': ':memory:'}
