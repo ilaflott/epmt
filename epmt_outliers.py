@@ -37,3 +37,34 @@ def get_outliers_operations(df,columns=["duration","cputime"]):
 def get_outliers_processes(df,columns=["duration","exclusive_cpu_time"]):
     return None
 
+def detect_outlier_jobs(jobs, trained_model=None, features = ['duration','cpu_time','num_procs']):
+    retval = pd.DataFrame(columns=features, index=jobs.index)
+    for c in features:
+        outlier_rows = eod.outliers_iqr(jobs[c])[0]
+#        print(c,outlier_rows)
+        retval.loc[outlier_rows,c] = True
+    retval['jobid'] = jobs['jobid']
+    retval = retval[['jobid']+features]
+    return retval
+
+def detect_outlier_ops(ops, trained_model=None, features = ['duration','exclusive_cpu_time','num_procs']):
+    retval = pd.DataFrame(columns=features, index=ops.index)
+    for c in features:
+        outlier_rows = eod.outliers_iqr(ops[c])[0]
+#        print(c,outlier_rows)
+        retval.loc[outlier_rows,c] = True
+    retval['jobid'] = ops['jobid']
+    retval = retval[['jobid']+features]
+    return retval
+
+def detect_outlier_processes(processes, trained_model=None, features=['duration','exclusive_cpu_time']):
+    retval = pd.DataFrame(columns=features, index=processes.index)
+    for c in features:
+        outlier_rows = eod.outliers_iqr(processes[c])[0]
+        print(c,outlier_rows)
+        retval.loc[outlier_rows,c] = True
+    retval['id'] = processes['id']
+    retval['exename'] = processes['exename']
+    retval['tags'] = processes['tags']
+    retval = retval[['id','exename','tags']+features]
+    return retval
