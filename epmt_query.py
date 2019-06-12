@@ -115,6 +115,11 @@ def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict',
     # do we need to merge threads' sum fields into the process?
     if merge_proc_sums:
         for j in out_list:
+            # check if dicts have any common fields, if so,
+            # warn the user as some fields will get clobbered
+            common_fields = list(set(j) & set(j[settings.proc_sums_field_in_job]))
+            if common_fields:
+                logger.warning('while hoisting proc_sums to job-level, found {0} common fields: {1}'.format(len(common_fields), common_fields))
             j.update(j[settings.proc_sums_field_in_job])
             del j[settings.proc_sums_field_in_job]
 
@@ -242,6 +247,11 @@ def get_procs(jobs = [], tags = {}, fltr = None, order = '', limit = 0, fmt='dic
     # do we need to merge threads' sum fields into the process?
     if merge_threads_sums:
         for p in out_list:
+            # check if dicts have any common fields, if so,
+            # warn the user as some fields will get clobbered
+            common_fields = list(set(p) & set(p[settings.thread_sums_field_in_proc]))
+            if common_fields:
+                logger.warning('while hoisting thread_sums to process-level, found {0} common fields: {1}'.format(len(common_fields), common_fields))
             p.update(p[settings.thread_sums_field_in_proc])
             del p[settings.thread_sums_field_in_proc]
 

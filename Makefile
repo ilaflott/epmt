@@ -29,9 +29,10 @@ distclean: clean
 check: check-python-driver-bash check-python-driver-sh check-python-driver-tcsh check-python-driver-csh check-example-csh check-example-stage-submit
 
 SLURM_FAKE_JOB_ID=1
+FORCE_DEFAULT_SETTINGS=EPMT_USE_DEFAULT_SETTINGS=1
 TMP_OUTPUT_DIR=/tmp/epmt/
 DOCKER_PYTHON_IMAGE=
-DOCKER_RUN_PYTHON=docker run -ti --rm -v $(shell pwd):/app -w /app -e PAPIEX_OUTPUT=$(TMP_OUTPUT_DIR) -e SLURM_JOB_ID=$(SLURM_FAKE_JOB_ID) -e EPMT_JOB_TAGS=operation:test
+DOCKER_RUN_PYTHON=docker run -ti --rm -v $(shell pwd):/app -w /app -e PAPIEX_OUTPUT=$(TMP_OUTPUT_DIR) -e SLURM_JOB_ID=$(SLURM_FAKE_JOB_ID) -e EPMT_JOB_TAGS=operation:test -e $(FORCE_DEFAULT_SETTINGS)
 
 check-python-2.6: 
 	@$(MAKE) DOCKER_PYTHON_IMAGE=lovato/python-2.6.6 check-python-driver
@@ -44,22 +45,22 @@ check-python-native:
 
 check-python-driver-bash:
 	@echo; echo "Testing /bin/bash..."
-	env -i PATH=$(PWD):$$PATH /bin/bash -x epmt-check.anysh
+	env -i PATH=$(PWD):$$PATH $(FORCE_DEFAULT_SETTINGS) /bin/bash -x epmt-check.anysh
 check-python-driver-sh:
 	@echo; echo "Testing /bin/sh..."
-	env -i PATH=$(PWD):$$PATH /bin/sh -x epmt-check.anysh
+	env -i PATH=$(PWD):$$PATH $(FORCE_DEFAULT_SETTINGS) /bin/sh -x epmt-check.anysh
 check-python-driver-tcsh:
 	@echo; echo "Testing /bin/tcsh..."
-	env -i PATH=$(PWD):$$PATH /bin/csh -v epmt-check.anysh
+	env -i PATH=$(PWD):$$PATH $(FORCE_DEFAULT_SETTINGS) /bin/csh -v epmt-check.anysh
 check-python-driver-csh:
 	@echo; echo "Testing /bin/csh..."
-	env -i PATH=$(PWD):$$PATH /bin/csh -v epmt-check.anysh
+	env -i PATH=$(PWD):$$PATH $(FORCE_DEFAULT_SETTINGS) /bin/csh -v epmt-check.anysh
 check-example-csh:
 	@echo; echo "Testing /bin/csh with epmt-example.csh..."
-	env -i PATH=$(PWD):$(PATH) /bin/csh -v epmt-example.csh
+	env -i PATH=$(PWD):$(PATH) $(FORCE_DEFAULT_SETTINGS) /bin/csh -v epmt-example.csh
 check-example-stage-submit:
 	@echo; echo "Testing sample data stage/submit with epmt-example-stage-submit.sh..."
-	env -i PATH=$(PWD):$(PATH) /bin/sh -x epmt-example-stage-submit.sh
+	env -i PATH=$(PWD):$(PATH) $(FORCE_DEFAULT_SETTINGS) /bin/sh -x epmt-example-stage-submit.sh
 check-python-driver:
 #	@rm -fr $(TMP_OUTPUT_DIR) $(SLURM_FAKE_JOB_ID);
 	@rm -f settings.py; ln -s settings/settings_sqlite_inmem.py settings.py  # Setup in mem sqlite

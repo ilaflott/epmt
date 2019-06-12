@@ -11,14 +11,13 @@ def outliers_z_score(ys):
     stdev_y = np.std(ys)
     z_scores = [(y - mean_y) / stdev_y for y in ys]
     return np.where(np.abs(z_scores) > threshold)
-def outliers_iqr(ys):
-    quartile_1, quartile_3 = np.percentile(ys, [10, 90])
+def outliers_iqr(ys, range=[30,70]):
+    quartile_1, quartile_3 = np.percentile(ys, range)
     iqr = quartile_3 - quartile_1
     lower_bound = quartile_1 - (iqr * 1.5)
     upper_bound = quartile_3 + (iqr * 1.5)
     return np.where((ys > upper_bound) | (ys < lower_bound))
-def outliers_modified_z_score(ys):
-    threshold = 3.5
+def outliers_modified_z_score(ys,threshold=2.5):
     median_y = np.median(ys)
     median_absolute_deviation_y = np.median([np.abs(y - median_y) for y in ys])
     modified_z_scores = [0.6745 * (y - median_y) / median_absolute_deviation_y
@@ -102,14 +101,36 @@ def detect_outlier_ops(ops, tags, trained_model=None, features = ['duration','ex
     retval = retval[['jobid', 'tags']+features]
     return retval
 
-def detect_outlier_processes(processes, trained_model=None, features=['duration','exclusive_cpu_time']):
-    retval = pd.DataFrame(False, columns=features, index=processes.index)
+def detect_outlier_processes(processes, trained_model=None, 
+                             features=['duration','exclusive_cpu_time'],
+                             methods=[outliers_iqr,outliers_modified_z_score]):
+    retval = pd.DataFrame(0, columns=features, index=processes.index)
     for c in features:
-        outlier_rows = outliers_iqr(processes[c])[0]
-        print(c,outlier_rows)
-        retval.loc[outlier_rows,c] = True
+        for m in methods:
+            outlier_rows = m(processes[c])[0]
+            print(m,c,len(outlier_rows),"outliers")
+            retval.loc[outlier_rows,c] += 1
+#
+#   Here we can demand that more than one detector signal an outlier, currently only 1 is required.
+#
+    print retval.head()
+    retval = retval.gt(.99)
     retval['id'] = processes['id']
     retval['exename'] = processes['exename']
     retval['tags'] = processes['tags']
     retval = retval[['id','exename','tags']+features]
     return retval
+
+if (__name__ == "__main__"):
+    np.random.seed(101)
+    random_data = np.random.randn(100,2)
+    random_proc_df = pd.DataFrame(random_data, columns=['duration','exclusive_cpu_time'])
+    random_proc_df['id'] = ""
+    random_proc_df['exename'] = ""
+    random_proc_df['tags'] = ""
+    retval = detect_outlier_processes(random_proc_df)
+    print retval.head()
+#
+# Here we print a boolean if any metric barfed at us
+#
+    print ((retval[['duration','exclusive_cpu_time']] == True).any(axis=1)).head()
