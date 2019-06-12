@@ -1,1 +1,0 @@
-settings/settings_pg_localhost.py

@@ -49,3 +49,6 @@ Thumbs.db
 .jupyter
 .local
 OutliersData/*.dir
+
+# user settings
+settings.py
