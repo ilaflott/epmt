@@ -58,6 +58,36 @@ def detect_outlier_jobs(jobs, trained_model=None, features = ['duration','cpu_ti
     retval = retval[['jobid']+features]
     return retval
 
+# jobs is a list of jobids or a Pony Query object
+# tags is a list of tags specified either as a string or a list of string/list of dicts
+# If tags is not specified, then the list of jobs will be queried to get the
+# superset of unique tags across the jobs.
+# This function should effectively replace detect_outlier_ops as
+# it requires less user steps
+def detect_outlier_jobs_using_tags(jobs, tags=[], trained_model=None, features = ['duration','exclusive_cpu_time','num_procs','majflt','rssmax']):
+    if not tags:
+        tags = eq.get_unique_process_tags(jobs, fold=False)
+    # get the dataframe of aggregate metrics, where each row
+    # is an aggregate across a group of processes with a particular
+    # jobid and tag
+    ops = eq.agg_metrics_by_tags(jobs=jobs, tags=tags) 
+    retval = pd.DataFrame(False, columns=features, index=ops.index)
+
+    # now we iterate over tags and for each tag we select
+    # the rows from the ops dataframe that have the same tag;
+    # the select rows will have different job ids
+    for tag in tags:
+        # select only those rows with matching tag
+        rows = ops[ops.tags == tag]
+        for c in features:
+            outlier_rows = outliers_iqr(rows[c])[0]
+            retval.loc[outlier_rows,c] = True
+    retval['jobid'] = ops['job']
+    retval['tags'] = ops['tags']
+    retval = retval[['jobid', 'tags']+features]
+    return retval
+
+
 def detect_outlier_ops(ops, tags, trained_model=None, features = ['duration','exclusive_cpu_time','num_procs']):
     
     retval = pd.DataFrame(False, columns=features, index=ops.index)

@@ -191,7 +191,7 @@ def get_procs(jobs = [], tags = {}, fltr = None, order = '', limit = 0, fmt='dic
     if jobs:
         if isinstance(jobs, Query):
             # convert the pony query object to a list
-            jobs = jobs[:]
+            jobs = list(jobs[:])
 
         if type(jobs) != list:
             # user probably passed a single job, and forgot to wrap it in a list
