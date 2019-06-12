@@ -628,7 +628,7 @@ def get_filedict(dirname,pattern,tar=False):
 
     return filedict
 
-def epmt_submit(other_dirs, forced_jobid, dry_run=True, drop=False):
+def epmt_submit(other_dirs, forced_jobid, dry_run=True, drop=False, keep_going=True):
     if dry_run and drop:
         logger.error("You can't drop tables and do a dry run")
         return(False)
@@ -638,7 +638,7 @@ def epmt_submit(other_dirs, forced_jobid, dry_run=True, drop=False):
     if other_dirs: # specified list of dirs
         for f in other_dirs:
             r = submit_to_db(f,settings.input_pattern,dry_run=dry_run,drop=drop)
-            if r is False:
+            if r is False and not keep_going:
                 return(r)
         return(True)
     else:
@@ -690,7 +690,7 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
             info = tar.getmember("./job_metadata")
         except KeyError:
             logger.error('ERROR: Did not find %s in tar archive' % "job_metadata")
-            exit(1)
+            return False
         else:
             logger.info('%s is %d bytes in archive' % (info.name, info.size))
             f = tar.extractfile(info)
@@ -718,18 +718,20 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
 # Now we touch the Database
     from epmt_job import setup_orm_db, ETL_job_dict, ETL_ppr
     if setup_orm_db(settings) == False:
-        exit(1)
+        return False
     j = ETL_job_dict(metadata,filedict,settings,tarfile=tar)
     if not j:
-        exit(1)
+        return False
     logger.info("Committed job %s to database: %s",j.jobid,j)
-# Check if we have anything related to an "experiment"
 
-    if check_workflowdb_dict(metadata,pfx="exp_"):
-        e = ETL_ppr(metadata,j.jobid)
-        if not e:
-            exit(1)
-        logger.info("Committed post process run to database")    
+# Dead code
+# Check if we have anything related to an "experiment"
+#
+#    if check_workflowdb_dict(metadata,pfx="exp_"):
+#        e = ETL_ppr(metadata,j.jobid)
+#        if not e:
+#            exit(1)
+#        logger.info("Committed post process run to database")    
 
 def set_logging(intlvl):
     if not intlvl or intlvl == 0:
@@ -853,7 +855,7 @@ def epmt_entrypoint(args, help):
             return(1)
         return(epmt_run(args.jobid,args.epmt_cmd_args,wrapit=args.auto,dry_run=args.dry_run,debug=(args.verbose > 2)))
     if args.epmt_cmd == 'submit':
-        return(epmt_submit(args.epmt_cmd_args,args.jobid,dry_run=args.dry_run,drop=args.drop) == False)
+        return(epmt_submit(args.epmt_cmd_args,args.jobid,dry_run=args.dry_run,drop=args.drop,keep_going=not args.error) == False)
     if args.epmt_cmd == 'check':
         return(epmt_check() == False)
 
