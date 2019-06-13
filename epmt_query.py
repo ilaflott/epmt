@@ -1,16 +1,18 @@
-from sys import stderr
 #from __future__ import print_function
-from models import *
-from epmt_job import setup_orm_db, get_tags_from_string, _sum_dicts, unique_dicts, fold_dicts
+from sys import stderr
 import pandas as pd
 from pony.orm.core import Query, set_sql_debug
-from pony.orm import select, sum, count, avg, group_concat
+from pony.orm import *
 from json import loads
 from os import environ
+from logging import getLogger
+from models import Job, Process
+from epmt_job import setup_orm_db, get_tags_from_string, _sum_dicts, unique_dicts, fold_dicts
+from epmt_cmds import set_logging, init_settings
 
-from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
 logger = getLogger(__name__)  # you can use other name
-
+set_logging()
+init_settings()
 
 if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
     logger.info('Overriding settings.py and using defaults in epmt_default_settings')
@@ -20,7 +22,6 @@ else:
 
 print(settings.db_params)
 setup_orm_db(settings)
-
 
 # This function returns a list of jobs based on some filtering and ordering.
 # The output format can be set to pandas dataframe, list of dicts or list

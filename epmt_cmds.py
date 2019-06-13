@@ -716,7 +716,7 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
 #        exit(1)
 
 # Now we touch the Database
-    from epmt_job import setup_orm_db, ETL_job_dict, ETL_ppr
+    from epmt_job import setup_orm_db, ETL_job_dict
     if setup_orm_db(settings) == False:
         return False
     j = ETL_job_dict(metadata,filedict,settings,tarfile=tar)
@@ -733,7 +733,7 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
 #            exit(1)
 #        logger.info("Committed post process run to database")    
 
-def set_logging(intlvl):
+def set_logging(intlvl = 0):
     if not intlvl or intlvl == 0:
         basicConfig(level=WARNING)
     if intlvl == 1:
