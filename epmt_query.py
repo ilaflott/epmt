@@ -6,7 +6,7 @@ from pony.orm import *
 from json import loads
 from os import environ
 from logging import getLogger
-from models import Job, Process
+from models import Job, Process, ReferenceModel
 from epmt_job import setup_orm_db, get_tags_from_string, _sum_dicts, unique_dicts, fold_dicts
 from epmt_cmds import set_logging, init_settings
 
@@ -22,6 +22,9 @@ else:
 
 print(settings.db_params)
 setup_orm_db(settings)
+
+
+REF_MODEL_TYPES = { 'job': 1, 'op': 2 }
 
 # This function returns a list of jobs based on some filtering and ordering.
 # The output format can be set to pandas dataframe, list of dicts or list
@@ -320,6 +323,64 @@ def get_unique_process_tags(jobs = [], exclude=[], fold=True):
     # remove duplicates
     tags = unique_dicts(tags, exclude)
     return fold_dicts(tags) if fold else tags
+
+
+# This function returns reference models filtered using ref_type, tags and fltr
+# ref_type is one of 'job' or 'op'
+def get_ref_models(ref_type, tags = {}, fltr=None, limit=0, order='', exact_tags_only=False, merge_nested_fields=True, fmt='dict'):
+    if ref_type not in REF_MODEL_TYPES and not ref_type.lower() in REF_MODEL_TYPES:
+        logger.warning('ref_type must be one of: {0}'.format(REF_MODEL_TYPES.keys()))
+        return None
+    ref_type = REF_MODEL_TYPES[ref_type.lower()]
+    qs = ReferenceModel.select(lambda r: r.ref_type == ref_type)
+
+    # filter using tags if set
+    if type(tags) == str:
+        tags = get_tags_from_string(tags)
+    if exact_tags_only:
+        qs = qs.filter(lambda p: p.tags == tags)
+    else:
+        # we consider a match if the job tags are a superset
+        # of the passed tags
+        for (k,v) in tags.items():
+            qs = qs.filter(lambda p: p.tags[k] == v)
+
+    # if fltr is a lambda function or a string apply it
+    if fltr:
+        qs = qs.filter(fltr)
+
+    if order:
+        qs = qs.order_by(order)
+
+    # finally set limits on the number of processes returned
+    if limit:
+        qs = qs.limit(int(limit))
+
+    if fmt == 'orm':
+        return qs
+
+    if fmt == 'terse':
+        return [ r.id for r in qs ]
+    
+    out_list = [ r.to_dict(with_collections=True) for r in qs ]
+
+    # do we need to merge nested fields?
+    if merge_nested_fields:
+        for r in out_list:
+            # check if dicts have any common fields, if so,
+            # warn the user as some fields will get clobbered
+            common_fields = list(set(r) & set(r['computed']))
+            if common_fields:
+                logger.warning('while hoisting nested fields in "computed" to reference model, found {0} common fields: {1}'.format(len(common_fields), common_fields))
+            r.update(r['computed'])
+            del r['computed']
+
+    if fmt == 'pandas':
+        return pd.DataFrame(out_list)
+
+    # we assume the user wants the output in the form of a list of dicts
+    return out_list
+
 
 
 # This is a low-level function that finds the unique process
