@@ -327,7 +327,19 @@ def get_unique_process_tags(jobs = [], exclude=[], fold=True):
 
 # This function returns reference models filtered using ref_type, tags and fltr
 # ref_type is one of 'job' or 'op'
-def get_ref_models(ref_type, tags = {}, fltr=None, limit=0, order='', exact_tags_only=False, merge_nested_fields=True, fmt='dict'):
+# tags refers to a single dict of key/value pairs or a string
+# fltr is a lambda function or a string containing a pony expression
+# limit is used to limit the number of output items, 0 means no limit
+# order is used to order the output list, its a lambda function or a string
+# exact_tags_only is used to match the DB tags with the supplied tag:
+#   the full dictionary must match for a successful match. Default False.
+# merge_nested_fields is used to hoist attributes from the 'computed'
+#   fields in the reference model, so they appear as first-class fields.
+# fmt is one of 'orm', 'pandas', 'dict'. Default is 'dict'
+# example usage:
+#   get_refmodels('job', tags = 'exp_name:ESM4;exp_component:ice_1x1', fmt='pandas')
+#
+def get_refmodels(ref_type, tags = {}, fltr=None, limit=0, order='', exact_tags_only=False, merge_nested_fields=True, fmt='dict'):
     if ref_type not in REF_MODEL_TYPES and not ref_type.lower() in REF_MODEL_TYPES:
         logger.warning('ref_type must be one of: {0}'.format(REF_MODEL_TYPES.keys()))
         return None
@@ -381,7 +393,65 @@ def get_ref_models(ref_type, tags = {}, fltr=None, limit=0, order='', exact_tags
     # we assume the user wants the output in the form of a list of dicts
     return out_list
 
+#
+# This function creates a reference model and returns
+# the ID of the newly-created model in the database
+#
+# tags:     A string or dict consisting of key/value pairs
+# compued:  A dict containing arbitrary computed stats
+# reflist: points to a list of Jobs (or pony JobSet)
+#           or jobids in case of ref_type = 'job', and a list of 
+#           Process objects (or a pony ProcessSet) or
+#           process primary keys in case ref_type='op'
+# 
+# e.g,.
+#
+# create a job ref model with a list of jobids
+# eq.create_refmodel(ref_type='job', reflist=[u'615503', u'625135'])
+#
+# create a ref model, with the process set being a list of primary keys
+# from the process table:
+# eq.create_refmodel(ref_type='op', reflist=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) 
+#
+# or use pony orm query result:
+# >>> jobs = eq.get_jobs(tags='exp_component:atmos', fmt='orm')
+# >>> r = eq.create_refmodel(ref_type='job', reflist=jobs)
+#
+# or use get_procs to get orm objects:
+# >>> procs = eq.get_procs(tags='op_instance:5', fmt='orm')
+# >>> procs.count()
+# 5201L
+# >>> eq.create_refmodel(ref_type='op', reflist=procs)
+# 6
+# >>> ReferenceModel[6].ops.count()
+# 5201
+#
+#
+#
+def create_refmodel(ref_type, tags={}, computed={}, reflist = []):
+    if ref_type not in REF_MODEL_TYPES and not ref_type.lower() in REF_MODEL_TYPES:
+        logger.warning('ref_type must be one of: {0}'.format(REF_MODEL_TYPES.keys()))
+        return None
+    ref_type = REF_MODEL_TYPES[ref_type.lower()]
+    if type(tags) == str:
+        tags = get_tags_from_string(tags)
 
+    # do we have a list of jobids or process primary keys?
+    # if so, we need to get the actual DB objects for them
+    if type(reflist) == list and (type(reflist[0]) in [str, unicode,int]):
+        if ref_type == REF_MODEL_TYPES['job']:
+            # reflist is a list of jobids
+            rs = Job.select(lambda j: j.jobid in reflist)
+        else:
+            # reflist is a list of process ids
+            rs = Process.select(lambda p: p.id in reflist)
+    else:
+        rs = reflist
+    r = ReferenceModel(ref_type=ref_type, tags=tags, computed=computed, jobs=rs) if ref_type == REF_MODEL_TYPES['job'] else ReferenceModel(ref_type=ref_type, tags=tags, computed=computed, ops=rs)
+    commit()
+    return r.id
+
+            
 
 # This is a low-level function that finds the unique process
 # tags for a job (job is either a job id or a Job object). 
