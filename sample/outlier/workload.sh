@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 njobs=${1:-1}
-TMPDIR=${TMPDIR:-"/tmp"}
+export TMPDIR=${TMPDIR:-"/tmp"}
 job_prefix="kern-bld-$$"
 
 function work_unit() {
@@ -14,8 +14,8 @@ function work_unit() {
     eval `epmt -j$jobid source`   # Setup environment
     ##### Work ######
     (
-        build_dir=$(tempfile -p epmt- -s build)
-        #echo "creating build directory: $build_dir"
+        build_dir=$(tempfile -p epmt_ -s _build)
+        echo "    build in directory: $build_dir"
         rm -rf $build_dir; mkdir -p $build_dir && cd $build_dir
         
         # download
@@ -34,7 +34,7 @@ function work_unit() {
     )
     #### End work ####
 
-    unsetenv LD_PRELOAD
+    unset LD_PRELOAD
     epmt -j$jobid stop            # Generate epilog and append
     echo "  - staging $jobid (to ./$jobid.tgz)"
     epmt -j$jobid stage           # Move to medium term storage
