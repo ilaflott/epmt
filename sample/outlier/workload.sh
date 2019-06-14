@@ -15,6 +15,7 @@ function work_unit() {
         outl="(outlier)"
         echo "  started background compute to generate outlier"
         export EPMT_JOB_TAGS="${EPMT_JOB_TAGS};outlier=1"
+        jobid="${jobid}-outlier"
         yes > /dev/null &
         yes > /dev/null &
     fi
