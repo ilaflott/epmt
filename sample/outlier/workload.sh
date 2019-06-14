@@ -1,15 +1,25 @@
 #!/bin/bash -e
 
-njobs=${1:-1}
 export TMPDIR=${TMPDIR:-"/tmp"}
-job_prefix="kern-bld-$$"
+job_prefix="kern-$$"
+
+trap "killall yes 2>/dev/null; kill $(jobs -p) 2>/dev/null; exit 0" INT QUIT TERM EXIT
 
 function work_unit() {
     jobid="${job_prefix}-$(date +%Y%m%d-%H%M%S)"
     rm -rf ./$jobid $TMPDIR/epmt/$jobid ./$jobid.tgz
-    echo "  - starting job $jobid"
-    export EPMT_JOB_TAGS="exp_name:linux_kernel;exp_component:kernel_tiny;launch_id=$$;seqno$1"
+    export EPMT_JOB_TAGS="exp_name:linux_kernel;exp_component:kernel_tiny;launch_id:$$;seqno:$1"
 
+    # check if it's an outlier
+    if [ "$2" != "" ]; then
+        outl="(outlier)"
+        echo "  started background compute to generate outlier"
+        export EPMT_JOB_TAGS="${EPMT_JOB_TAGS};outlier=1"
+        yes > /dev/null &
+        yes > /dev/null &
+    fi
+    start_time=$(date +%s)
+    echo "  - starting job $1: $jobid $outl"
     epmt -j$jobid start           # Generate prolog
     eval `epmt -j$jobid source`   # Setup environment
     ##### Work ######
@@ -36,17 +46,56 @@ function work_unit() {
 
     unset LD_PRELOAD
     epmt -j$jobid stop            # Generate epilog and append
-    echo "  - staging $jobid (to ./$jobid.tgz)"
+    end_time=$(date +%s)
+    duration=$(expr $end_time - $start_time)
+    if [ "$outl" != "" ]; then
+        echo "  removing background compute.."
+        killall yes 2>/dev/null
+    fi
+    echo "  - job took approx. $duration seconds"
+    echo "  - staging $jobid -> ./$jobid.tgz"
     epmt -j$jobid stage           # Move to medium term storage
-    echo "  - submitting $jobid (from ./$jobid.tgz)"
+    echo "  - submitting ./$jobid.tgz"
     epmt submit ./$jobid.tgz      # Submit from staged storage
-    rm -f ./$jobid.tgz
+    # rm -f ./$jobid.tgz
 }
 
+usage="
+`basename $0` [-h] [-n <num_jobs>] [-o <job-number-to-make-outlier]
+
+e.g.,
+To run a workload of 10 jobs and make every fifth job an outlier, do:
+
+`basename $0` -n 10 -o 5
+
+"
+
+# parse arguments
+while getopts "hn:o:" opt; do
+    case $opt in
+      h) echo "$usage"; exit 0;;
+      n) njobs=$OPTARG ;;
+      o) ojobs=$OPTARG ;;
+      \?) echo "$usage"; exit 0;;  # Handle error: unknown option or missing required argument.
+    esac
+done
+
+
 echo "Workload consists of $njobs jobs"
+if [ "$ojobs" != "" ]; then
+    echo "Every multiple of $ojobs will be an outlier"
+    outlier=$ojobs
+fi
 echo "Launch ID: $$"
 
 for n in `seq 1 $njobs`; do
     echo "job $n"
-    work_unit $n
+    if [ "$ojobs" != "" ]; then
+        if [ "$outlier" -eq $n ]; then
+            work_unit $n 1
+            outlier=`expr $outlier + $n`
+            continue
+        fi
+        work_unit $n
+    fi
 done
