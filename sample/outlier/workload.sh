@@ -1,9 +1,9 @@
-#!/bin/bash -e
+#!/bin/bash
 
 export TMPDIR=${TMPDIR:-"/tmp"}
 job_prefix="kern-$$"
 
-trap "killall yes 2>/dev/null; kill $(jobs -p) 2>/dev/null; exit 0" INT QUIT TERM EXIT
+trap "echo cleaning up.. ; killall yes 2>/dev/null; kill $(jobs -p) 2>/dev/null; rm -rf $TMPDIR/epmt_*_build; exit 0" INT QUIT TERM EXIT
 
 function work_unit() {
     jobid="${job_prefix}-$(date +%Y%m%d-%H%M%S)"
@@ -18,6 +18,8 @@ function work_unit() {
         jobid="${jobid}-outlier"
         yes > /dev/null &
         yes > /dev/null &
+    else
+        outl=""
     fi
     start_time=$(date +%s)
     echo "  - starting job $1: $jobid $outl"
@@ -56,35 +58,45 @@ function work_unit() {
     echo "  - job took approx. $duration seconds"
     echo "  - staging $jobid -> ./$jobid.tgz"
     epmt -j$jobid stage           # Move to medium term storage
-    echo "  - submitting ./$jobid.tgz"
-    epmt submit ./$jobid.tgz      # Submit from staged storage
+    if [ "$submit" != "" ]; then
+        echo "  - submitting ./$jobid.tgz"
+        epmt submit ./$jobid.tgz      # Submit from staged storage
+    fi
     # rm -f ./$jobid.tgz
 }
 
 usage="
-`basename $0` [-h] [-n <num_jobs>] [-o <job-number-to-make-outlier]
+`basename $0` [-h] [-s] [-o <job-number-to-make-outlier] [-n num_jobs]
 
 e.g.,
 To run a workload of 10 jobs and make every fifth job an outlier, do:
 
 `basename $0` -n 10 -o 5
 
+This will create .tgz files in the working directory. If you also
+want to submit the jobs after staging, use the -s flag.
 "
 
 # parse arguments
-while getopts "hn:o:" opt; do
+while getopts "hn:o:s" opt; do
     case $opt in
       h) echo "$usage"; exit 0;;
       n) njobs=$OPTARG ;;
       o) ojobs=$OPTARG ;;
-      \?) echo "$usage"; exit 0;;  # Handle error: unknown option or missing required argument.
+      s) submit=1 ;;
+      \?) echo "$usage"; exit 1;;  # Handle error: unknown option or missing required argument.
     esac
 done
 
+if [ "$njobs" == "" ]; then
+    echo "$usage"
+    exit 1
+fi
 
 echo "Workload consists of $njobs jobs"
+[ "$submit" == "" ] || echo "Jobs will be submitted after staging"
 if [ "$ojobs" != "" ]; then
-    echo "Every multiple of $ojobs will be an outlier"
+    echo "Every multiple of $ojobs will be an outlier job"
     outlier=$ojobs
 fi
 echo "Launch ID: $$"
