@@ -324,23 +324,24 @@ def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
 #
 # Load experiment
 # 
-@db_session
-def ETL_ppr(metadata, jobid):
-#    if not check_experiment_in_metadata(metadata):
-#        return None
 
-    logger.info("Creating PostProcessRun(%s,%s,%s,%s)",
-                metadata["exp_component"],
-                metadata["exp_name"],
-                metadata["exp_jobname"],
-                metadata["exp_oname"])
-    exp = PostProcessRun(component=metadata["exp_component"],
-                         name=metadata["exp_name"],
-                         jobname=metadata["exp_jobname"],
-                         oname=metadata["exp_oname"],
-                         user=Job[jobid].user,
-                         job=Job[jobid])
-    return exp
+# @db_session
+# def ETL_ppr(metadata, jobid):
+# #    if not check_experiment_in_metadata(metadata):
+# #        return None
+# 
+#     logger.info("Creating PostProcessRun(%s,%s,%s,%s)",
+#                 metadata["exp_component"],
+#                 metadata["exp_name"],
+#                 metadata["exp_jobname"],
+#                 metadata["exp_oname"])
+#     exp = PostProcessRun(component=metadata["exp_component"],
+#                          name=metadata["exp_name"],
+#                          jobname=metadata["exp_jobname"],
+#                          oname=metadata["exp_oname"],
+#                          user=Job[jobid].user,
+#                          job=Job[jobid])
+#     return exp
 
 # walk up the process tree starting from the supplied ancestor
 # and ensure  that every ancestor of the supplied process(proc) includes
