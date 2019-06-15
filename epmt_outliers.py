@@ -11,8 +11,10 @@ def outliers_z_score(ys):
     stdev_y = np.std(ys)
     z_scores = [(y - mean_y) / stdev_y for y in ys]
     return np.where(np.abs(z_scores) > threshold)
-def outliers_iqr(ys, range=[30,70]):
-    quartile_1, quartile_3 = np.percentile(ys, range)
+def outliers_iqr(ys, span=[]):
+    if not span: 
+        span = [20, 80]
+    quartile_1, quartile_3 = np.percentile(ys, span)
     iqr = quartile_3 - quartile_1
     lower_bound = quartile_1 - (iqr * 1.5)
     upper_bound = quartile_3 + (iqr * 1.5)
@@ -40,7 +42,7 @@ def get_outliers_processes(df,columns=["duration","exclusive_cpu_time"]):
 
 # jobs is either a pandas dataframe of job(s) or a list of job ids
 # or a Pony Query object
-def detect_outlier_jobs(jobs, trained_model=None, features = ['duration','cpu_time','num_procs']):
+def detect_outlier_jobs(jobs, trained_model=None, features = ['duration','cpu_time','num_procs'], span=[]):
     # if we have a non-empty list of job ids then get a pandas df
     # using get_jobs to convert the format
     if type(jobs) == list or type(jobs) == Query:
@@ -49,7 +51,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = ['duration','cpu_ti
     # initialize a df with all values set to False
     retval = pd.DataFrame(False, columns=features, index=jobs.index)
     for c in features:
-        outlier_rows = outliers_iqr(jobs[c])[0]
+        outlier_rows = outliers_iqr(jobs[c], span=span)[0]
 #        print(c,outlier_rows)
         retval.loc[outlier_rows,c] = True
     # add a jobid column to the output dataframe
@@ -61,9 +63,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = ['duration','cpu_ti
 # tags is a list of tags specified either as a string or a list of string/list of dicts
 # If tags is not specified, then the list of jobs will be queried to get the
 # superset of unique tags across the jobs.
-# This function should effectively replace detect_outlier_ops as
-# it requires less user steps
-def detect_outlier_jobs_using_tags(jobs, tags=[], trained_model=None, features = ['duration','exclusive_cpu_time','num_procs','majflt','rssmax']):
+def detect_outlier_ops(jobs, tags=[], trained_model=None, features = ['duration','exclusive_cpu_time','num_procs','majflt','rssmax'], span=[]):
     if not tags:
         tags = eq.get_unique_process_tags(jobs, fold=False)
     # get the dataframe of aggregate metrics, where each row
@@ -79,7 +79,7 @@ def detect_outlier_jobs_using_tags(jobs, tags=[], trained_model=None, features =
         # select only those rows with matching tag
         rows = ops[ops.tags == tag]
         for c in features:
-            outlier_rows = outliers_iqr(rows[c])[0]
+            outlier_rows = outliers_iqr(rows[c], span=span)[0]
             retval.loc[outlier_rows,c] = True
     retval['jobid'] = ops['job']
     retval['tags'] = ops['tags']
@@ -87,19 +87,19 @@ def detect_outlier_jobs_using_tags(jobs, tags=[], trained_model=None, features =
     return retval
 
 
-def detect_outlier_ops(ops, tags, trained_model=None, features = ['duration','exclusive_cpu_time','num_procs']):
-    
-    retval = pd.DataFrame(False, columns=features, index=ops.index)
-    for tag in tags:
-        # select only those rows with matching tag
-        rows = ops[ops.tags == tag]
-        for c in features:
-            outlier_rows = outliers_iqr(rows[c])[0]
-            retval.loc[outlier_rows,c] = True
-    retval['jobid'] = ops['job']
-    retval['tags'] = ops['tags']
-    retval = retval[['jobid', 'tags']+features]
-    return retval
+# def detect_outlier_ops(ops, tags, trained_model=None, features = ['duration','exclusive_cpu_time','num_procs']):
+#     
+#     retval = pd.DataFrame(False, columns=features, index=ops.index)
+#     for tag in tags:
+#         # select only those rows with matching tag
+#         rows = ops[ops.tags == tag]
+#         for c in features:
+#             outlier_rows = outliers_iqr(rows[c])[0]
+#             retval.loc[outlier_rows,c] = True
+#     retval['jobid'] = ops['job']
+#     retval['tags'] = ops['tags']
+#     retval = retval[['jobid', 'tags']+features]
+#     return retval
 
 def detect_outlier_processes(processes, trained_model=None, 
                              features=['duration','exclusive_cpu_time'],
