@@ -1,7 +1,7 @@
 #from __future__ import print_function
 from sys import stderr
 import pandas as pd
-from pony.orm.core import Query, set_sql_debug
+from pony.orm.core import Query
 from pony.orm import *
 from json import loads
 from os import environ
@@ -11,7 +11,7 @@ from epmt_job import setup_orm_db, get_tags_from_string, _sum_dicts, unique_dict
 from epmt_cmds import set_logging, init_settings
 
 logger = getLogger(__name__)  # you can use other name
-set_logging()
+#set_logging()
 init_settings()
 
 if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
