@@ -2,6 +2,9 @@ import pandas as pd
 import numpy as np
 import epmt_query as eq
 from pony.orm.core import Query
+from models import ReferenceModel
+from logging import getLogger
+logger = getLogger(__name__)  # you can use other name
 
 # These all return a tuple containing a list of indicies
 # For 1-D this is just a tuple with one element that is a list of rows
@@ -24,9 +27,11 @@ def outliers_iqr(ys, span=[]):
 # this function returns a tuple consisting of:
 #  (modified_z_scores, max, median, median_abs_dev)
 # The reason we return max,.. is so it can be saved in the ref model
-def modified_z_score(ys):
-    median_y = np.median(ys)
-    median_absolute_deviation_y = np.median([np.abs(y - median_y) for y in ys])
+# params if passed in, is of the form (max, median, median_abs_dev)
+# We will ignore params(0) as that's the max z_score in the ref_model
+def modified_z_score(ys, params=()):
+    median_y = params[1] if params else np.median(ys)
+    median_absolute_deviation_y = params[2] if params else np.median([np.abs(y - median_y) for y in ys])
     # z_score will be zero if std. dev is zero, for all others compute it
     modified_z_scores = [round(0.6745 * abs(y - median_y) / median_absolute_deviation_y, 4)
                          for y in ys] if median_absolute_deviation_y > 0 else [0.0 for y in ys]
@@ -53,18 +58,31 @@ def get_outliers_processes(df,columns=["duration","exclusive_cpu_time"]):
 
 # jobs is either a pandas dataframe of job(s) or a list of job ids
 # or a Pony Query object
-def detect_outlier_jobs(jobs, trained_model=None, features = ['duration','cpu_time','num_procs'], span=[]):
+def detect_outlier_jobs(jobs, trained_model=None, features = ['duration','cpu_time','num_procs'], methods=[modified_z_score], default_thresholds = { modified_z_score: 2.5 }):
     # if we have a non-empty list of job ids then get a pandas df
     # using get_jobs to convert the format
     if type(jobs) == list or type(jobs) == Query:
         jobs = eq.get_jobs(jobs, fmt='pandas')
 
+    model_params = {}
+    if trained_model:
+        logger.debug('using a trained model for detecting outliers')
+        if type(trained_model) == int:
+            trained_model = ReferenceModel[trained_model]
+
+    for m in methods:
+        model_params[m] = trained_model.computed[m.__name__] if trained_model else {}
+
     # initialize a df with all values set to False
-    retval = pd.DataFrame(False, columns=features, index=jobs.index)
+    retval = pd.DataFrame(0, columns=features, index=jobs.index)
     for c in features:
-        outlier_rows = outliers_iqr(jobs[c], span=span)
-#        print(c,outlier_rows)
-        retval.loc[outlier_rows,c] = True
+        for m in methods:
+            params = model_params[m].get(c, ())
+            logger.debug('params[{0}][{1}]: {2}'.format(m.__name__, c, params))
+            scores = m(jobs[c], params)[0]
+            threshold = params[0] if params else default_thresholds[m]
+            outlier_rows = np.where(np.abs(scores) > threshold)[0]
+            retval.loc[outlier_rows,c] += 1
     # add a jobid column to the output dataframe
     retval['jobid'] = jobs['jobid']
     retval = retval[['jobid']+features]
