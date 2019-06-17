@@ -108,11 +108,12 @@ def detect_outlier_processes(processes, trained_model=None,
     for c in features:
         for m in methods:
             outlier_rows = m(processes[c])[0]
-            print(m,c,len(outlier_rows),"outliers")
+            print(m.__name__,c,len(outlier_rows),"outliers")
             retval.loc[outlier_rows,c] += 1
 #
 #   Here we can demand that more than one detector signal an outlier, currently only 1 is required.
 #
+    print retval.describe()
     print retval.head()
     retval = retval.gt(.99)
     retval['id'] = processes['id']
