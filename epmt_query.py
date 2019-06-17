@@ -9,6 +9,7 @@ from logging import getLogger
 from models import Job, Process, ReferenceModel
 from epmt_job import setup_orm_db, get_tags_from_string, _sum_dicts, unique_dicts, fold_dicts
 from epmt_cmds import set_logging, init_settings
+from epmt_outliers import modified_z_score
 
 logger = getLogger(__name__)  # you can use other name
 #set_logging()
@@ -25,6 +26,56 @@ setup_orm_db(settings)
 
 
 REF_MODEL_TYPES = { 'job': 1, 'op': 2 }
+
+# figure out the entity type and then call the appropriate 
+# convertor. For now we know its either a collection of Job or Process objects
+def conv_orm(entities, merge_sub_sums, fmt='dict'):
+    e1 = entities[0] if type(entities) == list else entities.first()
+    return conv_jobs_orm(entities, merge_sub_sums, fmt) if e1.__class__.__name__ == 'Job' else conv_procs_orm(entities, merge_sub_sums, fmt)
+
+# jobs is an ORM Query object on Job or a list of Job objects
+def conv_jobs_orm(jobs, merge_sums = True, fmt='dict'):
+    if fmt=='terse':
+        return [ j.jobid for j in jobs ]
+
+    # convert the ORM into a list of dictionaries, excluding blacklisted fields
+    out_list = [ j.to_dict() for j in jobs ]
+
+    # do we need to merge threads' sum fields into the process?
+    if merge_sums:
+        for j in out_list:
+            # check if dicts have any common fields, if so,
+            # warn the user as some fields will get clobbered
+            common_fields = list(set(j) & set(j[settings.proc_sums_field_in_job]))
+            if common_fields:
+                logger.warning('while hoisting proc_sums to job-level, found {0} common fields: {1}'.format(len(common_fields), common_fields))
+            j.update(j[settings.proc_sums_field_in_job])
+            del j[settings.proc_sums_field_in_job]
+
+    return pd.DataFrame(out_list) if fmt=='pandas' else out_list
+
+
+# procs is an ORM Query object on Process or a list of Process objects
+def conv_procs_orm(procs, merge_sums = True, fmt='dict'):
+    if fmt=='terse':
+        return [ p.id for p in procs ]
+
+    # convert the ORM into a list of dictionaries, excluding blacklisted fields
+    out_list = [ p.to_dict(exclude = 'threads_df') for p in procs ]
+
+    # do we need to merge threads' sum fields into the process?
+    if merge_sums:
+        for p in out_list:
+            # check if dicts have any common fields, if so,
+            # warn the user as some fields will get clobbered
+            common_fields = list(set(p) & set(p[settings.thread_sums_field_in_proc]))
+            if common_fields:
+                logger.warning('while hoisting thread_sums to process-level, found {0} common fields: {1}'.format(len(common_fields), common_fields))
+            p.update(p[settings.thread_sums_field_in_proc])
+            del p[settings.thread_sums_field_in_proc]
+    return pd.DataFrame(out_list) if fmt == 'pandas' else out_list
+
+
 
 # This function returns a list of jobs based on some filtering and ordering.
 # The output format can be set to pandas dataframe, list of dicts or list
@@ -109,29 +160,8 @@ def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict',
     if fmt == 'orm':
         return qs
 
-    if fmt == 'terse':
-        return [ j.jobid for j in qs ]
+    return conv_jobs_orm(qs, merge_proc_sums, fmt)
 
-    # convert the ORM into a list of dictionaries, excluding blacklisted fields
-    exclude_fields = (settings.query_job_fields_exclude or '') if hasattr(settings, 'query_job_fields_exclude') else ''
-    out_list = [ j.to_dict(exclude = exclude_fields) for j in qs ]
-
-    # do we need to merge threads' sum fields into the process?
-    if merge_proc_sums:
-        for j in out_list:
-            # check if dicts have any common fields, if so,
-            # warn the user as some fields will get clobbered
-            common_fields = list(set(j) & set(j[settings.proc_sums_field_in_job]))
-            if common_fields:
-                logger.warning('while hoisting proc_sums to job-level, found {0} common fields: {1}'.format(len(common_fields), common_fields))
-            j.update(j[settings.proc_sums_field_in_job])
-            del j[settings.proc_sums_field_in_job]
-
-    if fmt == 'pandas':
-        return pd.DataFrame(out_list)
-
-    # we assume the user wants the output in the form of a list of dicts
-    return out_list
 
 # Filter a supplied list of jobs to find a match
 # by tags or some primary keys. If no jobs list is provided,
@@ -241,29 +271,8 @@ def get_procs(jobs = [], tags = {}, fltr = None, order = '', limit = 0, fmt='dic
     if fmt == 'orm':
         return qs
 
-    if fmt == 'terse':
-        return [ p.id for p in qs ]
+    return conv_procs_orm(qs, merge_threads_sums, fmt)
 
-    # convert the ORM into a list of dictionaries, excluding blacklisted fields
-    proc_exclude_fields = (settings.query_process_fields_exclude or '') if hasattr(settings, 'query_process_fields_exclude') else ''
-    out_list = [ p.to_dict(exclude = proc_exclude_fields) for p in qs ]
-
-    # do we need to merge threads' sum fields into the process?
-    if merge_threads_sums:
-        for p in out_list:
-            # check if dicts have any common fields, if so,
-            # warn the user as some fields will get clobbered
-            common_fields = list(set(p) & set(p[settings.thread_sums_field_in_proc]))
-            if common_fields:
-                logger.warning('while hoisting thread_sums to process-level, found {0} common fields: {1}'.format(len(common_fields), common_fields))
-            p.update(p[settings.thread_sums_field_in_proc])
-            del p[settings.thread_sums_field_in_proc]
-
-    if fmt == 'pandas':
-        return pd.DataFrame(out_list)
-
-    # we assume the user wants the output in the form of a list of dicts
-    return out_list
 
 
 # returns thread metrics dataframe for one or more processes
@@ -393,17 +402,45 @@ def get_refmodels(ref_type, tags = {}, fltr=None, limit=0, order='', exact_tags_
     # we assume the user wants the output in the form of a list of dicts
     return out_list
 
+
+# This function computes a dict such as:
+# { 'z_score': {'duration': (max, median, median_dev), {'cpu_time': (max, median, median_dev)},
+#   'iqr': {'duration': ...}
+#               
+def _refmodel_scores(reflist, outlier_methods, features):
+    df = conv_orm(reflist, fmt='pandas')
+    ret = {}
+    for m in outlier_methods:
+        ret[m.__name__] = {}
+        for c in features:
+            # we save everything except the first element of the
+            # tuple as the first element is the actual scores
+            ret[m.__name__][c] = m(df[c])[1:]
+    return ret
 #
 # This function creates a reference model and returns
 # the ID of the newly-created model in the database
+# 
 #
 # tags:     A string or dict consisting of key/value pairs
-# compued:  A dict containing arbitrary computed stats
+# computed:  A dict containing arbitrary computed stats
 # reflist: points to a list of Jobs (or pony JobSet)
 #           or jobids in case of ref_type = 'job', and a list of 
 #           Process objects (or a pony ProcessSet) or
 #           process primary keys in case ref_type='op'
 # 
+# outlier_methods: Is a list of methods that are used to obtain
+#          scores. Each method is passed a vector consisting
+#          of the value of 'feature' for all the jobs. The
+#          method will return a vector of scores. This
+#          vector of scores will be saved (or some processed
+#          form of it). If methods is not specified then it
+#          will at present be set to modified_z_score.
+#
+# features: List of fields of each job that should be used
+#          for outlier detection. 
+#          Defaults to: ['duration', 'cpu_time', 'num_procs']
+#
 # e.g,.
 #
 # create a job ref model with a list of jobids
@@ -427,8 +464,9 @@ def get_refmodels(ref_type, tags = {}, fltr=None, limit=0, order='', exact_tags_
 # 5201
 #
 #
-#
-def create_refmodel(ref_type, tags={}, computed={}, reflist = []):
+def create_refmodel(ref_type, tags={}, reflist = [], computed = {},
+                    outlier_methods=[modified_z_score], 
+                    features=['duration', 'cpu_time', 'num_procs'] ):
     if ref_type not in REF_MODEL_TYPES and not ref_type.lower() in REF_MODEL_TYPES:
         logger.warning('ref_type must be one of: {0}'.format(REF_MODEL_TYPES.keys()))
         return None
@@ -447,6 +485,9 @@ def create_refmodel(ref_type, tags={}, computed={}, reflist = []):
             rs = Process.select(lambda p: p.id in reflist)
     else:
         rs = reflist
+
+    computed.update(_refmodel_scores(rs, outlier_methods, features))
+
     r = ReferenceModel(ref_type=ref_type, tags=tags, computed=computed, jobs=rs) if ref_type == REF_MODEL_TYPES['job'] else ReferenceModel(ref_type=ref_type, tags=tags, computed=computed, ops=rs)
     commit()
     return r.id
@@ -525,7 +566,7 @@ def agg_metrics_by_tags(jobs = [], tags = [], exact_tags_only = False, fmt='pand
                 sum_dict = _sum_dicts(sum_dict, d)
             # add some useful fields so we can back-reference and
             # also add some sums we obtained in the query
-            sum_dict.update({'job': j.jobid, 'tags': t, 'num_procs': nprocs, 'num_tids': ntids, 'exclusive_cpu_time': excl_cpu, 'duration': duration})
+            sum_dict.update({'job': j.jobid, 'tags': t, 'num_procs': nprocs, 'num_tids': ntids, 'exclusive_cpu_time': excl_cpu, 'duration': duration, 'cpu_time': excl_cpu})
             all_procs.append(sum_dict)
 
     if fmt == 'pandas':

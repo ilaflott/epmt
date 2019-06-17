@@ -21,15 +21,20 @@ def outliers_iqr(ys, span=[]):
     upper_bound = quartile_3 + (iqr * 1.5)
     return np.where((ys > upper_bound) | (ys < lower_bound))[0]
 
+# this function returns a tuple consisting of:
+#  (modified_z_scores, max, median, median_abs_dev)
+# The reason we return max,.. is so it can be saved in the ref model
 def modified_z_score(ys):
     median_y = np.median(ys)
     median_absolute_deviation_y = np.median([np.abs(y - median_y) for y in ys])
+    # z_score will be zero if std. dev is zero, for all others compute it
     modified_z_scores = [round(0.6745 * abs(y - median_y) / median_absolute_deviation_y, 4)
-                         for y in ys]
-    return modified_z_scores
+                         for y in ys] if median_absolute_deviation_y > 0 else [0.0 for y in ys]
+    return (modified_z_scores, max(modified_z_scores), median_y, median_absolute_deviation_y)
+
 
 def outliers_modified_z_score(ys,threshold=2.5):
-    scores = modified_z_score(ys)
+    scores = modified_z_score(ys)[0]
     return np.where(np.abs(scores) > threshold)[0]
 
 def get_outlier_1d(df,column,func=outliers_iqr):
