@@ -10,7 +10,8 @@ def outliers_z_score(ys):
     mean_y = np.mean(ys)
     stdev_y = np.std(ys)
     z_scores = [(y - mean_y) / stdev_y for y in ys]
-    return np.where(np.abs(z_scores) > threshold)
+    return np.where(np.abs(z_scores) > threshold)[0]
+
 def outliers_iqr(ys, span=[]):
     if not span: 
         span = [20, 80]
@@ -18,13 +19,18 @@ def outliers_iqr(ys, span=[]):
     iqr = quartile_3 - quartile_1
     lower_bound = quartile_1 - (iqr * 1.5)
     upper_bound = quartile_3 + (iqr * 1.5)
-    return np.where((ys > upper_bound) | (ys < lower_bound))
-def outliers_modified_z_score(ys,threshold=2.5):
+    return np.where((ys > upper_bound) | (ys < lower_bound))[0]
+
+def modified_z_score(ys):
     median_y = np.median(ys)
     median_absolute_deviation_y = np.median([np.abs(y - median_y) for y in ys])
-    modified_z_scores = [0.6745 * (y - median_y) / median_absolute_deviation_y
+    modified_z_scores = [round(0.6745 * abs(y - median_y) / median_absolute_deviation_y, 4)
                          for y in ys]
-    return np.where(np.abs(modified_z_scores) > threshold)
+    return modified_z_scores
+
+def outliers_modified_z_score(ys,threshold=2.5):
+    scores = modified_z_score(ys)
+    return np.where(np.abs(scores) > threshold)[0]
 
 def get_outlier_1d(df,column,func=outliers_iqr):
     if column not in df:
@@ -51,7 +57,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = ['duration','cpu_ti
     # initialize a df with all values set to False
     retval = pd.DataFrame(False, columns=features, index=jobs.index)
     for c in features:
-        outlier_rows = outliers_iqr(jobs[c], span=span)[0]
+        outlier_rows = outliers_iqr(jobs[c], span=span)
 #        print(c,outlier_rows)
         retval.loc[outlier_rows,c] = True
     # add a jobid column to the output dataframe
@@ -79,7 +85,7 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = ['duration'
         # select only those rows with matching tag
         rows = ops[ops.tags == tag]
         for c in features:
-            outlier_rows = outliers_iqr(rows[c], span=span)[0]
+            outlier_rows = outliers_iqr(rows[c], span=span)
             retval.loc[outlier_rows,c] = True
     retval['jobid'] = ops['job']
     retval['tags'] = ops['tags']
@@ -94,7 +100,7 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = ['duration'
 #         # select only those rows with matching tag
 #         rows = ops[ops.tags == tag]
 #         for c in features:
-#             outlier_rows = outliers_iqr(rows[c])[0]
+#             outlier_rows = outliers_iqr(rows[c])
 #             retval.loc[outlier_rows,c] = True
 #     retval['jobid'] = ops['job']
 #     retval['tags'] = ops['tags']
@@ -107,7 +113,7 @@ def detect_outlier_processes(processes, trained_model=None,
     retval = pd.DataFrame(0, columns=features, index=processes.index)
     for c in features:
         for m in methods:
-            outlier_rows = m(processes[c])[0]
+            outlier_rows = m(processes[c])
             print(m.__name__,c,len(outlier_rows),"outliers")
             retval.loc[outlier_rows,c] += 1
 #
