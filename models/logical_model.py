@@ -6,32 +6,45 @@ from pony.orm import *
 from .general import db
 import datetime
 
-class PostProcessRun(db.Entity):
-	time = Required(datetime.datetime, default=datetime.datetime.utcnow)
+class ReferenceModel(db.Entity):
+	created_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	info_dict = Optional(Json)
-	# end template
-	# The following four are from the environment currently
-	component = Required(str)
-	name = Required(str)
-	jobname = Required(str)
-	oname = Required(str)
-	# End
-	user = Required('User')
-	job = Required('Job')
-	detectors = Set('Detector')
-	# 
-	# component = Optional('Component')
-	# platform = Optional('Platform')
-	# experiment = Optional('Experiment')
+	ref_type = Required(int) # Job=1, Operation=2
+	tags = Optional(Json)
+	computed = Optional(Json)
+	# we set jobs for ref_type=Job
+	jobs = Set('Job')
+	# we set ops for ref_type=Operation
+	ops = Set('Process')
 
-class Detector(db.Entity):
-	time = Required(datetime.datetime, default=datetime.datetime.utcnow)
-	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
-	name = PrimaryKey(str)
-	description = Optional(str)
-	pandas_json = Optional(Json)
-	pprs = Set('PostProcessRun')
+
+# class PostProcessRun(db.Entity):
+# 	time = Required(datetime.datetime, default=datetime.datetime.utcnow)
+# 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
+# 	info_dict = Optional(Json)
+# 	# end template
+# 	# The following four are from the environment currently
+# 	component = Required(str)
+# 	name = Required(str)
+# 	jobname = Required(str)
+# 	oname = Required(str)
+# 	# End
+# 	user = Required('User')
+# 	job = Required('Job')
+# 	detectors = Set('Detector')
+# 	# 
+# 	# component = Optional('Component')
+# 	# platform = Optional('Platform')
+# 	# experiment = Optional('Experiment')
+
+# class Detector(db.Entity):
+# 	time = Required(datetime.datetime, default=datetime.datetime.utcnow)
+# 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
+# 	name = PrimaryKey(str)
+# 	description = Optional(str)
+# 	pandas_json = Optional(Json)
+# 	pprs = Set('PostProcessRun')
 
 # 
 # Unused for now

@@ -52,3 +52,6 @@ OutliersData/*.dir
 
 # user settings
 settings.py
+
+# virtualenv
+venv

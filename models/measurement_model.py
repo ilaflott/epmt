@@ -6,19 +6,10 @@ from pony.orm import *
 from .general import db
 import datetime
 
-# class Tag(db.Entity):
-# #	time = Required(datetime.datetime, default=datetime.datetime.utcnow)
-# 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
-# 	info_dict = Optional(Json)
-# 	# end template
-# 	name = PrimaryKey(str)
-# 	processes = Set('Process')
-# 	jobs = Set('Job')
-#
 # Removing/changing hosts needs to be addressed
 #
 class Host(db.Entity):
-#	time = Required(datetime.datetime, default=datetime.datetime.utcnow)
+	created_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	info_dict = Optional(Json)
 	# end template
@@ -35,6 +26,7 @@ class Job(db.Entity):
 	duration = Required(float, default=0)
 	proc_sums = Optional(Json) # proc_sums contains aggregates across processes
 # End rollups
+	created_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	info_dict = Optional(Json)
 # End generic template
@@ -53,8 +45,9 @@ class Job(db.Entity):
 	tags = Optional(Json)
 	account = Optional('Account')
 	queue = Optional('Queue')
-	ppr = Optional('PostProcessRun')
+#	ppr = Optional('PostProcessRun')
 	cpu_time = Optional(float)
+	ref_models = Set('ReferenceModel')
 
 class Process(db.Entity):
 # Rollup entries, computed at insert time
@@ -62,6 +55,7 @@ class Process(db.Entity):
 	end = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	duration = Required(float, default=0)
 # End rollup
+	created_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 #	info_dict = Optional(Json)
 # End generic template
@@ -72,7 +66,7 @@ class Process(db.Entity):
 	group = Optional('Group')
 	threads_df = Optional(Json)
 	threads_sums = Optional(Json)
-	numtids = Required(int, default=0)
+	numtids = Required(int, default=1)
 # save some useful timing information for threads
 	exclusive_cpu_time = Optional(float)
 # sum of cpu times of all descendants + process_cpu_time
@@ -96,6 +90,8 @@ class Process(db.Entity):
 	children = Set('Process', reverse="parent")
 	ancestors = Set('Process', reverse="descendants")
 	descendants = Set('Process', reverse="ancestors")
+
+	ref_models = Set('ReferenceModel')
 
 # class Thread(db.Entity):
 # # These are measured
@@ -127,7 +123,7 @@ class Process(db.Entity):
 # 	thread = Required(Thread)
 
 class User(db.Entity):
-	time = Required(datetime.datetime, default=datetime.datetime.utcnow)
+	created_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	info_dict = Optional(Json)
 	# end template
@@ -135,12 +131,12 @@ class User(db.Entity):
 	id = Optional(int,unique=True)
 	groups = Set('Group')
 #	exps = Set('Experiment')
-	pprs = Set('PostProcessRun')
+#	pprs = Set('PostProcessRun')
 	jobs = Set('Job')
 	processes = Set('Process')
 
 class Group(db.Entity):
-	time = Required(datetime.datetime, default=datetime.datetime.utcnow)
+	created_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	info_dict = Optional(Json)
 	# end template
@@ -151,7 +147,7 @@ class Group(db.Entity):
 	users = Set('User')
 
 class Queue(db.Entity):
-	time = Required(datetime.datetime, default=datetime.datetime.utcnow)
+	created_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	info_dict = Optional(Json)
 	# end template
@@ -160,7 +156,7 @@ class Queue(db.Entity):
 	jobs = Set('Job')	
 
 class Account(db.Entity):
-	time = Required(datetime.datetime, default=datetime.datetime.utcnow)
+	created_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	info_dict = Optional(Json)
 	# end template
