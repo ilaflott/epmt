@@ -103,7 +103,19 @@ def detect_outlier_jobs(jobs, trained_model=None, features = ['duration','cpu_ti
 # tags is a list of tags specified either as a string or a list of string/list of dicts
 # If tags is not specified, then the list of jobs will be queried to get the
 # superset of unique tags across the jobs.
-def detect_outlier_ops(jobs, tags=[], trained_model=None, features = ['duration','exclusive_cpu_time','num_procs'], methods=[modified_z_score], thresholds=THRESHOLD_DEFAULTS):
+def detect_outlier_ops(jobs, tags=[], trained_model=None, features = ['duration','cpu_time','num_procs'], methods=[modified_z_score], thresholds=THRESHOLD_DEFAULTS):
+
+    # do we have a single tag in string or dict form? 
+    if type(tags) == str:
+        tags = [eq.get_tags_from_string(tags)]
+    elif type(tags) == dict:
+        tags = [tags]
+    tags = [eq.get_tags_from_string(t) for t in tags if type(t) == str]
+        
+    jobs_tags_set = set()
+    unique_job_tags = eq.get_unique_process_tags(jobs, fold=False)
+    for t in unique_job_tags:
+        jobs_tags_set.add(dumps(t, sort_keys=True))
 
     model_params = {}
     if trained_model:
@@ -118,20 +130,15 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = ['duration'
             model_tags_set.add(dumps(t, sort_keys=True))
         if not tags:
             tags = trained_model.op_tags
-
-    jobs_tags_set = set()
-    unique_job_tags = eq.get_unique_process_tags(jobs, fold=False)
+        if jobs_tags_set != model_tags_set:
+            logger.warning('Set of unique tags are different from the model')
+            if (jobs_tags_set - model_tags_set):
+                logger.warning('Jobs have the following tags, not found in the model: {0}'.format(jobs_tags_set - model_tags_set))
+            if (model_tags_set - jobs_tags_set):
+                logger.warning('Model has the following tags, not found in the jobs: {0}'.format(model_tags_set - jobs_tags_set))
     if not tags:
         tags = unique_job_tags
-    for t in unique_job_tags:
-        jobs_tags_set.add(dumps(t, sort_keys=True))
 
-    if jobs_tags_set != model_tags_set:
-        logger.warning('Set of unique tags are different from the model')
-        if (jobs_tags_set - model_tags_set):
-            logger.warning('Jobs have the following tags, not found in the model: {0}'.format(jobs_tags_set - model_tags_set))
-        if (model_tags_set - jobs_tags_set):
-            logger.warning('Model has the following tags, not found in the jobs: {0}'.format(model_tags_set - jobs_tags_set))
     tags_to_use = []
     if trained_model:
         if tags == trained_model.op_tags:
@@ -175,6 +182,8 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = ['duration'
                 # otherwise use the default threshold for the method
                 threshold = params[0] if params else thresholds[m.__name__]
                 outlier_rows = np.where(np.abs(scores) > threshold)[0]
+                # remain the outlier rows indices to the indices in the original df
+                outlier_rows = rows.index[outlier_rows].values
                 logger.debug('Outliers for [{0}][{1}][{2}] -> {3}'.format(t,m.__name__,c,outlier_rows))
                 retval.loc[outlier_rows,c] += 1
     retval['jobid'] = ops['job']
