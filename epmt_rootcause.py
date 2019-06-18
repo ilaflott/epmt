@@ -2,7 +2,7 @@ from __future__ import print_function
 import pandas as pd
 import numpy as np
 
-# Return a <boolean, df, dict> tuple that consists of error/no-error, dataframe of derived stats, 
+# Return a <boolean, df, list> tuple that consists of error/no-error, dataframe of derived stats, 
 # and a sorted hash in order of deviant feature values. 
 
 def rootcause_zscore(ref, input, features):
@@ -54,11 +54,15 @@ def rootcause(ref, input, features, methods = [rootcause_zscore]):
         return False
 # We don't really know what to do with multiple methods here yet, so just use the first
     for m in methods:
-        df, dct = m(ref,input,features)
+        df, dlst = m(ref,input,features)
 # Here we should never be returning an empty set, just sets of scores for interpretation
-        if df.empty or dct is None:
+        ranked_features = [x[0] for x in dlst]
+        print("Sorted metrics",ranked_features)
+        if df.empty or dlst is None:
             return False, None, None
-        return True, df, dct
+# Sort order of columns
+        df = df[ranked_features]
+        return True, df, dlst
 # If methods list was empty...
     return False, None, None
 
