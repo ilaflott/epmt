@@ -2,8 +2,8 @@ from __future__ import print_function
 import pandas as pd
 import numpy as np
 
-# Return a <boolean, df> tuple that consists of error/no-error and columns where the input data is out of tolerance,
-# Rows are currently defined but should be configurable.
+# Return a <boolean, df, dict> tuple that consists of error/no-error, dataframe of derived stats, 
+# and a sorted hash in order of deviant feature values. 
 
 def rootcause_zscore(ref, input, features):
 # describe() computes the following, as an example
@@ -15,24 +15,30 @@ def rootcause_zscore(ref, input, features):
 #50%     73.000000   73.500000   74.000000
 #75%     86.000000   85.000000   84.250000
 #max     99.000000   99.000000   98.000000
-#value   27.000000   29.000000  121.000000
     ref_computed = ref.describe()
 # Now add the actual input vector to the describe output as a row for later reference, probably not needed
 # and not really in the right place
     ref_computed.loc['value'] = input.iloc[0]
+    ref_computed.loc['zscore'] = input.iloc[0]
 # I could not figure out how to do this arraywise so we do it per feature...
+#    for col in features:
+#        col_zscore = col + '_zscore'
+#        df[col_zscore] = (df[col] - df[col].mean())/df[col].std(ddof=0)
+    result_dict = {}
     for f in features:
         mean = ref_computed[f]['mean']
         sd = ref_computed[f]['std']
         val2compare = input[f][0]
 # Instead of binary testing here, I should be returning the score per metric and not dropping columns
-        tester = ((val2compare > (mean + 3*sd)) or (val2compare < (mean - 3*sd)))
-# Delete all features (columns) that are not out of tolerance
-        if tester == False:
-            ref_computed.drop(f, axis=1, inplace=True)
+        zscore = abs(val2compare - mean) / sd 
+        ref_computed[f]['zscore'] = zscore
+        result_dict[f] = zscore
+#        if tester == False:
+#            ref_computed.drop(f, axis=1, inplace=True)
 #        else:
 #            print(f,mean,sd,val2compare,tester)
-    return ref_computed
+    import operator
+    return ref_computed, sorted(result_dict.items(), key=operator.itemgetter(1), reverse=True)
 
 #
 # Observe that this function looks very much like the outlier detection functions. Can we integrate?
@@ -48,13 +54,13 @@ def rootcause(ref, input, features, methods = [rootcause_zscore]):
         return False
 # We don't really know what to do with multiple methods here yet, so just use the first
     for m in methods:
-        df = m(ref,input,features)
+        df, dct = m(ref,input,features)
 # Here we should never be returning an empty set, just sets of scores for interpretation
-        if df.empty:
-            return False, None
-        return True, df
+        if df.empty or dct is None:
+            return False, None, None
+        return True, df, dct
 # If methods list was empty...
-    return False, None
+    return False, None, None
 
 if (__name__ == "__main__"):
 # Synthesize 10 feature names
@@ -71,9 +77,10 @@ if (__name__ == "__main__"):
 # Wider range input values for test set
     random_input_df = pd.DataFrame(np.random.randint(25,125,size=(1,n_features)), columns=features)
     print("Input:\n",random_input_df.head())
-    retval, df = rootcause(random_reference_df,random_input_df,features)
+    retval, df, dct = rootcause(random_reference_df,random_input_df,features)
     print("Retval:\n",retval)
     print("Result:\n",df)
+    print("Result:\n",dct)
 #
 # Check with one outlier
 #
@@ -84,9 +91,10 @@ if (__name__ == "__main__"):
 # Wider range input values for test set
     random_input_df = pd.DataFrame(np.random.randint(25,125,size=(1,n_features)), columns=features)
     print("Input:\n",random_input_df.head())
-    retval, df = rootcause(random_reference_df,random_input_df,features)
+    retval, df, dct = rootcause(random_reference_df,random_input_df,features)
     print("Retval:\n",retval)
     print("Result:\n",df)
+    print("Result:\n",dct)
 #
 # Check with no outliers
 #
@@ -97,6 +105,7 @@ if (__name__ == "__main__"):
 # Wider range input values for test set
     random_input_df = pd.DataFrame(np.random.randint(25,125,size=(1,n_features)), columns=features)
     print("Input:\n",random_input_df.head())
-    retval, df = rootcause(random_reference_df,random_input_df,features)
+    retval, df, dct = rootcause(random_reference_df,random_input_df,features)
     print("Retval:\n",retval)
     print("Result:\n",df)
+    print("Result:\n",dct)
