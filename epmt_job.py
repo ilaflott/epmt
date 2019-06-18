@@ -62,6 +62,22 @@ def fold_dicts(dicts):
             folded_dict[k].add(v)
     return { k: list(v) if len(v) > 1 else v.pop() for (k,v) in folded_dict.items() }
 
+# Returns True if at least one dictionary in L is contained by d
+# where containment is defined as all keys of the containee
+# are in the container with matching values. Container may have
+# additional key/values.
+# For example:
+# for input ({'abc':100, 'def':200}, [{'hello': 50}, {'abc':100}]
+# we get True
+def dict_in_list(d, L):
+    for item in L:
+        flag = True
+        for (k,v) in item.items():
+            if (not k in d) or not(d[k] == v):
+                flag = False
+        if (flag): return True
+    return False
+
 # def lookup_or_create_metricname(metricname):
 #     mn = MetricName.get(name=metricname)
 #     if mn is None:

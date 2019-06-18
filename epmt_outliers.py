@@ -1,10 +1,18 @@
+from __future__ import print_function
 import pandas as pd
 import numpy as np
 import epmt_query as eq
 from pony.orm.core import Query
 from models import ReferenceModel
 from logging import getLogger
+from json import dumps
+from epmt_job import dict_in_list
+
 logger = getLogger(__name__)  # you can use other name
+
+
+# this sets the defaults to be used when a trained model is not provided
+THRESHOLD_DEFAULTS = { 'modified_z_score': 2.5 }
 
 # These all return a tuple containing a list of indicies
 # For 1-D this is just a tuple with one element that is a list of rows
@@ -38,7 +46,7 @@ def modified_z_score(ys, params=()):
     return (modified_z_scores, max(modified_z_scores), median_y, median_absolute_deviation_y)
 
 
-def outliers_modified_z_score(ys,threshold=2.5):
+def outliers_modified_z_score(ys,threshold=THRESHOLD_DEFAULTS['modified_z_score']):
     scores = modified_z_score(ys)[0]
     return np.where(np.abs(scores) > threshold)[0]
 
@@ -58,7 +66,7 @@ def get_outliers_processes(df,columns=["duration","exclusive_cpu_time"]):
 
 # jobs is either a pandas dataframe of job(s) or a list of job ids
 # or a Pony Query object
-def detect_outlier_jobs(jobs, trained_model=None, features = ['duration','cpu_time','num_procs'], methods=[modified_z_score], default_thresholds = { modified_z_score: 2.5 }):
+def detect_outlier_jobs(jobs, trained_model=None, features = ['duration','cpu_time','num_procs'], methods=[modified_z_score], thresholds = THRESHOLD_DEFAULTS):
     # if we have a non-empty list of job ids then get a pandas df
     # using get_jobs to convert the format
     if type(jobs) == list or type(jobs) == Query:
@@ -78,9 +86,12 @@ def detect_outlier_jobs(jobs, trained_model=None, features = ['duration','cpu_ti
     for c in features:
         for m in methods:
             params = model_params[m].get(c, ())
-            logger.debug('params[{0}][{1}]: {2}'.format(m.__name__, c, params))
+            if params:
+                logger.debug('params[{0}][{1}]: {2}'.format(m.__name__, c, params))
             scores = m(jobs[c], params)[0]
-            threshold = params[0] if params else default_thresholds[m]
+            # use the max score in the refmodel if we have a trained model
+            # otherwise use the default threshold for the method
+            threshold = params[0] if params else thresholds[m.__name__]
             outlier_rows = np.where(np.abs(scores) > threshold)[0]
             retval.loc[outlier_rows,c] += 1
     # add a jobid column to the output dataframe
@@ -92,24 +103,80 @@ def detect_outlier_jobs(jobs, trained_model=None, features = ['duration','cpu_ti
 # tags is a list of tags specified either as a string or a list of string/list of dicts
 # If tags is not specified, then the list of jobs will be queried to get the
 # superset of unique tags across the jobs.
-def detect_outlier_ops(jobs, tags=[], trained_model=None, features = ['duration','exclusive_cpu_time','num_procs','majflt','rssmax'], span=[]):
+def detect_outlier_ops(jobs, tags=[], trained_model=None, features = ['duration','exclusive_cpu_time','num_procs'], methods=[modified_z_score], thresholds=THRESHOLD_DEFAULTS):
+
+    model_params = {}
+    if trained_model:
+        model_tags_set = set()
+        logger.debug('using a trained model for detecting outliers')
+        if type(trained_model) == int:
+            trained_model = ReferenceModel[trained_model]
+        #logger.debug('Ref. model scores: {0}'.format(trained_model.computed))
+        #logger.debug('Ref. model op_tags: {0}'.format(trained_model.op_tags))
+        logger.debug('Ref model contains {0} op_tags'.format(len(trained_model.op_tags)))
+        for t in trained_model.op_tags:
+            model_tags_set.add(dumps(t, sort_keys=True))
+        if not tags:
+            tags = trained_model.op_tags
+
+    jobs_tags_set = set()
+    unique_job_tags = eq.get_unique_process_tags(jobs, fold=False)
     if not tags:
-        tags = eq.get_unique_process_tags(jobs, fold=False)
+        tags = unique_job_tags
+    for t in unique_job_tags:
+        jobs_tags_set.add(dumps(t, sort_keys=True))
+
+    if jobs_tags_set != model_tags_set:
+        logger.warning('Set of unique tags are different from the model')
+        if (jobs_tags_set - model_tags_set):
+            logger.warning('Jobs have the following tags, not found in the model: {0}'.format(jobs_tags_set - model_tags_set))
+        if (model_tags_set - jobs_tags_set):
+            logger.warning('Model has the following tags, not found in the jobs: {0}'.format(model_tags_set - jobs_tags_set))
+    tags_to_use = []
+    if trained_model:
+        if tags == trained_model.op_tags:
+            tags_to_use = tags
+        else:
+            for d in trained_model.op_tags:
+                if (dict_in_list(d, tags)):
+                    tags_to_use.append(d)
+    else:
+        tags_to_use = tags
+   
+    for t in tags_to_use:
+        t = dumps(t, sort_keys=True)
+        model_params[t] = {}
+        for m in methods:
+            model_params[t][m] = trained_model.computed[t][m.__name__] if trained_model else {}
+
+
     # get the dataframe of aggregate metrics, where each row
     # is an aggregate across a group of processes with a particular
     # jobid and tag
-    ops = eq.agg_metrics_by_tags(jobs=jobs, tags=tags) 
-    retval = pd.DataFrame(False, columns=features, index=ops.index)
+    ops = eq.agg_metrics_by_tags(jobs=jobs, tags=tags_to_use) 
+    retval = pd.DataFrame(0, columns=features, index=ops.index)
 
     # now we iterate over tags and for each tag we select
     # the rows from the ops dataframe that have the same tag;
     # the select rows will have different job ids
-    for tag in tags:
+    for tag in tags_to_use:
+        t = dumps(tag, sort_keys=True)
+        logger.debug('Processing tag: {0}'.format(tag))
         # select only those rows with matching tag
         rows = ops[ops.tags == tag]
+        logger.debug('input: \n{0}\n'.format(rows[['tags']+features]))
         for c in features:
-            outlier_rows = outliers_iqr(rows[c], span=span)
-            retval.loc[outlier_rows,c] = True
+            for m in methods:
+                params = model_params[t][m].get(c, ())
+                if params:
+                    logger.debug('params[{0}][{1}][{2}]: {3}'.format(t,m.__name__, c, params))
+                scores = m(rows[c], params)[0]
+                # use the max score in the refmodel if we have a trained model
+                # otherwise use the default threshold for the method
+                threshold = params[0] if params else thresholds[m.__name__]
+                outlier_rows = np.where(np.abs(scores) > threshold)[0]
+                logger.debug('Outliers for [{0}][{1}][{2}] -> {3}'.format(t,m.__name__,c,outlier_rows))
+                retval.loc[outlier_rows,c] += 1
     retval['jobid'] = ops['job']
     retval['tags'] = ops['tags']
     retval = retval[['jobid', 'tags']+features]
@@ -142,8 +209,8 @@ def detect_outlier_processes(processes, trained_model=None,
 #
 #   Here we can demand that more than one detector signal an outlier, currently only 1 is required.
 #
-    print retval.describe()
-    print retval.head()
+    # print(retval.describe())
+    print(retval.head())
     retval = retval.gt(.99)
     retval['id'] = processes['id']
     retval['exename'] = processes['exename']
@@ -159,8 +226,8 @@ if (__name__ == "__main__"):
     random_proc_df['exename'] = ""
     random_proc_df['tags'] = ""
     retval = detect_outlier_processes(random_proc_df)
-    print retval.head()
+    print(retval.head())
 #
 # Here we print a boolean if any metric barfed at us
 #
-    print ((retval[['duration','exclusive_cpu_time']] == True).any(axis=1)).head()
+    print ((retval[['duration','exclusive_cpu_time']] == True).any(axis=1).head())

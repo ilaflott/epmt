@@ -1,9 +1,9 @@
-#from __future__ import print_function
+from __future__ import print_function
 from sys import stderr
 import pandas as pd
 from pony.orm.core import Query
 from pony.orm import *
-from json import loads
+from json import loads, dumps
 from os import environ
 from logging import getLogger
 from models import Job, Process, ReferenceModel
@@ -12,7 +12,7 @@ from epmt_cmds import set_logging, init_settings
 from epmt_outliers import modified_z_score
 
 logger = getLogger(__name__)  # you can use other name
-# set_logging(1)
+set_logging(2)
 init_settings()
 
 if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
@@ -472,21 +472,27 @@ def create_refmodel(jobs=[], tags={}, op_tags=[], computed = {},
     if type(jobs) == list and (type(jobs[0]) in [str, unicode]):
         jobs = Job.select(lambda j: j.jobid in jobs)
 
-    col = jobs
     if op_tags:
+        if op_tags == '*':
+            logger.debug('wildcard op_tags set: obtaining set of unique tags across the input jobs')
+            op_tags = get_unique_process_tags(jobs, fold=False)
         # do we have a single tag in string or dict form? 
         # we eventually want a list of dicts
-        if type(op_tags) == str:
+        elif type(op_tags) == str:
             op_tags = [get_tags_from_string(op_tags)]
         elif type(op_tags) == dict:
             op_tags = [op_tags]
         # let's get the dataframe of metrics aggregated by op_tags
-        col = agg_metrics_by_tags(jobs = jobs, tags = op_tags, exact_tags_only = exact_tags_only, fmt='pandas')
+        ops_df = agg_metrics_by_tags(jobs = jobs, tags = op_tags, exact_tags_only = exact_tags_only, fmt='pandas')
+        scores = {}
+        for t in op_tags:
+            # serialize the tag so we can use it as a key
+            stag = dumps(t, sort_keys=True)
+            scores[stag] = _refmodel_scores(ops_df[ops_df.tags == t], outlier_methods, features)
+    else:
+        # full jobs, no ops
+        scores = _refmodel_scores(jobs, outlier_methods, features)
 
-    # pass either a dataframe of aggregated metrics or a collection of
-    # of jobs to the scorer. It will figure out the score and do any
-    # needed conversions
-    scores = _refmodel_scores(col, outlier_methods, features)
     logger.debug('computed scores: {0}'.format(scores))
     computed.update(scores)
 
