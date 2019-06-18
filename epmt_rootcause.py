@@ -25,6 +25,7 @@ def rootcause_zscore(ref, input, features):
         mean = ref_computed[f]['mean']
         sd = ref_computed[f]['std']
         val2compare = input[f][0]
+# Instead of binary testing here, I should be returning the score per metric and not dropping columns
         tester = ((val2compare > (mean + 3*sd)) or (val2compare < (mean - 3*sd)))
 # Delete all features (columns) that are not out of tolerance
         if tester == False:
@@ -48,6 +49,7 @@ def rootcause(ref, input, features, methods = [rootcause_zscore]):
 # We don't really know what to do with multiple methods here yet, so just use the first
     for m in methods:
         df = m(ref,input,features)
+# Here we should never be returning an empty set, just sets of scores for interpretation
         if df.empty:
             return False, None
         return True, df
