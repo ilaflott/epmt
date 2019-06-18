@@ -10,13 +10,10 @@ class ReferenceModel(db.Entity):
 	created_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
 	info_dict = Optional(Json)
-	ref_type = Required(int) # Job=1, Operation=2
 	tags = Optional(Json)
+	op_tags = Optional(Json)
 	computed = Optional(Json)
-	# we set jobs for ref_type=Job
 	jobs = Set('Job')
-	# we set ops for ref_type=Operation
-	ops = Set('Process')
 
 
 # class PostProcessRun(db.Entity):

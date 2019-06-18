@@ -91,8 +91,6 @@ class Process(db.Entity):
 	ancestors = Set('Process', reverse="descendants")
 	descendants = Set('Process', reverse="ancestors")
 
-	ref_models = Set('ReferenceModel')
-
 # class Thread(db.Entity):
 # # These are measured
 # 	start = Required(datetime.datetime)

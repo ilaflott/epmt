@@ -12,7 +12,7 @@ from epmt_cmds import set_logging, init_settings
 from epmt_outliers import modified_z_score
 
 logger = getLogger(__name__)  # you can use other name
-#set_logging()
+# set_logging(1)
 init_settings()
 
 if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
@@ -29,7 +29,7 @@ REF_MODEL_TYPES = { 'job': 1, 'op': 2 }
 
 # figure out the entity type and then call the appropriate 
 # convertor. For now we know its either a collection of Job or Process objects
-def conv_orm(entities, merge_sub_sums, fmt='dict'):
+def conv_orm(entities, merge_sub_sums=True, fmt='dict'):
     e1 = entities[0] if type(entities) == list else entities.first()
     return conv_jobs_orm(entities, merge_sub_sums, fmt) if e1.__class__.__name__ == 'Job' else conv_procs_orm(entities, merge_sub_sums, fmt)
 
@@ -334,8 +334,7 @@ def get_unique_process_tags(jobs = [], exclude=[], fold=True):
     return fold_dicts(tags) if fold else tags
 
 
-# This function returns reference models filtered using ref_type, tags and fltr
-# ref_type is one of 'job' or 'op'
+# This function returns reference models filtered using tags and fltr
 # tags refers to a single dict of key/value pairs or a string
 # fltr is a lambda function or a string containing a pony expression
 # limit is used to limit the number of output items, 0 means no limit
@@ -346,14 +345,10 @@ def get_unique_process_tags(jobs = [], exclude=[], fold=True):
 #   fields in the reference model, so they appear as first-class fields.
 # fmt is one of 'orm', 'pandas', 'dict'. Default is 'dict'
 # example usage:
-#   get_refmodels('job', tags = 'exp_name:ESM4;exp_component:ice_1x1', fmt='pandas')
+#   get_refmodels(tags = 'exp_name:ESM4;exp_component:ice_1x1', fmt='pandas')
 #
-def get_refmodels(ref_type, tags = {}, fltr=None, limit=0, order='', exact_tags_only=False, merge_nested_fields=True, fmt='dict'):
-    if ref_type not in REF_MODEL_TYPES and not ref_type.lower() in REF_MODEL_TYPES:
-        logger.warning('ref_type must be one of: {0}'.format(REF_MODEL_TYPES.keys()))
-        return None
-    ref_type = REF_MODEL_TYPES[ref_type.lower()]
-    qs = ReferenceModel.select(lambda r: r.ref_type == ref_type)
+def get_refmodels(tags = {}, fltr=None, limit=0, order='', exact_tags_only=False, merge_nested_fields=True, fmt='dict'):
+    qs = ReferenceModel.select()
 
     # filter using tags if set
     if type(tags) == str:
@@ -406,9 +401,10 @@ def get_refmodels(ref_type, tags = {}, fltr=None, limit=0, order='', exact_tags_
 # This function computes a dict such as:
 # { 'z_score': {'duration': (max, median, median_dev), {'cpu_time': (max, median, median_dev)},
 #   'iqr': {'duration': ...}
-#               
-def _refmodel_scores(reflist, outlier_methods, features):
-    df = conv_orm(reflist, fmt='pandas')
+#
+# col: is either a dataframe or a collection of jobs (Query/list of Job objects)
+def _refmodel_scores(col, outlier_methods, features):
+    df = conv_jobs_orm(col, fmt='pandas') if col.__class__.__name__ != 'DataFrame' else col
     ret = {}
     for m in outlier_methods:
         ret[m.__name__] = {}
@@ -422,12 +418,19 @@ def _refmodel_scores(reflist, outlier_methods, features):
 # the ID of the newly-created model in the database
 # 
 #
-# tags:     A string or dict consisting of key/value pairs
+# jobs:     points to a list of Jobs (or pony JobSet) or jobids
+#
+# tags:     A string or dict consisting of key/value pairs. These
+#           tags are saved for the refmodel, and may be used
+#           in a filter while retrieving the refmodel.
+#
+# op_tags:  A list of strings or dicts. This is optional,
+#           if set, it will restrict the model to the filtered ops.
+#           op_tags are distinct from tags. op_tags are used to
+#           obtain the set of processes over which an aggregation
+#           is performed using agg_metrics_by_tags. 
+#
 # computed:  A dict containing arbitrary computed stats
-# reflist: points to a list of Jobs (or pony JobSet)
-#           or jobids in case of ref_type = 'job', and a list of 
-#           Process objects (or a pony ProcessSet) or
-#           process primary keys in case ref_type='op'
 # 
 # outlier_methods: Is a list of methods that are used to obtain
 #          scores. Each method is passed a vector consisting
@@ -441,59 +444,58 @@ def _refmodel_scores(reflist, outlier_methods, features):
 #          for outlier detection. 
 #          Defaults to: ['duration', 'cpu_time', 'num_procs']
 #
+# exact_tags_only: Default False. If set, all tag matches require
+#          exact dictionary match, and a superset match won't do.
+#
 # e.g,.
 #
 # create a job ref model with a list of jobids
-# eq.create_refmodel(ref_type='job', reflist=[u'615503', u'625135'])
-#
-# create a ref model, with the process set being a list of primary keys
-# from the process table:
-# eq.create_refmodel(ref_type='op', reflist=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) 
+# eq.create_refmodel(jobs=[u'615503', u'625135'])
 #
 # or use pony orm query result:
 # >>> jobs = eq.get_jobs(tags='exp_component:atmos', fmt='orm')
-# >>> r = eq.create_refmodel(ref_type='job', reflist=jobs)
-#
-# or use get_procs to get orm objects:
-# >>> procs = eq.get_procs(tags='op_instance:5', fmt='orm')
-# >>> procs.count()
-# 5201L
-# >>> eq.create_refmodel(ref_type='op', reflist=procs)
-# 6
-# >>> ReferenceModel[6].ops.count()
-# 5201
+# >>> r = eq.create_refmodel(jobs)
 #
 #
-def create_refmodel(ref_type, tags={}, reflist = [], computed = {},
+def create_refmodel(jobs=[], tags={}, op_tags=[], computed = {},
                     outlier_methods=[modified_z_score], 
-                    features=['duration', 'cpu_time', 'num_procs'] ):
-    if ref_type not in REF_MODEL_TYPES and not ref_type.lower() in REF_MODEL_TYPES:
-        logger.warning('ref_type must be one of: {0}'.format(REF_MODEL_TYPES.keys()))
+                    features=['duration', 'cpu_time', 'num_procs'], exact_tags_only=False ):
+    if (not jobs) or len(jobs)==0:
+        logger.error('You need to specify one or more jobs to create a reference model')
         return None
-    ref_type = REF_MODEL_TYPES[ref_type.lower()]
+
     if type(tags) == str:
         tags = get_tags_from_string(tags)
 
-    # do we have a list of jobids or process primary keys?
+    # do we have a list of jobids?
     # if so, we need to get the actual DB objects for them
-    if type(reflist) == list and (type(reflist[0]) in [str, unicode,int]):
-        if ref_type == REF_MODEL_TYPES['job']:
-            # reflist is a list of jobids
-            rs = Job.select(lambda j: j.jobid in reflist)
-        else:
-            # reflist is a list of process ids
-            rs = Process.select(lambda p: p.id in reflist)
-    else:
-        rs = reflist
+    if type(jobs) == list and (type(jobs[0]) in [str, unicode]):
+        jobs = Job.select(lambda j: j.jobid in jobs)
 
-    computed.update(_refmodel_scores(rs, outlier_methods, features))
+    col = jobs
+    if op_tags:
+        # do we have a single tag in string or dict form? 
+        # we eventually want a list of dicts
+        if type(op_tags) == str:
+            op_tags = [get_tags_from_string(op_tags)]
+        elif type(op_tags) == dict:
+            op_tags = [op_tags]
+        # let's get the dataframe of metrics aggregated by op_tags
+        col = agg_metrics_by_tags(jobs = jobs, tags = op_tags, exact_tags_only = exact_tags_only, fmt='pandas')
 
-    r = ReferenceModel(ref_type=ref_type, tags=tags, computed=computed, jobs=rs) if ref_type == REF_MODEL_TYPES['job'] else ReferenceModel(ref_type=ref_type, tags=tags, computed=computed, ops=rs)
+    # pass either a dataframe of aggregated metrics or a collection of
+    # of jobs to the scorer. It will figure out the score and do any
+    # needed conversions
+    scores = _refmodel_scores(col, outlier_methods, features)
+    logger.debug('computed scores: {0}'.format(scores))
+    computed.update(scores)
+
+    # now save the ref model
+    r = ReferenceModel(jobs=jobs, tags=tags, op_tags=op_tags, computed=computed)
     commit()
     return r.id
 
             
-
 # This is a low-level function that finds the unique process
 # tags for a job (job is either a job id or a Job object). 
 # See also: get_unique_process_tags, which does the same
