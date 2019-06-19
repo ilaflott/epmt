@@ -734,7 +734,9 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
 #        logger.info("Committed post process run to database")    
 
 def set_logging(intlvl = 0):
-    if not intlvl or intlvl == 0:
+    if intlvl < 0:
+        basicConfig(level=ERROR)
+    if intlvl == 0:
         basicConfig(level=WARNING)
     if intlvl == 1:
         basicConfig(level=INFO)

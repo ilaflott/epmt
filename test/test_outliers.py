@@ -9,7 +9,7 @@ from os import environ
 environ['EPMT_USE_DEFAULT_SETTINGS'] = "1"
 
 from epmt_cmds import set_logging, epmt_submit
-set_logging(0)
+set_logging(-1)
 
 import epmt_query as eq
 import epmt_outliers as eod
@@ -18,7 +18,9 @@ from epmtlib import timing
 
 @timing
 def setUpModule():
-    epmt_submit(glob('test/data/outliers/*.tgz'), dry_run=False)
+    datafiles='test/data/outliers/*.tgz'
+    print('setup: importing {0}'.format(datafiles))
+    epmt_submit(glob(datafiles), dry_run=False)
     
 
 def tearDownModule():
@@ -43,7 +45,7 @@ class QueryAPI(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_jobs_basic_query(self):
+    def test_jobs_basic(self):
         jobs = eq.get_jobs(fmt='terse')
         self.assertEqual(type(jobs), list, 'wrong jobs format with terse')
         self.assertEqual(len(jobs), 4, 'job count in db wrong')
@@ -51,7 +53,17 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(df.shape, (4, 47), 'wrong jobs dataframe shape')
 
     @db_session
-    def test_procs_query(self):
+    def test_jobs_adv(self):
+        jobs = eq.get_jobs(fltr=lambda j: 'outlier' not in j.jobid, fmt='orm')
+        self.assertEqual(jobs.count(), 3, 'jobs orm query with filter option')
+        jobs = eq.get_jobs(tags='seqno:4', fmt='terse')
+        self.assertEqual(len(jobs), 1, 'jobs query with tags option')
+        df = eq.get_jobs(order='desc(j.duration)', limit=1, fmt='pandas')
+        self.assertEqual(df.shape[0], 1, 'job query with limit')
+        self.assertTrue('outlier' in df.loc[0,'jobid'], "jobs dataframe query with order")
+
+    @db_session
+    def test_procs(self):
         jobs = eq.get_jobs(fmt='orm')
         procs = eq.get_procs(fltr=lambda p: 'outlier' in p.job.jobid, fmt='orm')
         self.assertEqual(len(procs), 10600, 'wrong count of processes in ORM format using filter')
@@ -68,7 +80,7 @@ class QueryAPI(unittest.TestCase):
 
 
 
-class TestOutliers(unittest.TestCase):
+class OutliersAPI(unittest.TestCase):
     # called ONCE before before first test in this class starts
     @classmethod
     def setUpClass(cls):
