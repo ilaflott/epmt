@@ -226,6 +226,7 @@ def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict',
 # by using the default merge_threads_sums=True, it will be available as column in the output
 # dataframe. The output will be pre-sorted on this field because we have set 'order'
 #
+@db_session
 def get_procs(jobs = [], tags = {}, fltr = None, order = '', limit = 0, fmt='dict', merge_threads_sums=True, exact_tags_only = False, sql_debug = False):
     set_sql_debug(sql_debug)
     if jobs:
