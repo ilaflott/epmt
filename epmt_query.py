@@ -122,6 +122,7 @@ def conv_procs_orm(procs, merge_sums = True, fmt='dict'):
 # sql_debug: Show SQL queries, default False
 #              
 #
+@db_session
 def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict', merge_proc_sums=True, exact_tags_only = False, sql_debug = False):
     set_sql_debug(sql_debug)
     if jobids:

@@ -32,7 +32,7 @@
 *.log
 *.sql
 *.sqlite
-data
+data/postgres
 
 # OS generated files #
 ######################

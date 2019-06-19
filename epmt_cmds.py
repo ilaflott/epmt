@@ -17,7 +17,7 @@ from logging import getLogger, basicConfig, DEBUG, INFO, WARNING, ERROR
 logger = getLogger(__name__)  # you can use other name
 
 if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
-    logger.info('Overriding settings.py and using defaults in epmt_default_settings')
+    #logger.info('Overriding settings.py and using defaults in epmt_default_settings')
     import epmt_default_settings as settings
 else:
     import settings
@@ -628,7 +628,7 @@ def get_filedict(dirname,pattern,tar=False):
 
     return filedict
 
-def epmt_submit(other_dirs, forced_jobid, dry_run=True, drop=False, keep_going=True):
+def epmt_submit(other_dirs, forced_jobid=None, dry_run=True, drop=False, keep_going=True):
     if dry_run and drop:
         logger.error("You can't drop tables and do a dry run")
         return(False)

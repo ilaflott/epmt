@@ -14,7 +14,7 @@ from pwd import getpwnam, getpwuid
 logger = getLogger(__name__)  # you can use other name
 
 if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
-    logger.info('Overriding settings.py and using defaults in epmt_default_settings')
+    #logger.info('Overriding settings.py and using defaults in epmt_default_settings')
     import epmt_default_settings as settings
 else:
     import settings
@@ -294,8 +294,8 @@ def load_process_from_pandas(df, h, j, u, settings):
         logger.error("%s",e)
         logger.error("missing or invalid value for thread start/end time");
 
-    logger.debug("Earliest thread start: %s, Latest thread end: %s",str(earliest_thread_start),str(latest_thread_finish))
-    logger.debug("Process wallclock: %s, Computed process wallclock: %s s.",str(p.duration),str((p.end-p.start).total_seconds()))
+    #logger.debug("Earliest thread start: %s, Latest thread end: %s",str(earliest_thread_start),str(latest_thread_finish))
+    #logger.debug("Process wallclock: %s, Computed process wallclock: %s s.",str(p.duration),str((p.end-p.start).total_seconds()))
     return p
     
 #
