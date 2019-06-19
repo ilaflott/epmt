@@ -20,19 +20,35 @@ def rootcause_zscore(ref, input, features):
 # and not really in the right place
     ref_computed.loc['value'] = input.iloc[0]
     ref_computed.loc['zscore'] = input.iloc[0]
+    ref_computed.loc['zscore_diff'] = input.iloc[0]
 # I could not figure out how to do this arraywise so we do it per feature...
 #    for col in features:
 #        col_zscore = col + '_zscore'
 #        df[col_zscore] = (df[col] - df[col].mean())/df[col].std(ddof=0)
     result_dict = {}
     for f in features:
-        mean = ref_computed[f]['mean']
-        sd = ref_computed[f]['std']
+        rmin = ref_computed[f]['min']
+        rmax = ref_computed[f]['max']
+        rmean = ref_computed[f]['mean']
+        rsd = ref_computed[f]['std']
+# Compute max zscore in reference for this feature
+        if (rmean - rmin > rmax - rmean):
+            rmax_diff = abs(rmin - rmean)
+        else:
+            rmax_diff = abs(rmax - rmean)
+        rmax_zscore = rmax_diff / rsd
+        print(f,"rmax_zscore is",rmax_zscore)
+
         val2compare = input[f][0]
 # Instead of binary testing here, I should be returning the score per metric and not dropping columns
-        zscore = abs(val2compare - mean) / sd 
+        zscore = abs(val2compare - rmean) / rsd 
+        print(f,"zscore is",f,zscore)
         ref_computed[f]['zscore'] = zscore
+        zscore = abs(zscore - rmax_zscore)
+        print(f,"zscore difference is",zscore)
+        ref_computed[f]['zscore_diff'] = zscore
         result_dict[f] = zscore
+
 #        if tester == False:
 #            ref_computed.drop(f, axis=1, inplace=True)
 #        else:
@@ -68,48 +84,53 @@ def rootcause(ref, input, features, methods = [rootcause_zscore]):
 
 if (__name__ == "__main__"):
 # Synthesize 10 feature names
-    n_features = 10
+    n_features = 6
     features = [ '%c' % x for x in range(97, 97+n_features) ] 
     print("Features:\n",features)
 #
 # Check with multiple outliers
 #
 # Narrow range of reference values
-    np.random.seed(104)
-    random_reference_df = pd.DataFrame(np.random.randint(50,100,size=(100,n_features)), columns=features)
-    print("Reference:\n",random_reference_df.head())
-# Wider range input values for test set
-    random_input_df = pd.DataFrame(np.random.randint(25,125,size=(1,n_features)), columns=features)
-    print("Input:\n",random_input_df.head())
-    retval, df, dct = rootcause(random_reference_df,random_input_df,features)
-    print("Retval:\n",retval)
-    print("Result:\n",df)
-    print("Result:\n",dct)
-#
-# Check with one outlier
-#
-# Narrow range of reference values
-    np.random.seed(102)
-    random_reference_df = pd.DataFrame(np.random.randint(50,100,size=(100,n_features)), columns=features)
-    print("Reference:\n",random_reference_df.head())
-# Wider range input values for test set
-    random_input_df = pd.DataFrame(np.random.randint(25,125,size=(1,n_features)), columns=features)
-    print("Input:\n",random_input_df.head())
-    retval, df, dct = rootcause(random_reference_df,random_input_df,features)
-    print("Retval:\n",retval)
-    print("Result:\n",df)
-    print("Result:\n",dct)
+    def multiple():
+        np.random.seed(104)
+        random_reference_df = pd.DataFrame(np.random.randint(50,100,size=(100,n_features)), columns=features)
+        print("Reference:\n",random_reference_df.head())
+    # Wider range input values for test set
+        random_input_df = pd.DataFrame(np.random.randint(25,125,size=(1,n_features)), columns=features)
+        print("Input:\n",random_input_df.head())
+        retval, df, dct = rootcause(random_reference_df,random_input_df,features)
+        print("Retval:\n",retval)
+        print("Result:\n",df)
+        print("Result:\n",dct)
 #
 # Check with no outliers
 #
 # Narrow range of reference values
-    np.random.seed(103)
-    random_reference_df = pd.DataFrame(np.random.randint(50,100,size=(100,n_features)), columns=features)
-    print("Reference:\n",random_reference_df.head())
-# Wider range input values for test set
-    random_input_df = pd.DataFrame(np.random.randint(25,125,size=(1,n_features)), columns=features)
-    print("Input:\n",random_input_df.head())
-    retval, df, dct = rootcause(random_reference_df,random_input_df,features)
-    print("Retval:\n",retval)
-    print("Result:\n",df)
-    print("Result:\n",dct)
+    def none():
+        np.random.seed(103)
+        random_reference_df = pd.DataFrame(np.random.randint(50,100,size=(100,n_features)), columns=features)
+        print("Reference:\n",random_reference_df.head())
+    # Wider range input values for test set
+        random_input_df = pd.DataFrame(np.random.randint(25,125,size=(1,n_features)), columns=features)
+        print("Input:\n",random_input_df.head())
+        retval, df, dct = rootcause(random_reference_df,random_input_df,features)
+        print("Retval:\n",retval)
+        print("Result:\n",df)
+        print("Result:\n",dct)
+#
+# Check with one outlier
+#
+# Narrow range of reference values
+    def one():
+        np.random.seed(102)
+        random_reference_df = pd.DataFrame(np.random.randint(50,100,size=(100,n_features)), columns=features)
+        print("Reference:\n",random_reference_df.head())
+    # Wider range input values for test set
+        random_input_df = pd.DataFrame(np.random.randint(25,125,size=(1,n_features)), columns=features)
+        print("Input:\n",random_input_df.head())
+        retval, df, dct = rootcause(random_reference_df,random_input_df,features)
+        print("Retval:\n",retval)
+        print("Result:\n",df)
+        print("Result:\n",dct)
+
+    one()
