@@ -115,26 +115,6 @@ def dump_config(outf):
         if v in environ:
             print >> outf,"%-24s%-56s" % (v,environ[v])
 
-#
-#       WorkflowDB detection
-#
-
-def check_workflowdb_dict(d,pfx=""):
-    if all (k in d for k in (pfx+"name",pfx+"component",pfx+"oname",pfx+"jobname")):
-        logger.info("*** Workflow detected*** job(%s,%s)",d["job_pl_id"], d["job_pl_jobname"]);
-        logger.info("name(%s), component(%s), oname(%s) and jobname(%s)",d[pfx+"name"],d[pfx+"component"],d[pfx+"oname"],d[pfx+"jobname"])
-        return True
-    return False
-
-def check_and_add_workflowdb_envvars(metadata, env):
-    if check_workflowdb_dict(env):
-        metadata["exp_name"] = env["name"]
-        metadata["exp_component"] = env["component"]
-        metadata["exp_oname"] = env["oname"]
-        metadata["exp_jobname"] = env["jobname"]
-    return metadata
-
-
 def merge_two_dicts(x, y):
     z = x.copy()   # start with x's keys and values
     z.update(y)    # modifies z with y's keys and values & returns None
@@ -188,10 +168,10 @@ def verify_install_prefix():
         logger.error("Found wildcards in value!",str)
         PrintFail()
         return False
-    for e in [ "bin/monitor-run","lib/libpapiex.so","lib/libmonitor.so",
+    for e in [ "lib/libpapiex.so","lib/libmonitor.so",
                "lib/libpapi.so","lib/libpfm.so","bin/papi_command_line" ]:
         cmd = "ls -l "+str+e+">/dev/null"
-        print("\t"+cmd)
+        logger.info("\t"+cmd)
         return_code = forkexecwait(cmd, shell=True)
         if return_code != 0:
             retval = False
@@ -213,7 +193,7 @@ def verify_papiex_output():
         return False
 # Print and create dir
     def testdir(str2):
-        print("\tmkdir -p "+str2)
+        logger.info("\tmkdir -p "+str2)
         return(create_job_dir(str2))
 # Test create (or if it exists)
     if testdir(str) == False:
@@ -223,13 +203,13 @@ def verify_papiex_output():
         retval = False
 # Test to make sure we can access it
     cmd = "ls -lR "+str+" >/dev/null"    
-    print("\t"+cmd)
+    logger.info("\t"+cmd)
     return_code = forkexecwait(cmd, shell=True)
     if return_code != 0:
         retval = False
 # Remove the created tmp dir
     cmd = "rm -rf "+str+"tmp"
-    print("\t"+cmd)
+    logger.info("\t"+cmd)
     return_code = forkexecwait(cmd, shell=True)
     if return_code != 0:
         retval = False
@@ -247,7 +227,7 @@ def verify_papiex_options():
     retval = True
 # Check for any components
     cmd = settings.install_prefix+"bin/papi_component_avail"+"| sed -n -e '/Active/,$p' | grep perf_event >/dev/null"
-    print("\t"+cmd)
+    logger.info("\t"+cmd)
     return_code = forkexecwait(cmd, shell=True)
     if return_code != 0:
         retval = False
@@ -255,7 +235,7 @@ def verify_papiex_options():
     eventlist = str.split(',')
     for e in eventlist:
         cmd = settings.install_prefix+"bin/papi_command_line "+e+"| sed -n -e '/PERF_COUNT_SW_CPU_CLOCK\ :/,$p' | grep PERF_COUNT_SW_CPU_CLOCK > /dev/null"
-        print("\t"+cmd)
+        logger.info("\t"+cmd)
         return_code = forkexecwait(cmd, shell=True)
         if return_code != 0:
             retval = False
@@ -283,28 +263,26 @@ def verify_db_params():
     
 def verify_perf():
     f="/proc/sys/kernel/perf_event_paranoid"
+    print f,"exists and has a value of 0"
     try:
         with open(f, 'r') as content_file:
             value = int(content_file.read())
-            print f,"=",str(value)
-            if value == 3:
-                logger.error("bad %s value of %d, perf event disabled!",f,value)
+            logger.info("%s = %d",f,value)
+            if value != 0:
+                logger.error("bad %s value of %d, should be 0 to allow cpu events",f,value)
                 PrintFail()
                 return False
-            if value == 2 or value == 1:
-                logger.warning("restrictive %s value of %d, should be 0 for non-privileged users",f,value)
             logger.info("perf_event_paranoid is %d",value)
             PrintPass()
             return True
     except Exception as e:
-        print f,"="
         print >> stderr,str(e)
         PrintFail()
     return False
 
 def verify_papiex():
-    print "collect functionality (papiex+epmt)"
-    print("\tepmt run -a /bin/sleep 1")
+    print "epmt run functionality"
+    logger.info("\tepmt run -a /bin/sleep 1")
     fake_job_id = "1"
     dir = settings.papiex_output+fake_job_id+"/"
     retval = epmt_run(fake_job_id,["/bin/sleep","1"],wrapit=True)
@@ -315,11 +293,13 @@ def verify_papiex():
     if len(files) != 1:
         logger.error("%s matched %d papiex CSV output files instead of 1",dir+settings.input_pattern,len(files))
         PrintFail()
+        rmtree(dir)
         return False
     files = glob(dir+"job_metadata")
     if len(files) != 1:
         logger.error("%s matched %d job_metadata files instead of 1",dir+job_metadata,len(files))
         PrintFail()
+        rmtree(dir)
         return False
     rmtree(dir)
     PrintPass()
@@ -402,7 +382,7 @@ def create_job_dir(dir):
 def write_job_metadata(jobdatafile,data):
 	with open(jobdatafile,'w+b') as file:
 		pickle.dump(data,file)
-                logger.info("picked to %s",jobdatafile);
+                logger.info("pickled to %s",jobdatafile);
                 logger.debug("Data %s",data)
 		return True
 	return False
@@ -706,7 +686,7 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
 
 # Do as much as we can before bailing
     if dry_run:
-        check_workflowdb_dict(metadata,pfx="exp_")
+#        check_workflowdb_dict(metadata,pfx="exp_")
         logger.info("Dry run finished, skipping DB work")
         return
 
