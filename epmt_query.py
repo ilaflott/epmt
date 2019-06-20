@@ -85,6 +85,43 @@ def conv_procs_orm(procs, merge_sums = True, fmt='dict'):
     return pd.DataFrame(out_list) if fmt == 'pandas' else out_list
 
 
+# this function returns a timeline of processes
+# ordered chronologically by start time.
+# jobs is either a collection of jobs or a single job, where 
+# jobs can be specified as jobids or Job objects.
+# 
+# The function takes the same arguments as get_procs is a very
+# slim wrapper over it, just setting an ordering by start time.
+#
+# >>> eq.timeline([u'685000', u'685016'], limit=5)[['job', 'exename', 'start', 'id']]
+#       job    exename                      start    id
+# 0  685000       tcsh 2019-06-15 11:52:04.126892  3413
+# 1  685000       tcsh 2019-06-15 11:52:04.133795  3414
+# 2  685000      mkdir 2019-06-15 11:52:04.142141  3415
+# 3  685000  modulecmd 2019-06-15 11:52:04.176020  3416
+# 4  685000       test 2019-06-15 11:52:04.192758  3417
+#
+# >>> eq.timeline([u'685000', u'685016'], limit=5, hosts=[Host[u'pp313'], Host[u'pp208']])[['job', 'exename', 'start', 'host']]
+#       job    exename                      start   host
+# 0  685000       tcsh 2019-06-15 11:52:04.126892  pp208
+# 1  685000       tcsh 2019-06-15 11:52:04.133795  pp208
+# 2  685000      mkdir 2019-06-15 11:52:04.142141  pp208
+# 3  685000  modulecmd 2019-06-15 11:52:04.176020  pp208
+# 4  685000       test 2019-06-15 11:52:04.192758  pp208
+#
+def timeline(jobs = [], limit=0, fltr='', when=None, hosts=[], fmt='pandas'):
+    # if type(jobs) in [str, unicode]:
+    #     # job is a single jobid
+    #     jobs = Job[jobs]
+    # if type(jobs) == Job:
+    #     # is it a singular job?
+    #     jobs = [jobs]
+    # if type(jobs) == list:
+    #     jobs = [Job[j] if type(j) in [str, unicode] else j for j in jobs]
+    # # at this point jobs is either a list of Job objects or a Query object
+    return get_procs(jobs, fmt=fmt, order='p.start', limit=limit, fltr=fltr, when=when, hosts=hosts)
+
+
 # get the root process of the job
 # The job is either a Job object or a jobid
 def get_root(job, fmt='dict'):
