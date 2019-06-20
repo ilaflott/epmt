@@ -10,6 +10,7 @@ from models import Job, Process, ReferenceModel
 from epmt_job import setup_orm_db, get_tags_from_string, _sum_dicts, unique_dicts, fold_dicts
 from epmt_cmds import set_logging, init_settings
 from epmt_outliers import modified_z_score
+from datetime import datetime
 
 logger = getLogger(__name__)  # you can use other name
 set_logging(2)
@@ -84,6 +85,16 @@ def conv_procs_orm(procs, merge_sums = True, fmt='dict'):
     return pd.DataFrame(out_list) if fmt == 'pandas' else out_list
 
 
+# get the root process of the job
+# The job is either a Job object or a jobid
+def get_root(job, fmt='dict'):
+    if type(job) in [str, unicode]:
+        job = Job[job]
+    p = job.processes.order_by('p.start').limit(1)
+    if fmt == 'orm': return p.to_list().pop()
+
+    plist = conv_procs_orm(p, fmt='dict')
+    return pd.DataFrame(plist) if fmt == 'pandas' else plist.pop()
 
 # This function returns a list of jobs based on some filtering and ordering.
 # The output format can be set to pandas dataframe, list of dicts or list
@@ -108,6 +119,12 @@ def conv_procs_orm(procs, merge_sums = True, fmt='dict'):
 #
 # limit  : Restrict the output list a specified number of jobs
 #
+# when   : Restrict the output to jobs running at 'when' time. 'when'
+#          can be specified as a Python datetime. You can also choose
+#          to specify 'when' as jobid or a Job object. In which 
+#          case the output will be restricted to those jobs that 
+#          had an overlap with the specified 'when' job. 
+#
 # fmt    : Control the output format. One of 'dict', 'pandas', 'orm', 'terse'
 #          'dict': each job object is converted to a dict, and the entire
 #                  output is a list of dictionaries
@@ -131,7 +148,7 @@ def conv_procs_orm(procs, merge_sums = True, fmt='dict'):
 #              
 #
 @db_session
-def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict', merge_proc_sums=True, exact_tags_only = False, sql_debug = False):
+def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, when=None, fmt='dict', merge_proc_sums=True, exact_tags_only = False, sql_debug = False):
     set_sql_debug(sql_debug)
     if jobids:
         if (type(jobids) == str) or (type(jobids) == unicode):
@@ -158,6 +175,13 @@ def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict',
     # if fltr is a lambda function or a string apply it
     if fltr:
         qs = qs.filter(fltr)
+
+    if when:
+        if type(when) == datetime:
+            qs = qs.filter(lambda j: j.start <= when and j.end >= when)
+        else:
+            when_job = Job[when] if type(when) in [str, unicode] else when
+            qs = qs.filter(lambda j: j.start <= when_job.end and j.end >= when_job.start)
 
     if order:
         qs = qs.order_by(order)
@@ -187,6 +211,12 @@ def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, fmt='dict',
 #
 # limit: if set, limits the total number of results
 # 
+# when   : Restrict the output to processes running at 'when' time. 'when'
+#          can be specified as a Python datetime. You can also choose
+#          to specify 'when' as process PK or a Process object. In which 
+#          case the output will be restricted to those processes that 
+#          had an overlap with the specified 'when' process. 
+#
 # fmt :   Output format, is one of 'dict', 'orm', 'pandas', 'terse'
 #         'dict': This is the default, and in this case
 #                 each process is output as a python dictionary, 
@@ -270,6 +300,13 @@ def get_procs(jobs = [], tags = {}, fltr = None, order = '', limit = 0, fmt='dic
     # if fltr is a lambda function or a string apply it
     if fltr:
         qs = qs.filter(fltr)
+
+    if when:
+        if type(when) == datetime:
+            qs = qs.filter(lambda p: p.start <= when and p.end >= when)
+        else:
+            when_process = Process[when] if type(when) in [str, unicode] else when
+            qs = qs.filter(lambda p: p.start <= when_process.end and p.end >= when_process.start)
 
     if order:
         qs = qs.order_by(order)
