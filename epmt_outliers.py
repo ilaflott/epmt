@@ -62,6 +62,24 @@ def get_outlier_1d(df,column,func=outliers_iqr):
     return(func(df[column]))
 
 
+def partition_jobs(jobs, feature='duration', methods=[modified_z_score], thresholds=THRESHOLDS, fmt='pandas'):
+    if type(feature) not in [str, unicode]:
+        logger.error('feature needs to be a single string such as "duration"')
+        return None
+    df = detect_outlier_jobs(jobs, features=[feature], methods=methods, thresholds=thresholds)
+    outliers_df = df[df[feature] > 0]
+    ref_df = df[df[feature] == 0]
+    if fmt == 'pandas':
+        return (outliers_df, ref_df)
+    ref_list = list(ref_df['jobid'].values)
+    outliers_list = list(outliers_df['jobid'].values)
+    if fmt == 'terse':
+        return (outliers_list, ref_list)
+    if fmt == 'orm':
+        return (eq.conv_jobs_terse(outliers_list), eq.conv_jobs_terse(ref_list))
+
+
+
 # jobs is either a pandas dataframe of job(s) or a list of job ids or a Pony Query object
 def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds = THRESHOLDS):
     # if we have a non-empty list of job ids then get a pandas df

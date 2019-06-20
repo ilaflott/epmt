@@ -33,6 +33,14 @@ def conv_orm(entities, merge_sub_sums=True, fmt='dict'):
     e1 = entities[0] if type(entities) == list else entities.first()
     return conv_jobs_orm(entities, merge_sub_sums, fmt) if e1.__class__.__name__ == 'Job' else conv_procs_orm(entities, merge_sub_sums, fmt)
 
+
+def conv_jobs_terse(jobids, merge_sums=True, fmt='orm'):
+    jobs = Job.select(lambda j: j.jobid in jobids)
+    if fmt == 'orm':
+        return jobs
+    if fmt == 'pandas':
+        return conv_jobs_orm(jobs, merge_sums=merge_sums, fmt='pandas')
+
 # jobs is an ORM Query object on Job or a list of Job objects
 def conv_jobs_orm(jobs, merge_sums = True, fmt='dict'):
     if fmt=='terse':

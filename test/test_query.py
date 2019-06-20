@@ -15,7 +15,6 @@ from epmt_cmds import set_logging, epmt_submit
 set_logging(-1)
 
 import epmt_query as eq
-import epmt_outliers as eod
 from epmtlib import timing
 import epmt_default_settings as settings
 

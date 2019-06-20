@@ -60,6 +60,23 @@ class OutliersAPI(unittest.TestCase):
         self.assertTrue('outlier' in df[df.duration > 0]['jobid'].values[0], "wrong duration outlier")
         self.assertTrue('outlier' in df[df.cpu_time > 0]['jobid'].values[0], "wrong duration outlier")
 
+    @db_session
+    def test_partition_jobs(self):
+        jobs = eq.get_jobs(tags='launch_id:6656', fmt='orm')
+        self.assertEqual(jobs.count(), 4, "incorrect job count using tags")
+        (p1, p2) = eod.partition_jobs(jobs, fmt='terse')
+        self.assertEqual(len(p1), 1, "incorrect count of outlier partition")
+        self.assertEqual(len(p2), 3, "incorrect count of ref partition")
+        self.assertTrue('outlier' in p1[0], "wrong job in outlier partition")
+        self.assertFalse('outlier' in ",".join(p2), "wrong job in ref. partition")
+        (p1, p2) = eod.partition_jobs(jobs, fmt='pandas')
+        self.assertEqual(p1.shape[0], 1, "wrong count of rows in outliers df")
+        self.assertEqual(p2.shape[0], 3, "wrong count of rows in ref df")
+        (p1, p2) = eod.partition_jobs(jobs, fmt='orm')
+        self.assertEqual(p1.count(), 1, "wrong count in outliers partition orm")
+        self.assertEqual(p2.count(), 3, "wrong count in ref partition orm")
+        self.assertTrue('outlier' in p1.first().jobid, "wrong job found in outliers partition orm")
+        
 
 if __name__ == '__main__':
     unittest.main()
