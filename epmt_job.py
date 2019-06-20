@@ -661,6 +661,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             proc.inclusive_cpu_time = float(proc.exclusive_cpu_time + sum(proc.descendants.exclusive_cpu_time))
             nthreads += proc.numtids
             threads_sums_across_procs = _sum_dicts(threads_sums_across_procs, proc.threads_sums)
+            j.hosts.add(proc.host)
         logger.info("Adding %d processes to job",len(all_procs))
         j.processes.add(all_procs)
     j.proc_sums['num_procs'] = len(all_procs)
