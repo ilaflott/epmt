@@ -6,7 +6,7 @@ from pony.orm import *
 from json import loads, dumps
 from os import environ
 from logging import getLogger
-from models import Job, Process, ReferenceModel
+from models import Job, Process, ReferenceModel, Host
 from epmt_job import setup_orm_db, get_tags_from_string, _sum_dicts, unique_dicts, fold_dicts
 from epmt_cmds import set_logging, init_settings
 from epmt_outliers import modified_z_score
@@ -125,6 +125,10 @@ def get_root(job, fmt='dict'):
 #          case the output will be restricted to those jobs that 
 #          had an overlap with the specified 'when' job. 
 #
+# hosts  : Restrict the output to those jobs that ran on 'hosts'.
+#          'hosts' is a list of hostnames/Host objects. A job is
+#          consider to match if the intersection of j.hosts and hosts is non-empty
+#
 # fmt    : Control the output format. One of 'dict', 'pandas', 'orm', 'terse'
 #          'dict': each job object is converted to a dict, and the entire
 #                  output is a list of dictionaries
@@ -148,7 +152,7 @@ def get_root(job, fmt='dict'):
 #              
 #
 @db_session
-def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, when=None, fmt='dict', merge_proc_sums=True, exact_tags_only = False, sql_debug = False):
+def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tags_only = False, sql_debug = False):
     set_sql_debug(sql_debug)
     if jobids:
         if (type(jobids) == str) or (type(jobids) == unicode):
@@ -183,6 +187,15 @@ def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, when=None, 
             when_job = Job[when] if type(when) in [str, unicode] else when
             qs = qs.filter(lambda j: j.start <= when_job.end and j.end >= when_job.start)
 
+    if hosts:
+        if type(hosts) in [str, unicode, Host]:
+            # user probably forgot to wrap in a list
+            hosts = [hosts]
+        if type(hosts) == list:
+            # if the list contains of strings then we want the Host objects
+            hosts = [Host[h] if type(h) in [str,unicode] else h for h in hosts]
+        qs = select(j for j in qs for h in j.hosts if h in hosts)
+
     if order:
         qs = qs.order_by(order)
 
@@ -216,6 +229,10 @@ def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, when=None, 
 #          to specify 'when' as process PK or a Process object. In which 
 #          case the output will be restricted to those processes that 
 #          had an overlap with the specified 'when' process. 
+#
+# hosts  : Restrict the output to those processes that ran on 'hosts'.
+#          'hosts' is a list of hostnames/Host objects. A process is
+#          consider to match if process.host is in the list of 'hosts'
 #
 # fmt :   Output format, is one of 'dict', 'orm', 'pandas', 'terse'
 #         'dict': This is the default, and in this case
@@ -265,7 +282,7 @@ def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, when=None, 
 # dataframe. The output will be pre-sorted on this field because we have set 'order'
 #
 @db_session
-def get_procs(jobs = [], tags = {}, fltr = None, order = '', limit = 0, fmt='dict', merge_threads_sums=True, exact_tags_only = False, sql_debug = False):
+def get_procs(jobs = [], tags = {}, fltr = None, order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_threads_sums=True, exact_tags_only = False, sql_debug = False):
     set_sql_debug(sql_debug)
     if jobs:
         if isinstance(jobs, Query):
@@ -307,6 +324,15 @@ def get_procs(jobs = [], tags = {}, fltr = None, order = '', limit = 0, fmt='dic
         else:
             when_process = Process[when] if type(when) in [str, unicode] else when
             qs = qs.filter(lambda p: p.start <= when_process.end and p.end >= when_process.start)
+
+    if hosts:
+        if type(hosts) in [str, unicode, Host]:
+            # user probably forgot to wrap in a list
+            hosts = [hosts]
+        if type(hosts) == list:
+            # if the list contains of strings then we want the Host objects
+            hosts = [Host[h] if type(h) in [str,unicode] else h for h in hosts]
+        qs = qs.filter(lambda p: p.host in hosts)
 
     if order:
         qs = qs.order_by(order)
