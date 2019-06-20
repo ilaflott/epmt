@@ -1,0 +1,106 @@
+#!/usr/bin/env python
+from __future__ import print_function
+import unittest
+from sys import stderr, exit
+from glob import glob
+from pony.orm import db_session
+from models import db
+
+# put this above all epmt imports so they use defaults
+from os import environ
+environ['EPMT_USE_DEFAULT_SETTINGS'] = "1"
+
+from epmt_job import setup_orm_db
+from epmt_cmds import set_logging, epmt_submit
+set_logging(-1)
+
+import epmt_query as eq
+import epmt_outliers as eod
+from epmtlib import timing
+import epmt_default_settings as settings
+
+
+@timing
+def setUpModule():
+    if settings.db_params.get('filename') != ':memory:':
+        print('db_params MUST use in-memory sqlite for testing', file=stderr)
+        exit(1)
+    setup_orm_db(settings, drop=True)
+    datafiles='test/data/query/*.tgz'
+    print('setUpModdule: importing {0}'.format(datafiles))
+    epmt_submit(glob(datafiles), dry_run=False)
+    
+
+def tearDownModule():
+    pass
+
+class QueryAPI(unittest.TestCase):
+#     # called ONCE before before first test in this class starts
+#     @classmethod
+#     def setUpClass(cls):
+#         pass
+# 
+#     # called ONCE after last tests in this class is finished
+#     @classmethod
+#     def tearDownClass(cls):
+#         pass
+# 
+#     # called before every test
+#     def setUp(self):
+#         pass
+# 
+#     # called after every test
+#     def tearDown(self):
+#         pass
+
+    def test_jobs(self):
+        jobs = eq.get_jobs(fmt='terse')
+        self.assertEqual(type(jobs), list, 'wrong jobs format with terse')
+        self.assertEqual(len(jobs), 3, 'job count in db wrong')
+        df = eq.get_jobs(fmt='pandas')
+        self.assertEqual(df.shape, (3, 47), 'wrong jobs dataframe shape')
+
+    @db_session
+    def test_jobs_advanced(self):
+        jobs = eq.get_jobs(fltr=lambda j: '685000' not in j.jobid, fmt='orm')
+        self.assertEqual(jobs.count(), 2, 'jobs orm query with filter option')
+        jobs = eq.get_jobs(tags='exp_component:ocean_month_rho2_1x1deg', fmt='terse')
+        self.assertEqual(len(jobs), 1, 'jobs query with tags option')
+        df = eq.get_jobs(order='desc(j.duration)', limit=1, fmt='pandas')
+        self.assertEqual(df.shape[0], 1, 'job query with limit')
+        self.assertEqual('685016', df.loc[0,'jobid'], "jobs dataframe query with order")
+
+    @db_session
+    def test_procs(self):
+        procs = eq.get_procs(['685016'], fmt='terse')
+        self.assertEqual(type(procs), list, 'wrong procs format with terse')
+        self.assertEqual(len(procs), 3412, 'wrong count of processes in terse')
+        procs = eq.get_procs(['685016', '685000'], fmt='orm')
+        self.assertEqual(len(procs), 6892, 'wrong count of processes in ORM format')
+        df = eq.get_procs(fmt='pandas', limit=10)
+        self.assertEqual(df.shape, (10,49), "incorrect dataframe shape with limit")
+
+    @db_session
+    def test_procs_advanced(self):
+        procs = eq.get_procs(fltr=lambda p: p.duration > 1000000, order='desc(p.duration)', fmt='orm')
+        self.assertEqual(len(procs), 630, 'wrong count of processes in ORM format using filter')
+        self.assertEqual(int(procs.first().duration), 7005558348, 'wrong order when using orm with filter and order')
+
+        df = eq.get_procs(limit=5, order='desc(p.exclusive_cpu_time)', fmt='pandas')
+        self.assertEqual(df.shape, (5,49), "incorrect dataframe shape")
+        self.assertEqual('685016', df.loc[0,'job'], "ordering of processes wrong in dataframe")
+
+        procs_with_tag = eq.get_procs(tags='op_sequence:4', fltr='p.duration > 10000000', order='desc(p.duration)', fmt='orm')
+        self.assertEqual(len(procs_with_tag), 2, 'incorrect process count when using tags and filter')
+        p = procs_with_tag.first()
+        self.assertEqual(int(p.duration), 207384313, 'wrong duration or order when used with tags and filter')
+        self.assertEqual(p.descendants.count(), 85, 'wrong descendant count or order when used with tags and filter')
+
+
+
+
+
+if __name__ == '__main__':
+    unittest.main()
+    #suite = unittest.TestLoader().loadTestsFromTestCase(QueryAPI)
+    #unittest.TextTestRunner(verbosity=2).run(suite)

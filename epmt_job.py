@@ -120,8 +120,6 @@ def lookup_or_create_host(hostname):
     if host is None:
         logger.info("Creating host %s",hostname)
         host = Host(name=hostname)
-    else:
-        logger.debug("Found host %s",hostname)
     return host
 
 def lookup_or_create_user(username):
@@ -129,8 +127,6 @@ def lookup_or_create_user(username):
     if user is None:
         logger.info("Creating user %s",username)
         user = User(name=username)
-    else:
-        logger.debug("Found user %s",username)
     return user
 
 
