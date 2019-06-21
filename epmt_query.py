@@ -85,6 +85,19 @@ def conv_procs_orm(procs, merge_sums = True, fmt='dict'):
     return pd.DataFrame(out_list) if fmt == 'pandas' else out_list
 
 
+def __job_col(jobs):
+    if type(jobs) in [str, unicode]:
+        # job is a single jobid
+        jobs = Job[jobs]
+    if type(jobs) == Job:
+        # is it a singular job?
+        jobs = [jobs]
+    if type(jobs) == list:
+        jobs = [Job[j] if type(j) in [str, unicode] else j for j in jobs]
+    # at this point jobs is either a list of Job objects or a Query object
+    return jobs
+
+
 # this function returns a timeline of processes
 # ordered chronologically by start time.
 # jobs is either a collection of jobs or a single job, where 
@@ -110,15 +123,6 @@ def conv_procs_orm(procs, merge_sums = True, fmt='dict'):
 # 4  685000       test 2019-06-15 11:52:04.192758  pp208
 #
 def timeline(jobs = [], limit=0, fltr='', when=None, hosts=[], fmt='pandas'):
-    # if type(jobs) in [str, unicode]:
-    #     # job is a single jobid
-    #     jobs = Job[jobs]
-    # if type(jobs) == Job:
-    #     # is it a singular job?
-    #     jobs = [jobs]
-    # if type(jobs) == list:
-    #     jobs = [Job[j] if type(j) in [str, unicode] else j for j in jobs]
-    # # at this point jobs is either a list of Job objects or a Query object
     return get_procs(jobs, fmt=fmt, order='p.start', limit=limit, fltr=fltr, when=when, hosts=hosts)
 
 
@@ -192,13 +196,7 @@ def get_root(job, fmt='dict'):
 def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tags_only = False, sql_debug = False):
     set_sql_debug(sql_debug)
     if jobids:
-        if (type(jobids) == str) or (type(jobids) == unicode):
-            # user either gave the job id directly instead of passing a list
-            jobids = jobids.split(',')
-        if type(jobids) == list:
-            qs = Job.select(lambda j: j.jobid in jobids)
-        elif type(jobids) == Query:
-            qs = jobids
+        qs = __job_col(jobids)
     else:
         qs = Job.select()
 

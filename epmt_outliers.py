@@ -199,11 +199,11 @@ def detect_outlier_processes(processes, trained_model=None,
 # for the feature. The sorted_tuples consists of a list of tuples, where each
 # tuple (feature,<diff_score>)
 def detect_rootcause(refs, inp, features = FEATURES,  methods = [modified_z_score]):
-    if type(refs) == list:
-        refs = eq.get_jobs(refs, fmt='pandas')
-    elif type(refs) == int:
+    if type(refs) == int:
         refs = eq.get_jobs(ReferenceModel[refs].jobs, fmt='pandas')
-    if type(inp) in [str, unicode]:
+    elif type(refs) != pd.DataFrame:
+        refs = eq.get_jobs(refs, fmt='pandas')
+    if type(inp) in [str, unicode, Query]:
         inp = eq.get_jobs(inp, fmt='pandas')
     return rca(refs, inp, features, methods)
 

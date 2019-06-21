@@ -76,7 +76,17 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(p1.count(), 1, "wrong count in outliers partition orm")
         self.assertEqual(p2.count(), 3, "wrong count in ref partition orm")
         self.assertTrue('outlier' in p1.first().jobid, "wrong job found in outliers partition orm")
-        
+
+    def test_rca_jobs(self):
+        ref_jobs = eq.get_jobs(tags='exp_name:linux_kernel', fltr='"outlier" not in j.jobid', fmt='orm')
+        outlier_job = eq.get_jobs(tags='exp_name:linux_kernel', fltr='"outlier" in j.jobid', fmt='orm')
+        (res, df, sl) = eod.detect_rootcause(ref_jobs, outlier_job)
+        self.assertTrue(res, 'detect_rootcause returned False')
+        self.assertEqual(list(df.columns.values), ['cpu_time', 'duration', 'num_procs'], 'wrong order of features returned by RCA')
+        self.assertEqual(df.shape, (12,3), "wrong dataframe format")
+        self.assertEqual([int(x) for x in list(df.loc['modified_z_score_ratio'])], [204, 27, 0], "wrong madz score ratios")
+
+
 
 if __name__ == '__main__':
     unittest.main()

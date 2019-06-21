@@ -69,14 +69,14 @@ def get_outlier_1d(df,column,func=outliers_iqr):
 def rca(ref, inp, features, methods = [modified_z_score]):
     # API input checking
     if ref.empty or inp.empty:
-        return False
+        return (False, None, None)
 
     if type(inp) == pd.Series:
         inp = pd.DataFrame(inp).transpose()
 
     if list(ref.columns.values) != list(inp.columns.values):
         logger.error('ref and inp MUST have the same columns and in the same order')
-        return False
+        return (False, None, None)
 
     if not features:
         # pick all the numeric columns in the dataframe
@@ -121,5 +121,5 @@ def rca(ref, inp, features, methods = [modified_z_score]):
 
     # print("Sorted metrics",ranked_features)
     # Sort order of columns in returned dataframe
-    return True, ref_computed[ranked_features], dlst
+    return (True, ref_computed[ranked_features], dlst)
 
