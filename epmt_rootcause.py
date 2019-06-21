@@ -1,6 +1,7 @@
 from __future__ import print_function
 import pandas as pd
 import numpy as np
+import epmt_stat as estat
 
 # Return a <boolean, df, list> tuple that consists of error/no-error, dataframe of derived stats, 
 # and a sorted hash in order of deviant feature values. 
@@ -128,9 +129,8 @@ if (__name__ == "__main__"):
     # Wider range input values for test set
         random_input_df = pd.DataFrame(np.random.randint(25,125,size=(1,n_features)), columns=features)
         print("Input:\n",random_input_df.head())
-        retval, df, dct = rootcause(random_reference_df,random_input_df,features)
+        retval, df, dct = estat.rootcause(random_reference_df,random_input_df,features)
         print("Retval:\n",retval)
         print("Result:\n",df)
         print("Result:\n",dct)
-
     one()

@@ -2,12 +2,14 @@ from __future__ import print_function
 from os import environ
 import pandas as pd
 import numpy as np
+import operator
 import epmt_query as eq
 from pony.orm.core import Query
 from models import ReferenceModel
 from logging import getLogger
 from json import dumps
 from epmt_job import dict_in_list
+from epmt_stat import thresholds, modified_z_score,outliers_iqr,outliers_modified_z_score
 
 logger = getLogger(__name__)  # you can use other name
 
@@ -17,52 +19,10 @@ if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
 else:
     import settings
 
-
-
-# this sets the defaults to be used when a trained model is not provided
-THRESHOLDS = settings.outlier_thresholds if hasattr(settings, 'outlier_thresholds') else { 'modified_z_score': 2.5, 'iqr': [20,80], 'z_score': 3.0 }
 FEATURES = settings.outlier_features if hasattr(settings, 'outlier_features') else ['duration', 'cpu_time', 'num_procs']
 
-# These all return a tuple containing a list of indicies
-# For 1-D this is just a tuple with one element that is a list of rows
-def outliers_z_score(ys, threshold=THRESHOLDS['z_score']):
-    mean_y = np.mean(ys)
-    stdev_y = np.std(ys)
-    z_scores = [(y - mean_y) / stdev_y for y in ys]
-    return np.where(np.abs(z_scores) > threshold)[0]
 
-def outliers_iqr(ys, span=THRESHOLDS['iqr']):
-    quartile_1, quartile_3 = np.percentile(ys, span)
-    iqr = quartile_3 - quartile_1
-    lower_bound = quartile_1 - (iqr * 1.5)
-    upper_bound = quartile_3 + (iqr * 1.5)
-    return np.where((ys > upper_bound) | (ys < lower_bound))[0]
-
-# this function returns a tuple consisting of:
-#  (modified_z_scores, max, median, median_abs_dev)
-# The reason we return max,.. is so it can be saved in the ref model
-# params if passed in, is of the form (max, median, median_abs_dev)
-# We will ignore params(0) as that's the max z_score in the ref_model
-def modified_z_score(ys, params=()):
-    median_y = params[1] if params else np.median(ys)
-    median_absolute_deviation_y = params[2] if params else np.median([np.abs(y - median_y) for y in ys])
-    # z_score will be zero if std. dev is zero, for all others compute it
-    modified_z_scores = [round(0.6745 * abs(y - median_y) / median_absolute_deviation_y, 4)
-                         for y in ys] if median_absolute_deviation_y > 0 else [0.0 for y in ys]
-    return (modified_z_scores, max(modified_z_scores), median_y, median_absolute_deviation_y)
-
-
-def outliers_modified_z_score(ys,threshold=THRESHOLDS['modified_z_score']):
-    scores = modified_z_score(ys)[0]
-    return np.where(np.abs(scores) > threshold)[0]
-
-def get_outlier_1d(df,column,func=outliers_iqr):
-    if column not in df:
-        return None
-    return(func(df[column]))
-
-
-def partition_jobs(jobs, feature='duration', methods=[modified_z_score], thresholds=THRESHOLDS, fmt='pandas'):
+def partition_jobs(jobs, feature='duration', methods=[modified_z_score], thresholds=thresholds, fmt='pandas'):
     if type(feature) not in [str, unicode]:
         logger.error('feature needs to be a single string such as "duration"')
         return None
@@ -81,7 +41,7 @@ def partition_jobs(jobs, feature='duration', methods=[modified_z_score], thresho
 
 
 # jobs is either a pandas dataframe of job(s) or a list of job ids or a Pony Query object
-def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds = THRESHOLDS):
+def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds = thresholds):
     # if we have a non-empty list of job ids then get a pandas df
     # using get_jobs to convert the format
     if type(jobs) == list or type(jobs) == Query:
@@ -118,7 +78,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
 # tags is a list of tags specified either as a string or a list of string/list of dicts
 # If tags is not specified, then the list of jobs will be queried to get the
 # superset of unique tags across the jobs.
-def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds=THRESHOLDS):
+def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds=thresholds):
 
     # do we have a single tag in string or dict form? 
     if type(tags) == str:

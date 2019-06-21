@@ -1,5 +1,6 @@
 from __future__ import print_function
 from sys import stderr
+from datetime import datetime
 import pandas as pd
 from pony.orm.core import Query
 from pony.orm import *
@@ -9,8 +10,7 @@ from logging import getLogger
 from models import Job, Process, ReferenceModel, Host
 from epmt_job import setup_orm_db, get_tags_from_string, _sum_dicts, unique_dicts, fold_dicts
 from epmt_cmds import set_logging, init_settings
-from epmt_outliers import modified_z_score
-from datetime import datetime
+from epmt_stat import modified_z_score
 
 logger = getLogger(__name__)  # you can use other name
 set_logging(2)
