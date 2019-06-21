@@ -65,7 +65,7 @@ def get_outlier_1d(df,column,func=outliers_iqr):
 # match the column labels of the ref dataframe. Similarly if inp is a
 # dataframe then it's column labels must match those of ref and in the
 # same order.
-def rootcause(ref, inp, features, methods = [modified_z_score]):
+def rca(ref, inp, features, methods = [modified_z_score]):
     # API input checking
     if ref.empty or inp.empty:
         return False
@@ -81,6 +81,7 @@ def rootcause(ref, inp, features, methods = [modified_z_score]):
         features = list(inp.columns.values)
 
     ref_computed = ref.describe()
+    ref_computed.loc['inp_values'] = inp.iloc[0]
 
     result_dict = { f: 0 for f in features }
 

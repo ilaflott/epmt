@@ -9,7 +9,7 @@ from models import ReferenceModel
 from logging import getLogger
 from json import dumps
 from epmt_job import dict_in_list
-from epmt_stat import thresholds, modified_z_score,outliers_iqr,outliers_modified_z_score
+from epmt_stat import thresholds, modified_z_score,outliers_iqr,outliers_modified_z_score,rca
 
 logger = getLogger(__name__)  # you can use other name
 
@@ -187,6 +187,25 @@ def detect_outlier_processes(processes, trained_model=None,
     retval['tags'] = processes['tags']
     retval = retval[['id','exename','tags']+features]
     return retval
+
+
+# refs is either a dataframe of reference jobs/ops, or a list
+# of reference jobs, or a trained model.
+# inp is either a single job/jobid or a Series or a dataframe with a single column
+# output is of the form:
+# (df, sorted_feature_list),
+# where df is a dataframe that ranks the features from left to right according
+# to the difference of the score for the input with the score for the reference
+# for the feature. The sorted_tuples consists of a list of tuples, where each
+# tuple (feature,<diff_score>)
+def detect_rootcause(refs, inp, features = FEATURES,  methods = [modified_z_score]):
+    if type(refs) == list:
+        refs = eq.get_jobs(refs, fmt='pandas')
+    elif type(refs) == int:
+        refs = eq.get_jobs(ReferenceModel[refs].jobs, fmt='pandas')
+    if type(inp) in [str, unicode]:
+        inp = eq.get_jobs(inp, fmt='pandas')
+    return rca(refs, inp, features, methods)
 
 if (__name__ == "__main__"):
     np.random.seed(101)
