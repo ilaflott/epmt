@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import operator
 from logging import getLogger
+from numbers import Number
 
 logger = getLogger(__name__)  # you can use other name
 
@@ -78,17 +79,19 @@ def rca(ref, inp, features, methods = [modified_z_score]):
         return False
 
     if not features:
-        features = list(inp.columns.values)
+        # pick all the numeric columns in the dataframe
+        features = [f for f in list(inp.columns.values) if isinstance(inp[f][0], Number)]
+        logger.debug('using following features for RCA analysis: ' + str(features))
 
-    ref_computed = ref.describe()
-    ref_computed.loc['inp_values'] = inp.iloc[0]
+    ref_computed = ref[features].describe()
+    ref_computed.loc['input'] = inp.iloc[0]
 
     result_dict = { f: 0 for f in features }
 
     for m in methods:
         ref_computed.loc['ref_max_' + m.__name__] = 0
         ref_computed.loc[m.__name__] = 0
-        ref_computed.loc[m.__name__+'_diff' ] = 0
+        ref_computed.loc[m.__name__+'_ratio' ] = 0
         for f in features:
             # lets get the params for ref using the scoring method
             # we expect the following tuple:
@@ -98,11 +101,17 @@ def rca(ref, inp, features, methods = [modified_z_score]):
             ref_params = m(ref[f])
             ref_max_score = ref_params[1]
             ref_computed[f]['ref_max_' + m.__name__] = ref_max_score
-            inp_params = m([inp[f]], ref_params[1:])
+            inp_params = m([inp[f][0]], ref_params[1:])
             inp_score = inp_params[0][0]
             ref_computed[f][m.__name__] = inp_score
-            ref_computed[f][m.__name__+'_diff'] = inp_score - ref_max_score
-            result_dict[f] += inp_score - ref_max_score
+            if ref_max_score != 0:
+                ratio = inp_score/ref_max_score
+            elif inp_score == 0:
+                ratio = inp_score
+            else:
+                ratio = float('inf')
+            ref_computed[f][m.__name__+'_ratio'] = ratio
+            result_dict[f] += ratio
 
     # sort the result_dict by descending value
     dlst = sorted(result_dict.items(), key=operator.itemgetter(1), reverse=True)
