@@ -36,7 +36,7 @@ def partition_jobs(jobs, feature='duration', methods=[modified_z_score], thresho
     if fmt == 'terse':
         return (outliers_list, ref_list)
     if fmt == 'orm':
-        return (eq.conv_jobs_terse(outliers_list), eq.conv_jobs_terse(ref_list))
+        return (eq.conv_jobs(outliers_list, fmt='orm'), eq.conv_jobs(ref_list, fmt='orm'))
 
 
 

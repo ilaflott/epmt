@@ -60,6 +60,11 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(len(jobs), 3, 'job count in db wrong')
         df = eq.get_jobs(fmt='pandas')
         self.assertEqual(df.shape, (3, 47), 'wrong jobs dataframe shape')
+        df = eq.get_jobs('685016', fmt='pandas')
+        self.assertEqual(df['jobid'][0], '685016', "cannot specify job as a single job id string")
+        self.assertEqual(df.shape[0],1, "wrong selection of jobs when specified as a string")
+        jobs = eq.get_jobs('685016, 685000', fmt='dict')
+        self.assertEqual(len(jobs), 2, 'job count wrong when selected a comma-separated string')
 
     @db_session
     def test_jobs_advanced(self):
@@ -116,6 +121,13 @@ class QueryAPI(unittest.TestCase):
                 elif out_fmt == 'pandas':
                     self.assertEqual(type(out), pd.DataFrame,'output format not dataframe when input fmt: {0}'.format(inp_fmt))
                     self.assertEqual(sorted(list(out['jobid'].values)), sorted(ref), 'error in {0} -> {1}'.format(inp_fmt, out_fmt))
+
+    @db_session
+    def test_unique_proc_tags(self):
+        tags = eq.get_unique_process_tags(['685000', '685016'], fold=False)
+        self.assertEqual(len(tags), 89, "wrong unique process tags count")
+        from hashlib import md5
+        self.assertEqual(md5(str(sorted(tags))).hexdigest(), '7083bed0954830e2daa34a1113209177', 'wrong hash of tags')
 
 
 

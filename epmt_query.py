@@ -26,26 +26,24 @@ print(settings.db_params)
 setup_orm_db(settings)
 
 
-REF_MODEL_TYPES = { 'job': 1, 'op': 2 }
-
 # figure out the entity type and then call the appropriate 
 # convertor. For now we know its either a collection of Job or Process objects
-def conv_orm(entities, merge_sub_sums=True, fmt='dict'):
-    e1 = entities[0] if type(entities) == list else entities.first()
-    return conv_jobs(entities, merge_sub_sums, fmt) if e1.__class__.__name__ == 'Job' else conv_procs_orm(entities, merge_sub_sums, fmt)
+# def conv_orm(entities, merge_sub_sums=True, fmt='dict'):
+#     e1 = entities[0] if type(entities) == list else entities.first()
+#     return conv_jobs(entities, merge_sub_sums, fmt) if e1.__class__.__name__ == 'Job' else conv_procs_orm(entities, merge_sub_sums, fmt)
 
 
-def conv_jobs_terse(jobids, merge_sums=True, fmt='orm'):
-    jobs = Job.select(lambda j: j.jobid in jobids)
-    if fmt == 'orm':
-        return jobs
-    if fmt == 'pandas':
-        return conv_jobs(jobs, merge_sums=merge_sums, fmt='pandas')
+# def conv_jobs_terse(jobids, merge_sums=True, fmt='orm'):
+#     jobs = Job.select(lambda j: j.jobid in jobids)
+#     if fmt == 'orm':
+#         return jobs
+#     if fmt == 'pandas':
+#         return conv_jobs(jobs, merge_sums=merge_sums, fmt='pandas')
 
 # jobs is a jobs collection (Pony) or a list of Job objects,
 # or a list of jobids, or a pandas dataframe or a dictlist of jobs.
 # 'merge_sums' is silently ignored for fmt 'orm' or 'terse'
-def conv_jobs(jobs, merge_sums = True, fmt='dict'):
+def conv_jobs(jobs, fmt='dict', merge_sums = True):
     jobs = __jobs_col(jobs)
     if fmt == 'orm':
         return jobs
@@ -89,8 +87,13 @@ def conv_procs_orm(procs, merge_sums = True, fmt='dict'):
             del p[settings.thread_sums_field_in_proc]
     return pd.DataFrame(out_list) if fmt == 'pandas' else out_list
 
-
+# this is an internal function to take a collection of jobs
+# in a variety of formats and return output in a specified format
+# You should not use this function directly, but instead use
+# conv_jobs()
 def __jobs_col(jobs):
+    if (type(jobs) != pd.DataFrame and not(jobs)):
+        return Job.select()
     if type(jobs) == pd.DataFrame:
         jobs = list(jobs['jobid'])
     if type(jobs) in [str, unicode]:
@@ -157,9 +160,10 @@ def get_root(job, fmt='dict'):
 # of ORM objects. See 'fmt' option.
 #
 #
-# jobids : Optional list of jobids to narrow the search space. The jobids can
+# jobs   : Optional list of jobs to narrow the search space. The jobs can
 #          a list of jobids (i.e., list of strings), or the result of a Pony
-#          query on Job (i.e., a Query object)
+#          query on Job (i.e., a Query object), or a pandas dataframe of jobs
+#          
 #
 # tags   : Optional dictionary or string of key/value pairs
 #
@@ -208,12 +212,9 @@ def get_root(job, fmt='dict'):
 #              
 #
 @db_session
-def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tags_only = False, sql_debug = False):
+def get_jobs(jobs = [], tags={}, fltr = '', order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tags_only = False, sql_debug = False):
     set_sql_debug(sql_debug)
-    if jobids:
-        qs = __job_col(jobids)
-    else:
-        qs = Job.select()
+    qs = __jobs_col(jobs)
 
     # filter using tags if set
     if type(tags) == str:
@@ -256,7 +257,7 @@ def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, when=None, 
     if fmt == 'orm':
         return qs
 
-    return conv_jobs(qs, merge_proc_sums, fmt)
+    return conv_jobs(qs, fmt, merge_proc_sums)
 
 
 # Filter a supplied list of jobs to find a match
@@ -335,20 +336,21 @@ def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, when=None, 
 def get_procs(jobs = [], tags = {}, fltr = None, order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_threads_sums=True, exact_tags_only = False, sql_debug = False):
     set_sql_debug(sql_debug)
     if jobs:
-        if isinstance(jobs, Query):
-            # convert the pony query object to a list
-            jobs = list(jobs[:])
+        jobs = __jobs_col(jobs)
+        # if isinstance(jobs, Query):
+        #     # convert the pony query object to a list
+        #     jobs = list(jobs[:])
 
-        if type(jobs) != list:
-            # user probably passed a single job, and forgot to wrap it in a list
-            jobs = [jobs]
-        # is jobs a collection of Job IDs or actual Job objects?
-        if type(jobs[0]) == str or type(jobs[0]) == unicode:
-            # jobs is a list of job IDs
-            qs = Process.select(lambda p: p.job.jobid in jobs)
-        else:
-            # jobs is a list of Job objects
-            qs = Process.select(lambda p: p.job in jobs)
+        # if type(jobs) != list:
+        #     # user probably passed a single job, and forgot to wrap it in a list
+        #     jobs = [jobs]
+        # # is jobs a collection of Job IDs or actual Job objects?
+        # if type(jobs[0]) == str or type(jobs[0]) == unicode:
+        #     # jobs is a list of job IDs
+        #     qs = Process.select(lambda p: p.job.jobid in jobs)
+        # else:
+        #     # jobs is a list of Job objects
+        qs = Process.select(lambda p: p.job in jobs)
     else:
         # no jobs set, so expand the scope to all Process objects
         qs = Process.select()
@@ -433,21 +435,22 @@ def get_thread_metrics(*processes):
 # otherwise, the expanded list of dictionaries is returned
 # 'exclude' is an optional list of keys to exclude from each tag (if present)
 def get_unique_process_tags(jobs = [], exclude=[], fold=True):
-    if jobs:
-        if isinstance(jobs, Query):
-            # convert the pony query object to a list
-            jobs = list(jobs[:])
-    else:
-        # all Jobs
-        jobs = list(Job.select()[:])
+    # if jobs:
+    #     if isinstance(jobs, Query):
+    #         # convert the pony query object to a list
+    #         jobs = list(jobs[:])
+    # else:
+    #     # all Jobs
+    #     jobs = list(Job.select()[:])
 
-    if type(jobs) != list:
-        # wrap jobs into a list. It's either a string jobid or Job object
-        jobs = [jobs]
+    # if type(jobs) != list:
+    #     # wrap jobs into a list. It's either a string jobid or Job object
+    #     jobs = [jobs]
 
-    # at this point jobs is a list of job ids or Job objects
-    # let's make sure it's a list of Job objects
-    jobs = [ Job[j] if (type(j) == str or type(j) == unicode) else j for j in jobs ]
+    # # at this point jobs is a list of job ids or Job objects
+    # # let's make sure it's a list of Job objects
+    # jobs = [ Job[j] if (type(j) == str or type(j) == unicode) else j for j in jobs ]
+    jobs = __jobs_col(jobs)
     tags = []
     for j in jobs:
         unique_tags_for_job = _get_unique_process_tags_for_single_job(j, exclude, fold = False)
