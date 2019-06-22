@@ -213,7 +213,8 @@ def get_root(job, fmt='dict'):
 #
 @db_session
 def get_jobs(jobs = [], tags={}, fltr = '', order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tags_only = False, sql_debug = False):
-    set_sql_debug(sql_debug)
+    if sql_debug:
+        set_sql_debug(sql_debug)
     qs = __jobs_col(jobs)
 
     # filter using tags if set
@@ -334,7 +335,8 @@ def get_jobs(jobs = [], tags={}, fltr = '', order = '', limit = 0, when=None, ho
 #
 @db_session
 def get_procs(jobs = [], tags = {}, fltr = None, order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_threads_sums=True, exact_tags_only = False, sql_debug = False):
-    set_sql_debug(sql_debug)
+    if sql_debug:
+        set_sql_debug(sql_debug)
     if jobs:
         jobs = __jobs_col(jobs)
         # if isinstance(jobs, Query):
@@ -434,7 +436,7 @@ def get_thread_metrics(*processes):
 # If 'fold' is set, then tags will be merged to compact the output
 # otherwise, the expanded list of dictionaries is returned
 # 'exclude' is an optional list of keys to exclude from each tag (if present)
-def get_unique_process_tags(jobs = [], exclude=[], fold=True):
+def get_unique_process_tags(jobs = [], exclude=[], fold=False):
     # if jobs:
     #     if isinstance(jobs, Query):
     #         # convert the pony query object to a list
@@ -554,7 +556,7 @@ def _refmodel_scores(col, outlier_methods, features):
 #           if set, it will restrict the model to the filtered ops.
 #           op_tags are distinct from tags. op_tags are used to
 #           obtain the set of processes over which an aggregation
-#           is performed using agg_metrics_by_tags. 
+#           is performed using op_metrics. 
 #
 # computed:  A dict containing arbitrary computed stats
 # 
@@ -609,7 +611,7 @@ def create_refmodel(jobs=[], tags={}, op_tags=[], computed = {},
         elif type(op_tags) == dict:
             op_tags = [op_tags]
         # let's get the dataframe of metrics aggregated by op_tags
-        ops_df = agg_metrics_by_tags(jobs = jobs, tags = op_tags, exact_tags_only = exact_tags_only, fmt='pandas')
+        ops_df = op_metrics(jobs = jobs, tags = op_tags, exact_tags_only = exact_tags_only, fmt='pandas')
         scores = {}
         for t in op_tags:
             # serialize the tag so we can use it as a key
@@ -657,22 +659,20 @@ def _get_unique_process_tags_for_single_job(job, exclude=[], fold=True):
 # tags is passed in as a list of strings or dictionaries. You
 # may optionally pass a single tag as a string or dict.
 # If exatct_tags_only is set (default False), then a match
-# means there is an exact match of the tag dictionaries
+# means there is an exact match of the tag dictionaries.
+# If no tags are passed, then the set of unique tags for the jobs
+# will be used.
 # In this function, fmt is only allowed 'pandas' or 'dict'
 #
-def agg_metrics_by_tags(jobs = [], tags = [], exact_tags_only = False, fmt='pandas', sql_debug = False):
-    set_sql_debug(sql_debug)
+def op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas', sql_debug = False):
+    if sql_debug:
+        set_sql_debug(sql_debug)
 
     if type(jobs) == str or type(jobs) == unicode:
         jobs = [jobs]
 
     if not tags:
-       if (len(jobs) > 1):
-           print("You must specify tags as non-empty string or dictionary", stderr)
-           return None
-       # as we have only a single job, let's figure out all the
-       # tags for the job
-       tags = get_all_tags_in_job(jobs[0], fold=False)
+       tags = get_unique_process_tags(jobs, fold=False)
 
     # do we have a single tag in string or dict form? 
     if type(tags) == str:

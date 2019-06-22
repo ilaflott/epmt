@@ -135,7 +135,7 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
     # get the dataframe of aggregate metrics, where each row
     # is an aggregate across a group of processes with a particular
     # jobid and tag
-    ops = eq.agg_metrics_by_tags(jobs=jobs, tags=tags_to_use) 
+    ops = eq.op_metrics(jobs=jobs, tags=tags_to_use) 
     retval = pd.DataFrame(0, columns=features, index=ops.index)
 
     # now we iterate over tags and for each tag we select

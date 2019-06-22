@@ -129,6 +129,13 @@ class QueryAPI(unittest.TestCase):
         from hashlib import md5
         self.assertEqual(md5(str(sorted(tags))).hexdigest(), '7083bed0954830e2daa34a1113209177', 'wrong hash of tags')
 
+    @db_session
+    def test_op_metrics(self):
+        df = eq.op_metrics(['685000', '685016'])
+        self.assertEqual(df.shape, (178,32), "wrong dataframe shape for op_metrics")
+        top = df[['job', 'tags', 'duration']].sort_values('duration', axis=0, ascending=False)[:1]
+        self.assertEqual(top.tags.values[0], {u'op_instance': u'2', u'op_sequence': u'89', u'op': u'dmput'})
+        self.assertEqual(int(top.duration.values[0]), 7008334182)
 
 
 
