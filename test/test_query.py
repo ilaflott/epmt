@@ -136,9 +136,8 @@ class QueryAPI(unittest.TestCase):
         top = df[['job', 'tags', 'duration']].sort_values('duration', axis=0, ascending=False)[:1]
         self.assertEqual(top.tags.values[0], {u'op_instance': u'2', u'op_sequence': u'89', u'op': u'dmput'})
         self.assertEqual(int(top.duration.values[0]), 7008334182)
-
-
-
+        df = eq.op_metrics(['685000', '685016'], tags='op_sequence:89')
+        self.assertEqual([int(f) for f in list(df.duration.values)], [6463542235, 7008334182])
 
 
 if __name__ == '__main__':
