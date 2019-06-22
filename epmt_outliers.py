@@ -80,12 +80,13 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
 # superset of unique tags across the jobs.
 def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds=thresholds):
 
-    # do we have a single tag in string or dict form? 
-    if type(tags) == str:
-        tags = [eq.get_tags_from_string(tags)]
-    elif type(tags) == dict:
-        tags = [tags]
-    tags = [eq.get_tags_from_string(t) for t in tags if type(t) == str]
+    # # do we have a single tag in string or dict form? 
+    # if type(tags) == str:
+    #     tags = [eq.get_tags_from_string(tags)]
+    # elif type(tags) == dict:
+    #     tags = [tags]
+    # tags = [eq.get_tags_from_string(t) for t in tags if type(t) == str]
+    tags = eq.__tags_list(tags)
         
     jobs_tags_set = set()
     unique_job_tags = eq.get_unique_process_tags(jobs, fold=False)

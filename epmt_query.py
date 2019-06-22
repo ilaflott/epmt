@@ -116,6 +116,18 @@ def __jobs_col(jobs):
     return jobs
 
 
+# returns a list of tags, where each tag is a dict.
+# the input can be a list of strings or a single string.
+# each string will be converted to a dict
+def __tags_list(tags):
+    # do we have a single tag in string or dict form? 
+    if type(tags) == str:
+        tags = [get_tags_from_string(tags)]
+    elif type(tags) == dict:
+        tags = [tags]
+    tags = [get_tags_from_string(t) if type(t)==str else t for t in tags]
+    return tags
+
 # this function returns a timeline of processes
 # ordered chronologically by start time.
 # jobs is either a collection of jobs or a single job, where 
@@ -671,14 +683,7 @@ def op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas', sql_
     if type(jobs) == str or type(jobs) == unicode:
         jobs = [jobs]
 
-    if not tags:
-       tags = get_unique_process_tags(jobs, fold=False)
-
-    # do we have a single tag in string or dict form? 
-    if type(tags) == str:
-        tags = [get_tags_from_string(tags)]
-    elif type(tags) == dict:
-        tags = [tags]
+    tags = __tags_list(tags) if tags else get_unique_process_tags(jobs, fold=False)
 
     all_procs = []
     # we iterate over tags, where each tag is dictionary
