@@ -32,7 +32,7 @@ REF_MODEL_TYPES = { 'job': 1, 'op': 2 }
 # convertor. For now we know its either a collection of Job or Process objects
 def conv_orm(entities, merge_sub_sums=True, fmt='dict'):
     e1 = entities[0] if type(entities) == list else entities.first()
-    return conv_jobs_orm(entities, merge_sub_sums, fmt) if e1.__class__.__name__ == 'Job' else conv_procs_orm(entities, merge_sub_sums, fmt)
+    return conv_jobs(entities, merge_sub_sums, fmt) if e1.__class__.__name__ == 'Job' else conv_procs_orm(entities, merge_sub_sums, fmt)
 
 
 def conv_jobs_terse(jobids, merge_sums=True, fmt='orm'):
@@ -40,10 +40,15 @@ def conv_jobs_terse(jobids, merge_sums=True, fmt='orm'):
     if fmt == 'orm':
         return jobs
     if fmt == 'pandas':
-        return conv_jobs_orm(jobs, merge_sums=merge_sums, fmt='pandas')
+        return conv_jobs(jobs, merge_sums=merge_sums, fmt='pandas')
 
-# jobs is an ORM Query object on Job or a list of Job objects
-def conv_jobs_orm(jobs, merge_sums = True, fmt='dict'):
+# jobs is a jobs collection (Pony) or a list of Job objects,
+# or a list of jobids, or a pandas dataframe or a dictlist of jobs.
+# 'merge_sums' is silently ignored for fmt 'orm' or 'terse'
+def conv_jobs(jobs, merge_sums = True, fmt='dict'):
+    jobs = __jobs_col(jobs)
+    if fmt == 'orm':
+        return jobs
     if fmt=='terse':
         return [ j.jobid for j in jobs ]
 
@@ -85,16 +90,26 @@ def conv_procs_orm(procs, merge_sums = True, fmt='dict'):
     return pd.DataFrame(out_list) if fmt == 'pandas' else out_list
 
 
-def __job_col(jobs):
+def __jobs_col(jobs):
+    if type(jobs) == pd.DataFrame:
+        jobs = list(jobs['jobid'])
     if type(jobs) in [str, unicode]:
-        # job is a single jobid
-        jobs = Job[jobs]
+        if ',' in jobs:
+            # jobs a string of comma-separated job ids
+            jobs = [ j.strip() for j in jobs.split(",") ]
+        else:
+            # job is a single jobid
+            jobs = Job[jobs]
     if type(jobs) == Job:
         # is it a singular job?
         jobs = [jobs]
     if type(jobs) == list:
-        jobs = [Job[j] if type(j) in [str, unicode] else j for j in jobs]
-    # at this point jobs is either a list of Job objects or a Query object
+        # jobs is a list of Job objects or a list of jobids or a list of dicts
+        # so first convert the dict list to a jobid list
+        jobs = [ j['jobid'] if type(j) == dict else j for j in jobs ]
+        jobs = [ Job[j] if type(j) in [str,unicode] else j for j in jobs ]
+        # and now convert to a pony Query object so the user can chain
+        jobs = Job.select(lambda j: j in jobs)
     return jobs
 
 
@@ -241,7 +256,7 @@ def get_jobs(jobids = [], tags={}, fltr = '', order = '', limit = 0, when=None, 
     if fmt == 'orm':
         return qs
 
-    return conv_jobs_orm(qs, merge_proc_sums, fmt)
+    return conv_jobs(qs, merge_proc_sums, fmt)
 
 
 # Filter a supplied list of jobs to find a match
@@ -512,7 +527,7 @@ def get_refmodels(tags = {}, fltr=None, limit=0, order='', exact_tags_only=False
 #
 # col: is either a dataframe or a collection of jobs (Query/list of Job objects)
 def _refmodel_scores(col, outlier_methods, features):
-    df = conv_jobs_orm(col, fmt='pandas') if col.__class__.__name__ != 'DataFrame' else col
+    df = conv_jobs(col, fmt='pandas') if col.__class__.__name__ != 'DataFrame' else col
     ret = {}
     for m in outlier_methods:
         ret[m.__name__] = {}

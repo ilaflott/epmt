@@ -5,6 +5,8 @@ from sys import stderr, exit
 from glob import glob
 from pony.orm import db_session
 from models import db
+from pony.orm.core import Query
+import pandas as pd
 
 # put this above all epmt imports so they use defaults
 from os import environ
@@ -94,6 +96,27 @@ class QueryAPI(unittest.TestCase):
         p = procs_with_tag.first()
         self.assertEqual(int(p.duration), 207384313, 'wrong duration or order when used with tags and filter')
         self.assertEqual(p.descendants.count(), 85, 'wrong descendant count or order when used with tags and filter')
+
+    @db_session
+    def test_jobs_conv(self):
+        ref = eq.get_jobs(fmt='terse')
+        for inp_fmt in ['terse','orm','pandas','dict']:
+            jobs = eq.get_jobs(fmt=inp_fmt)
+            for out_fmt in ['pandas', 'terse', 'orm', 'dict']:
+                out = eq.conv_jobs(jobs, fmt=out_fmt)
+                if out_fmt == 'terse':
+                    self.assertEqual(type(out), list,'output format not terse when input fmt: {0}'.format(inp_fmt))
+                    self.assertEqual(sorted(out), sorted(ref), 'error in {0} -> {1}'.format(inp_fmt, out_fmt))
+                elif out_fmt == 'orm':
+                    self.assertEqual(type(out), Query,'output format not ORM when input fmt: {0}'.format(inp_fmt))
+                    self.assertEqual(sorted([j.jobid for j in out]), sorted(ref), 'error in {0} -> {1}'.format(inp_fmt, out_fmt))
+                elif out_fmt == 'dict':
+                    self.assertTrue((type(out) == list) and (type(out[0]) == dict),'output format not dictlist when input fmt: {0}'.format(inp_fmt))
+                    self.assertEqual(sorted([j['jobid'] for j in out]), sorted(ref), 'error in {0} -> {1}'.format(inp_fmt, out_fmt))
+                elif out_fmt == 'pandas':
+                    self.assertEqual(type(out), pd.DataFrame,'output format not dataframe when input fmt: {0}'.format(inp_fmt))
+                    self.assertEqual(sorted(list(out['jobid'].values)), sorted(ref), 'error in {0} -> {1}'.format(inp_fmt, out_fmt))
+
 
 
 
