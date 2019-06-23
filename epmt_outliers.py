@@ -78,6 +78,78 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
 # tags is a list of tags specified either as a string or a list of string/list of dicts
 # If tags is not specified, then the list of jobs will be queried to get the
 # superset of unique tags across the jobs.
+#
+# OUTPUT:
+#  (dataframe, dict_of_partitions)
+# The dict of partitions is indexed by the tag, and the value 
+# is a tuple, consisting of the (<ref_part>,<outlier_part>) for the tag.
+# e.g.,
+#
+# >>> (df, parts) = eod.detect_outlier_ops(jobs, tags = {"op_instance": "4", "op_sequence": "4", "op": "build"})
+# >>> df
+#                                jobid  \
+# 0          kern-6656-20190614-190245   
+# 1          kern-6656-20190614-191138   
+# 2  kern-6656-20190614-192044-outlier   
+# 3          kern-6656-20190614-194024   
+# 
+#                                                 tags  duration  cpu_time  \
+# 0  {u'op_instance': u'4', u'op_sequence': u'4', u...         0         0   
+# 1  {u'op_instance': u'4', u'op_sequence': u'4', u...         0         0   
+# 2  {u'op_instance': u'4', u'op_sequence': u'4', u...         1         1   
+# 3  {u'op_instance': u'4', u'op_sequence': u'4', u...         0         0   
+# 
+#    num_procs  
+# 0          0  
+# 1          0  
+# 2          0  
+# 3          0  
+#
+# >>> parts
+# {'{"op_instance": "4", "op_sequence": "4", "op": "build"}': ([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024'], [u'kern-6656-20190614-192044-outlier'])}
+#
+#
+# Here is another example, this time we auto-detect the tags:
+# >>> jobs = eq.get_jobs(fmt='orm', tags='exp_name:linux_kernel')
+# >>> (df, parts) = eod.detect_outlier_ops(jobs)
+# >>> df[['jobid', 'tags', 'duration', 'cpu_time']][:5]
+#                                jobid  \
+# 0          kern-6656-20190614-190245   
+# 1          kern-6656-20190614-191138   
+# 2  kern-6656-20190614-192044-outlier   
+# 3          kern-6656-20190614-194024   
+# 4          kern-6656-20190614-190245   
+# 
+#                                                 tags  duration  cpu_time  
+# 0  {u'op_instance': u'4', u'op_sequence': u'4', u...         0         0  
+# 1  {u'op_instance': u'4', u'op_sequence': u'4', u...         0         0  
+# 2  {u'op_instance': u'4', u'op_sequence': u'4', u...         1         1  
+# 3  {u'op_instance': u'4', u'op_sequence': u'4', u...         0         0  
+# 4  {u'op_instance': u'5', u'op_sequence': u'5', u...         0         0  
+#
+#
+# >>> pprint(parts)
+# {'{"op_instance": "1", "op_sequence": "1", "op": "download"}': ([u'kern-6656-20190614-190245',
+#                                                                  u'kern-6656-20190614-191138',
+#                                                                  u'kern-6656-20190614-194024'],
+#                                                                 [u'kern-6656-20190614-192044-outlier']),
+#  '{"op_instance": "2", "op_sequence": "2", "op": "extract"}': ([u'kern-6656-20190614-190245',
+#                                                                 u'kern-6656-20190614-191138',
+#                                                                 u'kern-6656-20190614-194024'],
+#                                                                [u'kern-6656-20190614-192044-outlier']),
+#  '{"op_instance": "3", "op_sequence": "3", "op": "configure"}': ([u'kern-6656-20190614-190245',
+#                                                                   u'kern-6656-20190614-191138',
+#                                                                   u'kern-6656-20190614-194024'],
+#                                                                  [u'kern-6656-20190614-192044-outlier']),
+#  '{"op_instance": "4", "op_sequence": "4", "op": "build"}': ([u'kern-6656-20190614-190245',
+#                                                               u'kern-6656-20190614-191138',
+#                                                               u'kern-6656-20190614-194024'],
+#                                                              [u'kern-6656-20190614-192044-outlier']),
+#  '{"op_instance": "5", "op_sequence": "5", "op": "clean"}': ([u'kern-6656-20190614-190245',
+#                                                               u'kern-6656-20190614-191138',
+#                                                               u'kern-6656-20190614-194024'],
+#                                                              [u'kern-6656-20190614-192044-outlier'])}
+
 def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds=thresholds):
 
     # # do we have a single tag in string or dict form? 
@@ -136,7 +208,10 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
     # get the dataframe of aggregate metrics, where each row
     # is an aggregate across a group of processes with a particular
     # jobid and tag
-    ops = eq.op_metrics(jobs=jobs, tags=tags_to_use) 
+    ops = eq.op_metrics(jobs=jobs, tags=tags_to_use)
+    if len(ops) == 0:
+        logger.warning('no matching tags found in the tag set: {0}'.format(tags_to_use))
+        return (None, {})
     retval = pd.DataFrame(0, columns=features, index=ops.index)
 
     # now we iterate over tags and for each tag we select
@@ -144,7 +219,7 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
     # the select rows will have different job ids
     for tag in tags_to_use:
         t = dumps(tag, sort_keys=True)
-        # logger.debug('Processing tag: {0}'.format(tag))
+        logger.debug('Processing tag: {0}'.format(tag))
         # select only those rows with matching tag
         rows = ops[ops.tags == tag]
         # logger.debug('input: \n{0}\n'.format(rows[['tags']+features]))
@@ -160,7 +235,7 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
                 outlier_rows = np.where(np.abs(scores) > threshold)[0]
                 # remain the outlier rows indices to the indices in the original df
                 outlier_rows = rows.index[outlier_rows].values
-                # logger.debug('outliers for [{0}][{1}][{2}] -> {3}'.format(t,m.__name__,c,outlier_rows))
+                logger.debug('outliers for [{0}][{1}][{2}] -> {3}'.format(t,m.__name__,c,outlier_rows))
                 retval.loc[outlier_rows,c] += 1
     retval['jobid'] = ops['job']
     retval['tags'] = ops['tags']

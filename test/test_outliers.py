@@ -73,6 +73,14 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(len(parts), 5, 'wrong number of distinct tags')
         self.assertEqual(parts['{"op_instance": "4", "op_sequence": "4", "op": "build"}'], ([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024'], [u'kern-6656-20190614-192044-outlier']))
 
+        (df, parts) = eod.detect_outlier_ops(jobs, tags = {"op_instance": "4", "op_sequence": "4", "op": "build"})
+        self.assertEqual(df.shape, (4,5), "wrong shape of df from detect_outlier_ops with supplied tag")
+        self.assertEqual(list(df.duration), [0, 0, 1, 0])
+        self.assertEqual(list(df.cpu_time), [0, 0, 1, 0])
+        self.assertEqual(list(df.num_procs), [0, 0, 0, 0])
+        self.assertEqual(parts, {'{"op_instance": "4", "op_sequence": "4", "op": "build"}': ([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024'], [u'kern-6656-20190614-192044-outlier'])})
+
+
     @db_session
     def test_partition_jobs(self):
         jobs = eq.get_jobs(tags='launch_id:6656', fmt='orm')
