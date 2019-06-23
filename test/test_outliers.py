@@ -53,7 +53,7 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_outlier_jobs(self):
-        jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm')
+        jobs = eq.get_jobs(tag='exp_name:linux_kernel', fmt='orm')
         df = eod.detect_outlier_jobs(jobs)
         self.assertEqual(len(df[df.duration > 0]), 1, "incorrect count of duration outliers")
         self.assertEqual(len(df[df.cpu_time > 0]), 1, "incorrect count of cpu_time outliers")
@@ -63,7 +63,7 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_outlier_ops(self):
-        jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm')
+        jobs = eq.get_jobs(tag='exp_name:linux_kernel', fmt='orm')
         (df, parts) = eod.detect_outlier_ops(jobs)
         self.assertEqual(df.shape, (20,5), "wrong shape of df from detect_outlier_ops")
         self.assertEqual(len(df[df.duration > 0]), 3, 'wrong outlier count for duration')
@@ -83,7 +83,7 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_partition_jobs(self):
-        jobs = eq.get_jobs(tags='launch_id:6656', fmt='orm')
+        jobs = eq.get_jobs(tag='launch_id:6656', fmt='orm')
         self.assertEqual(jobs.count(), 4, "incorrect job count using tags")
         (p1, p2) = eod.partition_jobs(jobs, fmt='terse')
         self.assertEqual(len(p1), 1, "incorrect count of outlier partition")
@@ -100,8 +100,8 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_rca_jobs(self):
-        ref_jobs = eq.get_jobs(tags='exp_name:linux_kernel', fltr='"outlier" not in j.jobid', fmt='orm')
-        outlier_job = eq.get_jobs(tags='exp_name:linux_kernel', fltr='"outlier" in j.jobid', fmt='orm')
+        ref_jobs = eq.get_jobs(tag='exp_name:linux_kernel', fltr='"outlier" not in j.jobid', fmt='orm')
+        outlier_job = eq.get_jobs(tag='exp_name:linux_kernel', fltr='"outlier" in j.jobid', fmt='orm')
         (res, df, sl) = eod.detect_rootcause(ref_jobs, outlier_job)
         self.assertTrue(res, 'detect_rootcause returned False')
         self.assertEqual(list(df.columns.values), ['cpu_time', 'duration', 'num_procs'], 'wrong order of features returned by RCA')

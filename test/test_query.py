@@ -70,8 +70,8 @@ class QueryAPI(unittest.TestCase):
     def test_jobs_advanced(self):
         jobs = eq.get_jobs(fltr=lambda j: '685000' not in j.jobid, fmt='orm')
         self.assertEqual(jobs.count(), 2, 'jobs orm query with filter option')
-        jobs = eq.get_jobs(tags='exp_component:ocean_month_rho2_1x1deg', fmt='terse')
-        self.assertEqual(len(jobs), 1, 'jobs query with tags option')
+        jobs = eq.get_jobs(tag='exp_component:ocean_month_rho2_1x1deg', fmt='terse')
+        self.assertEqual(len(jobs), 1, 'jobs query with tag option')
         df = eq.get_jobs(order='desc(j.duration)', limit=1, fmt='pandas')
         self.assertEqual(df.shape[0], 1, 'job query with limit')
         self.assertEqual('685016', df.loc[0,'jobid'], "jobs dataframe query with order")
@@ -96,11 +96,11 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(df.shape, (5,49), "incorrect dataframe shape")
         self.assertEqual('685016', df.loc[0,'job'], "ordering of processes wrong in dataframe")
 
-        procs_with_tag = eq.get_procs(tags='op_sequence:4', fltr='p.duration > 10000000', order='desc(p.duration)', fmt='orm')
-        self.assertEqual(len(procs_with_tag), 2, 'incorrect process count when using tags and filter')
+        procs_with_tag = eq.get_procs(tag='op_sequence:4', fltr='p.duration > 10000000', order='desc(p.duration)', fmt='orm')
+        self.assertEqual(len(procs_with_tag), 2, 'incorrect process count when using tag and filter')
         p = procs_with_tag.first()
-        self.assertEqual(int(p.duration), 207384313, 'wrong duration or order when used with tags and filter')
-        self.assertEqual(p.descendants.count(), 85, 'wrong descendant count or order when used with tags and filter')
+        self.assertEqual(int(p.duration), 207384313, 'wrong duration or order when used with tag and filter')
+        self.assertEqual(p.descendants.count(), 85, 'wrong descendant count or order when used with tag and filter')
 
     @db_session
     def test_jobs_conv(self):

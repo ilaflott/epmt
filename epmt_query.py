@@ -8,7 +8,8 @@ from json import loads, dumps
 from os import environ
 from logging import getLogger
 from models import Job, Process, ReferenceModel, Host
-from epmt_job import setup_orm_db, get_tags_from_string, _sum_dicts, unique_dicts, fold_dicts
+from epmt_job import setup_orm_db, _sum_dicts, unique_dicts, fold_dicts
+from epmtlib import tag_from_string, tags_list
 from epmt_cmds import set_logging, init_settings
 from epmt_stat import modified_z_score
 
@@ -116,18 +117,6 @@ def __jobs_col(jobs):
     return jobs
 
 
-# returns a list of tags, where each tag is a dict.
-# the input can be a list of strings or a single string.
-# each string will be converted to a dict
-def __tags_list(tags):
-    # do we have a single tag in string or dict form? 
-    if type(tags) == str:
-        tags = [get_tags_from_string(tags)]
-    elif type(tags) == dict:
-        tags = [tags]
-    tags = [get_tags_from_string(t) if type(t)==str else t for t in tags]
-    return tags
-
 # this function returns a timeline of processes
 # ordered chronologically by start time.
 # jobs is either a collection of jobs or a single job, where 
@@ -177,7 +166,7 @@ def get_root(job, fmt='dict'):
 #          query on Job (i.e., a Query object), or a pandas dataframe of jobs
 #          
 #
-# tags   : Optional dictionary or string of key/value pairs
+# tag    : Optional dictionary or string of key/value pairs
 #
 # fltr   : Optional filter in the form of a lamdba function or a string
 #          e.g., lambda j: count(j.processes) > 100 will filter jobs more than 100 processes
@@ -215,29 +204,29 @@ def get_root(job, fmt='dict'):
 #          of key/value pairs, where each is an process attribute, such as numtids,
 #          and the value is the sum acorss all processes of the job.
 #
-# exact_tags_only: If set, tags will be considered matched if saved tags have
-#          to identically match the passed tags. The default is False, which
-#          means if the tags in the database are a superset of the passed
-#          tags a match will considered.
+# exact_tag_only: If set, tag will be considered matched if saved tag
+#          identically matches the passed tag. The default is False, which
+#          means if the tag in the database are a superset of the passed
+#          tag a match will considered.
 #
 # sql_debug: Show SQL queries, default False
 #              
 #
 @db_session
-def get_jobs(jobs = [], tags={}, fltr = '', order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tags_only = False, sql_debug = False):
+def get_jobs(jobs = [], tag={}, fltr = '', order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tag_only = False, sql_debug = False):
     if sql_debug:
         set_sql_debug(sql_debug)
     qs = __jobs_col(jobs)
 
-    # filter using tags if set
-    if type(tags) == str:
-        tags = get_tags_from_string(tags)
-    if exact_tags_only:
-        qs = qs.filter(lambda j: j.tags == tags)
+    # filter using tag if set
+    if type(tag) == str:
+        tag = tag_from_string(tag)
+    if exact_tag_only:
+        qs = qs.filter(lambda j: j.tags == tag)
     else:
-        # we consider a match if the job tags are a superset
-        # of the passed tags
-        for (k,v) in tags.items():
+        # we consider a match if the job tag is a superset
+        # of the passed tag
+        for (k,v) in tag.items():
             qs = qs.filter(lambda j: j.tags[k] == v)
 
     # if fltr is a lambda function or a string apply it
@@ -274,12 +263,12 @@ def get_jobs(jobs = [], tags={}, fltr = '', order = '', limit = 0, when=None, ho
 
 
 # Filter a supplied list of jobs to find a match
-# by tags or some primary keys. If no jobs list is provided,
+# by tag or some primary keys. If no jobs list is provided,
 # then the query will be run against all processes.
 #
 # All fields are optional and sensible defaults are assumed.
 #
-# tags : is a dictionary or string of key/value pairs and is optional.
+# tag : is a dictionary or string of key/value pairs and is optional.
 #
 # fltr: is a lambda expression or a string of the form:
 #       lambda p: p.duration > 1000
@@ -315,10 +304,10 @@ def get_jobs(jobs = [], tags={}, fltr = '', order = '', limit = 0, when=None, ho
 #          ignored if output format 'fmt' is set to 'orm', and ORM
 #          objects will not be merge_threads_sumsed.
 #
-# exact_tags_only: If set, tags will be considered matched if saved tags have
-#          to identically match the passed tags. The default is False, which
-#          means if the tags in the database are a superset of the passed
-#          tags a match will considered.
+# exact_tag_only: If set, tag will be considered matched if saved tag
+#          identically matches the passed tag. The default is False, which
+#          means if the tag in the database are a superset of the passed
+#          tag a match will considered.
 #
 # sql_debug: Show/hide SQL queries. Default False.
 #
@@ -327,11 +316,11 @@ def get_jobs(jobs = [], tags={}, fltr = '', order = '', limit = 0, when=None, ho
 #
 #   get_procs(jobs = ['32046'], fltr = 'p.numtids > 1')
 #
-# To filter all processes that have tags = {'app': 'fft'}, you would do:
-# get_procs(tags = {'app': 'fft'})
+# To filter all processes that have tag = {'app': 'fft'}, you would do:
+# get_procs(tag = {'app': 'fft'})
 #
 # to get a pandas dataframe:
-# qs1 = get_procs(tags = {'app': 'fft'}, fmt = 'pandas')
+# qs1 = get_procs(tag = {'app': 'fft'}, fmt = 'pandas')
 #
 # to filter processes for a job '1234' and order by process duration,
 # getting the top 10 results, and keeping the final output in ORM format:
@@ -346,7 +335,7 @@ def get_jobs(jobs = [], tags={}, fltr = '', order = '', limit = 0, when=None, ho
 # dataframe. The output will be pre-sorted on this field because we have set 'order'
 #
 @db_session
-def get_procs(jobs = [], tags = {}, fltr = None, order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_threads_sums=True, exact_tags_only = False, sql_debug = False):
+def get_procs(jobs = [], tag = {}, fltr = None, order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_threads_sums=True, exact_tag_only = False, sql_debug = False):
     if sql_debug:
         set_sql_debug(sql_debug)
     if jobs:
@@ -369,15 +358,15 @@ def get_procs(jobs = [], tags = {}, fltr = None, order = '', limit = 0, when=Non
         # no jobs set, so expand the scope to all Process objects
         qs = Process.select()
 
-    # filter using tags if set
-    if type(tags) == str:
-        tags = get_tags_from_string(tags)
-    if exact_tags_only:
-        qs = qs.filter(lambda p: p.tags == tags)
+    # filter using tag if set
+    if type(tag) == str:
+        tag = tag_from_string(tag)
+    if exact_tag_only:
+        qs = qs.filter(lambda p: p.tags == tag)
     else:
-        # we consider a match if the job tags are a superset
-        # of the passed tags
-        for (k,v) in tags.items():
+        # we consider a match if the process tag is a superset
+        # of the passed tag
+        for (k,v) in tag.items():
             qs = qs.filter(lambda p: p.tags[k] == v)
 
     # if fltr is a lambda function or a string apply it
@@ -449,21 +438,6 @@ def get_thread_metrics(*processes):
 # otherwise, the expanded list of dictionaries is returned
 # 'exclude' is an optional list of keys to exclude from each tag (if present)
 def get_unique_process_tags(jobs = [], exclude=[], fold=False):
-    # if jobs:
-    #     if isinstance(jobs, Query):
-    #         # convert the pony query object to a list
-    #         jobs = list(jobs[:])
-    # else:
-    #     # all Jobs
-    #     jobs = list(Job.select()[:])
-
-    # if type(jobs) != list:
-    #     # wrap jobs into a list. It's either a string jobid or Job object
-    #     jobs = [jobs]
-
-    # # at this point jobs is a list of job ids or Job objects
-    # # let's make sure it's a list of Job objects
-    # jobs = [ Job[j] if (type(j) == str or type(j) == unicode) else j for j in jobs ]
     jobs = __jobs_col(jobs)
     tags = []
     for j in jobs:
@@ -474,27 +448,27 @@ def get_unique_process_tags(jobs = [], exclude=[], fold=False):
     return fold_dicts(tags) if fold else tags
 
 
-# This function returns reference models filtered using tags and fltr
-# tags refers to a single dict of key/value pairs or a string
+# This function returns reference models filtered using tag and fltr
+# tag refers to a single dict of key/value pairs or a string
 # fltr is a lambda function or a string containing a pony expression
 # limit is used to limit the number of output items, 0 means no limit
 # order is used to order the output list, its a lambda function or a string
-# exact_tags_only is used to match the DB tags with the supplied tag:
+# exact_tag_only is used to match the DB tag with the supplied tag:
 #   the full dictionary must match for a successful match. Default False.
 # merge_nested_fields is used to hoist attributes from the 'computed'
 #   fields in the reference model, so they appear as first-class fields.
 # fmt is one of 'orm', 'pandas', 'dict'. Default is 'dict'
 # example usage:
-#   get_refmodels(tags = 'exp_name:ESM4;exp_component:ice_1x1', fmt='pandas')
+#   get_refmodels(tag = 'exp_name:ESM4;exp_component:ice_1x1', fmt='pandas')
 #
-def get_refmodels(tags = {}, fltr=None, limit=0, order='', exact_tags_only=False, merge_nested_fields=True, fmt='dict'):
+def get_refmodels(tag = {}, fltr=None, limit=0, order='', exact_tag_only=False, merge_nested_fields=True, fmt='dict'):
     qs = ReferenceModel.select()
 
-    # filter using tags if set
-    if type(tags) == str:
-        tags = get_tags_from_string(tags)
-    if exact_tags_only:
-        qs = qs.filter(lambda p: p.tags == tags)
+    # filter using tag if set
+    if type(tag) == str:
+        tag = tag_from_string(tag)
+    if exact_tag_only:
+        qs = qs.filter(lambda p: p.tags == tag)
     else:
         # we consider a match if the job tags are a superset
         # of the passed tags
@@ -560,13 +534,13 @@ def _refmodel_scores(col, outlier_methods, features):
 #
 # jobs:     points to a list of Jobs (or pony JobSet) or jobids
 #
-# tags:     A string or dict consisting of key/value pairs. These
-#           tags are saved for the refmodel, and may be used
+# tag:      A string or dict consisting of key/value pairs. This
+#           tag is saved for the refmodel, and may be used
 #           in a filter while retrieving the refmodel.
 #
 # op_tags:  A list of strings or dicts. This is optional,
 #           if set, it will restrict the model to the filtered ops.
-#           op_tags are distinct from tags. op_tags are used to
+#           op_tags are distinct from "tag". op_tags are used to
 #           obtain the set of processes over which an aggregation
 #           is performed using op_metrics. 
 #
@@ -584,7 +558,7 @@ def _refmodel_scores(col, outlier_methods, features):
 #          for outlier detection. 
 #          Defaults to: ['duration', 'cpu_time', 'num_procs']
 #
-# exact_tags_only: Default False. If set, all tag matches require
+# exact_tag_only: Default False. If set, all tag matches require
 #          exact dictionary match, and a superset match won't do.
 #
 # e.g,.
@@ -593,19 +567,19 @@ def _refmodel_scores(col, outlier_methods, features):
 # eq.create_refmodel(jobs=[u'615503', u'625135'])
 #
 # or use pony orm query result:
-# >>> jobs = eq.get_jobs(tags='exp_component:atmos', fmt='orm')
+# >>> jobs = eq.get_jobs(tag='exp_component:atmos', fmt='orm')
 # >>> r = eq.create_refmodel(jobs)
 #
 #
-def create_refmodel(jobs=[], tags={}, op_tags=[], computed = {},
+def create_refmodel(jobs=[], tag={}, op_tags=[], computed = {},
                     outlier_methods=[modified_z_score], 
-                    features=['duration', 'cpu_time', 'num_procs'], exact_tags_only=False ):
+                    features=['duration', 'cpu_time', 'num_procs'], exact_tag_only=False ):
     if (not jobs) or len(jobs)==0:
         logger.error('You need to specify one or more jobs to create a reference model')
         return None
 
-    if type(tags) == str:
-        tags = get_tags_from_string(tags)
+    if type(tag) == str:
+        tag = tag_from_string(tag)
 
     # do we have a list of jobids?
     # if so, we need to get the actual DB objects for them
@@ -619,11 +593,11 @@ def create_refmodel(jobs=[], tags={}, op_tags=[], computed = {},
         # do we have a single tag in string or dict form? 
         # we eventually want a list of dicts
         elif type(op_tags) == str:
-            op_tags = [get_tags_from_string(op_tags)]
+            op_tags = [tag_from_string(op_tags)]
         elif type(op_tags) == dict:
             op_tags = [op_tags]
         # let's get the dataframe of metrics aggregated by op_tags
-        ops_df = op_metrics(jobs = jobs, tags = op_tags, exact_tags_only = exact_tags_only, fmt='pandas')
+        ops_df = op_metrics(jobs = jobs, tags = op_tags, exact_tags_only = exact_tag_only, fmt='pandas')
         scores = {}
         for t in op_tags:
             # serialize the tag so we can use it as a key
@@ -637,7 +611,7 @@ def create_refmodel(jobs=[], tags={}, op_tags=[], computed = {},
     computed.update(scores)
 
     # now save the ref model
-    r = ReferenceModel(jobs=jobs, tags=tags, op_tags=op_tags, computed=computed)
+    r = ReferenceModel(jobs=jobs, tags=tag, op_tags=op_tags, computed=computed)
     commit()
     return r.id
 
@@ -683,12 +657,12 @@ def op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas', sql_
     if type(jobs) == str or type(jobs) == unicode:
         jobs = [jobs]
 
-    tags = __tags_list(tags) if tags else get_unique_process_tags(jobs, fold=False)
+    tags = tags_list(tags) if tags else get_unique_process_tags(jobs, fold=False)
 
     all_procs = []
     # we iterate over tags, where each tag is dictionary
     for t in tags:
-        procs = get_procs(jobs, tags = t, exact_tags_only = exact_tags_only, sql_debug = sql_debug, fmt='orm')
+        procs = get_procs(jobs, tag = t, exact_tag_only = exact_tags_only, sql_debug = sql_debug, fmt='orm')
         # group the Query response we got by jobid
         # we use group_concat to join the thread_sums json into a giant string
         procs_grp_by_job = select((p.job, count(p.id), sum(p.duration), sum(p.exclusive_cpu_time), sum(p.numtids), group_concat(p.threads_sums, sep='@@@')) for p in procs)

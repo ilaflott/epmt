@@ -8,6 +8,7 @@ from pony.orm.core import Query
 from models import ReferenceModel
 from logging import getLogger
 from json import dumps
+from epmtlib import tags_list
 from epmt_job import dict_in_list
 from epmt_stat import thresholds, modified_z_score,outliers_iqr,outliers_modified_z_score,rca
 
@@ -110,7 +111,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
 #
 #
 # Here is another example, this time we auto-detect the tags:
-# >>> jobs = eq.get_jobs(fmt='orm', tags='exp_name:linux_kernel')
+# >>> jobs = eq.get_jobs(fmt='orm', tag='exp_name:linux_kernel')
 # >>> (df, parts) = eod.detect_outlier_ops(jobs)
 # >>> df[['jobid', 'tags', 'duration', 'cpu_time']][:5]
 #                                jobid  \
@@ -152,13 +153,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
 
 def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds=thresholds):
 
-    # # do we have a single tag in string or dict form? 
-    # if type(tags) == str:
-    #     tags = [eq.get_tags_from_string(tags)]
-    # elif type(tags) == dict:
-    #     tags = [tags]
-    # tags = [eq.get_tags_from_string(t) for t in tags if type(t) == str]
-    tags = eq.__tags_list(tags)
+    tags = tags_list(tags)
         
     jobs_tags_set = set()
     unique_job_tags = eq.get_unique_process_tags(jobs, fold=False)
