@@ -144,15 +144,15 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
     # the select rows will have different job ids
     for tag in tags_to_use:
         t = dumps(tag, sort_keys=True)
-        logger.debug('Processing tag: {0}'.format(tag))
+        # logger.debug('Processing tag: {0}'.format(tag))
         # select only those rows with matching tag
         rows = ops[ops.tags == tag]
-        logger.debug('input: \n{0}\n'.format(rows[['tags']+features]))
+        # logger.debug('input: \n{0}\n'.format(rows[['tags']+features]))
         for c in features:
             for m in methods:
                 params = model_params[t][m].get(c, ())
-                if params:
-                    logger.debug('params[{0}][{1}][{2}]: {3}'.format(t,m.__name__, c, params))
+                # if params:
+                #     logger.debug('params[{0}][{1}][{2}]: {3}'.format(t,m.__name__, c, params))
                 scores = m(rows[c], params)[0]
                 # use the max score in the refmodel if we have a trained model
                 # otherwise use the default threshold for the method
@@ -160,12 +160,22 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
                 outlier_rows = np.where(np.abs(scores) > threshold)[0]
                 # remain the outlier rows indices to the indices in the original df
                 outlier_rows = rows.index[outlier_rows].values
-                logger.debug('Outliers for [{0}][{1}][{2}] -> {3}'.format(t,m.__name__,c,outlier_rows))
+                # logger.debug('outliers for [{0}][{1}][{2}] -> {3}'.format(t,m.__name__,c,outlier_rows))
                 retval.loc[outlier_rows,c] += 1
     retval['jobid'] = ops['job']
     retval['tags'] = ops['tags']
     retval = retval[['jobid', 'tags']+features]
-    return retval
+    # partition using tags
+    parts = {}
+    for tag in tags_to_use:
+        dft = retval[retval.tags == tag]
+        q_ref = "&".join(["{0} == 0".format(f) for f in features])
+        dft_ref = dft.query(q_ref).reset_index(drop=True)
+        q_outlier = "|".join(["{0} > 0".format(f) for f in features])
+        dft_outlier = dft.query(q_outlier).reset_index(drop=True)
+        parts[dumps(tag)] = (list(dft_ref['jobid'].values), (list(dft_outlier['jobid'].values)))
+    return (retval, parts)
+    
 
 
 def detect_outlier_processes(processes, trained_model=None, 

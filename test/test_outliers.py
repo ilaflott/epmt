@@ -51,6 +51,7 @@ class OutliersAPI(unittest.TestCase):
 ##    def tearDown(self):
 ##        pass
 
+    @db_session
     def test_outlier_jobs(self):
         jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm')
         df = eod.detect_outlier_jobs(jobs)
@@ -59,6 +60,18 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(len(df[df.num_procs > 0]), 0, "incorrect count of num_procs outliers")
         self.assertTrue('outlier' in df[df.duration > 0]['jobid'].values[0], "wrong duration outlier")
         self.assertTrue('outlier' in df[df.cpu_time > 0]['jobid'].values[0], "wrong duration outlier")
+
+    @db_session
+    def test_outlier_ops(self):
+        jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm')
+        (df, parts) = eod.detect_outlier_ops(jobs)
+        self.assertEqual(df.shape, (20,5), "wrong shape of df from detect_outlier_ops")
+        self.assertEqual(len(df[df.duration > 0]), 3, 'wrong outlier count for duration')
+        self.assertEqual(len(df[df.cpu_time > 0]), 5, 'wrong outlier count for cpu_time')
+        self.assertEqual(len(df[df.num_procs > 0]), 0, 'wrong outlier count for num_procs')
+        self.assertEqual(list(df.loc[2].values), [u'kern-6656-20190614-192044-outlier', {u'op_instance': u'4', u'op_sequence': u'4', u'op': u'build'}, 1, 1, 0])
+        self.assertEqual(len(parts), 5, 'wrong number of distinct tags')
+        self.assertEqual(parts['{"op_instance": "4", "op_sequence": "4", "op": "build"}'], ([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024'], [u'kern-6656-20190614-192044-outlier']))
 
     @db_session
     def test_partition_jobs(self):
@@ -77,6 +90,7 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(p2.count(), 3, "wrong count in ref partition orm")
         self.assertTrue('outlier' in p1.first().jobid, "wrong job found in outliers partition orm")
 
+    @db_session
     def test_rca_jobs(self):
         ref_jobs = eq.get_jobs(tags='exp_name:linux_kernel', fltr='"outlier" not in j.jobid', fmt='orm')
         outlier_job = eq.get_jobs(tags='exp_name:linux_kernel', fltr='"outlier" in j.jobid', fmt='orm')
