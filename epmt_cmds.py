@@ -501,7 +501,7 @@ def epmt_source(forced_jobid, papiex_debug=False, monitor_debug=False, add_expor
         cmd += " "
     
     if output_dir:
-        output_dir = environ.get('PAPIEX_OUTPUT', output_dir)
+        #output_dir = environ.get('PAPIEX_OUTPUT', output_dir)
         if add_export:
             cmd += export
         cmd += "PAPIEX_OUTPUT"+equals+output_dir
