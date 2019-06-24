@@ -34,15 +34,6 @@ def init_settings():
     if not hasattr(settings, 'job_tags_env'):
         logger.warning("missing settings.job_tags_env")
         settings.job_tags_env = 'EPMT_JOB_TAGS'
-    if not hasattr(settings, 'tag_delimiter'):
-        logger.warning("missing settings.tag_delimiter")
-        settings.tag_delimiter = ';'
-    if not hasattr(settings, 'tag_kv_separator'):
-        logger.warning("missing settings.tag_kv_separator")
-        settings.tag_kv_separator = ':'
-    if not hasattr(settings, 'tag_default_value'):
-        logger.warning("missing settings.tag_default_value")
-        settings.tag_default_value = "1"
     if not hasattr(settings, 'jobid_env_list'):
         logger.warning("missing settings.jobid_env_list")
         settings.jobid_env_list = [ "SLURM_JOB_ID", "SLURM_JOBID", "PBS_JOB_ID" ]
@@ -61,12 +52,6 @@ def init_settings():
     if not hasattr(settings, 'skip_for_thread_sums'):
         logger.warning("missing settings.skip_for_thread_sums")
         settings.skip_for_thread_sums = ["tid", "start", "end", "num_threads", "starttime"]
-    if not hasattr(settings, 'proc_sums_field_in_job'):
-        logger.warning("missing settings.proc_sums_field_in_job")
-        settings.proc_sums_field_in_job = 'proc_sums'
-    if not hasattr(settings, 'thread_sums_field_in_proc'):
-        logger.warning("missing settings.thread_sums_field_in_proc")
-        settings.thread_sums_field_in_proc = 'threads_sums'
     if not hasattr(settings, 'all_tags_field'):
         logger.warning("missing settings.all_tags_field")
         settings.all_tags_field = 'all_proc_tags'

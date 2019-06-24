@@ -26,6 +26,8 @@ else:
 print(settings.db_params)
 setup_orm_db(settings)
 
+PROC_SUMS_FIELD_IN_JOB='proc_sums'
+THREAD_SUMS_FIELD_IN_PROC='threads_sums'
 
 # figure out the entity type and then call the appropriate 
 # convertor. For now we know its either a collection of Job or Process objects
@@ -59,11 +61,11 @@ def conv_jobs(jobs, fmt='dict', merge_sums = True):
         for j in out_list:
             # check if dicts have any common fields, if so,
             # warn the user as some fields will get clobbered
-            common_fields = list(set(j) & set(j[settings.proc_sums_field_in_job]))
+            common_fields = list(set(j) & set(j[PROC_SUMS_FIELD_IN_JOB]))
             if common_fields:
                 logger.warning('while hoisting proc_sums to job-level, found {0} common fields: {1}'.format(len(common_fields), common_fields))
-            j.update(j[settings.proc_sums_field_in_job])
-            del j[settings.proc_sums_field_in_job]
+            j.update(j[PROC_SUMS_FIELD_IN_JOB])
+            del j[PROC_SUMS_FIELD_IN_JOB]
 
     return pd.DataFrame(out_list) if fmt=='pandas' else out_list
 
@@ -81,11 +83,11 @@ def conv_procs_orm(procs, merge_sums = True, fmt='dict'):
         for p in out_list:
             # check if dicts have any common fields, if so,
             # warn the user as some fields will get clobbered
-            common_fields = list(set(p) & set(p[settings.thread_sums_field_in_proc]))
+            common_fields = list(set(p) & set(p[THREAD_SUMS_FIELD_IN_PROC]))
             if common_fields:
                 logger.warning('while hoisting thread_sums to process-level, found {0} common fields: {1}'.format(len(common_fields), common_fields))
-            p.update(p[settings.thread_sums_field_in_proc])
-            del p[settings.thread_sums_field_in_proc]
+            p.update(p[THREAD_SUMS_FIELD_IN_PROC])
+            del p[THREAD_SUMS_FIELD_IN_PROC]
     return pd.DataFrame(out_list) if fmt == 'pandas' else out_list
 
 # this is an internal function to take a collection of jobs
@@ -322,7 +324,7 @@ def get_jobs(jobs = [], tag={}, fltr = '', order = '', limit = 0, when=None, hos
 #
 # merge_threads_sums: By default, this is True, and this means threads sums are
 #          are folded into the process. If set to False, the threads'
-#          sums will be available as a separate field settings.thread_sums_field_in_proc.
+#          sums will be available as a separate field THREAD_SUMS_FIELD_IN_PROC.
 #          Flattening makes subsequent processing easier as all the
 #          thread aggregates such as 'usertime', 'systemtime' are available
 #          as first-class members of the process. This option is silently
@@ -654,7 +656,7 @@ def create_refmodel(jobs=[], tag={}, op_tags=[], computed = {},
 def _get_unique_process_tags_for_single_job(job, exclude=[], fold=True):
     if type(job) == str or type(job) == unicode:
         job = Job[job]
-    proc_sums = getattr(job, settings.proc_sums_field_in_job, {})
+    proc_sums = getattr(job, PROC_SUMS_FIELD_IN_JOB, {})
     tags = []
     if proc_sums:
         tags = proc_sums[settings.all_tags_field]
