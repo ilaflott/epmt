@@ -7,6 +7,7 @@ from pony.orm import db_session
 from models import db
 from pony.orm.core import Query
 import pandas as pd
+import datetime
 
 # put this above all epmt imports so they use defaults
 from os import environ
@@ -149,6 +150,16 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(df.shape, (1,49))
         self.assertEqual(df.loc[0,'pid'], 122181)
 
+    @db_session
+    def test_timeline(self):
+        jobs = eq.get_jobs(fmt='orm')
+        procs = eq.timeline(jobs, fmt='orm')
+        p1 = procs.first()
+        self.assertEqual(p1.start, min(min(j.processes.start) for j in jobs))
+        self.assertEqual([ p.start for p in procs[:3] ], [datetime.datetime(2019, 6, 15, 11, 52, 4, 126892), datetime.datetime(2019, 6, 15, 11, 52, 4, 133795), datetime.datetime(2019, 6, 15, 11, 52, 4, 142141)])
+        procs = eq.timeline('685016', fmt='orm', limit=5)
+        pids = [p.pid for p in procs]
+        self.assertEqual(pids, [122181, 122182, 122183, 122184, 122185])
 
 
 if __name__ == '__main__':
