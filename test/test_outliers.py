@@ -59,9 +59,30 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(len(df[df.cpu_time > 0]), 1, "incorrect count of cpu_time outliers")
         self.assertEqual(len(df[df.num_procs > 0]), 0, "incorrect count of num_procs outliers")
         self.assertTrue('outlier' in df[df.duration > 0]['jobid'].values[0], "wrong duration outlier")
-        self.assertTrue('outlier' in df[df.cpu_time > 0]['jobid'].values[0], "wrong duration outlier")
+        self.assertTrue('outlier' in df[df.cpu_time > 0]['jobid'].values[0], "wrong cpu_time outlier")
         self.assertEqual(len(parts), 3, "wrong number of items in partition dictionary")
         self.assertEqual(parts['duration'], (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-194024', u'kern-6656-20190614-191138']), set([u'kern-6656-20190614-192044-outlier'])))
+
+    @db_session
+    def test_outlier_jobs_trained(self):
+        all_jobs = eq.get_jobs(tag='exp_name:linux_kernel', fmt='orm')
+        jobs_ex_outl = eq.get_jobs(tag='exp_name:linux_kernel', fmt='orm', fltr='"outlier" not in j.jobid')
+        r = eq.create_refmodel(jobs_ex_outl, fmt='terse')
+        (df, parts) = eod.detect_outlier_jobs(all_jobs, trained_model=r)
+        self.assertEqual(len(df[df.duration > 0]), 1, "incorrect count of duration outliers")
+        self.assertEqual(len(df[df.cpu_time > 0]), 1, "incorrect count of cpu_time outliers")
+        self.assertEqual(len(df[df.num_procs > 0]), 0, "incorrect count of num_procs outliers")
+        self.assertTrue('outlier' in df[df.duration > 0]['jobid'].values[0], "wrong duration outlier")
+        self.assertTrue('outlier' in df[df.cpu_time > 0]['jobid'].values[0], "wrong cpu_time outlier")
+        self.assertEqual(parts['duration'], (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-194024', u'kern-6656-20190614-191138']), set([u'kern-6656-20190614-192044-outlier'])))
+        # now create a ref model that *includes* the outlier job
+        # this way it won't later be classified as a outlier
+        r = eq.create_refmodel(all_jobs, fmt='terse')
+        (df, parts) = eod.detect_outlier_jobs(all_jobs, trained_model=r)
+        # check there are no outliers
+        self.assertEqual(len(df[df.duration > 0]), 0, "incorrect count of duration outliers")
+        self.assertEqual(len(df[df.cpu_time > 0]), 0, "incorrect count of cpu_time outliers")
+        self.assertEqual(len(df[df.num_procs > 0]), 0, "incorrect count of num_procs outliers")
 
     @db_session
     def test_outlier_ops(self):
