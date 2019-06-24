@@ -144,14 +144,39 @@ def __jobs_col(jobs):
 def timeline(jobs = [], limit=0, fltr='', when=None, hosts=[], fmt='pandas'):
     return get_procs(jobs, fmt=fmt, order='p.start', limit=limit, fltr=fltr, when=when, hosts=hosts)
 
-
+#
 # get the root process of the job
 # The job is either a Job object or a jobid
-def get_root(job, fmt='dict'):
+#
+# EXAMPLE:
+# >>> eq.root('685016',fmt='terse')
+# 7266
+#
+# >>> p = eq.root('685016',fmt='orm')
+# >>> p.id
+# 7266
+# >>> p.exename
+# u'tcsh'
+# >>> p.args
+# u'-f /home/Jeffrey.Durachta/ESM4/DECK/ESM4_historical_D151/gfdl.ncrc4-intel16-prod-openmp/scripts/postProcess/ESM4_historical_D151_ocean_month_rho2_1x1deg_18840101.tags'
+# >>> p.descendants.count()
+# 3381
+#
+# >>> df = eq.root('685016', fmt='pandas')
+# >>> df.shape
+# (1,49)
+# >>> df.loc[0,'pid']
+# 122181
+#
+# >>> p = eq.root('685016')
+# >>> p['id'],p['exename']
+# (7266, u'tcsh')
+def root(job, fmt='dict'):
     if type(job) in [str, unicode]:
         job = Job[job]
     p = job.processes.order_by('p.start').limit(1)
     if fmt == 'orm': return p.to_list().pop()
+    if fmt == 'terse': return p.to_list().pop().id
 
     plist = conv_procs_orm(p, fmt='dict')
     return pd.DataFrame(plist) if fmt == 'pandas' else plist.pop()

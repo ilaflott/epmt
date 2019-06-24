@@ -139,6 +139,19 @@ class QueryAPI(unittest.TestCase):
         df = eq.op_metrics(['685000', '685016'], tags='op_sequence:89')
         self.assertEqual([int(f) for f in list(df.duration.values)], [6463542235, 7008334182])
 
+    @db_session
+    def test_root(self):
+        p = eq.root('685016')
+        self.assertEqual((p['id'], p['exename']), (7266, u'tcsh'))
+        p = eq.root('685016', fmt='terse')
+        self.assertEqual(p, 7266)
+        p = eq.root('685016', fmt='orm')
+        self.assertEqual(p.id, 7266)
+        df = eq.root('685016', fmt='pandas')
+        self.assertEqual(df.shape, (1,49))
+        self.assertEqual(df.loc[0,'pid'], 122181)
+
+
 
 if __name__ == '__main__':
     unittest.main()
