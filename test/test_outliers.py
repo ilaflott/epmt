@@ -115,6 +115,17 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(df.shape, (12,3), "wrong dataframe format")
         self.assertEqual([int(x) for x in list(df.loc['modified_z_score_ratio'])], [204, 27, 0], "wrong madz score ratios")
 
+    @db_session
+    def test_trained_model(self):
+        jobs = eq.get_jobs(tag='exp_name:linux_kernel', fltr='"outlier" not in j.jobid', fmt='terse')
+        self.assertEqual(len(jobs), 3)
+        r = eq.create_refmodel(jobs, tag='exp_name:linux_kernel')
+        self.assertEqual(r['tags'], {'exp_name': 'linux_kernel'})
+        r = eq.get_refmodels(tag='exp_name:linux_kernel', fmt='orm')
+        self.assertEqual(r.count(), 1)
+        self.assertEqual(r.first().computed, {'modified_z_score': {'duration': (1.0287, 542680315.0, 14860060.0), 'cpu_time': (1.3207, 449914707.0, 444671.0), 'num_procs': (0.0, 10600.0, 0.0)}})
+        self.assertEqual(set(r.first().jobs.jobid), set([u'kern-6656-20190614-194024', u'kern-6656-20190614-191138', u'kern-6656-20190614-190245']))
+
 
 
 if __name__ == '__main__':

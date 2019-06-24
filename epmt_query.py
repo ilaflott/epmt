@@ -493,12 +493,12 @@ def get_refmodels(tag = {}, fltr=None, limit=0, order='', exact_tag_only=False, 
     if type(tag) == str:
         tag = tag_from_string(tag)
     if exact_tag_only:
-        qs = qs.filter(lambda p: p.tags == tag)
+        qs = qs.filter(lambda r: r.tags == tag)
     else:
         # we consider a match if the job tags are a superset
         # of the passed tags
-        for (k,v) in tags.items():
-            qs = qs.filter(lambda p: p.tags[k] == v)
+        for (k,v) in tag.items():
+            qs = qs.filter(lambda r: r.tags[k] == v)
 
     # if fltr is a lambda function or a string apply it
     if fltr:
@@ -598,7 +598,8 @@ def _refmodel_scores(col, outlier_methods, features):
 #
 def create_refmodel(jobs=[], tag={}, op_tags=[], computed = {},
                     outlier_methods=[modified_z_score], 
-                    features=['duration', 'cpu_time', 'num_procs'], exact_tag_only=False ):
+                    features=['duration', 'cpu_time', 'num_procs'], exact_tag_only=False,
+                    fmt='dict'):
     if (not jobs) or len(jobs)==0:
         logger.error('You need to specify one or more jobs to create a reference model')
         return None
@@ -638,7 +639,12 @@ def create_refmodel(jobs=[], tag={}, op_tags=[], computed = {},
     # now save the ref model
     r = ReferenceModel(jobs=jobs, tags=tag, op_tags=op_tags, computed=computed)
     commit()
-    return r.id
+    if fmt=='orm': 
+        return r
+    elif fmt=='terse': 
+        return r.id
+    r_dict = r.to_dict(with_collections=True)
+    return pd.Series(r_dict) if fmt=='pandas' else r_dict
 
             
 # This is a low-level function that finds the unique process
