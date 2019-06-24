@@ -99,6 +99,18 @@ class OutliersAPI(unittest.TestCase):
         self.assertTrue('outlier' in p1.first().jobid, "wrong job found in outliers partition orm")
 
     @db_session
+    def test_partition_jobs_by_ops(self):
+        jobs = eq.get_jobs(fmt='terse', tag='exp_name:linux_kernel')
+        parts = eod.partition_jobs_by_ops(jobs)
+        self.assertEqual(len(parts), 5, "incorrect number of tags in output")
+        self.assertEqual(parts['{"op_instance": "3", "op_sequence": "3", "op": "configure"}'], ([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024'], [u'kern-6656-20190614-192044-outlier']), "wrong partitioning for configure op")
+        parts = eod.partition_jobs_by_ops(jobs, tags = 'op:build;op_instance:4;op_sequence:4')
+        self.assertEqual(parts, {'{"op_instance": "4", "op_sequence": "4", "op": "build"}': ([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024'], [u'kern-6656-20190614-192044-outlier'])}, "wrong partitioning when supplying a single tag string")
+        parts = eod.partition_jobs_by_ops(jobs, tags = ['op:build;op_instance:4;op_sequence:4', {"op_instance": "2", "op_sequence": "2", "op": "extract"}])
+        self.assertEqual(parts, {'{"op_instance": "4", "op_sequence": "4", "op": "build"}': ([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024'], [u'kern-6656-20190614-192044-outlier']), '{"op_instance": "2", "op_sequence": "2", "op": "extract"}': ([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024'], [u'kern-6656-20190614-192044-outlier'])}, "wrong partitioning when supplying tags consisting of a list of string and dict")
+        
+
+    @db_session
     def test_rca_jobs(self):
         ref_jobs = eq.get_jobs(tag='exp_name:linux_kernel', fltr='"outlier" not in j.jobid', fmt='orm')
         outlier_job = eq.get_jobs(tag='exp_name:linux_kernel', fltr='"outlier" in j.jobid', fmt='orm')

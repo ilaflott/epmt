@@ -39,6 +39,63 @@ def partition_jobs(jobs, feature='duration', methods=[modified_z_score], thresho
     if fmt == 'orm':
         return (eq.conv_jobs(outliers_list, fmt='orm'), eq.conv_jobs(ref_list, fmt='orm'))
 
+# This function attempts to partition the supplied jobs into two partitions:
+# reference jobs and outliers. The partitioning is done for each tag, and
+# for a tag, if any feature makes a job an outlier then it's put in the
+# outlier partition.
+#
+# INPUT:
+#   - jobs: Jobs collection specified as a list of a jobs, a single job or a pandas df
+#   - tags: One or more tags specified as a list of strings, or a list of dicts.
+#           Single tag specified as a string or tag is also acceptable.
+#           If not specified all the unique process tags across all jobs in "jobs"
+#           will be assumed.
+#   - features: One or more features. Specified as a list of strings
+#   - methods: One or more methods for outlier detection (default is MADZ)
+#   - thresholds: dict of constants indexable by the names of functions specified in 'methods'
+#
+# OUTPUT:
+#   - dictionary where each key is a tag, and the value is a tuple like 
+#     ([ref_jobs],[outlier_jobs).
+#
+# EXAMPLE:
+# >>> jobs = eq.get_jobs(tag = 'exp_name:linux_kernel', fmt='terse)
+# >>> parts = eod.partition_jobs_by_ops(jobs)
+# >>> pprint(parts)
+# {'{"op_instance": "1", "op_sequence": "1", "op": "download"}': ([u'kern-6656-20190614-190245',
+#                                                                  u'kern-6656-20190614-191138',
+#                                                                  u'kern-6656-20190614-194024'],
+#                                                                 [u'kern-6656-20190614-192044-outlier']),
+#  '{"op_instance": "2", "op_sequence": "2", "op": "extract"}': ([u'kern-6656-20190614-190245',
+#                                                                 u'kern-6656-20190614-191138',
+#                                                                 u'kern-6656-20190614-194024'],
+#                                                                [u'kern-6656-20190614-192044-outlier']),
+#  '{"op_instance": "3", "op_sequence": "3", "op": "configure"}': ([u'kern-6656-20190614-190245',
+#                                                                   u'kern-6656-20190614-191138',
+#                                                                   u'kern-6656-20190614-194024'],
+#                                                                  [u'kern-6656-20190614-192044-outlier']),
+#  '{"op_instance": "4", "op_sequence": "4", "op": "build"}': ([u'kern-6656-20190614-190245',
+#                                                               u'kern-6656-20190614-191138',
+#                                                               u'kern-6656-20190614-194024'],
+#                                                              [u'kern-6656-20190614-192044-outlier']),
+#  '{"op_instance": "5", "op_sequence": "5", "op": "clean"}': ([u'kern-6656-20190614-190245',
+#                                                               u'kern-6656-20190614-191138',
+#                                                               u'kern-6656-20190614-194024'],
+#                                                              [u'kern-6656-20190614-192044-outlier'])}
+#
+# In the example above we did not supply any tags so the set of unique
+# process tags was determined automatically. We can also choose to
+# specify a tag (or a list of tags) as so:
+# >>> parts = eod.partition_jobs_by_ops(jobs, tags = 'op:build;op_instance:4;op_sequence:4')
+# >>> pprint(parts)
+# {'{"op_instance": "4", "op_sequence": "4", "op": "build"}': ([u'kern-6656-20190614-190245',
+#                                                               u'kern-6656-20190614-191138',
+#                                                               u'kern-6656-20190614-194024'],
+#                                                              [u'kern-6656-20190614-192044-outlier'])}
+
+def partition_jobs_by_ops(jobs, tags=[], features=FEATURES, methods=[modified_z_score], thresholds=thresholds):
+    (_, parts) = detect_outlier_ops(jobs, tags=tags, features=features, methods=methods, thresholds=thresholds)
+    return parts
 
 
 # jobs is either a pandas dataframe of job(s) or a list of job ids or a Pony Query object
