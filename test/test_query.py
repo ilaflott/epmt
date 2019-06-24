@@ -142,11 +142,9 @@ class QueryAPI(unittest.TestCase):
     @db_session
     def test_root(self):
         p = eq.root('685016')
-        self.assertEqual((p['id'], p['exename']), (7266, u'tcsh'))
-        p = eq.root('685016', fmt='terse')
-        self.assertEqual(p, 7266)
+        self.assertEqual((p['pid'], p['exename']), (122181, u'tcsh'))
         p = eq.root('685016', fmt='orm')
-        self.assertEqual(p.id, 7266)
+        self.assertEqual(p.pid, 122181)
         df = eq.root('685016', fmt='pandas')
         self.assertEqual(df.shape, (1,49))
         self.assertEqual(df.loc[0,'pid'], 122181)
