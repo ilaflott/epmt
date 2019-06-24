@@ -54,12 +54,14 @@ class OutliersAPI(unittest.TestCase):
     @db_session
     def test_outlier_jobs(self):
         jobs = eq.get_jobs(tag='exp_name:linux_kernel', fmt='orm')
-        df = eod.detect_outlier_jobs(jobs)
+        (df, parts) = eod.detect_outlier_jobs(jobs)
         self.assertEqual(len(df[df.duration > 0]), 1, "incorrect count of duration outliers")
         self.assertEqual(len(df[df.cpu_time > 0]), 1, "incorrect count of cpu_time outliers")
         self.assertEqual(len(df[df.num_procs > 0]), 0, "incorrect count of num_procs outliers")
         self.assertTrue('outlier' in df[df.duration > 0]['jobid'].values[0], "wrong duration outlier")
         self.assertTrue('outlier' in df[df.cpu_time > 0]['jobid'].values[0], "wrong duration outlier")
+        self.assertEqual(len(parts), 3, "wrong number of items in partition dictionary")
+        self.assertEqual(parts['duration'], (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-194024', u'kern-6656-20190614-191138']), set([u'kern-6656-20190614-192044-outlier'])))
 
     @db_session
     def test_outlier_ops(self):
@@ -71,43 +73,36 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(len(df[df.num_procs > 0]), 0, 'wrong outlier count for num_procs')
         self.assertEqual(list(df.loc[2].values), [u'kern-6656-20190614-192044-outlier', {u'op_instance': u'4', u'op_sequence': u'4', u'op': u'build'}, 1, 1, 0])
         self.assertEqual(len(parts), 5, 'wrong number of distinct tags')
-        self.assertEqual(parts['{"op_instance": "4", "op_sequence": "4", "op": "build"}'], ([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024'], [u'kern-6656-20190614-192044-outlier']))
+        self.assertEqual(parts['{"op_instance": "4", "op_sequence": "4", "op": "build"}'], (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024']), set([u'kern-6656-20190614-192044-outlier'])))
 
         (df, parts) = eod.detect_outlier_ops(jobs, tags = {"op_instance": "4", "op_sequence": "4", "op": "build"})
         self.assertEqual(df.shape, (4,5), "wrong shape of df from detect_outlier_ops with supplied tag")
         self.assertEqual(list(df.duration), [0, 0, 1, 0])
         self.assertEqual(list(df.cpu_time), [0, 0, 1, 0])
         self.assertEqual(list(df.num_procs), [0, 0, 0, 0])
-        self.assertEqual(parts, {'{"op_instance": "4", "op_sequence": "4", "op": "build"}': ([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024'], [u'kern-6656-20190614-192044-outlier'])})
+        self.assertEqual(parts, {'{"op_instance": "4", "op_sequence": "4", "op": "build"}': (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024']), set([u'kern-6656-20190614-192044-outlier']))})
 
 
     @db_session
     def test_partition_jobs(self):
         jobs = eq.get_jobs(tag='launch_id:6656', fmt='orm')
         self.assertEqual(jobs.count(), 4, "incorrect job count using tags")
-        (p1, p2) = eod.partition_jobs(jobs, fmt='terse')
-        self.assertEqual(len(p1), 1, "incorrect count of outlier partition")
-        self.assertEqual(len(p2), 3, "incorrect count of ref partition")
-        self.assertTrue('outlier' in p1[0], "wrong job in outlier partition")
-        self.assertFalse('outlier' in ",".join(p2), "wrong job in ref. partition")
-        (p1, p2) = eod.partition_jobs(jobs, fmt='pandas')
-        self.assertEqual(p1.shape[0], 1, "wrong count of rows in outliers df")
-        self.assertEqual(p2.shape[0], 3, "wrong count of rows in ref df")
-        (p1, p2) = eod.partition_jobs(jobs, fmt='orm')
-        self.assertEqual(p1.count(), 1, "wrong count in outliers partition orm")
-        self.assertEqual(p2.count(), 3, "wrong count in ref partition orm")
-        self.assertTrue('outlier' in p1.first().jobid, "wrong job found in outliers partition orm")
+        parts = eod.partition_jobs(jobs, fmt='terse')
+        self.assertEqual(len(parts), 3, "incorrect count of items in partition dict")
+        self.assertEqual(parts['cpu_time'], (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-194024', u'kern-6656-20190614-191138']), set([u'kern-6656-20190614-192044-outlier'])))
+        self.assertEqual(parts['duration'], (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-194024', u'kern-6656-20190614-191138']), set([u'kern-6656-20190614-192044-outlier'])))
+        self.assertEqual(parts['num_procs'], (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-192044-outlier', u'kern-6656-20190614-194024', u'kern-6656-20190614-191138']), set([])))
 
     @db_session
     def test_partition_jobs_by_ops(self):
         jobs = eq.get_jobs(fmt='terse', tag='exp_name:linux_kernel')
         parts = eod.partition_jobs_by_ops(jobs)
         self.assertEqual(len(parts), 5, "incorrect number of tags in output")
-        self.assertEqual(parts['{"op_instance": "3", "op_sequence": "3", "op": "configure"}'], ([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024'], [u'kern-6656-20190614-192044-outlier']), "wrong partitioning for configure op")
+        self.assertEqual(parts['{"op_instance": "3", "op_sequence": "3", "op": "configure"}'], (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024']), set([u'kern-6656-20190614-192044-outlier'])), "wrong partitioning for configure op")
         parts = eod.partition_jobs_by_ops(jobs, tags = 'op:build;op_instance:4;op_sequence:4')
-        self.assertEqual(parts, {'{"op_instance": "4", "op_sequence": "4", "op": "build"}': ([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024'], [u'kern-6656-20190614-192044-outlier'])}, "wrong partitioning when supplying a single tag string")
+        self.assertEqual(parts, {'{"op_instance": "4", "op_sequence": "4", "op": "build"}': (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024']), set([u'kern-6656-20190614-192044-outlier']))}, "wrong partitioning when supplying a single tag string")
         parts = eod.partition_jobs_by_ops(jobs, tags = ['op:build;op_instance:4;op_sequence:4', {"op_instance": "2", "op_sequence": "2", "op": "extract"}])
-        self.assertEqual(parts, {'{"op_instance": "4", "op_sequence": "4", "op": "build"}': ([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024'], [u'kern-6656-20190614-192044-outlier']), '{"op_instance": "2", "op_sequence": "2", "op": "extract"}': ([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024'], [u'kern-6656-20190614-192044-outlier'])}, "wrong partitioning when supplying tags consisting of a list of string and dict")
+        self.assertEqual(parts, {'{"op_instance": "4", "op_sequence": "4", "op": "build"}': (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024']), set([u'kern-6656-20190614-192044-outlier'])), '{"op_instance": "2", "op_sequence": "2", "op": "extract"}': (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024']), set([u'kern-6656-20190614-192044-outlier']))}, "wrong partitioning when supplying tags consisting of a list of string and dict")
         
 
     @db_session
