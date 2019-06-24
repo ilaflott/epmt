@@ -571,8 +571,6 @@ def _refmodel_scores(col, outlier_methods, features):
 #           obtain the set of processes over which an aggregation
 #           is performed using op_metrics. 
 #
-# computed:  A dict containing arbitrary computed stats
-# 
 # outlier_methods: Is a list of methods that are used to obtain
 #          scores. Each method is passed a vector consisting
 #          of the value of 'feature' for all the jobs. The
@@ -597,8 +595,19 @@ def _refmodel_scores(col, outlier_methods, features):
 # >>> jobs = eq.get_jobs(tag='exp_component:atmos', fmt='orm')
 # >>> r = eq.create_refmodel(jobs)
 #
+# to create a refmodel for ops we need to either set op_tags
+# to a list of tags for the ops, or use the wildcard (*):
+# >>> r = eq.create_refmodel(jobs, tag='exp_name:linux_kernel', op_tags='*')
 #
-def create_refmodel(jobs=[], tag={}, op_tags=[], computed = {},
+# >>> r['id'], r['tags'], r['jobs']
+# (11, {'exp_name': 'linux_kernel'}, [u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-192044-outlier', u'kern-6656-20190614-194024'])
+#
+# >>> r['op_tags']
+# [{u'op_instance': u'4', u'op_sequence': u'4', u'op': u'build'}, {u'op_instance': u'5', u'op_sequence': u'5', u'op': u'clean'}, {u'op_instance': u'3', u'op_sequence': u'3', u'op': u'configure'}, {u'op_instance': u'1', u'op_sequence': u'1', u'op': u'download'}, {u'op_instance': u'2', u'op_sequence': u'2', u'op': u'extract'}]
+
+#
+#
+def create_refmodel(jobs=[], tag={}, op_tags=[], 
                     outlier_methods=[modified_z_score], 
                     features=['duration', 'cpu_time', 'num_procs'], exact_tag_only=False,
                     fmt='dict'):
@@ -616,7 +625,7 @@ def create_refmodel(jobs=[], tag={}, op_tags=[], computed = {},
 
     if op_tags:
         if op_tags == '*':
-            logger.debug('wildcard op_tags set: obtaining set of unique tags across the input jobs')
+            logger.info('wildcard op_tags set: obtaining set of unique tags across the input jobs')
             op_tags = get_unique_process_tags(jobs, fold=False)
         # do we have a single tag in string or dict form? 
         # we eventually want a list of dicts
@@ -636,7 +645,7 @@ def create_refmodel(jobs=[], tag={}, op_tags=[], computed = {},
         scores = _refmodel_scores(jobs, outlier_methods, features)
 
     logger.debug('computed scores: {0}'.format(scores))
-    computed.update(scores)
+    computed = scores
 
     # now save the ref model
     r = ReferenceModel(jobs=jobs, tags=tag, op_tags=op_tags, computed=computed)
