@@ -772,12 +772,19 @@ def stage_job(jid,dir,file,collate,compress_and_tar=True):
             return_code = forkexecwait(cmd, shell=True)
             if return_code != 0:
                 return False
-            dir=path.dirname(dir)+".tgz "
-        cmd = settings.stage_command + " " + dir + " " + settings.stage_command_dest
+            tgzf=path.dirname(dir)+".tgz "
+        cmd = settings.stage_command + " " + tgzf + " " + settings.stage_command_dest
         logger.debug(cmd)
         return_code = forkexecwait(cmd, shell=True)
         if return_code != 0:
             return False
+# Collation does it's own cleanup
+        if not collated_file or len(collated_file) == 0:
+            cmd = "rm -rf "+dir
+            logger.debug(cmd)
+            return_code = forkexecwait(cmd, shell=True)
+            if return_code != 0:
+                return False
         print(settings.stage_command_dest+path.basename(dir))
     return True
 
