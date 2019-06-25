@@ -163,6 +163,16 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual([int(x) for x in list(df.loc['modified_z_score_ratio'])], [204, 27, 0], "wrong madz score ratios")
 
     @db_session
+    def test_rca_ops(self):
+        ref_jobs = eq.get_jobs(tag='exp_name:linux_kernel', fltr='"outlier" not in j.jobid', fmt='orm')
+        outlier_job = eq.get_jobs(tag='exp_name:linux_kernel', fltr='"outlier" in j.jobid', fmt='orm')
+        (res, df, sl) = eod.detect_rootcause_op(ref_jobs, outlier_job, tag='op_sequence:4')
+        self.assertTrue(res, 'detect_rootcause_op returned False')
+        self.assertEqual(list(df.columns.values), ['cpu_time', 'duration', 'num_procs'], 'wrong order of features returned by RCA')
+        self.assertEqual(df.shape, (12,3), "wrong dataframe format")
+        self.assertEqual([int(x) for x in list(df.loc['modified_z_score_ratio'])], [379, 56, 0], "wrong madz score ratios")
+
+    @db_session
     def test_trained_model(self):
         jobs = eq.get_jobs(tag='exp_name:linux_kernel', fltr='"outlier" not in j.jobid', fmt='terse')
         self.assertEqual(len(jobs), 3)
