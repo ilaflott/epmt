@@ -125,7 +125,7 @@ class QueryAPI(unittest.TestCase):
 
     @db_session
     def test_unique_proc_tags(self):
-        tags = eq.get_unique_process_tags(['685000', '685016'], fold=False)
+        tags = eq.job_proc_tags(['685000', '685016'], fold=False)
         self.assertEqual(len(tags), 89, "wrong unique process tags count")
         from hashlib import md5
         self.assertEqual(md5(str(sorted(tags))).hexdigest(), '7083bed0954830e2daa34a1113209177', 'wrong hash of tags')

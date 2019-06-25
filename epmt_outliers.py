@@ -258,7 +258,7 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
     tags = tags_list(tags)
         
     jobs_tags_set = set()
-    unique_job_tags = eq.get_unique_process_tags(jobs, fold=False)
+    unique_job_tags = eq.job_proc_tags(jobs, fold=False)
     for t in unique_job_tags:
         jobs_tags_set.add(dumps(t, sort_keys=True))
 

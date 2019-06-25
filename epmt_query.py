@@ -36,13 +36,6 @@ THREAD_SUMS_FIELD_IN_PROC='threads_sums'
 #     return conv_jobs(entities, merge_sub_sums, fmt) if e1.__class__.__name__ == 'Job' else conv_procs_orm(entities, merge_sub_sums, fmt)
 
 
-# def conv_jobs_terse(jobids, merge_sums=True, fmt='orm'):
-#     jobs = Job.select(lambda j: j.jobid in jobids)
-#     if fmt == 'orm':
-#         return jobs
-#     if fmt == 'pandas':
-#         return conv_jobs(jobs, merge_sums=merge_sums, fmt='pandas')
-
 # jobs is a jobs collection (Pony) or a list of Job objects,
 # or a list of jobids, or a pandas dataframe or a dictlist of jobs.
 # 'merge_sums' is silently ignored for fmt 'orm' or 'terse'
@@ -359,19 +352,6 @@ def get_jobs(jobs = [], tag={}, fltr = '', order = '', limit = 0, when=None, hos
 def get_procs(jobs = [], tag = {}, fltr = None, order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_threads_sums=True, exact_tag_only = False):
     if jobs:
         jobs = __jobs_col(jobs)
-        # if isinstance(jobs, Query):
-        #     # convert the pony query object to a list
-        #     jobs = list(jobs[:])
-
-        # if type(jobs) != list:
-        #     # user probably passed a single job, and forgot to wrap it in a list
-        #     jobs = [jobs]
-        # # is jobs a collection of Job IDs or actual Job objects?
-        # if type(jobs[0]) == str or type(jobs[0]) == unicode:
-        #     # jobs is a list of job IDs
-        #     qs = Process.select(lambda p: p.job.jobid in jobs)
-        # else:
-        #     # jobs is a list of Job objects
         qs = Process.select(lambda p: p.job in jobs)
     else:
         # no jobs set, so expand the scope to all Process objects
@@ -456,11 +436,11 @@ def get_thread_metrics(*processes):
 # If 'fold' is set, then tags will be merged to compact the output
 # otherwise, the expanded list of dictionaries is returned
 # 'exclude' is an optional list of keys to exclude from each tag (if present)
-def get_unique_process_tags(jobs = [], exclude=[], fold=False):
+def job_proc_tags(jobs = [], exclude=[], fold=False):
     jobs = __jobs_col(jobs)
     tags = []
     for j in jobs:
-        unique_tags_for_job = _get_unique_process_tags_for_single_job(j, exclude, fold = False)
+        unique_tags_for_job = __unique_proc_tags_for_job(j, exclude, fold = False)
         tags.extend(unique_tags_for_job)
     # remove duplicates
     tags = unique_dicts(tags, exclude)
@@ -618,7 +598,7 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
     if op_tags:
         if op_tags == '*':
             logger.info('wildcard op_tags set: obtaining set of unique tags across the input jobs')
-            op_tags = get_unique_process_tags(jobs, fold=False)
+            op_tags = job_proc_tags(jobs, fold=False)
         # do we have a single tag in string or dict form? 
         # we eventually want a list of dicts
         elif type(op_tags) == str:
@@ -652,9 +632,9 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
             
 # This is a low-level function that finds the unique process
 # tags for a job (job is either a job id or a Job object). 
-# See also: get_unique_process_tags, which does the same
+# See also: job_proc_tags, which does the same
 # for a list of jobs
-def _get_unique_process_tags_for_single_job(job, exclude=[], fold=True):
+def __unique_proc_tags_for_job(job, exclude=[], fold=True):
     if type(job) == str or type(job) == unicode:
         job = Job[job]
     proc_sums = getattr(job, PROC_SUMS_FIELD_IN_JOB, {})
@@ -688,7 +668,7 @@ def op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas'):
     if type(jobs) == str or type(jobs) == unicode:
         jobs = [jobs]
 
-    tags = tags_list(tags) if tags else get_unique_process_tags(jobs, fold=False)
+    tags = tags_list(tags) if tags else job_proc_tags(jobs, fold=False)
 
     all_procs = []
     # we iterate over tags, where each tag is dictionary
