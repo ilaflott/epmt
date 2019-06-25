@@ -14,7 +14,7 @@ from epmt_cmds import set_logging, init_settings
 from epmt_stat import modified_z_score
 
 logger = getLogger(__name__)  # you can use other name
-set_logging(2)
+set_logging(1, check=True)
 init_settings()
 
 if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
@@ -236,13 +236,9 @@ def root(job, fmt='dict'):
 #          means if the tag in the database are a superset of the passed
 #          tag a match will considered.
 #
-# sql_debug: Show SQL queries, default False
-#              
 #
 @db_session
-def get_jobs(jobs = [], tag={}, fltr = '', order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tag_only = False, sql_debug = False):
-    if sql_debug:
-        set_sql_debug(sql_debug)
+def get_jobs(jobs = [], tag={}, fltr = '', order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tag_only = False):
     qs = __jobs_col(jobs)
 
     # filter using tag if set
@@ -362,9 +358,7 @@ def get_jobs(jobs = [], tag={}, fltr = '', order = '', limit = 0, when=None, hos
 # dataframe. The output will be pre-sorted on this field because we have set 'order'
 #
 @db_session
-def get_procs(jobs = [], tag = {}, fltr = None, order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_threads_sums=True, exact_tag_only = False, sql_debug = False):
-    if sql_debug:
-        set_sql_debug(sql_debug)
+def get_procs(jobs = [], tag = {}, fltr = None, order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_threads_sums=True, exact_tag_only = False):
     if jobs:
         jobs = __jobs_col(jobs)
         # if isinstance(jobs, Query):
@@ -692,10 +686,7 @@ def _get_unique_process_tags_for_single_job(job, exclude=[], fold=True):
 # will be used.
 # In this function, fmt is only allowed 'pandas' or 'dict'
 #
-def op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas', sql_debug = False):
-    if sql_debug:
-        set_sql_debug(sql_debug)
-
+def op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas'):
     if type(jobs) == str or type(jobs) == unicode:
         jobs = [jobs]
 
