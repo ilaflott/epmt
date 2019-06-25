@@ -332,8 +332,6 @@ def get_jobs(jobs = [], tag={}, fltr = '', order = '', limit = 0, when=None, hos
 #          means if the tag in the database are a superset of the passed
 #          tag a match will considered.
 #
-# sql_debug: Show/hide SQL queries. Default False.
-#
 # For example, to get all processes for a particular Job, with jobid '32046', which
 # are multithreaded, you would do:
 #
@@ -695,7 +693,7 @@ def op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas'):
     all_procs = []
     # we iterate over tags, where each tag is dictionary
     for t in tags:
-        procs = get_procs(jobs, tag = t, exact_tag_only = exact_tags_only, sql_debug = sql_debug, fmt='orm')
+        procs = get_procs(jobs, tag = t, exact_tag_only = exact_tags_only, fmt='orm')
         # group the Query response we got by jobid
         # we use group_concat to join the thread_sums json into a giant string
         procs_grp_by_job = select((p.job, count(p.id), sum(p.duration), sum(p.exclusive_cpu_time), sum(p.numtids), group_concat(p.threads_sums, sep='@@@')) for p in procs)
