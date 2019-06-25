@@ -80,6 +80,8 @@ def conv_procs_orm(procs, merge_sums = True, fmt='dict'):
             if common_fields:
                 logger.warning('while hoisting thread_sums to process-level, found {0} common fields: {1}'.format(len(common_fields), common_fields))
             p.update(p[THREAD_SUMS_FIELD_IN_PROC])
+            # add an alias for a consistent user experience
+            p['jobid'] = p['job']
             del p[THREAD_SUMS_FIELD_IN_PROC]
     return pd.DataFrame(out_list) if fmt == 'pandas' else out_list
 
@@ -690,7 +692,9 @@ def op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas'):
                 sum_dict = _sum_dicts(sum_dict, d)
             # add some useful fields so we can back-reference and
             # also add some sums we obtained in the query
-            sum_dict.update({'job': j.jobid, 'tags': t, 'num_procs': nprocs, 'num_tids': ntids, 'exclusive_cpu_time': excl_cpu, 'duration': duration, 'cpu_time': excl_cpu})
+            # we add synthetic alias keys for jobid and cpu_time for
+            # a more consistent user experience
+            sum_dict.update({'job': j.jobid, 'jobid': j.jobid, 'tags': t, 'num_procs': nprocs, 'num_tids': ntids, 'exclusive_cpu_time': excl_cpu, 'duration': duration, 'cpu_time': excl_cpu})
             all_procs.append(sum_dict)
 
     if fmt == 'pandas':

@@ -29,7 +29,7 @@ def setUpModule():
         exit(1)
     setup_orm_db(settings, drop=True)
     datafiles='test/data/query/*.tgz'
-    print('setUpModdule: importing {0}'.format(datafiles))
+    print('\nsetUpModdule: importing {0}'.format(datafiles))
     epmt_submit(glob(datafiles), dry_run=False)
     
 
@@ -85,7 +85,7 @@ class QueryAPI(unittest.TestCase):
         procs = eq.get_procs(['685016', '685000'], fmt='orm')
         self.assertEqual(len(procs), 6892, 'wrong count of processes in ORM format')
         df = eq.get_procs(fmt='pandas', limit=10)
-        self.assertEqual(df.shape, (10,49), "incorrect dataframe shape with limit")
+        self.assertEqual(df.shape, (10,50), "incorrect dataframe shape with limit")
 
     @db_session
     def test_procs_advanced(self):
@@ -94,7 +94,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(int(procs.first().duration), 7005558348, 'wrong order when using orm with filter and order')
 
         df = eq.get_procs(limit=5, order='desc(p.exclusive_cpu_time)', fmt='pandas')
-        self.assertEqual(df.shape, (5,49), "incorrect dataframe shape")
+        self.assertEqual(df.shape, (5,50), "incorrect dataframe shape")
         self.assertEqual('685016', df.loc[0,'job'], "ordering of processes wrong in dataframe")
 
         procs_with_tag = eq.get_procs(tag='op_sequence:4', fltr='p.duration > 10000000', order='desc(p.duration)', fmt='orm')
@@ -133,7 +133,7 @@ class QueryAPI(unittest.TestCase):
     @db_session
     def test_op_metrics(self):
         df = eq.op_metrics(['685000', '685016'])
-        self.assertEqual(df.shape, (178,32), "wrong dataframe shape for op_metrics")
+        self.assertEqual(df.shape, (178,33), "wrong dataframe shape for op_metrics")
         top = df[['job', 'tags', 'duration']].sort_values('duration', axis=0, ascending=False)[:1]
         self.assertEqual(top.tags.values[0], {u'op_instance': u'2', u'op_sequence': u'89', u'op': u'dmput'})
         self.assertEqual(int(top.duration.values[0]), 7008334182)
@@ -147,7 +147,7 @@ class QueryAPI(unittest.TestCase):
         p = eq.root('685016', fmt='orm')
         self.assertEqual(p.pid, 122181)
         df = eq.root('685016', fmt='pandas')
-        self.assertEqual(df.shape, (1,49))
+        self.assertEqual(df.shape, (1,50))
         self.assertEqual(df.loc[0,'pid'], 122181)
 
     @db_session

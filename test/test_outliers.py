@@ -26,7 +26,7 @@ def setUpModule():
         exit(1)
     setup_orm_db(settings, drop=True)
     datafiles='test/data/outliers/*.tgz'
-    print('setUpModule: importing {0}'.format(datafiles))
+    print('\nsetUpModule: importing {0}'.format(datafiles))
     epmt_submit(glob(datafiles), dry_run=False)
 
 def tearDownModule():
