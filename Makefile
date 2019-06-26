@@ -26,7 +26,7 @@ distclean: clean
 # 
 # Simple python version testing with no database
 #
-check: check-python-driver-bash check-python-driver-sh check-python-driver-tcsh check-python-driver-csh check-example-csh check-example-stage-submit
+check: check-python-driver-bash check-python-driver-sh check-python-driver-tcsh check-python-driver-csh check-example-csh check-example-bash check-stage-submit check-unittests
 
 SLURM_FAKE_JOB_ID=1
 FORCE_DEFAULT_SETTINGS=EPMT_USE_DEFAULT_SETTINGS=1
@@ -55,12 +55,19 @@ check-python-driver-tcsh:
 check-python-driver-csh:
 	@echo; echo "Testing /bin/csh..."
 	env -i PATH=$(PWD):$$PATH $(FORCE_DEFAULT_SETTINGS) /bin/csh -v epmt-check.anysh
+check-example-bash:
+	@echo; echo "Testing /bin/csh with epmt-example.csh..."
+	env -i PATH=$(PWD):$(PATH) $(FORCE_DEFAULT_SETTINGS) /bin/bash -Eeux epmt-example.anysh
 check-example-csh:
 	@echo; echo "Testing /bin/csh with epmt-example.csh..."
-	env -i PATH=$(PWD):$(PATH) $(FORCE_DEFAULT_SETTINGS) /bin/csh -v epmt-example.csh
-check-example-stage-submit:
-	@echo; echo "Testing sample data stage/submit with epmt-example-stage-submit.sh..."
-	env -i PATH=$(PWD):$(PATH) $(FORCE_DEFAULT_SETTINGS) /bin/sh -x epmt-example-stage-submit.sh
+	env -i PATH=$(PWD):$(PATH) $(FORCE_DEFAULT_SETTINGS) /bin/csh -ve epmt-example.csh
+check-stage-submit:
+	@echo; echo "Testing sample data stage/submit with epmt-check-stage-submit.sh..."
+	env -i PATH=$(PWD):$(PATH) $(FORCE_DEFAULT_SETTINGS) /bin/bash epmt-check-stage-submit.sh
+check-unittests:
+	@echo; echo "Testing built in unit tests..."
+	env -i PATH=$(PWD):$(PATH) $(FORCE_DEFAULT_SETTINGS) python -m unittest discover -s test -v
+
 check-python-driver:
 #	@rm -fr $(TMP_OUTPUT_DIR) $(SLURM_FAKE_JOB_ID);
 	@rm -f settings.py; ln -s settings/settings_sqlite_inmem.py settings.py  # Setup in mem sqlite

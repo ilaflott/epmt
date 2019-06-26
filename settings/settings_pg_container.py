@@ -6,7 +6,7 @@ db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','h
 #
 # jobid_env_list = [ "SLURM_JOB_ID", "SLURM_JOBID", "PBS_JOB_ID" ]
 # papiex_options = "PERF_COUNT_SW_CPU_CLOCK"
-# papiex_output = "/tmp/epmt/"
+# epmt_output_prefix = "/tmp/epmt/"
 # stage_command = "mv"
 # stage_command_dest = "./"
 # verbose = 1
