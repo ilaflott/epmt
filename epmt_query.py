@@ -8,20 +8,20 @@ from json import loads, dumps
 from os import environ
 from logging import getLogger
 from models import Job, Process, ReferenceModel, Host
-from epmt_job import setup_orm_db, _sum_dicts, unique_dicts, fold_dicts
-from epmtlib import tag_from_string, tags_list
-from epmt_cmds import set_logging, init_settings
+from epmt_job import setup_orm_db
+from epmtlib import tag_from_string, tags_list, set_logging, init_settings, sum_dicts, unique_dicts, fold_dicts
 from epmt_stat import modified_z_score
 
 logger = getLogger(__name__)  # you can use other name
-set_logging(1, check=True)
-init_settings()
 
 if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
     logger.info('Overriding settings.py and using defaults in epmt_default_settings')
     import epmt_default_settings as settings
 else:
     import settings
+
+set_logging(1, check=True)
+init_settings(settings)
 
 print(settings.db_params)
 setup_orm_db(settings)
@@ -689,7 +689,7 @@ def op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas'):
             # now aggregate across the dicts
             sum_dict = {}
             for d in thr_sums_dicts:
-                sum_dict = _sum_dicts(sum_dict, d)
+                sum_dict = sum_dicts(sum_dict, d)
             # add some useful fields so we can back-reference and
             # also add some sums we obtained in the query
             # we add synthetic alias keys for jobid and cpu_time for

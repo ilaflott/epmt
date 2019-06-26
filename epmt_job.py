@@ -11,7 +11,7 @@ from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
 from os import getuid
 from json import dumps, loads
 from pwd import getpwnam, getpwuid
-from epmtlib import tag_from_string
+from epmtlib import tag_from_string, sum_dicts, unique_dicts, fold_dicts
 
 logger = getLogger(__name__)  # you can use other name
 
@@ -37,57 +37,6 @@ def sortKeyFunc(s):
 # append instance number 
     t2 = t.split("-")
     return int(t2[0]+t2[1])
-
-# from list of dictionaries, get the unique ones
-# exclude keys is an optional list of keys that are removed
-# from 
-def unique_dicts(dicts, exclude_keys=[]):
-    new_dicts = []
-    if exclude_keys:
-        for d in dicts:
-            new_d = { x: d[x] for x in d if not x in exclude_keys }
-            new_dicts.append(new_d)
-    else:
-        new_dicts = dicts
-    from numpy import unique, array
-    return unique(array(new_dicts)).tolist()
-
-# fold a list of dictionaries such as:
-# INPUT: [{'abc': 100, 'def': 200}, {'abc': 150, 'ghi': 10}
-# OUTPUT: { 'abc': [100, 150], 'def': 200, 'ghi': 10 }
-def fold_dicts(dicts):
-    folded_dict = {}
-    for d in dicts:
-        for (k,v) in d.items():
-            if not (k in folded_dict):
-                folded_dict[k] = set()
-            folded_dict[k].add(v)
-    return { k: list(v) if len(v) > 1 else v.pop() for (k,v) in folded_dict.items() }
-
-# Returns True if at least one dictionary in L is contained by d
-# where containment is defined as all keys of the containee
-# are in the container with matching values. Container may have
-# additional key/values.
-# For example:
-# for input ({'abc':100, 'def':200}, [{'hello': 50}, {'abc':100}]
-# we get True
-def dict_in_list(d, L):
-    for item in L:
-        flag = True
-        for (k,v) in item.items():
-            if (not k in d) or not(d[k] == v):
-                flag = False
-        if (flag): return True
-    return False
-
-# def lookup_or_create_metricname(metricname):
-#     mn = MetricName.get(name=metricname)
-#     if mn is None:
-#         logger.info("Creating metricname %s",metricname)
-#         mn = MetricName(name=metricname)
-#     else:
-#         logger.info("Found metricname %s",metricname)
-#     return mn
 
 def create_job(jobid,user):
     job = Job.get(jobid=jobid)
@@ -131,13 +80,6 @@ def lookup_or_create_user(username):
         user = User(name=username)
     return user
 
-
-# return the sum of keys across two dictionaries
-# x = {'both1':1, 'both2':2, 'only_x': 100 }
-# y = {'both1':10, 'both2': 20, 'only_y':200 }
-# {'only_y': 200, 'both2': 22, 'both1': 11, 'only_x': 100}
-def _sum_dicts(x, y):
-    return { k: x.get(k, 0) + y.get(k, 0) for k in set(x) | set(y) }
 
 # This is a generator function that will yield
 # the next process dataframe from the collated file dataframe.
@@ -612,7 +554,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         for proc in all_procs:
             proc.inclusive_cpu_time = float(proc.exclusive_cpu_time + sum(proc.descendants.exclusive_cpu_time))
             nthreads += proc.numtids
-            threads_sums_across_procs = _sum_dicts(threads_sums_across_procs, proc.threads_sums)
+            threads_sums_across_procs = sum_dicts(threads_sums_across_procs, proc.threads_sums)
             j.hosts.add(proc.host)
         logger.info("Adding %d processes (%d threads) to job",len(all_procs), nthreads)
         j.processes.add(all_procs)

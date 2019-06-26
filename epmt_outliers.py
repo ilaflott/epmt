@@ -8,8 +8,7 @@ from pony.orm.core import Query
 from models import ReferenceModel
 from logging import getLogger
 from json import dumps
-from epmtlib import tags_list, tag_from_string
-from epmt_job import dict_in_list
+from epmtlib import tags_list, tag_from_string, dict_in_list
 from epmt_stat import thresholds, modified_z_score,outliers_iqr,outliers_modified_z_score,rca
 
 logger = getLogger(__name__)  # you can use other name
