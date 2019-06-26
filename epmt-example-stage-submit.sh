@@ -1,6 +1,6 @@
 #!/bin/sh
 set -Eeuxo pipefail
-USER=testuser
+export USER=testuser
 JOB=615503
 rm -rf /tmp/epmt
 mkdir -p /tmp/epmt/$USER/epmt/$JOB
