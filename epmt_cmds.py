@@ -155,10 +155,11 @@ def verify_install_prefix():
         return False
     for e in [ "lib/libpapiex.so","lib/libmonitor.so",
                "lib/libpapi.so","lib/libpfm.so","bin/papi_command_line" ]:
-        cmd = "ls -l "+str+e+">/dev/null"
+        cmd = "ls -l "+str+e+">/dev/null 2>&1"
         logger.info("\t"+cmd)
         return_code = forkexecwait(cmd, shell=True)
         if return_code != 0:
+            logger.error("%s failed",cmd)
             retval = False
 
     if retval == True:
@@ -211,18 +212,20 @@ def verify_papiex_options():
     print "settings.papiex_options =",str
     retval = True
 # Check for any components
-    cmd = settings.install_prefix+"bin/papi_component_avail"+"| sed -n -e '/Active/,$p' | grep perf_event >/dev/null"
+    cmd = settings.install_prefix+"bin/papi_component_avail 2>&1 "+"| sed -n -e '/Active/,$p' | grep perf_event >/dev/null 2>&1"
     logger.info("\t"+cmd)
     return_code = forkexecwait(cmd, shell=True)
     if return_code != 0:
+        logger.error("%s failed",cmd)
         retval = False
 # Now check events
     eventlist = str.split(',')
     for e in eventlist:
-        cmd = settings.install_prefix+"bin/papi_command_line "+e+"| sed -n -e '/PERF_COUNT_SW_CPU_CLOCK\ :/,$p' | grep PERF_COUNT_SW_CPU_CLOCK > /dev/null"
+        cmd = settings.install_prefix+"bin/papi_command_line 2>&1 "+e+"| sed -n -e '/PERF_COUNT_SW_CPU_CLOCK\ :/,$p' | grep PERF_COUNT_SW_CPU_CLOCK > /dev/null 2>&1"
         logger.info("\t"+cmd)
         return_code = forkexecwait(cmd, shell=True)
         if return_code != 0:
+            logger.error("%s failed",cmd)
             retval = False
 # End
     if retval == True:
