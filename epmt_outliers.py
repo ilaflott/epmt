@@ -8,6 +8,7 @@ from pony.orm.core import Query
 from models import ReferenceModel
 from logging import getLogger
 from json import dumps
+from epmtlib import tags_list, tag_from_string
 from epmt_job import dict_in_list
 from epmt_stat import thresholds, modified_z_score,outliers_iqr,outliers_modified_z_score,rca
 
@@ -22,25 +23,119 @@ else:
 FEATURES = settings.outlier_features if hasattr(settings, 'outlier_features') else ['duration', 'cpu_time', 'num_procs']
 
 
-def partition_jobs(jobs, feature='duration', methods=[modified_z_score], thresholds=thresholds, fmt='pandas'):
-    if type(feature) not in [str, unicode]:
-        logger.error('feature needs to be a single string such as "duration"')
-        return None
-    df = detect_outlier_jobs(jobs, features=[feature], methods=methods, thresholds=thresholds)
-    outliers_df = df[df[feature] > 0]
-    ref_df = df[df[feature] == 0]
-    if fmt == 'pandas':
-        return (outliers_df, ref_df)
-    ref_list = list(ref_df['jobid'].values)
-    outliers_list = list(outliers_df['jobid'].values)
-    if fmt == 'terse':
-        return (outliers_list, ref_list)
-    if fmt == 'orm':
-        return (eq.conv_jobs(outliers_list, fmt='orm'), eq.conv_jobs(ref_list, fmt='orm'))
+# This function partitions jobs using one feature at a time
+# INPUT: jobs is a collection/list of jobs/jobids
+# OUTPUT: dictionary where the keys are features and the values
+#         are tuples of the form: ([ref_jobs], [outlier_jobs])
+#
+#>>> parts = eod.partition_jobs(jobs)
+# >>> pprint(parts)
+# {'cpu_time': (set([u'kern-6656-20190614-190245',
+#                u'kern-6656-20190614-194024',
+#                u'kern-6656-20190614-191138']),
+#               set([u'kern-6656-20190614-192044-outlier'])),
+#  'duration': (set([u'kern-6656-20190614-190245',
+#                u'kern-6656-20190614-194024',
+#                u'kern-6656-20190614-191138']),
+#               set([u'kern-6656-20190614-192044-outlier'])),
+#  'num_procs': (set([u'kern-6656-20190614-190245',
+#                 u'kern-6656-20190614-192044-outlier',
+#                 u'kern-6656-20190614-194024',
+#                 u'kern-6656-20190614-191138']),
+#                set([]))}
+def partition_jobs(jobs, features=FEATURES, methods=[modified_z_score], thresholds=thresholds, fmt='pandas'):
+    (_,parts) = detect_outlier_jobs(jobs, features=features, methods=methods, thresholds=thresholds)
+    return parts
+
+# This function attempts to partition the supplied jobs into two partitions:
+# reference jobs and outliers. The partitioning is done for each tag, and
+# for a tag, if any feature makes a job an outlier then it's put in the
+# outlier partition.
+#
+# INPUT:
+#   - jobs: Jobs collection specified as a list of a jobs, a single job or a pandas df
+#   - tags: One or more tags specified as a list of strings, or a list of dicts.
+#           Single tag specified as a string or tag is also acceptable.
+#           If not specified all the unique process tags across all jobs in "jobs"
+#           will be assumed.
+#   - features: One or more features. Specified as a list of strings
+#   - methods: One or more methods for outlier detection (default is MADZ)
+#   - thresholds: dict of constants indexable by the names of functions specified in 'methods'
+#
+# OUTPUT:
+#   - dictionary where each key is a tag, and the value is a tuple like 
+#     ([ref_jobs],[outlier_jobs).
+#
+# EXAMPLE:
+# >>> jobs = eq.get_jobs(tag = 'exp_name:linux_kernel', fmt='terse)
+# >>> parts = eod.partition_jobs_by_ops(jobs)
+# >>> pprint(parts)
+# {'{"op_instance": "1", "op_sequence": "1", "op": "download"}': (set[u'kern-6656-20190614-190245',
+#                                                                  u'kern-6656-20190614-191138',
+#                                                                  u'kern-6656-20190614-194024']),
+#                                                            set[u'kern-6656-20190614-192044-outlier'])),
+#  '{"op_instance": "2", "op_sequence": "2", "op": "extract"}': (set([u'kern-6656-20190614-190245',
+#                                                                 u'kern-6656-20190614-191138',
+#                                                                 u'kern-6656-20190614-194024']),
+#                                                            set([u'kern-6656-20190614-192044-outlier'])),
+# ...
+# }
+#
+#
+# In the example above we did not supply any tags so the set of unique
+# process tags was determined automatically. We can also choose to
+# specify a tag (or a list of tags) as so:
+# >>> parts = eod.partition_jobs_by_ops(jobs, tags = 'op:build;op_instance:4;op_sequence:4')
+# >>> pprint(parts)
+# {'{"op_instance": "4", "op_sequence": "4", "op": "build"}': (set([u'kern-6656-20190614-190245',
+#                                                               u'kern-6656-20190614-191138',
+#                                                               u'kern-6656-20190614-194024']),
+#                                                           set([u'kern-6656-20190614-192044-outlier']))}
+
+def partition_jobs_by_ops(jobs, tags=[], features=FEATURES, methods=[modified_z_score], thresholds=thresholds):
+    (_, parts) = detect_outlier_ops(jobs, tags=tags, features=features, methods=methods, thresholds=thresholds)
+    return parts
 
 
-
+# This function will detects outliers among a set of input jobs
+#
+# INPUT:
 # jobs is either a pandas dataframe of job(s) or a list of job ids or a Pony Query object
+# 
+# OUTPUT:
+#   (df, partitions_dict)
+#
+# Where "df" is a dataframe like shown below.
+# The partitions dictionary is is indexed by one of the requested "features"
+# and the value is a tuple like ([ref_jobs], [outlier_jobs])
+#
+# EXAMPLE:
+# >>> jobs = eq.get_jobs(fmt='orm', tag='exp_name:linux_kernel') 
+# >>> len(jobs)
+# 4
+# >>> (df, parts) = eod.detect_outlier_jobs(jobs)
+# >>> df
+#                                jobid  duration  cpu_time  num_procs
+# 0          kern-6656-20190614-190245         0         0          0
+# 1  kern-6656-20190614-192044-outlier         1         1          0
+# 2          kern-6656-20190614-194024         0         0          0
+# 3          kern-6656-20190614-191138         0         0          0
+#
+# >>> pprint(parts)
+# {'cpu_time': ([u'kern-6656-20190614-190245',
+#                u'kern-6656-20190614-194024',
+#                u'kern-6656-20190614-191138'],
+#               [u'kern-6656-20190614-192044-outlier']),
+#  'duration': ([u'kern-6656-20190614-190245',
+#                u'kern-6656-20190614-194024',
+#                u'kern-6656-20190614-191138'],
+#               [u'kern-6656-20190614-192044-outlier']),
+#  'num_procs': ([u'kern-6656-20190614-190245',
+#                 u'kern-6656-20190614-192044-outlier',
+#                 u'kern-6656-20190614-194024',
+#                 u'kern-6656-20190614-191138'],
+#                [])}
+
 def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds = thresholds):
     # if we have a non-empty list of job ids then get a pandas df
     # using get_jobs to convert the format
@@ -72,7 +167,15 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
     # add a jobid column to the output dataframe
     retval['jobid'] = jobs['jobid']
     retval = retval[['jobid']+features]
-    return retval
+    # now let's create a dictionary where the key is the feature
+    # and he value is a tuple like ([ref_jobs],[outlier_jobs])
+    parts = {}
+    for f in features:
+        df_ref = retval[retval[f] == 0]
+        df_outl= retval[retval[f] > 0]
+        parts[f] = (set(df_ref['jobid'].values), (set(df_outl['jobid'].values)))
+    return (retval, parts)
+        
 
 # jobs is a list of jobids or a Pony Query object
 # tags is a list of tags specified either as a string or a list of string/list of dicts
@@ -110,7 +213,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
 #
 #
 # Here is another example, this time we auto-detect the tags:
-# >>> jobs = eq.get_jobs(fmt='orm', tags='exp_name:linux_kernel')
+# >>> jobs = eq.get_jobs(fmt='orm', tag='exp_name:linux_kernel')
 # >>> (df, parts) = eod.detect_outlier_ops(jobs)
 # >>> df[['jobid', 'tags', 'duration', 'cpu_time']][:5]
 #                                jobid  \
@@ -152,13 +255,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
 
 def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds=thresholds):
 
-    # # do we have a single tag in string or dict form? 
-    # if type(tags) == str:
-    #     tags = [eq.get_tags_from_string(tags)]
-    # elif type(tags) == dict:
-    #     tags = [tags]
-    # tags = [eq.get_tags_from_string(t) for t in tags if type(t) == str]
-    tags = eq.__tags_list(tags)
+    tags = tags_list(tags)
         
     jobs_tags_set = set()
     unique_job_tags = eq.get_unique_process_tags(jobs, fold=False)
@@ -248,7 +345,7 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
         dft_ref = dft.query(q_ref).reset_index(drop=True)
         q_outlier = "|".join(["{0} > 0".format(f) for f in features])
         dft_outlier = dft.query(q_outlier).reset_index(drop=True)
-        parts[dumps(tag)] = (list(dft_ref['jobid'].values), (list(dft_outlier['jobid'].values)))
+        parts[dumps(tag)] = (set(dft_ref['jobid'].values), (set(dft_outlier['jobid'].values)))
     return (retval, parts)
     
 
@@ -275,23 +372,86 @@ def detect_outlier_processes(processes, trained_model=None,
     return retval
 
 
-# refs is either a dataframe of reference jobs/ops, or a list
+# This function does an RCA for outlier jobs
+# INPUT:
+# jobs is either a dataframe of reference jobs, or a list
 # of reference jobs, or a trained model.
 # inp is either a single job/jobid or a Series or a dataframe with a single column
-# output is of the form:
-# (df, sorted_feature_list),
-# where df is a dataframe that ranks the features from left to right according
+# OUTPUT:
+#     (res, df, sorted_feature_list),
+# where 'res' is True on sucess and False otherwise,
+# df is a dataframe that ranks the features from left to right according
 # to the difference of the score for the input with the score for the reference
 # for the feature. The sorted_tuples consists of a list of tuples, where each
 # tuple (feature,<diff_score>)
-def detect_rootcause(refs, inp, features = FEATURES,  methods = [modified_z_score]):
-    if type(refs) == int:
-        refs = eq.get_jobs(ReferenceModel[refs].jobs, fmt='pandas')
-    elif type(refs) != pd.DataFrame:
-        refs = eq.get_jobs(refs, fmt='pandas')
+
+def detect_rootcause(jobs, inp, features = FEATURES,  methods = [modified_z_score]):
+    if type(jobs) == int:
+        jobs = eq.get_jobs(ReferenceModel[jobs].jobs, fmt='pandas')
+    elif type(jobs) != pd.DataFrame:
+        jobs = eq.get_jobs(jobs, fmt='pandas')
     if type(inp) in [str, unicode, Query]:
         inp = eq.get_jobs(inp, fmt='pandas')
-    return rca(refs, inp, features, methods)
+    return rca(jobs, inp, features, methods)
+
+# This function does an RCA for outlier ops
+# INPUT:
+# jobs is either a dataframe of reference jobs, or a list
+# of reference jobs, or a trained model.
+# inp is either a single job/jobid or a Series or a dataframe with a single column
+# tag: Required string or dictionary signifying the operation
+#
+# OUTPUT:
+#     (res, df, sorted_feature_list),
+# where 'res' is True on sucess and False otherwise,
+# df is a dataframe that ranks the features from left to right according
+# to the difference of the score for the input with the score for the reference
+# for the feature. The sorted_tuples consists of a list of tuples, where each
+# tuple (feature,<diff_score>)
+# 
+# EXAMPLE:
+# (retval, df, s) = eod.detect_rootcause_op([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024'], u'kern-6656-20190614-192044-outlier', tag = 'op_sequence:4')
+#
+# >>> df
+#                               cpu_time      duration  num_procs
+# count                     3.000000e+00  3.000000e+00          3
+# mean                      3.812180e+08  2.205502e+09       9549
+# std                       4.060242e+05  4.762406e+07          0
+# min                       3.808073e+08  2.158731e+09       9549
+# 25%                       3.810175e+08  2.181285e+09       9549
+# 50%                       3.812277e+08  2.203839e+09       9549
+# 75%                       3.814234e+08  2.228887e+09       9549
+# max                       3.816191e+08  2.253935e+09       9549
+# input                     5.407379e+08  5.014023e+09       9549
+# ref_max_modified_z_score  7.246000e-01  7.491000e-01          0
+# modified_z_score          2.748777e+02  4.202000e+01          0
+# modified_z_score_ratio    3.793510e+02  5.609398e+01          0
+# >>> s
+# [('cpu_time', 379.350952249517), ('duration', 56.09397944199707), ('num_procs', 0.0)]
+
+def detect_rootcause_op(jobs, inp, tag, features = FEATURES,  methods = [modified_z_score]):
+    if not tag:
+        logger.warning('You must specify a non-empty tag')
+        return (None, None)
+    if type(jobs) == int:
+        jobs = eq.get_jobs(ReferenceModel[jobs].jobs, fmt='orm')
+    jobs = eq.__jobs_col(jobs)
+    inp = eq.__jobs_col(inp)
+    if len(inp) > 1:
+        logger.warning('You can only do RCA for a single "inp" job')
+        return (False, None, None)
+    tag = tag_from_string(tag) if type(tag == str) else tag
+    ref_ops_df = eq.op_metrics(jobs, tag)
+    inp_ops_df = eq.op_metrics(inp, tag)
+    unique_tags = set([str(d) for d in ref_ops_df['tags'].values])
+    if unique_tags != set([str(tag)]):
+        # this is just a sanity check to make sure we only compare
+        # rows that have the same tag. Ordinarily this code won't be
+        # triggered as eq.op_metrics will only return rows that match 'tag'
+        logger.warning('ref jobs have multiple distinct tags({0}) that are superset of this specified tag. Please specify an exact tag match'.format(unique_tags))
+        return (False, None, None)
+    return rca(ref_ops_df, inp_ops_df, features, methods)
+    
 
 if (__name__ == "__main__"):
     np.random.seed(101)

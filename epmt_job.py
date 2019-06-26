@@ -11,6 +11,8 @@ from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
 from os import getuid
 from json import dumps, loads
 from pwd import getpwnam, getpwuid
+from epmtlib import tag_from_string
+
 logger = getLogger(__name__)  # you can use other name
 
 if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
@@ -130,58 +132,6 @@ def lookup_or_create_user(username):
     return user
 
 
-# we assume tags is of the format:
-#  "key1:value1 ; key2:value2"
-# where the whitespace is optional and discarded. The output would be:
-# { "key1": value1, "key2": value2 }
-#
-# We can also handle the case where a value is not set for
-# a key, by assigning a default value for the key
-# For example, for the input:
-# "multitheaded;app=fft" and a tag_default_value="1"
-# the output would be:
-# { "multithreaded": "1", "app": "fft" }
-#
-# Note, both key and values will be strings and no attempt will be made to
-# guess the type for integer/floats
-def get_tags_from_string(s, 
-                          delim = settings.tag_delimiter, 
-                          sep = settings.tag_kv_separator, 
-                          tag_default_value = settings.tag_default_value):
-    if not s or len(s) == 0:
-        return None
-    tags = {}
-    for t in s.split(delim):
-        t = t.strip()
-        if sep in t:
-            try:
-                (k,v) = t.split(sep)
-                k = k.strip()
-                v = v.strip()
-                tags[k] = v
-            except Exception as e:
-                logger.warning('ignoring key/value pair as it has an invalid format: {0}'.format(t))
-                logger.warning("%s",e)
-                continue
-        else:
-            # tag is not of the format k:v
-            # it's probably a simple label, so use the default value for it
-            tags[t] = tag_default_value
-    return tags
-
-# this assumes a list of labels like:
-# ["abc", "def", "ghi"] and generates an output like:
-# { "abc": "1", "def": "1", "ghi": "1" }, where the "1" comes
-# from the default value of a tag
-# We probably should remove this function once the job tag
-# is read in as key-value pair instead of a list of comments.
-#def _get_tags_for_list(l, tag_default_value = settings.tag_default_value):
-#    tags = {}
-#    for t in l:
-#        tags[t] = tag_default_value
-#    return tags
-
-
 # return the sum of keys across two dictionaries
 # x = {'both1':1, 'both2':2, 'only_x': 100 }
 # y = {'both1':10, 'both2': 20, 'only_y':200 }
@@ -247,7 +197,7 @@ def load_process_from_pandas(df, h, j, u, settings):
     if 'tags' in df.columns:
         tags = df['tags'][0]
         if tags:
-            p.tags = get_tags_from_string(tags)
+            p.tags = tag_from_string(tags)
 
     # remove per-process fields from the threads dataframe
     df = df.drop(labels=settings.per_process_fields, axis=1, errors = 'ignore')
@@ -443,7 +393,7 @@ def _check_and_create_metadata(raw_metadata):
         jobname = username+"-"+"interactive"
         logger.warning("No job name found, defaulting to %s",jobname)
 # Look up job tags from stop environment
-    job_tags = get_tags_from_string(raw_metadata['job_el_env'].get(settings.job_tags_env))
+    job_tags = tag_from_string(raw_metadata['job_el_env'].get(settings.job_tags_env))
     logger.info("job_tags: %s",str(job_tags))
 # Compute difference in start vs stop environment
     env={}
@@ -600,7 +550,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                     continue
 # If using old version of papiex, process tags are in the comment field
                 if not p.tags and oldproctag:
-                    p.tags = get_tags_from_string(oldproctag)
+                    p.tags = tag_from_string(oldproctag)
 
                 if p.tags:
                     # pickle and add tag dictionaries to a set

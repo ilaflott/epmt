@@ -34,15 +34,6 @@ def init_settings():
     if not hasattr(settings, 'job_tags_env'):
         logger.warning("missing settings.job_tags_env")
         settings.job_tags_env = 'EPMT_JOB_TAGS'
-    if not hasattr(settings, 'tag_delimiter'):
-        logger.warning("missing settings.tag_delimiter")
-        settings.tag_delimiter = ';'
-    if not hasattr(settings, 'tag_kv_separator'):
-        logger.warning("missing settings.tag_kv_separator")
-        settings.tag_kv_separator = ':'
-    if not hasattr(settings, 'tag_default_value'):
-        logger.warning("missing settings.tag_default_value")
-        settings.tag_default_value = "1"
     if not hasattr(settings, 'jobid_env_list'):
         logger.warning("missing settings.jobid_env_list")
         settings.jobid_env_list = [ "SLURM_JOB_ID", "SLURM_JOBID", "PBS_JOB_ID" ]
@@ -61,12 +52,6 @@ def init_settings():
     if not hasattr(settings, 'skip_for_thread_sums'):
         logger.warning("missing settings.skip_for_thread_sums")
         settings.skip_for_thread_sums = ["tid", "start", "end", "num_threads", "starttime"]
-    if not hasattr(settings, 'proc_sums_field_in_job'):
-        logger.warning("missing settings.proc_sums_field_in_job")
-        settings.proc_sums_field_in_job = 'proc_sums'
-    if not hasattr(settings, 'thread_sums_field_in_proc'):
-        logger.warning("missing settings.thread_sums_field_in_proc")
-        settings.thread_sums_field_in_proc = 'threads_sums'
     if not hasattr(settings, 'all_tags_field'):
         logger.warning("missing settings.all_tags_field")
         settings.all_tags_field = 'all_proc_tags'
@@ -734,15 +719,24 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
 #            exit(1)
 #        logger.info("Committed post process run to database")    
 
-def set_logging(intlvl = 0):
+# if check is set, then we will bail if logging has already been initialized
+def set_logging(intlvl = 0, check = False):
+    if check and hasattr(set_logging, 'initialized'):
+        return
+    set_logging.initialized = True
     if intlvl < 0:
-        basicConfig(level=ERROR)
+        level = ERROR
     if intlvl == 0:
-        basicConfig(level=WARNING)
+        level = WARNING
     if intlvl == 1:
-        basicConfig(level=INFO)
+        level = INFO
     elif intlvl >= 2:
-        basicConfig(level=DEBUG)
+        level = DEBUG
+    basicConfig(level=level)
+    logger = getLogger()
+    logger.setLevel(level)
+    for handler in logger.handlers:
+        handler.setLevel(level)
 
 def stage_job(jid,dir,file,collate=True,compress_and_tar=True):
     logger.debug("stage_job(%s,%s,%s,%s)",jid,dir,file,str(collate))
@@ -839,10 +833,10 @@ def epmt_stage(forced_jobid, forced_user, other_dirs):
 # depends on args being global
 #
 def epmt_entrypoint(args, help):
-    set_logging(args.verbose)
+    set_logging(args.verbose, check=True)
     init_settings()
     if not args.verbose:
-        set_logging(settings.verbose)
+        set_logging(settings.verbose, check=True)
 
     if args.help or args.epmt_cmd == 'help' or not args.epmt_cmd:
         help(stdout)

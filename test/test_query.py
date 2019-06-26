@@ -7,6 +7,7 @@ from pony.orm import db_session
 from models import db
 from pony.orm.core import Query
 import pandas as pd
+import datetime
 
 # put this above all epmt imports so they use defaults
 from os import environ
@@ -70,8 +71,8 @@ class QueryAPI(unittest.TestCase):
     def test_jobs_advanced(self):
         jobs = eq.get_jobs(fltr=lambda j: '685000' not in j.jobid, fmt='orm')
         self.assertEqual(jobs.count(), 2, 'jobs orm query with filter option')
-        jobs = eq.get_jobs(tags='exp_component:ocean_month_rho2_1x1deg', fmt='terse')
-        self.assertEqual(len(jobs), 1, 'jobs query with tags option')
+        jobs = eq.get_jobs(tag='exp_component:ocean_month_rho2_1x1deg', fmt='terse')
+        self.assertEqual(len(jobs), 1, 'jobs query with tag option')
         df = eq.get_jobs(order='desc(j.duration)', limit=1, fmt='pandas')
         self.assertEqual(df.shape[0], 1, 'job query with limit')
         self.assertEqual('685016', df.loc[0,'jobid'], "jobs dataframe query with order")
@@ -96,11 +97,11 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(df.shape, (5,49), "incorrect dataframe shape")
         self.assertEqual('685016', df.loc[0,'job'], "ordering of processes wrong in dataframe")
 
-        procs_with_tag = eq.get_procs(tags='op_sequence:4', fltr='p.duration > 10000000', order='desc(p.duration)', fmt='orm')
-        self.assertEqual(len(procs_with_tag), 2, 'incorrect process count when using tags and filter')
+        procs_with_tag = eq.get_procs(tag='op_sequence:4', fltr='p.duration > 10000000', order='desc(p.duration)', fmt='orm')
+        self.assertEqual(len(procs_with_tag), 2, 'incorrect process count when using tag and filter')
         p = procs_with_tag.first()
-        self.assertEqual(int(p.duration), 207384313, 'wrong duration or order when used with tags and filter')
-        self.assertEqual(p.descendants.count(), 85, 'wrong descendant count or order when used with tags and filter')
+        self.assertEqual(int(p.duration), 207384313, 'wrong duration or order when used with tag and filter')
+        self.assertEqual(p.descendants.count(), 85, 'wrong descendant count or order when used with tag and filter')
 
     @db_session
     def test_jobs_conv(self):
@@ -138,6 +139,27 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(int(top.duration.values[0]), 7008334182)
         df = eq.op_metrics(['685000', '685016'], tags='op_sequence:89')
         self.assertEqual([int(f) for f in list(df.duration.values)], [6463542235, 7008334182])
+
+    @db_session
+    def test_root(self):
+        p = eq.root('685016')
+        self.assertEqual((p['pid'], p['exename']), (122181, u'tcsh'))
+        p = eq.root('685016', fmt='orm')
+        self.assertEqual(p.pid, 122181)
+        df = eq.root('685016', fmt='pandas')
+        self.assertEqual(df.shape, (1,49))
+        self.assertEqual(df.loc[0,'pid'], 122181)
+
+    @db_session
+    def test_timeline(self):
+        jobs = eq.get_jobs(fmt='orm')
+        procs = eq.timeline(jobs, fmt='orm')
+        p1 = procs.first()
+        self.assertEqual(p1.start, min(min(j.processes.start) for j in jobs))
+        self.assertEqual([ p.start for p in procs[:3] ], [datetime.datetime(2019, 6, 15, 11, 52, 4, 126892), datetime.datetime(2019, 6, 15, 11, 52, 4, 133795), datetime.datetime(2019, 6, 15, 11, 52, 4, 142141)])
+        procs = eq.timeline('685016', fmt='orm', limit=5)
+        pids = [p.pid for p in procs]
+        self.assertEqual(pids, [122181, 122182, 122183, 122184, 122185])
 
 
 if __name__ == '__main__':
