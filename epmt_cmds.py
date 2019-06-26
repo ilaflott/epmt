@@ -806,7 +806,7 @@ def epmt_stage(forced_jobid, forced_user, other_dirs):
 #
 def epmt_entrypoint(args, help):
     set_logging(args.verbose, check=True)
-    init_settings()
+    init_settings(settings)
     if not args.verbose:
         set_logging(settings.verbose, check=True)
 
