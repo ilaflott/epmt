@@ -594,6 +594,8 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
 
     # do we have a list of jobids?
     # if so, we need to get the actual DB objects for them
+    if type(jobs) == set:
+        jobs = list(jobs)
     if type(jobs) == list and (type(jobs[0]) in [str, unicode]):
         jobs = Job.select(lambda j: j.jobid in jobs)
 
