@@ -10,13 +10,13 @@ from models import db
 from os import environ
 environ['EPMT_USE_DEFAULT_SETTINGS'] = "1"
 
-from epmt_job import setup_orm_db
-from epmt_cmds import set_logging, epmt_submit
+from epmtlib import set_logging, timing
 set_logging(-1)
 
 import epmt_query as eq
 import epmt_outliers as eod
-from epmtlib import timing
+from epmt_cmds import epmt_submit
+from epmt_job import setup_orm_db
 import epmt_default_settings as settings
 
 @timing

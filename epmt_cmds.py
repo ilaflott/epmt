@@ -691,25 +691,6 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
 #            exit(1)
 #        logger.info("Committed post process run to database")    
 
-# if check is set, then we will bail if logging has already been initialized
-def set_logging(intlvl = 0, check = False):
-    if check and hasattr(set_logging, 'initialized'):
-        return
-    set_logging.initialized = True
-    if intlvl < 0:
-        level = ERROR
-    if intlvl == 0:
-        level = WARNING
-    if intlvl == 1:
-        level = INFO
-    elif intlvl >= 2:
-        level = DEBUG
-    basicConfig(level=level)
-    logger = getLogger()
-    logger.setLevel(level)
-    for handler in logger.handlers:
-        handler.setLevel(level)
-
 def stage_job(jid,dir,file,collate=True,compress_and_tar=True):
     logger.debug("stage_job(%s,%s,%s,%s)",jid,dir,file,str(collate))
     if not jid or len(jid) < 1:

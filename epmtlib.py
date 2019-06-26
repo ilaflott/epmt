@@ -84,8 +84,9 @@ def timing(f):
 # Note, both key and values will be strings and no attempt will be made to
 # guess the type for integer/floats
 def tag_from_string(s, delim = ';', sep = ':', tag_default_value = '1'):
-    if not s or len(s) == 0:
-        return None
+    if s == None: return None
+    if not s: return {}
+
     tag = {}
     for t in s.split(delim):
         t = t.strip()

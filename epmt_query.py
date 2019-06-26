@@ -90,7 +90,9 @@ def conv_procs_orm(procs, merge_sums = True, fmt='dict'):
 # You should not use this function directly, but instead use
 # conv_jobs()
 def __jobs_col(jobs):
-    if (type(jobs) != pd.DataFrame and not(jobs)):
+    if (type(jobs) == Query):
+        return jobs
+    if ((type(jobs) != pd.DataFrame) and not(jobs)):
         return Job.select()
     if type(jobs) == pd.DataFrame:
         jobs = list(jobs['jobid'])
@@ -188,7 +190,9 @@ def root(job, fmt='dict'):
 #          query on Job (i.e., a Query object), or a pandas dataframe of jobs
 #          
 #
-# tag    : Optional dictionary or string of key/value pairs
+# tag    : Optional dictionary or string of key/value pairs. If set to ''
+#          or {], then exact_tag_match will be implicitly set, and only
+#          those jobs that have an empty tag will match. 
 #
 # fltr   : Optional filter in the form of a lamdba function or a string
 #          e.g., lambda j: count(j.processes) > 100 will filter jobs more than 100 processes
@@ -233,19 +237,21 @@ def root(job, fmt='dict'):
 #
 #
 @db_session
-def get_jobs(jobs = [], tag={}, fltr = '', order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tag_only = False):
+def get_jobs(jobs = [], tag=None, fltr = '', order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tag_only = False):
     qs = __jobs_col(jobs)
 
     # filter using tag if set
-    if type(tag) == str:
-        tag = tag_from_string(tag)
-    if exact_tag_only:
-        qs = qs.filter(lambda j: j.tags == tag)
-    else:
-        # we consider a match if the job tag is a superset
-        # of the passed tag
-        for (k,v) in tag.items():
-            qs = qs.filter(lambda j: j.tags[k] == v)
+    # Remember, tag = {} demands an exact match with an empty dict!
+    if tag != None:
+        if type(tag) == str:
+            tag = tag_from_string(tag)
+        if exact_tag_only or (tag == {}):
+            qs = qs.filter(lambda j: j.tags == tag)
+        else:
+            # we consider a match if the job tag is a superset
+            # of the passed tag
+            for (k,v) in tag.items():
+                qs = qs.filter(lambda j: j.tags[k] == v)
 
     # if fltr is a lambda function or a string apply it
     if fltr:
@@ -287,6 +293,8 @@ def get_jobs(jobs = [], tag={}, fltr = '', order = '', limit = 0, when=None, hos
 # All fields are optional and sensible defaults are assumed.
 #
 # tag : is a dictionary or string of key/value pairs and is optional.
+#       If set to '' or {}, exact_tag_match will be implicitly
+#       set, and only those processes with an empty tag will match.
 #
 # fltr: is a lambda expression or a string of the form:
 #       lambda p: p.duration > 1000
@@ -351,7 +359,7 @@ def get_jobs(jobs = [], tag={}, fltr = '', order = '', limit = 0, when=None, hos
 # dataframe. The output will be pre-sorted on this field because we have set 'order'
 #
 @db_session
-def get_procs(jobs = [], tag = {}, fltr = None, order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_threads_sums=True, exact_tag_only = False):
+def get_procs(jobs = [], tag = None, fltr = None, order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_threads_sums=True, exact_tag_only = False):
     if jobs:
         jobs = __jobs_col(jobs)
         qs = Process.select(lambda p: p.job in jobs)
@@ -360,15 +368,17 @@ def get_procs(jobs = [], tag = {}, fltr = None, order = '', limit = 0, when=None
         qs = Process.select()
 
     # filter using tag if set
-    if type(tag) == str:
-        tag = tag_from_string(tag)
-    if exact_tag_only:
-        qs = qs.filter(lambda p: p.tags == tag)
-    else:
-        # we consider a match if the process tag is a superset
-        # of the passed tag
-        for (k,v) in tag.items():
-            qs = qs.filter(lambda p: p.tags[k] == v)
+    # Remember, tag = {} demands an exact match with an empty dict!
+    if tag != None:
+        if type(tag) == str:
+            tag = tag_from_string(tag)
+        if exact_tag_only or (tag == {}):
+            qs = qs.filter(lambda p: p.tags == tag)
+        else:
+            # we consider a match if the job tag is a superset
+            # of the passed tag
+            for (k,v) in tag.items():
+                qs = qs.filter(lambda p: p.tags[k] == v)
 
     # if fltr is a lambda function or a string apply it
     if fltr:

@@ -13,12 +13,12 @@ import datetime
 from os import environ
 environ['EPMT_USE_DEFAULT_SETTINGS'] = "1"
 
-from epmt_job import setup_orm_db
-from epmt_cmds import set_logging, epmt_submit
+from epmtlib import set_logging, timing
 set_logging(-1)
 
 import epmt_query as eq
-from epmtlib import timing
+from epmt_job import setup_orm_db
+from epmt_cmds import epmt_submit
 import epmt_default_settings as settings
 
 
@@ -73,6 +73,10 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(jobs.count(), 2, 'jobs orm query with filter option')
         jobs = eq.get_jobs(tag='exp_component:ocean_month_rho2_1x1deg', fmt='terse')
         self.assertEqual(len(jobs), 1, 'jobs query with tag option')
+        jobs = eq.get_jobs(tag='', fmt='terse')
+        self.assertEqual(len(jobs), 0, 'jobs query with empty tag option')
+        jobs = eq.get_jobs(tag={}, fmt='terse')
+        self.assertEqual(len(jobs), 0, 'jobs query with {} tag option')
         df = eq.get_jobs(order='desc(j.duration)', limit=1, fmt='pandas')
         self.assertEqual(df.shape[0], 1, 'job query with limit')
         self.assertEqual('685016', df.loc[0,'jobid'], "jobs dataframe query with order")
@@ -96,6 +100,12 @@ class QueryAPI(unittest.TestCase):
         df = eq.get_procs(limit=5, order='desc(p.exclusive_cpu_time)', fmt='pandas')
         self.assertEqual(df.shape, (5,50), "incorrect dataframe shape")
         self.assertEqual('685016', df.loc[0,'job'], "ordering of processes wrong in dataframe")
+
+        # empty tag query
+        procs = eq.get_procs(tag='', fmt='terse')
+        self.assertEqual(len(procs), 0, 'procs query with empty tag option')
+        procs = eq.get_jobs(tag={}, fmt='terse')
+        self.assertEqual(len(procs), 0, 'procs query with {} tag option')
 
         procs_with_tag = eq.get_procs(tag='op_sequence:4', fltr='p.duration > 10000000', order='desc(p.duration)', fmt='orm')
         self.assertEqual(len(procs_with_tag), 2, 'incorrect process count when using tag and filter')
