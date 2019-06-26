@@ -394,11 +394,9 @@ def setup_vars(forced_jobid, forced_user):
         userdir = ""
 
     if environ.get("PAPIEX_OUTPUT"):
-        logger.error("PAPIEX_OUTPUT variable must not be defined")
-        return False,False,False
+        logger.warning("PAPIEX_OUTPUT variable should not be defined, it will be ignored")
     if environ.get("PAPIEX_OPTIONS"):
-        logger.error("PAPIEX_OPTIONS variable must not be defined")
-        return False,False,False
+        logger.warning("PAPIEX_OPTIONS variable should not be defined, it will be ignored")
 
     if not settings.epmt_output_prefix.endswith("/"):
         userdir = "/" + userdir

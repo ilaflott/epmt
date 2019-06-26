@@ -14,6 +14,7 @@ pipelines:
           - env -i PATH=${PWD}:${PATH} /bin/sh -x epmt-check.anysh
           - env -i PATH=${PWD}:${PATH} /bin/tcsh -v epmt-check.anysh
           - env -i PATH=${PWD}:${PATH} /bin/csh -v epmt-check.anysh
-          - env -i PATH=${PWD}:${PATH} /bin/csh -v epmt-example.csh
-          - env -i PATH=${PWD}:${PATH} /bin/bash epmt-example-stage-submit.sh
+          - env -i PATH=${PWD}:${PATH} /bin/csh -ve epmt-example.csh
+          - env -i PATH=${PWD}:${PATH} /bin/bash -Eeux epmt-example.anysh
+          - env -i PATH=${PWD}:${PATH} /bin/bash epmt-check-stage-submit.sh
           - env -i PATH=${PWD}:${PATH} python -m unittest discover -s test -v
