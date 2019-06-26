@@ -46,6 +46,9 @@ def init_settings(settings):
     if not hasattr(settings, 'stage_command_dest'):
         logger.warning("missing settings.stage_command_dest")
         settings.stage_command_dest = "."
+    if not hasattr(settings, 'allow_job_deletion'):
+        logger.warning("missing settings.allow_job_deletion")
+        settings.allow_job_deletion = False
     if not hasattr(settings, 'per_process_fields'):
         logger.warning("missing settings.per_process_fields")
         settings.per_process_fields = ["tags","hostname","exename","path","args","exitcode","pid","generation","ppid","pgid","sid","numtids"]

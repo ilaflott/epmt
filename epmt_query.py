@@ -13,14 +13,14 @@ from epmtlib import tag_from_string, tags_list, set_logging, init_settings, sum_
 from epmt_stat import modified_z_score
 
 logger = getLogger(__name__)  # you can use other name
+set_logging(1, check=True)
 
 if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
-    logger.info('Overriding settings.py and using defaults in epmt_default_settings')
+    logger.warning('Overriding settings.py and using defaults in epmt_default_settings')
     import epmt_default_settings as settings
 else:
     import settings
 
-set_logging(1, check=True)
 init_settings(settings)
 
 print(settings.db_params)
@@ -704,3 +704,26 @@ def op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas'):
 
     # we assume the user wants the output in the form of a list of dicts
     return all_procs
+
+# this function deletes one or more jobs
+# It requires settings.allow_job_deletion to be enabled and 'force' to be
+# set if number of jobs to delete > 1
+# Returns: number of jobs deleted
+def delete_jobs(jobs, force = False):
+    if not(settings.allow_job_deletion):
+        logger.warning('allow_job_deletion needs to be set to True in settings.py for this to succeed')
+        return 0
+    jobs = __jobs_col(jobs)
+    num_jobs = len(jobs)
+    if num_jobs > 1 and not force:
+        logger.warning('You must set force=True when calling this function as you want to delete more than one job')
+        return 0
+    for j in jobs:
+        for p in j.processes:
+            p.parent = None
+    for j in jobs:
+        for p in j.processes:
+            p.delete()
+    jobs.delete()
+    commit()
+    return num_jobs

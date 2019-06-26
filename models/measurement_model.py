@@ -41,7 +41,7 @@ class Job(db.Entity):
     user = Required('User')
     groups = Set('Group')
     hosts = Set('Host')
-    processes = Set('Process')
+    processes = Set('Process', cascade_delete=True)
     tags = Optional(Json)
     account = Optional('Account')
     queue = Optional('Queue')
@@ -131,7 +131,7 @@ class User(db.Entity):
 #   exps = Set('Experiment')
 #   pprs = Set('PostProcessRun')
     jobs = Set('Job')
-    processes = Set('Process')
+    processes = Set('Process', cascade_delete=True)
 
 class Group(db.Entity):
     created_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
