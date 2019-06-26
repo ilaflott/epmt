@@ -28,7 +28,7 @@ settings.install_prefix = ../papiex-oss/papiex-oss-install/
 			ls -l ../papiex-oss/papiex-oss-install/lib/libpfm.so>/dev/null
 			ls -l ../papiex-oss/papiex-oss-install/bin/papi_command_line>/dev/null
 			Pass
-settings.papiex_output = /tmp/epmt/
+settings.epmt_output_prefix = /tmp/epmt/
 		   mkdir -p /tmp/epmt/
 		   mkdir -p /tmp/epmt/tmp
 		   ls -lR /tmp/epmt/ >/dev/null
@@ -221,7 +221,7 @@ debug                   False
 input_pattern           *-papiex-[0-9]*-[0-9]*.csv                              
 install_prefix          ../papiex-oss/papiex-oss-install/                       
 papiex_options          PERF_COUNT_SW_CPU_CLOCK                                 
-papiex_output           /tmp/epmt/                                              
+epmt_output_prefix      /tmp/epmt/                                              
 
 environment variables (overrides settings.py):
 ```
