@@ -22,7 +22,7 @@ if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
 else:
     import settings
 
-from epmt_lib import set_logging, init_settings
+from epmtlib import set_logging, init_settings
 
 def find_diffs_in_envs(start_env,stop_env):
     env = {}
@@ -285,10 +285,10 @@ def create_start_job_metadata(jobid, submit_ts, from_batch=[]):
 #   print env
     metadata['job_pl_id'] = jobid
 #   metadata['job_pl_hostname'] = gethostname()
-        if submit_ts == False:
-            metadata['job_pl_submit_ts'] = ts
-        else:
-            metadata['job_pl_submit_ts'] = submit_ts
+    if submit_ts == False:
+        metadata['job_pl_submit_ts'] = ts
+    else:
+        metadata['job_pl_submit_ts'] = submit_ts
     metadata['job_pl_start_ts'] = ts
     metadata['job_pl_env'] = start_env
 #        metadata['job_pl_from_batch'] = from_batch
@@ -335,11 +335,10 @@ def create_job_dir(dir):
 def write_job_metadata(jobdatafile,data):
     with open(jobdatafile,'w+b') as file:
         pickle.dump(data,file)
-                logger.info("pickled to %s",jobdatafile);
-                logger.debug("Data %s",data)
+        logger.info("pickled to %s",jobdatafile);
+        logger.debug("Data %s",data)
         return True
     return False
-    # collect env
 
 def setup_vars(forced_jobid):
     if forced_jobid:
