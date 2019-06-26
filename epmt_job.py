@@ -507,6 +507,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         # h = lookup_or_create_host(hostname)
         cntmax = len(files)
         cnt = 0
+        nrecs = 0
         fileno = 0
         csv = datetime.datetime.now()
         for f in files:
@@ -566,14 +567,15 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                     latest_process = p.end
 # Debugging/    progress
                 cnt += 1
+                nrecs += p.numtids
                 csvt = datetime.datetime.now() - csv
-                if cnt % 1000 == 0:
+                if nrecs % 1000 == 0:
                     if cntmax > 1:
                         # many small files each with a single process
-                        logger.info("Did %d (%d/%d files)...%.2f/sec",cnt,fileno, cntmax,cnt/csvt.total_seconds())
+                        logger.info("Did %d (%d/%d files)...%.2f/sec",nrecs,fileno, cntmax,nrecs/csvt.total_seconds())
                     else:
                         # collated file
-                        logger.info("Did %d (%d in file)...%.2f/sec",cnt,collated_df.shape[0],cnt/csvt.total_seconds())
+                        logger.info("Did %d (%d in file)...%.2f/sec",nrecs,collated_df.shape[0],nrecs/csvt.total_seconds())
                     # break
 
 #
@@ -612,7 +614,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             nthreads += proc.numtids
             threads_sums_across_procs = _sum_dicts(threads_sums_across_procs, proc.threads_sums)
             j.hosts.add(proc.host)
-        logger.info("Adding %d processes to job",len(all_procs))
+        logger.info("Adding %d processes (%d threads) to job",len(all_procs), nthreads)
         j.processes.add(all_procs)
     j.proc_sums['num_procs'] = len(all_procs)
     j.proc_sums['num_threads'] = nthreads
