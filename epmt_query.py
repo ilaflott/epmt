@@ -13,7 +13,7 @@ from epmtlib import tag_from_string, tags_list, set_logging, init_settings, sum_
 from epmt_stat import modified_z_score
 
 logger = getLogger(__name__)  # you can use other name
-set_logging(1, check=True)
+set_logging(0, check=True)
 
 if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
     logger.warning('Overriding settings.py and using defaults in epmt_default_settings')
@@ -733,12 +733,16 @@ def delete_jobs(jobs, force = False):
     if num_jobs > 1 and not force:
         logger.warning('You must set force=True when calling this function as you want to delete more than one job')
         return 0
+    logger.info('deleting %d jobs, parents first',len(jobs))
     for j in jobs:
         for p in j.processes:
             p.parent = None
+    logger.debug('delete processes')
     for j in jobs:
         for p in j.processes:
             p.delete()
+    logger.debug('delete jobs')
     jobs.delete()
+    logger.debug('committing deletion')
     commit()
     return num_jobs
