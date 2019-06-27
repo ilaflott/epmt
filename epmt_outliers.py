@@ -93,7 +93,7 @@ def partition_jobs(jobs, features=FEATURES, methods=[modified_z_score], threshol
 #                                                           set([u'kern-6656-20190614-192044-outlier']))}
 
 def partition_jobs_by_ops(jobs, tags=[], features=FEATURES, methods=[modified_z_score], thresholds=thresholds):
-    (_, parts) = detect_outlier_ops(jobs, tags=tags, features=features, methods=methods, thresholds=thresholds)
+    (_, parts, _, _, _) = detect_outlier_ops(jobs, tags=tags, features=features, methods=methods, thresholds=thresholds)
     return parts
 
 
@@ -183,82 +183,65 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
 # superset of unique tags across the jobs.
 #
 # OUTPUT:
-#  (dataframe, dict_of_partitions)
-# The dict of partitions is indexed by the tag, and the value 
+#  (df, dict_of_partitions, scores_df, sorted_tags, sorted_features)
+# where:
+#  df is the dataframe that is sorted by decreasing tag importance, and
+#  shows whether each of the jobs is an outlier or not by feature.
+#
+# The dict_of_partitions is indexed by the tag, and the value 
 # is a tuple, consisting of the (<ref_part>,<outlier_part>) for the tag.
+#
+# scores_df is a dataframe containing the max scores for each tag against
+# a particular feature. It's sorted in decreasing order of tag scores, where
+# a tag_score is defined as the max of scores across all features for the tag.
+#
+# sorted_tags is just a sorted list of tags by decreasing tag_score
+# 
+# sorted_features is a sorted list of features by feature_score, where
+# feature_score is defined as the sum of scores for a feature across 
+# all tags:
+#
 # e.g.,
+# jobs = [u'625151', u'627907', u'629322', u'633114', u'675992', u'680163', u'685001', u'691209', u'693129', u'696110', u'802938', u'804266']
 #
-# >>> (df, parts) = eod.detect_outlier_ops(jobs, tags = {"op_instance": "4", "op_sequence": "4", "op": "build"})
-# >>> df
-#                                jobid  \
-# 0          kern-6656-20190614-190245   
-# 1          kern-6656-20190614-191138   
-# 2  kern-6656-20190614-192044-outlier   
-# 3          kern-6656-20190614-194024   
+#
+# >>> (df, parts, scores_df, sorted_tags, sorted_features) = eod.detect_outlier_ops(jobs)
+#
+# >>> df.head()
+#     jobid                                               tags  duration  \
+# 0  627907  {u'op_instance': u'13', u'op_sequence': u'69',...         0   
+# 1  629322  {u'op_instance': u'13', u'op_sequence': u'69',...         0   
+# 2  633114  {u'op_instance': u'13', u'op_sequence': u'69',...         0   
+# 3  675992  {u'op_instance': u'13', u'op_sequence': u'69',...         0   
+# 4  680163  {u'op_instance': u'13', u'op_sequence': u'69',...         0   
 # 
-#                                                 tags  duration  cpu_time  \
-# 0  {u'op_instance': u'4', u'op_sequence': u'4', u...         0         0   
-# 1  {u'op_instance': u'4', u'op_sequence': u'4', u...         0         0   
-# 2  {u'op_instance': u'4', u'op_sequence': u'4', u...         1         1   
-# 3  {u'op_instance': u'4', u'op_sequence': u'4', u...         0         0   
-# 
-#    num_procs  
-# 0          0  
-# 1          0  
-# 2          0  
-# 3          0  
+#    cpu_time  num_procs  
+# 0         0          0  
+# 1         1          0  
+# 2         0          0  
+# 3         1          0  
+# 4         1          0  
 #
-# >>> parts
-# {'{"op_instance": "4", "op_sequence": "4", "op": "build"}': ([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024'], [u'kern-6656-20190614-192044-outlier'])}
+# >>> scores_df.head()[['tags','duration','cpu_time']]
+#                                                 tags  duration  cpu_time
+# 0  {"op": "mv", "op_instance": "13", "op_sequence...    11.530  4043.151
+# 1  {"op": "mv", "op_instance": "10", "op_sequence...  1621.426     1.547
+# 2  {"op": "hsmget", "op_instance": "6", "op_seque...   824.428     0.973
+# 3  {"op": "hsmget", "op_instance": "7", "op_seque...   393.765     1.160
+# 4  {"op": "hsmget", "op_instance": "6", "op_seque...   387.099     0.000
 #
+# >>> sorted_tags[:3]
+# [{u'op_instance': u'13', u'op_sequence': u'69', u'op': u'mv'}, {u'op_instance': u'10', u'op_sequence': u'60', u'op': u'mv'}, {u'op_instance': u'6', u'op_sequence': u'21', u'op': u'hsmget'}]
 #
-# Here is another example, this time we auto-detect the tags:
-# >>> jobs = eq.get_jobs(fmt='orm', tag='exp_name:linux_kernel')
-# >>> (df, parts) = eod.detect_outlier_ops(jobs)
-# >>> df[['jobid', 'tags', 'duration', 'cpu_time']][:5]
-#                                jobid  \
-# 0          kern-6656-20190614-190245   
-# 1          kern-6656-20190614-191138   
-# 2  kern-6656-20190614-192044-outlier   
-# 3          kern-6656-20190614-194024   
-# 4          kern-6656-20190614-190245   
-# 
-#                                                 tags  duration  cpu_time  
-# 0  {u'op_instance': u'4', u'op_sequence': u'4', u...         0         0  
-# 1  {u'op_instance': u'4', u'op_sequence': u'4', u...         0         0  
-# 2  {u'op_instance': u'4', u'op_sequence': u'4', u...         1         1  
-# 3  {u'op_instance': u'4', u'op_sequence': u'4', u...         0         0  
-# 4  {u'op_instance': u'5', u'op_sequence': u'5', u...         0         0  
-#
-#
-# >>> pprint(parts)
-# {'{"op_instance": "1", "op_sequence": "1", "op": "download"}': ([u'kern-6656-20190614-190245',
-#                                                                  u'kern-6656-20190614-191138',
-#                                                                  u'kern-6656-20190614-194024'],
-#                                                                 [u'kern-6656-20190614-192044-outlier']),
-#  '{"op_instance": "2", "op_sequence": "2", "op": "extract"}': ([u'kern-6656-20190614-190245',
-#                                                                 u'kern-6656-20190614-191138',
-#                                                                 u'kern-6656-20190614-194024'],
-#                                                                [u'kern-6656-20190614-192044-outlier']),
-#  '{"op_instance": "3", "op_sequence": "3", "op": "configure"}': ([u'kern-6656-20190614-190245',
-#                                                                   u'kern-6656-20190614-191138',
-#                                                                   u'kern-6656-20190614-194024'],
-#                                                                  [u'kern-6656-20190614-192044-outlier']),
-#  '{"op_instance": "4", "op_sequence": "4", "op": "build"}': ([u'kern-6656-20190614-190245',
-#                                                               u'kern-6656-20190614-191138',
-#                                                               u'kern-6656-20190614-194024'],
-#                                                              [u'kern-6656-20190614-192044-outlier']),
-#  '{"op_instance": "5", "op_sequence": "5", "op": "clean"}': ([u'kern-6656-20190614-190245',
-#                                                               u'kern-6656-20190614-191138',
-#                                                               u'kern-6656-20190614-194024'],
-#                                                              [u'kern-6656-20190614-192044-outlier'])}
+# >>> sorted_features
+# ['duration', 'cpu_time', 'num_procs']
 
 @db_session
 def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds=thresholds):
 
     tags = tags_list(tags)
     if features:
-        logger.info('using features: ' + str(features))
+        logger.debug('using features: ' + str(features))
         
     jobs_tags_set = set()
     unique_job_tags = eq.job_proc_tags(jobs, fold=False)
@@ -361,7 +344,24 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
     # now lets sort the tags by the max of the scores across the features
     sorted_tags_with_scores = sorted(tags_max.items(), key=lambda e: max(e[1]), reverse=True)
     sorted_tags = [loads(x[0]) for x in sorted_tags_with_scores]
-    
+
+    _trows = []
+    for e in sorted_tags_with_scores:
+        _trows.append([e[0]] + list(e[1]))
+    # the dataframe below has the scores for the tags by feature,
+    # and it's sorted in order of desc tag importance
+    tag_scores_df = pd.DataFrame(_trows, columns=['tags']+features)
+
+    # now let's figure out the sorted feature list by summing the 
+    # scores for the feature across tags
+    f_scores = []
+    for f in features:
+        f_scores.append((f, tag_scores_df[f].sum()))
+    sorted_f_scores = sorted(f_scores, key=lambda e: e[1], reverse=True)
+    sorted_features = [x[0] for x in  sorted_f_scores]
+
+    # now let's create an output data from of outliers using the ordering
+    # of tags in sorted_tags
     all_rows = []
     for t in sorted_tags:
         all_rows.append(retval[retval.tags == t])
@@ -376,7 +376,7 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
         q_outlier = "|".join(["{0} > 0".format(f) for f in features])
         dft_outlier = dft.query(q_outlier).reset_index(drop=True)
         parts[dumps(tag)] = (set(dft_ref['jobid'].values), (set(dft_outlier['jobid'].values)))
-    return (sorted_df, parts, sorted_tags_with_scores)
+    return (sorted_df, parts, tag_scores_df, sorted_tags, sorted_features)
 
     
 def detect_outlier_processes(processes, trained_model=None, 

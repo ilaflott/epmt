@@ -89,7 +89,7 @@ class OutliersAPI(unittest.TestCase):
         all_jobs = eq.get_jobs(tag='exp_name:linux_kernel', fmt='orm')
         jobs_ex_outl = eq.get_jobs(tag='exp_name:linux_kernel', fmt='orm', fltr='"outlier" not in j.jobid')
         r = eq.create_refmodel(jobs_ex_outl, fmt='terse', op_tags='*')
-        (df, parts) = eod.detect_outlier_ops(all_jobs, trained_model=r)
+        (df, parts, _, _ , _) = eod.detect_outlier_ops(all_jobs, trained_model=r)
         self.assertEqual(df.shape, (20,5))
         self.assertEqual(set(df[df.duration > 0]['jobid']), set([u'kern-6656-20190614-192044-outlier']))
         self.assertEqual(set(df[df.cpu_time > 0]['jobid']), set([u'kern-6656-20190614-192044-outlier']))
@@ -99,21 +99,21 @@ class OutliersAPI(unittest.TestCase):
         # now also use the outlier job while creating the refmodel
         # this way, there should be NO outlier ops
         r = eq.create_refmodel(all_jobs, fmt='terse', op_tags='*')
-        (df, parts) = eod.detect_outlier_ops(all_jobs, trained_model=r)
+        (df, parts, _, _ , _) = eod.detect_outlier_ops(all_jobs, trained_model=r)
         self.assertEqual(len(df.query('duration > 0 | cpu_time > 0 | num_procs > 0')), 0)
 
         # now let's try creating a refmodel with a specific op_tag
         # we will get a warning in this test as the full jobs set has a different
         # set of unique process tags than the ref jobs set
         r = eq.create_refmodel(jobs_ex_outl, fmt='terse', op_tags='op_instance:4;op_sequence:4;op:build')
-        (df, parts) = eod.detect_outlier_ops(all_jobs, trained_model=r)
+        (df, parts, _, _ , _) = eod.detect_outlier_ops(all_jobs, trained_model=r)
         self.assertEqual(df.shape, (4,5))
         self.assertEqual(parts, {'{"op_instance": "4", "op_sequence": "4", "op": "build"}': (set([u'kern-6656-20190614-194024', u'kern-6656-20190614-190245', u'kern-6656-20190614-191138']), set([u'kern-6656-20190614-192044-outlier']))})
 
     @db_session
     def test_outlier_ops(self):
         jobs = eq.get_jobs(tag='exp_name:linux_kernel', fmt='orm')
-        (df, parts) = eod.detect_outlier_ops(jobs)
+        (df, parts, _, _, _) = eod.detect_outlier_ops(jobs)
         self.assertEqual(df.shape, (20,5), "wrong shape of df from detect_outlier_ops")
         self.assertEqual(len(df[df.duration > 0]), 3, 'wrong outlier count for duration')
         self.assertEqual(len(df[df.cpu_time > 0]), 5, 'wrong outlier count for cpu_time')
@@ -122,7 +122,7 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(len(parts), 5, 'wrong number of distinct tags')
         self.assertEqual(parts['{"op_instance": "4", "op_sequence": "4", "op": "build"}'], (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024']), set([u'kern-6656-20190614-192044-outlier'])))
 
-        (df, parts) = eod.detect_outlier_ops(jobs, tags = {"op_instance": "4", "op_sequence": "4", "op": "build"})
+        (df, parts, _, _, _) = eod.detect_outlier_ops(jobs, tags = {"op_instance": "4", "op_sequence": "4", "op": "build"})
         self.assertEqual(df.shape, (4,5), "wrong shape of df from detect_outlier_ops with supplied tag")
         self.assertEqual(list(df.duration), [0, 0, 1, 0])
         self.assertEqual(list(df.cpu_time), [0, 0, 1, 0])
