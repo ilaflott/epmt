@@ -42,7 +42,13 @@ def outliers_iqr(ys, span=thresholds['iqr']):
 # We will ignore params(0) as that's the max z_score in the ref_model
 def modified_z_score(ys, params=()):
     median_y = params[1] if params else np.median(ys)
-    median_absolute_deviation_y = params[2] if params else np.median([np.abs(y - median_y) for y in ys])
+    if params:
+        median_absolute_deviation_y = params[2]
+    else:
+        median_absolute_deviation_y = np.median([np.abs(y - median_y) for y in ys])
+        if median_absolute_deviation_y == 0:
+            # use the mean absolute deviation if the median abs deviation is zero
+            median_absolute_deviation_y = np.mean([np.abs(y - median_y) for y in ys])
     # z_score will be zero if std. dev is zero, for all others compute it
     if median_absolute_deviation_y > 0:
         madz = [round(0.6745 * abs(y - median_y) / median_absolute_deviation_y, 4) for y in ys]
