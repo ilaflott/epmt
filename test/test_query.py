@@ -179,6 +179,9 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(n, 0, 'multiple jobs deleted without "force"')
         n = eq.delete_jobs(['685000', '685016'], force=True)
         self.assertEqual(n, 2, 'jobs not deleted even with "force"')
+        #self.assertEqual(epmt_delete_jobs(['685003']), 1, 'deletion of job failed')
+        #jobs = eq.get_jobs(fmt='terse')
+        #self.assertEqual(len(jobs), 0, 'job count in db wrong after delete')
 
 
 if __name__ == '__main__':

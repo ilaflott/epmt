@@ -723,7 +723,8 @@ def op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas'):
 # this function deletes one or more jobs
 # It requires settings.allow_job_deletion to be enabled and 'force' to be
 # set if number of jobs to delete > 1
-# Returns: number of jobs deleted
+# Returns: number of jobs deleted or 0 if none deleted.
+# The function will either delete all requested jobs or none.
 @db_session
 def delete_jobs(jobs, force = False):
     if not(settings.allow_job_deletion):
@@ -733,15 +734,13 @@ def delete_jobs(jobs, force = False):
     if num_jobs > 1 and not force:
         logger.warning('You must set force=True when calling this function as you want to delete more than one job')
         return 0
-    logger.info('deleting %d jobs, parents first',len(jobs))
+    logger.info('deleting %d jobs, in an atomic operation..',len(jobs))
     for j in jobs:
         for p in j.processes:
             p.parent = None
-    logger.debug('delete processes')
     for j in jobs:
         for p in j.processes:
             p.delete()
-    logger.debug('delete jobs')
     jobs.delete()
     logger.debug('committing deletion')
     commit()

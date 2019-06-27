@@ -34,12 +34,13 @@ def setUpModule():
 def tearDownModule():
     pass
 
-class DeleteAPI(unittest.TestCase):
+class EPMTCmds(unittest.TestCase):
     def test_delete_jobs(self):
         jobs = eq.get_jobs(fmt='terse')
         self.assertEqual(type(jobs), list, 'wrong jobs format with terse')
         self.assertEqual(len(jobs), 3, 'job count in db wrong')
-        self.assertEqual(epmt_delete_jobs(['685000']), True, 'deletion of job failed')
+        settings.allow_job_deletion = True
+        self.assertEqual(epmt_delete_jobs(['685000']), 1, 'deletion of job failed')
         jobs = eq.get_jobs(fmt='terse')
         self.assertEqual(len(jobs), 2, 'job count in db wrong after delete')
 
