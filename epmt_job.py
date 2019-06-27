@@ -511,7 +511,9 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 cnt += 1
                 nrecs += p.numtids
                 csvt = datetime.datetime.now() - csv
-                if nrecs % 1000 == 0:
+                if ((nrecs % 1000) == 0) or \
+                   ((cntmax==1) and (nrecs == collated_df.shape[0])) or \
+                   ((cntmax > 1) and (fileno == cntmax)) :
                     if cntmax > 1:
                         # many small files each with a single process
                         logger.info("Did %d (%d/%d files)...%.2f/sec",nrecs,fileno, cntmax,nrecs/csvt.total_seconds())
