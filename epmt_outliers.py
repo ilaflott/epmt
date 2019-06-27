@@ -9,7 +9,7 @@ from pony.orm.core import Query
 from models import ReferenceModel
 from logging import getLogger
 from json import dumps
-from epmtlib import tags_list, tag_from_string, dict_in_list
+from epmtlib import tags_list, tag_from_string, dict_in_list, isString
 from epmt_stat import thresholds, modified_z_score,outliers_iqr,outliers_modified_z_score,rca
 
 logger = getLogger(__name__)  # you can use other name
@@ -391,7 +391,7 @@ def detect_rootcause(jobs, inp, features = FEATURES,  methods = [modified_z_scor
         jobs = eq.get_jobs(ReferenceModel[jobs].jobs, fmt='pandas')
     elif type(jobs) != pd.DataFrame:
         jobs = eq.get_jobs(jobs, fmt='pandas')
-    if type(inp) in [str, unicode, Query]:
+    if isString(inp) or (type(inp) == Query):
         inp = eq.get_jobs(inp, fmt='pandas')
     return rca(jobs, inp, features, methods)
 

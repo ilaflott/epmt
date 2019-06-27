@@ -168,3 +168,5 @@ def fold_dicts(dicts):
     return { k: list(v) if len(v) > 1 else v.pop() for (k,v) in folded_dict.items() }
 
 
+def isString(s):
+    return isinstance(s, ("".__class__, u"".__class__))

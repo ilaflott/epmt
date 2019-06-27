@@ -44,9 +44,11 @@ def modified_z_score(ys, params=()):
     median_y = params[1] if params else np.median(ys)
     median_absolute_deviation_y = params[2] if params else np.median([np.abs(y - median_y) for y in ys])
     # z_score will be zero if std. dev is zero, for all others compute it
-    modified_z_scores = [round(0.6745 * abs(y - median_y) / median_absolute_deviation_y, 4)
-                         for y in ys] if median_absolute_deviation_y > 0 else [0.0 for y in ys]
-    return (modified_z_scores, max(modified_z_scores), median_y, median_absolute_deviation_y)
+    if median_absolute_deviation_y > 0:
+        madz = [round(0.6745 * abs(y - median_y) / median_absolute_deviation_y, 4) for y in ys]
+    else:
+        madz = [float('inf') if abs((y - median_y)) > 0 else 0 for y in ys]
+    return (madz, max(madz), median_y, median_absolute_deviation_y)
 
 
 def outliers_modified_z_score(ys,threshold=thresholds['modified_z_score']):

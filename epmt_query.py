@@ -9,7 +9,7 @@ from os import environ
 from logging import getLogger
 from models import Job, Process, ReferenceModel, Host
 from epmt_job import setup_orm_db
-from epmtlib import tag_from_string, tags_list, set_logging, init_settings, sum_dicts, unique_dicts, fold_dicts
+from epmtlib import tag_from_string, tags_list, set_logging, init_settings, sum_dicts, unique_dicts, fold_dicts, isString
 from epmt_stat import modified_z_score
 
 logger = getLogger(__name__)  # you can use other name
@@ -96,7 +96,7 @@ def __jobs_col(jobs):
         return Job.select()
     if type(jobs) == pd.DataFrame:
         jobs = list(jobs['jobid'])
-    if type(jobs) in [str, unicode]:
+    if isString(jobs):
         if ',' in jobs:
             # jobs a string of comma-separated job ids
             jobs = [ j.strip() for j in jobs.split(",") ]
@@ -106,11 +106,11 @@ def __jobs_col(jobs):
     if type(jobs) == Job:
         # is it a singular job?
         jobs = [jobs]
-    if type(jobs) == list:
+    if type(jobs) in [list, set]:
         # jobs is a list of Job objects or a list of jobids or a list of dicts
         # so first convert the dict list to a jobid list
         jobs = [ j['jobid'] if type(j) == dict else j for j in jobs ]
-        jobs = [ Job[j] if type(j) in [str,unicode] else j for j in jobs ]
+        jobs = [ Job[j] if isString(j) else j for j in jobs ]
         # and now convert to a pony Query object so the user can chain
         jobs = Job.select(lambda j: j in jobs)
     return jobs
@@ -172,7 +172,7 @@ def timeline(jobs = [], limit=0, fltr='', when=None, hosts=[], fmt='pandas'):
 # (7266, u'tcsh')
 @db_session
 def root(job, fmt='dict'):
-    if type(job) in [str, unicode]:
+    if isString(job):
         job = Job[job]
     p = job.processes.order_by('p.start').limit(1)
     if fmt == 'orm': return p.to_list().pop()
@@ -262,16 +262,16 @@ def get_jobs(jobs = [], tag=None, fltr = '', order = '', limit = 0, when=None, h
         if type(when) == datetime:
             qs = qs.filter(lambda j: j.start <= when and j.end >= when)
         else:
-            when_job = Job[when] if type(when) in [str, unicode] else when
+            when_job = Job[when] if isString(when) else when
             qs = qs.filter(lambda j: j.start <= when_job.end and j.end >= when_job.start)
 
     if hosts:
-        if type(hosts) in [str, unicode, Host]:
+        if isString(hosts) or (type(hosts) == Host):
             # user probably forgot to wrap in a list
             hosts = [hosts]
         if type(hosts) == list:
             # if the list contains of strings then we want the Host objects
-            hosts = [Host[h] if type(h) in [str,unicode] else h for h in hosts]
+            hosts = [Host[h] if isString(h) else h for h in hosts]
         qs = select(j for j in qs for h in j.hosts if h in hosts)
 
     if order:
@@ -389,16 +389,16 @@ def get_procs(jobs = [], tag = None, fltr = None, order = '', limit = 0, when=No
         if type(when) == datetime:
             qs = qs.filter(lambda p: p.start <= when and p.end >= when)
         else:
-            when_process = Process[when] if type(when) in [str, unicode] else when
+            when_process = Process[when] if isString(when) else when
             qs = qs.filter(lambda p: p.start <= when_process.end and p.end >= when_process.start)
 
     if hosts:
-        if type(hosts) in [str, unicode, Host]:
+        if isString(hosts) or (type(hosts) == Host):
             # user probably forgot to wrap in a list
             hosts = [hosts]
         if type(hosts) == list:
             # if the list contains of strings then we want the Host objects
-            hosts = [Host[h] if type(h) in [str,unicode] else h for h in hosts]
+            hosts = [Host[h] if isString(h) else h for h in hosts]
         qs = qs.filter(lambda p: p.host in hosts)
 
     if order:
@@ -610,7 +610,7 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
     # if so, we need to get the actual DB objects for them
     if type(jobs) == set:
         jobs = list(jobs)
-    if type(jobs) == list and (type(jobs[0]) in [str, unicode]):
+    if type(jobs) == list and isString(jobs[0]):
         jobs = Job.select(lambda j: j.jobid in jobs)
 
     if op_tags:
@@ -653,7 +653,7 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
 # See also: job_proc_tags, which does the same
 # for a list of jobs
 def __unique_proc_tags_for_job(job, exclude=[], fold=True):
-    if type(job) == str or type(job) == unicode:
+    if isString(job):
         job = Job[job]
     proc_sums = getattr(job, PROC_SUMS_FIELD_IN_JOB, {})
     tags = []
@@ -684,7 +684,7 @@ def __unique_proc_tags_for_job(job, exclude=[], fold=True):
 #
 @db_session
 def op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas'):
-    if type(jobs) == str or type(jobs) == unicode:
+    if isString(jobs):
         jobs = [jobs]
 
     tags = tags_list(tags) if tags else job_proc_tags(jobs, fold=False)
