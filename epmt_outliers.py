@@ -8,7 +8,7 @@ from pony.orm import db_session
 from pony.orm.core import Query
 from models import ReferenceModel
 from logging import getLogger
-from json import dumps
+from json import dumps, loads
 from epmtlib import tags_list, tag_from_string, dict_in_list, isString
 from epmt_stat import thresholds, modified_z_score,outliers_iqr,outliers_modified_z_score,rca
 
@@ -257,6 +257,8 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
 def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds=thresholds):
 
     tags = tags_list(tags)
+    if features:
+        logger.info('using features: ' + str(features))
         
     jobs_tags_set = set()
     unique_job_tags = eq.job_proc_tags(jobs, fold=False)
@@ -312,6 +314,19 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
         return (None, {})
     retval = pd.DataFrame(0, columns=features, index=ops.index)
 
+    # the dict below will be indexed by tag, and will store
+    # the sum of the max value of scores for each feature, where the
+    # the sum is done across 'methods'. So, if we have two methods:
+    # z_score, and modified_z_score, and for a particular feature,
+    # say 'duration', the max z_score for tag -- op_seq:45 -- is
+    # 1.5 and 1.0. Then the sum is 2.5. And now suppose we have
+    # three features: duration, cpu_time, num_procs, with
+    # the sums being [2.5, 3.5, 1.0], then, we would have:
+    # { 'op_seq:45': [2.5, 3.5, 1.0], ... }
+    # So, the ordering of elements in the list is in the order of the
+    # features.
+    #
+    tags_max = {}
     # now we iterate over tags and for each tag we select
     # the rows from the ops dataframe that have the same tag;
     # the select rows will have different job ids
@@ -321,7 +336,9 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
         # select only those rows with matching tag
         rows = ops[ops.tags == tag]
         # logger.debug('input: \n{0}\n'.format(rows[['tags']+features]))
+        tags_max[t] = []
         for c in features:
+            score_diff = 0
             for m in methods:
                 params = model_params[t][m].get(c, ())
                 # if params:
@@ -331,13 +348,25 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
                 # otherwise use the default threshold for the method
                 threshold = params[0] if params else thresholds[m.__name__]
                 outlier_rows = np.where(np.abs(scores) > threshold)[0]
+                score_diff += max(max(scores) - threshold, 0)
                 # remain the outlier rows indices to the indices in the original df
                 outlier_rows = rows.index[outlier_rows].values
                 logger.debug('outliers for [{0}][{1}][{2}] -> {3}'.format(t,m.__name__,c,outlier_rows))
                 retval.loc[outlier_rows,c] += 1
+            tags_max[t].append(round(score_diff, 3))
     retval['jobid'] = ops['job']
     retval['tags'] = ops['tags']
     retval = retval[['jobid', 'tags']+features]
+
+    # now lets sort the tags by the max of the scores across the features
+    sorted_tags_with_scores = sorted(tags_max.items(), key=lambda e: max(e[1]), reverse=True)
+    sorted_tags = [loads(x[0]) for x in sorted_tags_with_scores]
+    
+    all_rows = []
+    for t in sorted_tags:
+        all_rows.append(retval[retval.tags == t])
+    sorted_df = pd.concat(all_rows, ignore_index=True)
+        
     # partition using tags
     parts = {}
     for tag in tags_to_use:
@@ -347,7 +376,7 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
         q_outlier = "|".join(["{0} > 0".format(f) for f in features])
         dft_outlier = dft.query(q_outlier).reset_index(drop=True)
         parts[dumps(tag)] = (set(dft_ref['jobid'].values), (set(dft_outlier['jobid'].values)))
-    return (retval, parts)
+    return (sorted_df, parts, sorted_tags_with_scores)
 
     
 def detect_outlier_processes(processes, trained_model=None, 
