@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import operator
 import epmt_query as eq
+from pony.orm import db_session
 from pony.orm.core import Query
 from models import ReferenceModel
 from logging import getLogger
@@ -134,7 +135,7 @@ def partition_jobs_by_ops(jobs, tags=[], features=FEATURES, methods=[modified_z_
 #                 u'kern-6656-20190614-194024',
 #                 u'kern-6656-20190614-191138'],
 #                [])}
-
+@db_session
 def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds = thresholds):
     # if we have a non-empty list of job ids then get a pandas df
     # using get_jobs to convert the format
@@ -252,6 +253,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
 #                                                               u'kern-6656-20190614-194024'],
 #                                                              [u'kern-6656-20190614-192044-outlier'])}
 
+@db_session
 def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds=thresholds):
 
     tags = tags_list(tags)
@@ -346,9 +348,8 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
         dft_outlier = dft.query(q_outlier).reset_index(drop=True)
         parts[dumps(tag)] = (set(dft_ref['jobid'].values), (set(dft_outlier['jobid'].values)))
     return (retval, parts)
+
     
-
-
 def detect_outlier_processes(processes, trained_model=None, 
                              features=['duration','exclusive_cpu_time'],
                              methods=[outliers_iqr,outliers_modified_z_score]):
@@ -384,6 +385,7 @@ def detect_outlier_processes(processes, trained_model=None,
 # for the feature. The sorted_tuples consists of a list of tuples, where each
 # tuple (feature,<diff_score>)
 
+@db_session
 def detect_rootcause(jobs, inp, features = FEATURES,  methods = [modified_z_score]):
     if type(jobs) == int:
         jobs = eq.get_jobs(ReferenceModel[jobs].jobs, fmt='pandas')
@@ -428,6 +430,7 @@ def detect_rootcause(jobs, inp, features = FEATURES,  methods = [modified_z_scor
 # >>> s
 # [('cpu_time', 379.350952249517), ('duration', 56.09397944199707), ('num_procs', 0.0)]
 
+@db_session
 def detect_rootcause_op(jobs, inp, tag, features = FEATURES,  methods = [modified_z_score]):
     if not tag:
         logger.warning('You must specify a non-empty tag')

@@ -171,6 +171,15 @@ class QueryAPI(unittest.TestCase):
         pids = [p.pid for p in procs]
         self.assertEqual(pids, [122181, 122182, 122183, 122184, 122185])
 
+    def test_zz_delete_jobs(self):
+        with self.assertRaises(EnvironmentError):
+            eq.delete_jobs('685000')
+        settings.allow_job_deletion = True
+        n = eq.delete_jobs(['685000', '685016'])
+        self.assertEqual(n, 0, 'multiple jobs deleted without "force"')
+        n = eq.delete_jobs(['685000', '685016'], force=True)
+        self.assertEqual(n, 2, 'jobs not deleted even with "force"')
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -170,6 +170,7 @@ def timeline(jobs = [], limit=0, fltr='', when=None, hosts=[], fmt='pandas'):
 # >>> p = eq.root('685016')
 # >>> p['id'],p['exename']
 # (7266, u'tcsh')
+@db_session
 def root(job, fmt='dict'):
     if type(job) in [str, unicode]:
         job = Job[job]
@@ -419,6 +420,7 @@ def get_procs(jobs = [], tag = None, fltr = None, order = '', limit = 0, when=No
 # the database ID of a process.
 # If multiple processes are specified then dataframes are concatenated
 # using pandas into a single dataframe
+@db_session
 def get_thread_metrics(*processes):
     # handle the case where the user supplied a python list rather
     # spread out arguments
@@ -472,6 +474,7 @@ def job_proc_tags(jobs = [], exclude=[], fold=False):
 # example usage:
 #   get_refmodels(tag = 'exp_name:ESM4;exp_component:ice_1x1', fmt='pandas')
 #
+@db_session
 def get_refmodels(tag = {}, fltr=None, limit=0, order='', exact_tag_only=False, merge_nested_fields=True, fmt='dict'):
     qs = ReferenceModel.select()
 
@@ -591,6 +594,7 @@ def _refmodel_scores(col, outlier_methods, features):
 
 #
 #
+@db_session
 def create_refmodel(jobs=[], tag={}, op_tags=[], 
                     outlier_methods=[modified_z_score], 
                     features=['duration', 'cpu_time', 'num_procs'], exact_tag_only=False,
@@ -678,6 +682,7 @@ def __unique_proc_tags_for_job(job, exclude=[], fold=True):
 # will be used.
 # In this function, fmt is only allowed 'pandas' or 'dict'
 #
+@db_session
 def op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas'):
     if type(jobs) == str or type(jobs) == unicode:
         jobs = [jobs]
@@ -719,10 +724,10 @@ def op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas'):
 # It requires settings.allow_job_deletion to be enabled and 'force' to be
 # set if number of jobs to delete > 1
 # Returns: number of jobs deleted
+@db_session
 def delete_jobs(jobs, force = False):
     if not(settings.allow_job_deletion):
-        logger.warning('allow_job_deletion needs to be set to True in settings.py for this to succeed')
-        return 0
+        raise EnvironmentError('allow_job_deletion needs to be True in settings.py to delete jobs')
     jobs = __jobs_col(jobs)
     num_jobs = len(jobs)
     if num_jobs > 1 and not force:
