@@ -651,6 +651,7 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
 # See also: job_proc_tags, which does the same
 # for a list of jobs
 def __unique_proc_tags_for_job(job, exclude=[], fold=True):
+    global settings
     if isString(job):
         job = Job[job]
     proc_sums = getattr(job, PROC_SUMS_FIELD_IN_JOB, {})
@@ -725,6 +726,7 @@ def op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas'):
 # The function will either delete all requested jobs or none.
 @db_session
 def delete_jobs(jobs, force = False):
+    global settings
     if not(settings.allow_job_deletion):
         raise EnvironmentError('allow_job_deletion needs to be True in settings.py to delete jobs')
     jobs = __jobs_col(jobs)
