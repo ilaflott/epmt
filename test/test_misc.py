@@ -3,7 +3,7 @@ from __future__ import print_function
 import unittest
 from sys import stderr, exit
 from glob import glob
-#from pony.orm import db_session
+from pony.orm import db_session
 #from models import db
 #from pony.orm.core import Query
 #import pandas as pd
@@ -17,6 +17,7 @@ from epmt_job import setup_orm_db
 from epmt_cmds import set_logging, epmt_submit, epmt_delete_jobs
 set_logging(-1)
 
+from models import Job
 import epmt_query as eq
 from epmtlib import timing
 import epmt_default_settings as settings
@@ -27,7 +28,7 @@ def setUpModule():
         print('db_params MUST use in-memory sqlite for testing', file=stderr)
         exit(1)
     setup_orm_db(settings, drop=True)
-    datafiles='test/data/query/*.tgz'
+    datafiles='test/data/misc/*.tgz'
     print('\nsetUpModdule: importing {0}'.format(datafiles))
     epmt_submit(glob(datafiles), dry_run=False)
     
@@ -35,14 +36,20 @@ def tearDownModule():
     pass
 
 class EPMTCmds(unittest.TestCase):
+    @db_session
     def test_delete_jobs(self):
         jobs = eq.get_jobs(fmt='terse')
-        self.assertEqual(type(jobs), list, 'wrong jobs format with terse')
-        self.assertEqual(len(jobs), 3, 'job count in db wrong')
+        n = len(jobs)
         settings.allow_job_deletion = True
         self.assertEqual(epmt_delete_jobs(['685000']), 1, 'deletion of job failed')
         jobs = eq.get_jobs(fmt='terse')
-        self.assertEqual(len(jobs), 2, 'job count in db wrong after delete')
+        self.assertEqual(len(jobs), n-1, 'job count in db wrong after delete')
+
+class DataImport(unittest.TestCase):
+    @db_session
+    def test_job_exitcode(self):
+        self.assertEqual(Job['failed-exitcode'].exitcode, 2, 'wrong job exit code synthesized')
+
 
 if __name__ == '__main__':
     unittest.main()

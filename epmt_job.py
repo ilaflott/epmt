@@ -438,6 +438,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     didsomething = False
     all_tags = set()
     all_procs = []
+    root_proc = None
 
     # a pid_map is used to create the process graph
     pid_map = {}  # maps pids to process objects
@@ -505,6 +506,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 # Compute duration of job
                 if (p.start < earliest_process):
                     earliest_process = p.start
+                    root_proc = p
                 if (p.end > latest_process):
                     latest_process = p.end
 # Debugging/    progress
@@ -580,6 +582,11 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     # the cpu time for a job is the sum of the exclusive times
     # of all processes in the job
     j.cpu_time = sum(j.processes.exclusive_cpu_time)
+    if root_proc:
+        if root_proc.exitcode != j.exitcode:
+            logger.warning('metadata shows the job exit code is {0}, but root process exit code is {1}'.format(j.exitcode, root_proc.exitcode))
+        j.exitcode = root_proc.exitcode
+        logger.info('job exit code (using exit code of root process): {0}'.format(j.exitcode))
     if job_tags:
         j.tags = job_tags
 #
