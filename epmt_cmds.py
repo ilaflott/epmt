@@ -262,23 +262,6 @@ def verify_papiex(fake_job_id,fake_job_user,dir):
     rmtree(dir)
     return retval
 
-# Takes string
-# Returns list of successfully deleted jobid's as strings
-
-def epmt_delete_jobs(joblist):
-    logger.info("epmt_delete_jobs: %s",str(joblist))
-    if not joblist or len(joblist) == 0:
-        logger.error("joblist must not be empty")
-        return False
-    from epmt_query import delete_jobs
-# Delete jobs should return which ones don't get deleted if it cannot
-# guarantee atomicity
-    if delete_jobs(joblist) != len(joblist):
-        logger.error("delete_jobs %s failed\n",str(joblist))
-        return False
-    logger.info("deleted jobs %s",str(joblist))
-    return True
-
 def epmt_check(forced_jobid):
     retval = True
     if verify_db_params() == False:
@@ -838,7 +821,11 @@ def epmt_entrypoint(args, help):
     if args.epmt_cmd == 'check':
         return(epmt_check(args.jobid) == False)
     if args.epmt_cmd == 'delete':
+        from epmt_cmd_delete import epmt_delete_jobs
         return(epmt_delete_jobs(args.epmt_cmd_args) == False)
+    if args.epmt_cmd == 'list':
+        from epmt_cmd_list import epmt_list_jobs
+        return(epmt_list_jobs(args.epmt_cmd_args) == False)
     logger.error("Unknown command, %s. See -h for options.",args.epmt_cmd)
     exit(1)
 

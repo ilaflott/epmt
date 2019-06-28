@@ -22,8 +22,6 @@ else:
     import settings
 
 init_settings(settings)
-
-print(settings.db_params)
 setup_orm_db(settings)
 
 PROC_SUMS_FIELD_IN_JOB='proc_sums'
