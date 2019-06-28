@@ -152,8 +152,9 @@ def unique_dicts(dicts, exclude_keys=[]):
             new_dicts.append(new_d)
     else:
         new_dicts = dicts
-    from numpy import unique, array
-    return unique(array(new_dicts)).tolist()
+    #from numpy import unique, array
+    #return unique(array(new_dicts)).tolist()
+    return list(map(dict, frozenset(frozenset(i.items()) for i in new_dicts)))
 
 # fold a list of dictionaries such as:
 # INPUT: [{'abc': 100, 'def': 200}, {'abc': 150, 'ghi': 10}

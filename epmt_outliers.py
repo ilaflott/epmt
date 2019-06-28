@@ -462,16 +462,16 @@ def detect_rootcause(jobs, inp, features = FEATURES,  methods = [modified_z_scor
 @db_session
 def detect_rootcause_op(jobs, inp, tag, features = FEATURES,  methods = [modified_z_score]):
     if not tag:
-        logger.warning('You must specify a non-empty tag')
-        return (None, None)
+        print('You must specify a non-empty tag')
+        return (False, None, None)
     if type(jobs) == int:
         jobs = eq.get_jobs(ReferenceModel[jobs].jobs, fmt='orm')
     jobs = eq.__jobs_col(jobs)
     inp = eq.__jobs_col(inp)
     if len(inp) > 1:
-        logger.warning('You can only do RCA for a single "inp" job')
+        print('You can only do RCA for a single "inp" job')
         return (False, None, None)
-    tag = tag_from_string(tag) if type(tag == str) else tag
+    tag = tag_from_string(tag) if (type(tag) == str) else tag
     ref_ops_df = eq.op_metrics(jobs, tag)
     inp_ops_df = eq.op_metrics(inp, tag)
     unique_tags = set([str(d) for d in ref_ops_df['tags'].values])
@@ -479,7 +479,7 @@ def detect_rootcause_op(jobs, inp, tag, features = FEATURES,  methods = [modifie
         # this is just a sanity check to make sure we only compare
         # rows that have the same tag. Ordinarily this code won't be
         # triggered as eq.op_metrics will only return rows that match 'tag'
-        logger.warning('ref jobs have multiple distinct tags({0}) that are superset of this specified tag. Please specify an exact tag match'.format(unique_tags))
+        print('ref jobs have multiple distinct tags({0}) that are superset of this specified tag. Please specify an exact tag match'.format(unique_tags))
         return (False, None, None)
     return rca(ref_ops_df, inp_ops_df, features, methods)
     
