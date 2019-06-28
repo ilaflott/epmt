@@ -344,16 +344,16 @@ def _check_and_create_metadata(raw_metadata):
     for e in start_env.keys():
         if e in stop_env.keys():
             if start_env[e] == stop_env[e]:
-                logger.debug("Found "+e)
+                logger.debug("Found "+e+"\t"+start_env[e])
             else:
-                logger.debug("Different "+e)
+                logger.debug("Different at stop "+e+"\t"+stop_env[e])
                 env[e] = stop_env[e]
         else:
-            logger.debug("Deleted "+e)
+            logger.debug("Deleted "+e+"\t"+start_env[e])
             env[e] = start_env[e]
     for e in stop_env.keys():
         if e not in start_env.keys():
-            logger.debug("Added "+e)
+            logger.debug("Added "+e+"\t"+stop_env[e])
             env[e] = stop_env[e]
     env_changes = env
 # Augment the metadata
