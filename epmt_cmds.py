@@ -577,6 +577,8 @@ def get_filedict(dirname,pattern,tar=False):
         else:
             logger.warn("Split failed of %s, only %d parts",t,len(ts))
             continue
+# Byproduct of collation
+        host = host.replace('-collated-','')
         if filedict.get(host):
             filedict[host].append(f)
         else:
