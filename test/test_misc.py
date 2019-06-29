@@ -14,12 +14,12 @@ from os import environ
 environ['EPMT_USE_DEFAULT_SETTINGS'] = "1"
 
 from epmt_job import setup_orm_db
-from epmt_cmds import set_logging, epmt_submit
+from epmtlib import timing, set_logging, capture
+from epmt_cmds import epmt_submit
 set_logging(-1)
 from epmt_cmd_delete import epmt_delete_jobs
 from epmt_cmd_list import  epmt_list_jobs
 import epmt_query as eq
-from epmtlib import timing
 import epmt_default_settings as settings
 from models import Job
 
@@ -40,7 +40,8 @@ class EPMTCmds(unittest.TestCase):
     def test_list_jobs(self):
         jobs = eq.get_jobs(fmt='terse')
         self.assertEqual(type(jobs), list, 'wrong jobs format with terse')
-        listed_jobs = epmt_list_jobs([])
+        with capture() as (out,err):
+            listed_jobs = epmt_list_jobs([])
         self.assertEqual(type(listed_jobs), bool, 'wrong list jobs return type')
         self.assertEqual(listed_jobs, True, 'wrong list jobs return value')
 # Currently an exception, but should just return False
@@ -49,7 +50,7 @@ class EPMTCmds(unittest.TestCase):
     def test_delete_jobs(self):
         jobs = eq.get_jobs(fmt='terse')
         n = len(jobs)
-        settings.allow_job_deletion = True
+        #settings.allow_job_deletion = True
         self.assertEqual(epmt_delete_jobs(['685000']), 1, 'deletion of job failed')
         jobs = eq.get_jobs(fmt='terse')
         self.assertEqual(len(jobs), n-1, 'job count in db wrong after delete')

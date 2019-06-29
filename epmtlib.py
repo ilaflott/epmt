@@ -1,8 +1,10 @@
+import sys
 from functools import wraps
 from time import time
-from sys import stdout
 from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
 from os import environ
+from contextlib import contextmanager
+from StringIO import StringIO
 
 # if check is set, then we will bail if logging has already been initialized
 def set_logging(intlvl = 0, check = False):
@@ -46,9 +48,9 @@ def init_settings(settings):
     if not hasattr(settings, 'stage_command_dest'):
         logger.warning("missing settings.stage_command_dest")
         settings.stage_command_dest = "."
-    if not hasattr(settings, 'allow_job_deletion'):
-        logger.warning("missing settings.allow_job_deletion")
-        settings.allow_job_deletion = False
+    # if not hasattr(settings, 'allow_job_deletion'):
+    #     logger.warning("missing settings.allow_job_deletion")
+    #     settings.allow_job_deletion = False
     if not hasattr(settings, 'per_process_fields'):
         logger.warning("missing settings.per_process_fields")
         settings.per_process_fields = ["tags","hostname","exename","path","args","exitcode","pid","generation","ppid","pgid","sid","numtids"]
@@ -65,9 +67,21 @@ def timing(f):
         ts = time()
         result = f(*args, **kw)
         te = time()
-        stdout.write('%r took: %2.4f sec\n' % (f.__name__, te-ts))
+        sys.stdout.write('%r took: %2.4f sec\n' % (f.__name__, te-ts))
         return result
     return wrap
+
+
+
+@contextmanager
+def capture():
+    new_out, new_err = StringIO(), StringIO()
+    old_out, old_err = sys.stdout, sys.stderr
+    try:
+        sys.stdout, sys.stderr = new_out, new_err
+        yield sys.stdout, sys.stderr
+    finally:
+        sys.stdout, sys.stderr = old_out, old_err
 
 # we assume tag is of the format:
 #  "key1:value1 ; key2:value2"

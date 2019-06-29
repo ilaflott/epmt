@@ -8,18 +8,21 @@ from json import loads, dumps
 from os import environ
 from logging import getLogger
 from models import Job, Process, ReferenceModel, Host
-from epmt_job import setup_orm_db
 from epmtlib import tag_from_string, tags_list, set_logging, init_settings, sum_dicts, unique_dicts, fold_dicts, isString
 from epmt_stat import modified_z_score
 
 logger = getLogger(__name__)  # you can use other name
 set_logging(0, check=True)
 
+# put epmt imports after this test
 if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
     logger.warning('Overriding settings.py and using defaults in epmt_default_settings')
     import epmt_default_settings as settings
 else:
     import settings
+from epmt_job import setup_orm_db
+
+
 
 init_settings(settings)
 setup_orm_db(settings)
@@ -720,15 +723,14 @@ def op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas'):
     return all_procs
 
 # this function deletes one or more jobs
-# It requires settings.allow_job_deletion to be enabled and 'force' to be
-# set if number of jobs to delete > 1
+# It requires 'force' to be set if number of jobs to delete > 1
 # Returns: number of jobs deleted or 0 if none deleted.
 # The function will either delete all requested jobs or none.
 @db_session
 def delete_jobs(jobs, force = False):
-    global settings
-    if not(settings.allow_job_deletion):
-        raise EnvironmentError('allow_job_deletion needs to be True in settings.py to delete jobs')
+    #global settings
+    #if not(settings.allow_job_deletion):
+    #    raise EnvironmentError('allow_job_deletion needs to be True in settings.py to delete jobs')
     jobs = __jobs_col(jobs)
     num_jobs = len(jobs)
     if num_jobs > 1 and not force:
