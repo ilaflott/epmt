@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 from datetime import datetime
 from os import environ, makedirs, mkdir, errno, path, getpid, getuid, getsid, getcwd, chdir
 from socket import gethostname
@@ -17,12 +18,11 @@ from logging import getLogger, basicConfig, DEBUG, INFO, WARNING, ERROR
 logger = getLogger(__name__)  # you can use other name
 
 if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
-    logger.info('Overriding settings.py and using defaults in epmt_default_settings')
     import epmt_default_settings as settings
 else:
     import settings
 
-from epmtlib import set_logging, init_settings
+from epmtlib import set_logging, init_settings, conv_dict_byte2str
 
 def find_diffs_in_envs(start_env,stop_env):
     env = {}
@@ -74,8 +74,12 @@ def merge_two_dicts(x, y):
     return z
 
 def read_job_metadata_direct(file):
-    data = pickle.load(file)
-    logger.debug("Unpickled")
+    try:
+        data = pickle.load(file)
+    except UnicodeDecodeError:
+        # python3 gives problems unpickling stuff pickled using python2
+        data = conv_dict_byte2str(pickle.load(file, encoding='bytes'))
+    logger.debug("Unpickled ")
     return data
 
 def read_job_metadata(jobdatafile):
@@ -106,15 +110,15 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 def PrintFail():
-    print "\t" + bcolors.FAIL + "Fail" + bcolors.ENDC
+    print("\t" + bcolors.FAIL + "Fail" + bcolors.ENDC)
 def PrintPass():
-    print "\t" + bcolors.OKBLUE + "Pass" + bcolors.ENDC
+    print("\t" + bcolors.OKBLUE + "Pass" + bcolors.ENDC)
 def PrintWarning():
-    print "\t" + bcolors.WARNING + "Pass" + bcolors.ENDC
+    print("\t" + bcolors.WARNING + "Pass" + bcolors.ENDC)
 
 def verify_install_prefix():
     str = settings.install_prefix
-    print "settings.install_prefix =",str
+    print("settings.install_prefix =",str)
     retval = True
 # Check for bad stuff and shortcut
     if "*" in str or "?" in str:
@@ -138,7 +142,7 @@ def verify_install_prefix():
     
 def verify_epmt_output_prefix():
     str = settings.epmt_output_prefix
-    print "settings.epmt_output_prefix =",str
+    print("settings.epmt_output_prefix =",str)
     retval = True
 # Check for bad stuff and shortcut
     if "*" in str or "?" in str:
@@ -177,7 +181,7 @@ def verify_epmt_output_prefix():
 
 def verify_papiex_options():
     str = settings.papiex_options
-    print "settings.papiex_options =",str
+    print("settings.papiex_options =",str)
     retval = True
 # Check for any components
     cmd = settings.install_prefix+"bin/papi_component_avail 2>&1 "+"| sed -n -e '/Active/,$p' | grep perf_event >/dev/null 2>&1"
@@ -203,7 +207,7 @@ def verify_papiex_options():
     return retval
 
 def verify_db_params():
-    print "settings.db_params =",str(settings.db_params)
+    print("settings.db_params =",str(settings.db_params))
     try:
         from epmt_job import setup_orm_db
         if setup_orm_db(settings) == False:
@@ -219,7 +223,7 @@ def verify_db_params():
     
 def verify_perf():
     f="/proc/sys/kernel/perf_event_paranoid"
-    print f,"exists and has a value of 0"
+    print(f,"exists and has a value of 0")
     try:
         with open(f, 'r') as content_file:
             value = int(content_file.read())
@@ -232,12 +236,12 @@ def verify_perf():
             PrintPass()
             return True
     except Exception as e:
-        print >> stderr,str(e)
+        print(str(e), file=stderr)
         PrintFail()
     return False
 
 def verify_papiex(fake_job_id,fake_job_user,dir):
-    print "epmt run functionality"
+    print("epmt run functionality")
     logger.info("\tepmt run -a /bin/sleep 1, output to %s",dir)
     retval = epmt_run(fake_job_id, fake_job_user, ["/bin/sleep","1"],wrapit=True)
     if retval != 0:
@@ -434,12 +438,12 @@ def epmt_dump_metadata(forced_jobid, forced_user, filelist=[]):
                 metadata = read_job_metadata_direct(f)
         else:
             metadata = read_job_metadata(file)
-            print metadata
+            print(metadata)
 
         if not metadata:
             return False
         for d in sorted(metadata.keys()):
-            print "%-24s%-56s" % (d,str(metadata[d]))
+            print("%-24s%-56s" % (d,str(metadata[d])))
     return True
 
 def epmt_source(forced_jobid, forced_user, papiex_debug=False, monitor_debug=False, add_export=True, run_cmd=False):
@@ -518,7 +522,7 @@ def epmt_run(forced_jobid, forced_user, cmdline, wrapit=False, dry_run=False, de
     if wrapit:
         logger.info("Forcing epmt_start")
         if dry_run:
-            print "epmt start"
+            print("epmt start")
         else:
             if not epmt_start_job(forced_jobid,forced_user):
                 return 1
@@ -533,13 +537,13 @@ def epmt_run(forced_jobid, forced_user, cmdline, wrapit=False, dry_run=False, de
         return_code = forkexecwait(cmd, shell=True)
         logger.info("Exit code %d",return_code)
     else:
-        print cmd
+        print(cmd)
         return_code = 0
 
     if wrapit:
         logger.info("Forcing epmt_stop")
         if dry_run:
-            print "epmt stop"
+            print("epmt stop")
         else:
             epmt_stop_job(forced_jobid, forced_user)
     return return_code

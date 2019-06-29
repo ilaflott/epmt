@@ -9,7 +9,6 @@ from numbers import Number
 logger = getLogger(__name__)  # you can use other name
 
 if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
-    #logger.warning('Overriding settings.py and using defaults in epmt_default_settings')
     import epmt_default_settings as settings
 else:
     import settings

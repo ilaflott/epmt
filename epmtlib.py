@@ -4,7 +4,11 @@ from time import time
 from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
 from os import environ
 from contextlib import contextmanager
-from StringIO import StringIO
+
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 # if check is set, then we will bail if logging has already been initialized
 def set_logging(intlvl = 0, check = False):
@@ -220,4 +224,20 @@ def kwargify(list_of_str):
     if myDict.get('fmt') == None:
         myDict['fmt'] = 'terse'
     return myDict
+
+# this function recursively converts a dict of byte k/v pairs to
+# strings. It's primarily of use when converting unpickled data in
+# python 3 from data pickled using python 2
+def conv_dict_byte2str(bytes_dict):
+    str_dict = {}
+    for key, value in bytes_dict.items():
+        if type(key) == bytes:
+            key = key.decode("utf-8")
+        if type(value) == bytes:
+            str_dict[key] = value.decode("utf-8") 
+        elif type(value) == dict:
+            str_dict[key] = conv_dict_byte2str(value)
+        else:
+            str_dict[key] = value
+    return str_dict
 

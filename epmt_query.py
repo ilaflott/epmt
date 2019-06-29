@@ -16,7 +16,7 @@ set_logging(0, check=True)
 
 # put epmt imports after this test
 if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
-    logger.warning('Overriding settings.py and using defaults in epmt_default_settings')
+    logger.warning('ignoring settings.py and using defaults in epmt_default_settings')
     import epmt_default_settings as settings
 else:
     import settings
