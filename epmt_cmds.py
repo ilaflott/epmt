@@ -46,7 +46,7 @@ def find_diffs_in_envs(start_env,stop_env):
 def blacklist_filter(filter=None, **env):
 #   print env
     env2 = {}
-    for k, v in env.iteritems():
+    for k, v in env.items():
         if k.startswith("_"):
             continue
         if k == "LS_COLORS":
@@ -57,7 +57,7 @@ def blacklist_filter(filter=None, **env):
 def dump_config(outf):
     print >> outf,"\nsettings.py (affected by the below env. vars):"
 #    book = {}
-    for key, value in sorted(settings.__dict__.iteritems()):
+    for key, value in sorted(settings.__dict__.items()):
         if not (key.startswith('__') or key.startswith('_')):
             print >> outf,"%-24s%-56s" % (key,str(value))
     print >> outf,"\nenvironment variables (overrides settings.py):"

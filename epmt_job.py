@@ -207,7 +207,7 @@ def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
     line = file.readline()
     while line:
         line = line.strip()
-        if len(line) == 0 or line.startswith(comment):
+        if len(line) == 0 or (str(line)).startswith(comment):
             if rows == 0:
                 retstr = line[1:].lstrip()
             rows += 1
@@ -442,7 +442,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     # a pid_map is used to create the process graph
     pid_map = {}  # maps pids to process objects
 
-    for hostname, files in filedict.iteritems():
+    for hostname, files in filedict.items():
         logger.debug("Processing host %s",hostname)
         # we only need to a lookup_or_create_host if papiex doesn't
         # have a hostname column
