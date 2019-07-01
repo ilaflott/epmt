@@ -1,4 +1,4 @@
-from epmt_query import get_jobs, get_procs, get_refmodels, get_thread_metrics, get_job_proc_tags
+from epmt_query import get_jobs, get_procs, get_refmodels, get_thread_metrics, get_job_proc_tags, get_op_metrics
 from logging import getLogger
 from epmtlib import kwargify
 #import pandas
@@ -17,9 +17,12 @@ def epmt_list(arglist):
     if arglist[0] == "procs":
         arglist = arglist[1:]
         return(epmt_list_procs(arglist))
-    if arglist[0] == "threadmetrics":
+    if arglist[0] == "thread_metrics":
         arglist = arglist[1:]
-        return(epmt_list_threadmetrics(arglist))
+        return(epmt_list_thread_metrics(arglist))
+    if arglist[0] == "op_metrics":
+        arglist = arglist[1:]
+        return(epmt_list_op_metrics(arglist))
     if arglist[0] == "job_proc_tags":
         arglist = arglist[1:]
         return(epmt_list_job_proc_tags(arglist))
@@ -50,10 +53,20 @@ def epmt_list_procs(arglist):
 
 def epmt_list_thread_metrics(arglist):
     logger.info("epmt_list_thread_metrics: %s",str(arglist))
+    arglist = list(map(int, arglist))
+    tm = get_thread_metrics(arglist)
+    if tm.empty:
+        logger.info("get_thread_metrics %s returned no thread metrics\n",str(arglist))
+        return False
+    print(tm)
+    return True
+
+def epmt_list_op_metrics(arglist):
+    logger.info("epmt_list_op_metrics: %s",str(arglist))
     kwargs = kwargify(arglist)
-    jobs = get_thread_metrics(**kwargs)
+    jobs = get_op_metrics(**kwargs)
     if len(jobs) == 0:
-        logger.info("get_thread_metrics %s returned no thread metrics\n",str(kwargs))
+        logger.info("get_op_metrics %s returned no op metrics\n",str(kwargs))
         return False
     print(jobs)
     return True
