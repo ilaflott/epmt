@@ -451,6 +451,10 @@ def get_thread_metrics(*processes):
 # If 'fold' is set, then tags will be merged to compact the output
 # otherwise, the expanded list of dictionaries is returned
 # 'exclude' is an optional list of keys to exclude from each tag (if present)
+@db_session
+def get_job_proc_tags(jobs = [], exclude=[], fold=False):
+    return(job_proc_tags(jobs=jobs,exclude=exclude,fold=fold))
+
 def job_proc_tags(jobs = [], exclude=[], fold=False):
     jobs = __jobs_col(jobs)
     tags = []
