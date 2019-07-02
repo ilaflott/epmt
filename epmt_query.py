@@ -685,7 +685,7 @@ def __unique_proc_tags_for_job(job, exclude=[], fold=True):
 # Notebook compat function
 @db_session
 def op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas'):
-    return(get_op_metrics(jobs,tags,exact_tags_only,fmt))
+    return get_op_metrics(jobs,tags,exact_tags_only,fmt)
 
 # returns a list of dicts (or dataframe), each row is of the form:
 # <job-id>,<tag>, metric1, metric2, etc..
@@ -708,6 +708,9 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas'):
         jobs = [jobs]
 
     tags = tags_list(tags) if tags else job_proc_tags(jobs, fold=False)
+    if not tags:
+        logger.warning('No tags found across all processes of job(s)')
+        return None
 
     all_procs = []
     # we iterate over tags, where each tag is dictionary

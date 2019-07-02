@@ -3,6 +3,7 @@ from epmt_query import get_jobs, get_procs, get_refmodels, get_thread_metrics, g
 from logging import getLogger
 from epmtlib import kwargify
 from sys import stderr
+from pandas import DataFrame
 #import pandas
 logger = getLogger(__name__)  # you can use other name
 
@@ -70,7 +71,7 @@ def epmt_list_op_metrics(arglist):
     logger.info("epmt_list_op_metrics: %s",str(arglist))
     kwargs = kwargify(arglist)
     ops = get_op_metrics(**kwargs)
-    if not ops or (len(ops) == 0):
+    if (type(ops) != DataFrame) or (len(ops) == 0):
         logger.info("get_op_metrics %s returned no op metrics\n",str(kwargs))
         return False
     print(ops)
