@@ -133,7 +133,7 @@ class OutliersAPI(unittest.TestCase):
     @db_session
     def test_partition_jobs(self):
         jobs = eq.get_jobs(tag='launch_id:6656', fmt='orm')
-        self.assertEqual(jobs.count(), 4, "incorrect job count using tags")
+        self.assertEqual(len(jobs), 4, "incorrect job count using tags")
         parts = eod.partition_jobs(jobs, fmt='terse')
         self.assertEqual(len(parts), 3, "incorrect count of items in partition dict")
         self.assertEqual(parts['cpu_time'], (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-194024', u'kern-6656-20190614-191138']), set([u'kern-6656-20190614-192044-outlier'])))

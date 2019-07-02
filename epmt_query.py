@@ -2,7 +2,7 @@ from __future__ import print_function
 from sys import stderr
 from datetime import datetime
 import pandas as pd
-from pony.orm.core import Query
+from pony.orm.core import Query, QueryResult
 from pony.orm import *
 from json import loads, dumps
 from os import environ
@@ -91,7 +91,7 @@ def conv_procs_orm(procs, merge_sums = True, fmt='dict'):
 # You should not use this function directly, but instead use
 # conv_jobs()
 def __jobs_col(jobs):
-    if (type(jobs) == Query):
+    if type(jobs) in [Query, QueryResult]:
         return jobs
     if ((type(jobs) != pd.DataFrame) and not(jobs)):
         return Job.select()
@@ -205,8 +205,10 @@ def root(job, fmt='dict'):
 #               order = 'desc(j.duration)'
 #          or, to sort jobs by the sum of durations of their processes, do:
 #               order = lambda j: sum(j.processes.duration)
+#          If not set, this defaults to desc(j.created_at), in other words
+#          jobs are returned in the reverse order of ingestion.
 #
-# limit  : Restrict the output list a specified number of jobs
+# limit  : Restrict the output list a specified number of jobs. Defaults to 20.
 #
 # when   : Restrict the output to jobs running at 'when' time. 'when'
 #          can be specified as a Python datetime. You can also choose
@@ -239,7 +241,7 @@ def root(job, fmt='dict'):
 #
 #
 @db_session
-def get_jobs(jobs = [], tag=None, fltr = '', order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tag_only = False):
+def get_jobs(jobs = [], tag=None, fltr = '', order = 'desc(j.created_at)', limit = 20, when=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tag_only = False):
     qs = __jobs_col(jobs)
 
     # filter using tag if set

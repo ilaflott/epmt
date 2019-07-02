@@ -5,7 +5,7 @@ from sys import stderr, exit
 from glob import glob
 from pony.orm import db_session
 from models import db
-from pony.orm.core import Query
+from pony.orm.core import Query, QueryResult
 import pandas as pd
 import datetime
 
@@ -30,7 +30,7 @@ def setUpModule():
     setup_orm_db(settings, drop=True)
     datafiles='test/data/query/*.tgz'
     print('\nsetUpModdule: importing {0}'.format(datafiles))
-    epmt_submit(glob(datafiles), dry_run=False)
+    epmt_submit(sorted(glob(datafiles)), dry_run=False)
     
 
 def tearDownModule():
@@ -59,6 +59,7 @@ class QueryAPI(unittest.TestCase):
         jobs = eq.get_jobs(fmt='terse')
         self.assertEqual(type(jobs), list, 'wrong jobs format with terse')
         self.assertEqual(len(jobs), 3, 'job count in db wrong')
+        self.assertEqual(jobs, [u'685016', u'685003', u'685000'], 'job ordering not in reverse order of submission')
         df = eq.get_jobs(fmt='pandas')
         self.assertEqual(df.shape, (3, 47), 'wrong jobs dataframe shape')
         df = eq.get_jobs('685016', fmt='pandas')
@@ -70,7 +71,7 @@ class QueryAPI(unittest.TestCase):
     @db_session
     def test_jobs_advanced(self):
         jobs = eq.get_jobs(fltr=lambda j: '685000' not in j.jobid, fmt='orm')
-        self.assertEqual(jobs.count(), 2, 'jobs orm query with filter option')
+        self.assertEqual(len(jobs), 2, 'jobs orm query with filter option')
         jobs = eq.get_jobs(tag='exp_component:ocean_month_rho2_1x1deg', fmt='terse')
         self.assertEqual(len(jobs), 1, 'jobs query with tag option')
         jobs = eq.get_jobs(tag='', fmt='terse')
@@ -124,7 +125,7 @@ class QueryAPI(unittest.TestCase):
                     self.assertEqual(type(out), list,'output format not terse when input fmt: {0}'.format(inp_fmt))
                     self.assertEqual(sorted(out), sorted(ref), 'error in {0} -> {1}'.format(inp_fmt, out_fmt))
                 elif out_fmt == 'orm':
-                    self.assertEqual(type(out), Query,'output format not ORM when input fmt: {0}'.format(inp_fmt))
+                    self.assertIn(type(out), [Query, QueryResult],'output format not ORM when input fmt: {0}'.format(inp_fmt))
                     self.assertEqual(sorted([j.jobid for j in out]), sorted(ref), 'error in {0} -> {1}'.format(inp_fmt, out_fmt))
                 elif out_fmt == 'dict':
                     self.assertTrue((type(out) == list) and (type(out[0]) == dict),'output format not dictlist when input fmt: {0}'.format(inp_fmt))

@@ -5,7 +5,7 @@ import numpy as np
 import operator
 import epmt_query as eq
 from pony.orm import db_session
-from pony.orm.core import Query
+from pony.orm.core import Query, QueryResult
 from models import ReferenceModel
 from logging import getLogger
 from json import dumps, loads
@@ -136,10 +136,9 @@ def partition_jobs_by_ops(jobs, tags=[], features=FEATURES, methods=[modified_z_
 #                [])}
 @db_session
 def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds = thresholds):
-    # if we have a non-empty list of job ids then get a pandas df
-    # using get_jobs to convert the format
-    if type(jobs) == list or type(jobs) == Query:
-        jobs = eq.get_jobs(jobs, fmt='pandas')
+    # if we don't have a dataframe, get one
+    if type(jobs) != pd.DataFrame:
+        jobs = eq.conv_jobs(jobs, fmt='pandas')
 
     model_params = {}
     if trained_model:
@@ -416,11 +415,11 @@ def detect_outlier_processes(processes, trained_model=None,
 @db_session
 def detect_rootcause(jobs, inp, features = FEATURES,  methods = [modified_z_score]):
     if type(jobs) == int:
-        jobs = eq.get_jobs(ReferenceModel[jobs].jobs, fmt='pandas')
+        jobs = eq.conv_jobs(ReferenceModel[jobs].jobs, fmt='pandas')
     elif type(jobs) != pd.DataFrame:
-        jobs = eq.get_jobs(jobs, fmt='pandas')
-    if isString(inp) or (type(inp) == Query):
-        inp = eq.get_jobs(inp, fmt='pandas')
+        jobs = eq.conv_jobs(jobs, fmt='pandas')
+    if type(inp) != pd.DataFrame:
+        inp = eq.conv_jobs(inp, fmt='pandas')
     return rca(jobs, inp, features, methods)
 
 # This function does an RCA for outlier ops
@@ -464,9 +463,9 @@ def detect_rootcause_op(jobs, inp, tag, features = FEATURES,  methods = [modifie
         print('You must specify a non-empty tag')
         return (False, None, None)
     if type(jobs) == int:
-        jobs = eq.get_jobs(ReferenceModel[jobs].jobs, fmt='orm')
-    jobs = eq.__jobs_col(jobs)
-    inp = eq.__jobs_col(inp)
+        jobs = eq.conv_jobs(ReferenceModel[jobs].jobs, fmt='orm')
+    jobs = eq.conv_jobs(jobs, fmt='orm')
+    inp = eq.conv_jobs(inp, fmt='orm')
     if len(inp) > 1:
         print('You can only do RCA for a single "inp" job')
         return (False, None, None)
