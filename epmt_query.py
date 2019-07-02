@@ -209,6 +209,7 @@ def root(job, fmt='dict'):
 #          jobs are returned in the reverse order of ingestion.
 #
 # limit  : Restrict the output list a specified number of jobs. Defaults to 20.
+#          When set to 0, it means no limit
 #
 # when   : Restrict the output to jobs running at 'when' time. 'when'
 #          can be specified as a Python datetime. You can also choose
@@ -241,7 +242,13 @@ def root(job, fmt='dict'):
 #
 #
 @db_session
-def get_jobs(jobs = [], tag=None, fltr = '', order = 'desc(j.created_at)', limit = 20, when=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tag_only = False):
+def get_jobs(jobs = [], tag=None, fltr = '', order = None, limit = None, when=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tag_only = False):
+
+    # set defaults for limit and ordering only if the user doesn't specify jobs
+    if jobs in [[], '', None]:
+        if limit == None: limit = 20
+        if order == None: order = 'desc(j.created_at)'
+      
     qs = __jobs_col(jobs)
 
     # filter using tag if set
