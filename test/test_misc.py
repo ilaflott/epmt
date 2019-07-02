@@ -60,8 +60,10 @@ class EPMTCmds(unittest.TestCase):
             retval = epmt_list_op_metrics(['685000'])
         self.assertTrue(retval, 'wrong list op_metrics return type')
     def test_list_thread_metrics(self):
+        p = eq.root('685000', fmt='terse')
+        self.assertTrue(p, 'empty root process')
         with capture() as (out,err):
-            retval = epmt_list_thread_metrics(["1"])
+            retval = epmt_list_thread_metrics([p])
         self.assertEqual(type(retval), bool, 'wrong list jobs return type')
         self.assertEqual(retval, True, 'wrong list jobs return value')
     def test_list_job_proc_tags(self):
