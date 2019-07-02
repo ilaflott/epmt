@@ -12,7 +12,7 @@ from epmtlib import tag_from_string, tags_list, set_logging, init_settings, sum_
 from epmt_stat import modified_z_score
 
 logger = getLogger(__name__)  # you can use other name
-set_logging(2, check=True)
+set_logging(0, check=True)
 
 # put epmt imports after this test
 if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
@@ -460,6 +460,7 @@ def get_thread_metrics(*processes):
 def get_job_proc_tags(jobs = [], exclude=[], fold=False):
     return(job_proc_tags(jobs=jobs,exclude=exclude,fold=fold))
 
+@db_session
 def job_proc_tags(jobs = [], exclude=[], fold=False):
     jobs = __jobs_col(jobs)
     tags = []
@@ -668,9 +669,9 @@ def __unique_proc_tags_for_job(job, exclude=[], fold=True):
         job = Job[job]
     proc_sums = getattr(job, PROC_SUMS_FIELD_IN_JOB, {})
     tags = []
-    if proc_sums:
+    try:
         tags = proc_sums[settings.all_tags_field]
-    else:
+    except:
         # if we haven't found it the easy way, do the heavy compute
         import numpy as np
         tags = np.unique(np.array(job.processes.tags)).tolist()
@@ -682,7 +683,7 @@ def __unique_proc_tags_for_job(job, exclude=[], fold=True):
     return fold_dicts(tags) if fold else tags
 
 # Notebook compat function
-
+@db_session
 def op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas'):
     return(get_op_metrics(jobs,tags,exact_tags_only,fmt))
 
@@ -699,6 +700,10 @@ def op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas'):
 #
 @db_session
 def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas'):
+    if not jobs:
+        logger.warning('You need to specify one or more jobs for op_metrics')
+        return None
+
     if isString(jobs):
         jobs = [jobs]
 

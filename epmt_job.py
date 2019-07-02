@@ -545,6 +545,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         j.proc_sums[settings.all_tags_field] = [ loads(t) for t in all_tags ]
     else:
         logger.debug('no process tags found')
+        j.proc_sums[settings.all_tags_field] = []
         
     # Add all processes to job and compute process totals to add to
     # job.proc_sums field

@@ -1,6 +1,8 @@
+from __future__ import print_function
 from epmt_query import get_jobs, get_procs, get_refmodels, get_thread_metrics, get_job_proc_tags, get_op_metrics
 from logging import getLogger
 from epmtlib import kwargify
+from sys import stderr
 #import pandas
 logger = getLogger(__name__)  # you can use other name
 
@@ -62,13 +64,16 @@ def epmt_list_thread_metrics(arglist):
     return True
 
 def epmt_list_op_metrics(arglist):
+    if not arglist:
+        print('You must to specify one more more jobs to get op_metrics', file=stderr)
+        return False
     logger.info("epmt_list_op_metrics: %s",str(arglist))
     kwargs = kwargify(arglist)
-    jobs = get_op_metrics(**kwargs)
-    if len(jobs) == 0:
+    ops = get_op_metrics(**kwargs)
+    if not ops or (len(ops) == 0):
         logger.info("get_op_metrics %s returned no op metrics\n",str(kwargs))
         return False
-    print(jobs)
+    print(ops)
     return True
 
 def epmt_list_refmodels(arglist):
