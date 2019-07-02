@@ -245,7 +245,7 @@ def root(job, fmt='dict'):
 def get_jobs(jobs = [], tag=None, fltr = '', order = None, limit = None, when=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tag_only = False):
 
     # set defaults for limit and ordering only if the user doesn't specify jobs
-    if jobs in [[], '', None]:
+    if (type(jobs) not in [Query, QueryResult, pd.DataFrame]) and (jobs in [[], '', None]):
         if limit == None: limit = 20
         if order == None: order = 'desc(j.created_at)'
       
