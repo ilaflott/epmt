@@ -70,6 +70,8 @@ class QueryAPI(unittest.TestCase):
 
     @db_session
     def test_jobs_advanced(self):
+        jobs = eq.get_jobs(fmt='terse', limit=2, offset=1)
+        self.assertEqual(jobs, [u'685003', u'685000'], 'job limit/offset not working')
         jobs = eq.get_jobs(fltr=lambda j: '685000' not in j.jobid, fmt='orm')
         self.assertEqual(len(jobs), 2, 'jobs orm query with filter option')
         jobs = eq.get_jobs(tag='exp_component:ocean_month_rho2_1x1deg', fmt='terse')

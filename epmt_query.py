@@ -211,6 +211,9 @@ def root(job, fmt='dict'):
 # limit  : Restrict the output list a specified number of jobs. Defaults to 20.
 #          When set to 0, it means no limit
 #
+# offset : When returning query results, skip offset rows. "offset"
+#          defaults to 0. 
+#
 # when   : Restrict the output to jobs running at 'when' time. 'when'
 #          can be specified as a Python datetime. You can also choose
 #          to specify 'when' as jobid or a Job object. In which 
@@ -242,7 +245,7 @@ def root(job, fmt='dict'):
 #
 #
 @db_session
-def get_jobs(jobs = [], tag=None, fltr = '', order = None, limit = None, when=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tag_only = False):
+def get_jobs(jobs = [], tag=None, fltr = '', order = None, limit = None, offset = 0, when=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tag_only = False):
 
     # set defaults for limit and ordering only if the user doesn't specify jobs
     if (type(jobs) not in [Query, QueryResult, pd.DataFrame]) and (jobs in [[], '', None]):
@@ -289,7 +292,10 @@ def get_jobs(jobs = [], tag=None, fltr = '', order = None, limit = None, when=No
 
     # finally set limits on the number of jobs returned
     if limit:
-        qs = qs.limit(int(limit))
+        qs = qs.limit(int(limit), offset=offset)
+    else:
+        if offset:
+            qs = qs.limit(offset=offset)
 
     if fmt == 'orm':
         return qs
