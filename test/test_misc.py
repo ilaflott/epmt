@@ -16,9 +16,8 @@ environ['EPMT_USE_DEFAULT_SETTINGS'] = "1"
 from epmt_job import setup_orm_db
 from epmtlib import timing, set_logging, capture
 from epmt_cmds import epmt_submit
-set_logging(-1)
 from epmt_cmd_delete import epmt_delete_jobs
-from epmt_cmd_list import  epmt_list_jobs
+from epmt_cmd_list import  epmt_list_jobs, epmt_list_procs, epmt_list_job_proc_tags, epmt_list_refmodels, epmt_list_op_metrics, epmt_list_thread_metrics
 import epmt_query as eq
 import epmt_default_settings as settings
 from models import Job
@@ -28,7 +27,8 @@ def setUpModule():
     if settings.db_params.get('filename') != ':memory:':
         print('db_params MUST use in-memory sqlite for testing', file=stderr)
         exit(1)
-    setup_orm_db(settings, drop=True)
+    set_logging(-1)
+    setup_orm_db(settings, drop=False)
     datafiles='test/data/misc/*.tgz'
     print('\nsetUpModule: importing {0}'.format(datafiles))
     epmt_submit(glob(datafiles), dry_run=False)
@@ -38,27 +38,38 @@ def tearDownModule():
 
 class EPMTCmds(unittest.TestCase):
     def test_list_jobs(self):
-        jobs = eq.get_jobs(fmt='terse')
-        self.assertEqual(type(jobs), list, 'wrong jobs format with terse')
         with capture() as (out,err):
-            listed_jobs = epmt_list_jobs([])
-        self.assertEqual(type(listed_jobs), bool, 'wrong list jobs return type')
-        self.assertEqual(listed_jobs, True, 'wrong list jobs return value')
-# Currently an exception, but should just return False
-#        listed_jobs = epmt_list_jobs(['685003', 'fmt=terse'])
-#        self.assertEqual(listed_jobs, True, 'wrong list job return value with terse and job')
-    def test_delete_jobs(self):
-        jobs = eq.get_jobs(fmt='terse')
-        n = len(jobs)
-        #settings.allow_job_deletion = True
-        self.assertEqual(epmt_delete_jobs(['685000']), 1, 'deletion of job failed')
-        jobs = eq.get_jobs(fmt='terse')
-        self.assertEqual(len(jobs), n-1, 'job count in db wrong after delete')
-
-class DataImport(unittest.TestCase):
-    @db_session
-    def test_job_exitcode(self):
-        self.assertEqual(Job['failed-exitcode'].exitcode, 2, 'wrong job exit code synthesized')
+            retval = epmt_list_jobs([])
+        self.assertEqual(type(retval), bool, 'wrong list jobs return type')
+        self.assertEqual(retval, True, 'wrong list jobs return value')
+        with capture() as (out,err):
+            retval = epmt_list_jobs(["685000"])
+        self.assertEqual(type(retval), bool, 'wrong list jobs return type')
+        self.assertEqual(retval, True, 'wrong list jobs return value')
+    def test_list_procs(self):
+        with capture() as (out,err):
+            retval = epmt_list_procs(["685000"])
+        self.assertEqual(type(retval), bool, 'wrong list jobs return type')
+        self.assertEqual(retval, True, 'wrong list jobs return value')
+    def test_list_refmodels(self):
+        with capture() as (out,err):
+            retval = epmt_list_refmodels([])
+        self.assertEqual(retval, False, 'wrong list jobs return value')
+    def test_list_op_metrics(self):
+        with capture() as (out,err):
+            retval = epmt_list_op_metrics([])
+        self.assertEqual(type(retval), bool, 'wrong list jobs return type')
+        self.assertEqual(retval, True, 'wrong list jobs return value')
+    def test_list_thread_metrics(self):
+        with capture() as (out,err):
+            retval = epmt_list_thread_metrics(["1"])
+        self.assertEqual(type(retval), bool, 'wrong list jobs return type')
+        self.assertEqual(retval, True, 'wrong list jobs return value')
+    def test_list_job_proc_tags(self):
+        with capture() as (out,err):
+            retval = epmt_list_job_proc_tags(["685000"])
+        self.assertEqual(type(retval), bool, 'wrong list jobs return type')
+        self.assertEqual(retval, True, 'wrong list jobs return value')
 
 
 if __name__ == '__main__':

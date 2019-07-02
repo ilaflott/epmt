@@ -221,8 +221,6 @@ def kwargify(list_of_str):
                 myDict[a] = b
     if myDict.get('jobs') == None and jobs:
         myDict['jobs'] = jobs
-    if myDict.get('fmt') == None:
-        myDict['fmt'] = 'terse'
     return myDict
 
 # this function recursively converts a dict of byte k/v pairs to

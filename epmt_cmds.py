@@ -830,8 +830,8 @@ def epmt_entrypoint(args, help):
         from epmt_cmd_delete import epmt_delete_jobs
         return(epmt_delete_jobs(args.epmt_cmd_args) == False)
     if args.epmt_cmd == 'list':
-        from epmt_cmd_list import epmt_list_jobs
-        return(epmt_list_jobs(args.epmt_cmd_args) == False)
+        from epmt_cmd_list import epmt_list
+        return(epmt_list(args.epmt_cmd_args) == False)
     logger.error("Unknown command, %s. See -h for options.",args.epmt_cmd)
     exit(1)
 

@@ -12,7 +12,7 @@ from epmtlib import tag_from_string, tags_list, set_logging, init_settings, sum_
 from epmt_stat import modified_z_score
 
 logger = getLogger(__name__)  # you can use other name
-set_logging(0, check=True)
+set_logging(2, check=True)
 
 # put epmt imports after this test
 if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
@@ -416,7 +416,9 @@ def get_procs(jobs = [], tag = None, fltr = None, order = '', limit = 0, when=No
 
 
 
-# returns thread metrics dataframe for one or more processes
+# Returns:
+# thread metrics dataframe for one or more processes
+# None if error
 # where each process is specified as either as a Process object or 
 # the database ID of a process.
 # If multiple processes are specified then dataframes are concatenated
@@ -427,6 +429,9 @@ def get_thread_metrics(*processes):
     # spread out arguments
     if type(processes[0]) == list:
         processes = processes[0]
+    if len(processes) == 0:
+        logger.warning("get_thread_metrics must be given one or more Process objects or primary keys")
+        return pd.DataFrame()
 
     df_list = []
     for proc in processes:
@@ -451,6 +456,10 @@ def get_thread_metrics(*processes):
 # If 'fold' is set, then tags will be merged to compact the output
 # otherwise, the expanded list of dictionaries is returned
 # 'exclude' is an optional list of keys to exclude from each tag (if present)
+@db_session
+def get_job_proc_tags(jobs = [], exclude=[], fold=False):
+    return(job_proc_tags(jobs=jobs,exclude=exclude,fold=fold))
+
 def job_proc_tags(jobs = [], exclude=[], fold=False):
     jobs = __jobs_col(jobs)
     tags = []
@@ -625,7 +634,7 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
         elif type(op_tags) == dict:
             op_tags = [op_tags]
         # let's get the dataframe of metrics aggregated by op_tags
-        ops_df = op_metrics(jobs = jobs, tags = op_tags, exact_tags_only = exact_tag_only, fmt='pandas')
+        ops_df = get_op_metrics(jobs = jobs, tags = op_tags, exact_tags_only = exact_tag_only, fmt='pandas')
         scores = {}
         for t in op_tags:
             # serialize the tag so we can use it as a key
@@ -672,6 +681,10 @@ def __unique_proc_tags_for_job(job, exclude=[], fold=True):
 
     return fold_dicts(tags) if fold else tags
 
+# Notebook compat function
+
+def op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas'):
+    return(get_op_metrics(jobs,tags,exact_tags_only,fmt))
 
 # returns a list of dicts (or dataframe), each row is of the form:
 # <job-id>,<tag>, metric1, metric2, etc..
@@ -685,7 +698,7 @@ def __unique_proc_tags_for_job(job, exclude=[], fold=True):
 # In this function, fmt is only allowed 'pandas' or 'dict'
 #
 @db_session
-def op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas'):
+def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas'):
     if isString(jobs):
         jobs = [jobs]
 
