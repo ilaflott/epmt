@@ -478,9 +478,6 @@ def get_thread_metrics(*processes):
 # If 'fold' is set, then tags will be merged to compact the output
 # otherwise, the expanded list of dictionaries is returned
 # 'exclude' is an optional list of keys to exclude from each tag (if present)
-@db_session
-def get_job_proc_tags(jobs = [], exclude=[], fold=False):
-    return(job_proc_tags(jobs=jobs,exclude=exclude,fold=fold))
 
 @db_session
 def job_proc_tags(jobs = [], exclude=[], fold=False):
@@ -492,6 +489,9 @@ def job_proc_tags(jobs = [], exclude=[], fold=False):
     # remove duplicates
     tags = unique_dicts(tags, exclude)
     return fold_dicts(tags) if fold else tags
+
+# alias job_proc_tags for compat
+get_job_proc_tags = job_proc_tags
 
 
 # This function returns reference models filtered using tag and fltr
@@ -729,10 +729,6 @@ def __unique_proc_tags_for_job(job, exclude=[], fold=True):
 
     return fold_dicts(tags) if fold else tags
 
-# Notebook compat function
-@db_session
-def op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas'):
-    return get_op_metrics(jobs,tags,exact_tags_only,fmt)
 
 # returns a list of dicts (or dataframe), each row is of the form:
 # <job-id>,<tag>, metric1, metric2, etc..
@@ -789,6 +785,9 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas'):
 
     # we assume the user wants the output in the form of a list of dicts
     return all_procs
+
+# alias for get_op_metrics, for compat
+op_metrics = get_op_metrics
 
 # this function deletes one or more jobs
 # It requires 'force' to be set if number of jobs to delete > 1
