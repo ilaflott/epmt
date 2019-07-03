@@ -45,16 +45,16 @@ def init_settings(settings):
         settings.jobid_env_list = [ "SLURM_JOB_ID", "SLURM_JOBID", "PBS_JOB_ID" ]
     if not hasattr(settings, 'verbose'):
         logger.warning("missing settings.verbose")
-        settings.verbose = 0
+        settings.verbose = 1
     if not hasattr(settings, 'stage_command'):
         logger.warning("missing settings.stage_command ")
         settings.stage_command = "cp"
     if not hasattr(settings, 'stage_command_dest'):
         logger.warning("missing settings.stage_command_dest")
         settings.stage_command_dest = "."
-    # if not hasattr(settings, 'allow_job_deletion'):
-    #     logger.warning("missing settings.allow_job_deletion")
-    #     settings.allow_job_deletion = False
+    if not hasattr(settings, 'input_pattern'):
+        logger.warning("missing settings.input_pattern")
+        settings.input_pattern = "*-papiex-*-[0-9]*.csv"
     if not hasattr(settings, 'per_process_fields'):
         logger.warning("missing settings.per_process_fields")
         settings.per_process_fields = ["tags","hostname","exename","path","args","exitcode","pid","generation","ppid","pgid","sid","numtids"]
@@ -64,6 +64,16 @@ def init_settings(settings):
     if not hasattr(settings, 'all_tags_field'):
         logger.warning("missing settings.all_tags_field")
         settings.all_tags_field = 'all_proc_tags'
+    if not hasattr(settings, 'outlier_thresholds'):
+        logger.warning("missing settings.outlier_thresholds")
+        settings.outlier_thresholds = { 'modified_z_score': 2.5, 'iqr': [20,80], 'z_score': 3.0 }
+    if not hasattr(settings, 'outlier_features'):
+        logger.warning("missing settings.outlier_features")
+        settings.outlier_features = ['duration', 'cpu_time', 'num_procs']
+    if not hasattr(settings, 'db_params'):
+        logger.error("missing settings.db_params")
+        sys.exit(1)
+
 
 def timing(f):
     @wraps(f)

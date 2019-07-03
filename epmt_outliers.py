@@ -21,7 +21,7 @@ if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
 else:
     import settings
 
-FEATURES = settings.outlier_features if hasattr(settings, 'outlier_features') else ['duration', 'cpu_time', 'num_procs']
+FEATURES = settings.outlier_features
 
 
 # This function partitions jobs using one feature at a time

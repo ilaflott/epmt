@@ -15,7 +15,7 @@ else:
 
 
 # this sets the defaults to be used when a trained model is not provided
-thresholds = settings.outlier_thresholds if hasattr(settings, 'outlier_thresholds') else { 'modified_z_score': 2.5, 'iqr': [20,80], 'z_score': 3.0 }
+thresholds = settings.outlier_thresholds 
 
 # These all return a tuple containing a list of indicies
 # For 1-D this is just a tuple with one element that is a list of rows
