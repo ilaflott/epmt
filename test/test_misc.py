@@ -4,21 +4,23 @@ import unittest
 from sys import stderr, exit
 from glob import glob
 from pony.orm import db_session
+from os import environ
 #from models import db
 #from pony.orm.core import Query
 #import pandas as pd
-import datetime
 
-# put this above all epmt imports so they use defaults
-from os import environ
+# put this above all epmt imports
 environ['EPMT_USE_DEFAULT_SETTINGS'] = "1"
+from epmtlib import set_logging
+set_logging(-1)
 
+# Put EPMT imports only after we have called set_logging()
+import epmt_query as eq
 from epmt_job import setup_orm_db
-from epmtlib import timing, set_logging, capture
+from epmtlib import timing, capture
 from epmt_cmds import epmt_submit
 from epmt_cmd_delete import epmt_delete_jobs
 from epmt_cmd_list import  epmt_list_jobs, epmt_list_procs, epmt_list_job_proc_tags, epmt_list_refmodels, epmt_list_op_metrics, epmt_list_thread_metrics
-import epmt_query as eq
 import epmt_default_settings as settings
 from models import Job
 
@@ -27,10 +29,10 @@ def setUpModule():
     if settings.db_params.get('filename') != ':memory:':
         print('db_params MUST use in-memory sqlite for testing', file=stderr)
         exit(1)
-    set_logging(-1)
     setup_orm_db(settings, drop=False)
+    print('\n' + str(settings.db_params))
     datafiles='test/data/misc/*.tgz'
-    print('\nsetUpModule: importing {0}'.format(datafiles))
+    print('setUpModule: importing {0}'.format(datafiles))
     epmt_submit(glob(datafiles), dry_run=False)
     
 def tearDownModule():

@@ -9,14 +9,15 @@ from pony.orm.core import Query, QueryResult
 import pandas as pd
 import datetime
 
-# put this above all epmt imports so they use defaults
+# put this above all epmt imports
 from os import environ
 environ['EPMT_USE_DEFAULT_SETTINGS'] = "1"
-
-from epmtlib import set_logging, timing
+from epmtlib import set_logging
 set_logging(-1)
 
+# Put EPMT imports only after we have called set_logging()
 import epmt_query as eq
+from epmtlib import timing
 from epmt_job import setup_orm_db
 from epmt_cmds import epmt_submit
 import epmt_default_settings as settings
@@ -28,8 +29,9 @@ def setUpModule():
         print('db_params MUST use in-memory sqlite for testing', file=stderr)
         exit(1)
     setup_orm_db(settings, drop=True)
+    print('\n' + str(settings.db_params))
     datafiles='test/data/query/*.tgz'
-    print('\nsetUpModdule: importing {0}'.format(datafiles))
+    print('setUpModdule: importing {0}'.format(datafiles))
     epmt_submit(sorted(glob(datafiles)), dry_run=False)
     
 

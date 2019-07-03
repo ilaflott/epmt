@@ -3,12 +3,14 @@ from os import environ
 import pandas as pd
 import numpy as np
 import operator
-import epmt_query as eq
 from pony.orm import db_session
 from pony.orm.core import Query, QueryResult
 from models import ReferenceModel
 from logging import getLogger
 from json import dumps, loads
+
+# the first epmt import must be epmt_query as it sets up logging
+import epmt_query as eq
 from epmtlib import tags_list, tag_from_string, dict_in_list, isString
 from epmt_stat import thresholds, modified_z_score,outliers_iqr,outliers_modified_z_score,rca
 

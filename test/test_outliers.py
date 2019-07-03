@@ -3,18 +3,20 @@ from __future__ import print_function
 import unittest
 from sys import stderr, exit
 from glob import glob
+from os import environ
 from pony.orm import db_session
 from models import db
 
 # put this above all epmt imports so they use defaults
-from os import environ
 environ['EPMT_USE_DEFAULT_SETTINGS'] = "1"
 
-from epmtlib import set_logging, timing
+from epmtlib import set_logging
 set_logging(-1)
 
+# Put EPMT imports only after we have called set_logging()
 import epmt_query as eq
 import epmt_outliers as eod
+from epmtlib import timing
 from epmt_cmds import epmt_submit
 from epmt_job import setup_orm_db
 import epmt_default_settings as settings
@@ -25,8 +27,9 @@ def setUpModule():
         print('db_params MUST use in-memory sqlite for testing', file=stderr)
         exit(1)
     setup_orm_db(settings, drop=True)
+    print('\n' + str(settings.db_params))
     datafiles='test/data/outliers/*.tgz'
-    print('\nsetUpModule: importing {0}'.format(datafiles))
+    print('setUpModule: importing {0}'.format(datafiles))
     epmt_submit(glob(datafiles), dry_run=False)
 
 def tearDownModule():

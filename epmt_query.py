@@ -7,22 +7,29 @@ from pony.orm import *
 from json import loads, dumps
 from os import environ
 from logging import getLogger
-from models import Job, Process, ReferenceModel, Host
-from epmtlib import tag_from_string, tags_list, set_logging, init_settings, sum_dicts, unique_dicts, fold_dicts, isString
-from epmt_stat import modified_z_score
 
+# do NOT do any epmt imports until logging is set up
+# using set_logging, other than import set_logging
+from epmtlib import set_logging
 logger = getLogger(__name__)  # you can use other name
-set_logging(0, check=True)
-
-# put epmt imports after this test
 if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
-    logger.warning('ignoring settings.py and using defaults in epmt_default_settings')
+    using_default_settings=True
     import epmt_default_settings as settings
 else:
+    using_default_settings=False
     import settings
+
+# now correct the logging level based on settings.verbose
+set_logging(settings.verbose if hasattr(settings, 'verbose') else 0, check=True)
+
+### Put EPMT imports below, after logging is set up
+from models import Job, Process, ReferenceModel, Host
+from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString
+from epmt_stat import modified_z_score
 from epmt_job import setup_orm_db
 
-
+if using_default_settings:
+    logger.warning('ignoring settings.py and using defaults in epmt_default_settings')
 
 init_settings(settings)
 setup_orm_db(settings)
