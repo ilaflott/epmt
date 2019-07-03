@@ -55,18 +55,18 @@ def blacklist_filter(filter=None, **env):
     return env2
 
 def dump_config(outf):
-    print >> outf,"\nsettings.py (affected by the below env. vars):"
+    print("\nsettings.py (affected by the below env. vars):", file=outf)
 #    book = {}
     for key, value in sorted(settings.__dict__.items()):
         if not (key.startswith('__') or key.startswith('_')):
-            print >> outf,"%-24s%-56s" % (key,str(value))
-    print >> outf,"\nenvironment variables (overrides settings.py):"
+            print("%-24s%-56s" % (key,str(value)), file=outf)
+    print("\nenvironment variables (overrides settings.py):", outf)
     for v in [ "PAPIEX_OSS_PATH", "PAPIEX_OUTPUT", "EPMT_DB_PROVIDER", "EPMT_DB_USER", "EPMT_DB_PASSWORD", "EPMT_DB_HOST", "EPMT_DB_DBNAME", "EPMT_DB_FILENAME" ]:
 #                "provider", "user", "password", "host", "dbname", "filename" ]:
 # "PAPIEX_OPTIONS","PAPIEX_DEBUG","PAPI_DEBUG","MONITOR_DEBUG","LIBPFM_DEBUG"
 #              ]:
         if v in environ:
-            print >> outf,"%-24s%-56s" % (v,environ[v])
+            print("%-24s%-56s" % (v,environ[v]), outf)
 
 def merge_two_dicts(x, y):
     z = x.copy()   # start with x's keys and values
