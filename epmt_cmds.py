@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 from datetime import datetime
-from os import environ, makedirs, mkdir, errno, path, getpid, getuid, getsid, getcwd, chdir
+from os import environ, makedirs, mkdir, errno, path, getpid, getuid, getsid, getcwd, chdir, unlink
 from socket import gethostname
 #from json import dumps as dict_to_json
 from subprocess import call as forkexecwait
@@ -22,7 +22,7 @@ if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
 else:
     import settings
 
-from epmtlib import set_logging, init_settings, conv_dict_byte2str
+from epmtlib import set_logging, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm
 
 def find_diffs_in_envs(start_env,stop_env):
     env = {}
@@ -240,6 +240,37 @@ def verify_perf():
         PrintFail()
     return False
 
+def verify_stage_command():
+    print("epmt stage functionality")
+    stage_cmd = settings.stage_command
+    if not(cmd_exists(stage_cmd)):
+        PrintFail()
+        return False
+    dest = settings.stage_command_dest
+    if (not dest) or (not path.isdir(dest)):
+        PrintFail()
+        return False
+    tmp = environ.get('TMPDIR', '/tmp')
+    tmpfile = 'test_stage_cmd'
+    inp = '/{0}/{1}'.format(tmp, tmpfile)
+    target = '{0}/{1}'.format(dest, tmpfile)
+    try:
+        safe_rm(target)
+        open(inp, 'a').close()
+        run_shell_cmd(stage_cmd, inp, dest)
+        if not path.exists(target):
+            raise("could not create output in {1}".format(dest))
+    except Exception as e:
+        print(str(e), file=stderr)
+        PrintFail()
+        return False
+    finally:
+        safe_rm(inp)
+        safe_rm(target)
+    PrintPass()
+    return True
+
+
 def verify_papiex(fake_job_id,fake_job_user,dir):
     print("epmt run functionality")
     logger.info("\tepmt run -a /bin/sleep 1, output to %s",dir)
@@ -277,6 +308,8 @@ def epmt_check(forced_jobid):
     if verify_perf() == False:
         retval = False
     if verify_papiex_options() == False:
+        retval = False
+    if verify_stage_command() == False:
         retval = False
 
     if not forced_jobid:

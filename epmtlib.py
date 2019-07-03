@@ -2,8 +2,9 @@ import sys
 from functools import wraps
 from time import time
 from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
-from os import environ
+from os import environ, unlink, devnull
 from contextlib import contextmanager
+from subprocess import call
 
 try:
     from StringIO import StringIO
@@ -12,9 +13,11 @@ except ImportError:
 
 # if check is set, then we will bail if logging has already been initialized
 def set_logging(intlvl = 0, check = False):
-    if check and hasattr(set_logging, 'initialized'):
-        return
+    if check and hasattr(set_logging, 'initialized'): return
     set_logging.initialized = True
+    if intlvl == None:
+        intlvl = 0
+    intlvl = int(intlvl)
     if intlvl < 0:
         level = ERROR
     if intlvl == 0:
@@ -74,6 +77,24 @@ def init_settings(settings):
         logger.error("missing settings.db_params")
         sys.exit(1)
 
+def run_shell_cmd(*cmd):
+    nf = open(devnull, 'w')
+    rc = call(cmd, stdout=nf, stderr=nf)
+    return rc
+
+def cmd_exists(cmd):
+    if not cmd: return False
+    rc = run_shell_cmd('which', cmd)
+    return (rc == 0)
+
+def safe_rm(f):
+    if not(f): return False
+    try:
+        unlink(f)
+        return True
+    except Exception as e:
+        pass
+    return False
 
 def timing(f):
     @wraps(f)
