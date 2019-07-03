@@ -673,6 +673,31 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
     r_dict = r.to_dict(with_collections=True)
     return pd.Series(r_dict) if fmt=='pandas' else r_dict
 
+# returns the number of models deleted.
+@db_session
+def delete_refmodels(*ref_ids):
+    if not ref_ids:
+        logger.warning("You must specify one or more reference model IDs to delete")
+        return 0
+    if type(ref_ids[0]) == list:
+        # user already gave a list of ids
+        ref_ids = ref_ids[0]
+    ref_ids = [int(r) for r in ref_ids]
+    ref_models = ReferenceModel.select(lambda r: r.id in ref_ids)
+    n = ref_models.count()
+    if n < len(ref_ids):
+        logger.warning("Request for deleting {0} model(s), but only found {1} models from your selection to delete".format(len(ref_ids), n))
+    if n > 0:
+        try:
+            for r in ref_models:
+                for j in r.jobs:
+                    j.ref_models.clear()
+            ref_models.delete()
+            commit()
+        except Exception as e:
+            logger.error(str(e))
+            return 0
+    return n
             
 # This is a low-level function that finds the unique process
 # tags for a job (job is either a job id or a Job object). 

@@ -174,6 +174,24 @@ class QueryAPI(unittest.TestCase):
         pids = [p.pid for p in procs]
         self.assertEqual(pids, [122181, 122182, 122183, 122184, 122185])
 
+    @db_session
+    def test_refmodel_crud(self):
+        jobs = eq.get_jobs(fmt='terse')
+        self.assertEqual(len(jobs), 3)
+        model_name = 'test_model'
+        r = eq.create_refmodel(jobs, tag='model_name:'+model_name)
+        self.assertEqual(r['tags'], {'model_name': model_name})
+        rq = eq.get_refmodels(tag='model_name:'+model_name, fmt='orm')
+        self.assertEqual(rq.count(), 1)
+        r1 = rq.first()
+        self.assertEqual(r1.id, r['id'])
+        self.assertEqual(r1.tags, {'model_name': model_name})
+        self.assertFalse(r1.op_tags)
+        self.assertEqual(set(r1.jobs.jobid), set(jobs))
+        n = eq.delete_refmodels(r['id'])
+        self.assertEqual(n, 1, 'wrong ref_model delete count')
+
+
     def test_zz_delete_jobs(self):
         #with self.assertRaises(EnvironmentError):
         #    eq.delete_jobs('685000')
