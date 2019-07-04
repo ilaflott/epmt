@@ -147,6 +147,7 @@ class QueryAPI(unittest.TestCase):
 
     @db_session
     def test_op_metrics(self):
+        from hashlib import md5
         df = eq.op_metrics(['685000', '685016'])
         self.assertEqual(df.shape, (178,33), "wrong dataframe shape for op_metrics")
         top = df[['job', 'tags', 'duration']].sort_values('duration', axis=0, ascending=False)[:1]
@@ -154,6 +155,27 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(int(top.duration.values[0]), 7008334182)
         df = eq.op_metrics(['685000', '685016'], tags='op_sequence:89')
         self.assertEqual([int(f) for f in list(df.duration.values)], [6463542235, 7008334182])
+
+        df = eq.op_metrics(['685000', '685003', '685016'])
+        self.assertEqual(df.shape,(573,33), 'wrong op_metrics shape when no tag specified')
+        self.assertEqual( md5(str([int(x) for x in list(df.duration)])).hexdigest(), '211b25251635735481d5c475739fc96d', 'wrong hash for op_metrics when no tag specified')
+
+        df = eq.op_metrics(['685000', '685003', '685016'], tags=['op:hsmget', 'op:mv'])
+        self.assertEqual(df.shape, (6,33), 'wrong op_metrics shape with tags specified')
+        self.assertEqual(list(df.duration.values), [18116213243, 6688820532, 7585973173, 25706545, 212902301, 62601798])
+        self.assertEqual(list(df.tags.values), [{'op': 'hsmget'}, {'op': 'hsmget'}, {'op': 'hsmget'}, {'op': 'mv'}, {'op': 'mv'}, {'op': 'mv'}])
+
+    @db_session
+    def test_op_metrics_grouped(self):
+        from hashlib import md5
+        df = eq.op_metrics(['685000', '685003', '685016'], group_by_tag=True)
+        self.assertEqual(df.shape,(459,31), 'wrong op_metrics grouped shape when no tag specified')
+        self.assertEqual(md5(str([int(x) for x in list(df.duration)])).hexdigest(), '8e2de8e38d7aade5e4c3b274dc34bfc0', 'wrong hash of duration column for group op_metrics, with no tag specified')
+
+        df = eq.op_metrics(['685000', '685003', '685016'], tags=['op:hsmget', 'op:mv'], group_by_tag=True)
+        self.assertEqual(df.shape, (2,31), 'wrong op_metrics shape with tags specified')
+        self.assertEqual(list(df.tags.values), [{u'op': u'mv'}, {u'op': u'hsmget'}])
+        self.assertEqual(md5(df.to_string()).hexdigest(), 'e30b9f3eb1703afaa124da7294ea71e7')
 
     @db_session
     def test_root(self):

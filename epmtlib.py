@@ -5,6 +5,7 @@ from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
 from os import environ, unlink, devnull
 from contextlib import contextmanager
 from subprocess import call
+from json import dumps, loads
 
 try:
     from StringIO import StringIO
@@ -190,6 +191,18 @@ def dict_in_list(d, L):
 def sum_dicts(x, y):
     return { k: x.get(k, 0) + y.get(k, 0) for k in set(x) | set(y) }
 
+def sum_dicts_list(dicts, exclude=[]):
+    all_keys = set()
+    for d in dicts:
+        all_keys |= set(d)
+    all_keys -= set(exclude)
+    sum_dict = {}
+    for k in all_keys:
+        sum_dict[k] = 0
+        for d in dicts:
+            sum_dict[k] += d.get(k, 0)
+    return sum_dict
+
 # from list of dictionaries, get the unique ones
 # exclude keys is an optional list of keys that are removed
 # from 
@@ -216,6 +229,37 @@ def fold_dicts(dicts):
                 folded_dict[k] = set()
             folded_dict[k].add(v)
     return { k: list(v) if len(v) > 1 else v.pop() for (k,v) in folded_dict.items() }
+
+
+# given a list of dictionaries, we aggregate like fields across the dictionaries
+# but only when they share the same value for 'key'
+# The 'exclude' fields will be skipped and not present in the output.
+# Example:
+#  d = [{'jobid': "3451", 'tags': {'op': 'hsmget'}, 'duration': 1000},
+#       {'jobid': "1251", 'tags': {'op': 'hsmget'}, 'duration': 2000},
+#       {'jobid': "3451", 'tags': {'op': 'gcp'}, 'duration': 100},
+#       {'jobid': "1251", 'tags': {'op': 'gcp'}, 'duration': 200}]
+#  
+#  group_dicts_by_key(d, key='tags', exclude = ['job', 'jobid'])
+#  would return:
+#  [{'tags': {'op': 'hsmget'}, duration: 3000},
+#   {'tags': {'op': 'gcp'},  duration: 300}]
+def group_dicts_by_key(dicts, key = 'tags', exclude = []):
+    groups = {}
+    for d in dicts:
+        k = dumps(d[key])
+        if not k in groups:
+            groups[k] = []
+        groups[k].append(d)
+    exclude.append(key)
+    out = []
+    for k in groups.keys():
+        sum_dict = sum_dicts_list(groups[k], exclude)
+        key_val = loads(k)
+        sum_dict[key] = key_val
+        out.append(sum_dict)
+    return out
+    
 
 
 def isString(s):

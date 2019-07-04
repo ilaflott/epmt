@@ -24,7 +24,7 @@ set_logging(settings.verbose if hasattr(settings, 'verbose') else 0, check=True)
 
 ### Put EPMT imports below, after logging is set up
 from models import Job, Process, ReferenceModel, Host
-from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString
+from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key
 from epmt_stat import modified_z_score
 from epmt_job import setup_orm_db
 
@@ -256,7 +256,8 @@ def get_jobs(jobs = [], tag=None, fltr = '', order = None, limit = None, offset 
 
     # set defaults for limit and ordering only if the user doesn't specify jobs
     if (type(jobs) not in [Query, QueryResult, pd.DataFrame]) and (jobs in [[], '', None]):
-        if limit == None: limit = 20
+        if (fmt != 'orm') and (limit == None): 
+            limit = 20
         if order == None: order = 'desc(j.created_at)'
       
     qs = __jobs_col(jobs)
@@ -739,10 +740,15 @@ def __unique_proc_tags_for_job(job, exclude=[], fold=True):
 # means there is an exact match of the tag dictionaries.
 # If no tags are passed, then the set of unique tags for the jobs
 # will be used.
+# 
+# group_by_tag: If set, rows that have the same tag will be coalesced
+#               and their column values will be aggregated. As a 
+#               consequence, the output will not have job/jobid columns
+#
 # In this function, fmt is only allowed 'pandas' or 'dict'
 #
 @db_session
-def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas'):
+def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=False, fmt='pandas'):
     if not jobs:
         logger.warning('You need to specify one or more jobs for op_metrics')
         return None
@@ -779,6 +785,9 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, fmt='pandas'):
             # a more consistent user experience
             sum_dict.update({'job': j.jobid, 'jobid': j.jobid, 'tags': t, 'num_procs': nprocs, 'num_tids': ntids, 'exclusive_cpu_time': excl_cpu, 'duration': duration, 'cpu_time': excl_cpu})
             all_procs.append(sum_dict)
+
+    if group_by_tag:
+        all_procs = group_dicts_by_key(all_procs, key='tags', exclude=['job', 'jobid'])
 
     if fmt == 'pandas':
         return pd.DataFrame(all_procs)
