@@ -73,6 +73,9 @@ def conv_jobs(jobs, fmt='dict', merge_sums = True):
 
 # procs is an ORM Query object on Process or a list of Process objects
 def conv_procs_orm(procs, merge_sums = True, fmt='dict'):
+    if fmt=='orm':
+        return procs
+
     if fmt=='terse':
         return [ p.id for p in procs ]
 
@@ -188,6 +191,30 @@ def root(job, fmt='dict'):
 
     plist = conv_procs_orm(p, fmt='dict')
     return pd.DataFrame(plist) if fmt == 'pandas' else plist.pop()
+
+# This function returns the root process(es) for an operation
+# for one or more jobs. Ideally, you would use this function with
+# a single job, but we allow a job collection for flexibility.
+# Bear in mind, for a large job collection, op_roots is presently a
+# *slow* query. 
+#
+# tag: is a single tag (string or dictionary of key/value pairs)
+#
+# Returns a collection of processes in the format specified.
+# The processes are sorted by jobid and within a job by start time
+@db_session
+def op_roots(jobs, tag, fmt='dict'):
+    jobs = __jobs_col(jobs)
+    if not tag:
+        logger.error('You must specify a tag (string or dict)')
+        return None
+    if jobs.count() > 10:
+        logger.warning('op_roots is slow currently for job sizes > 10')
+    op_procs = get_procs(jobs, tag, fmt='orm')
+    # TODO: This probably can be sped up by partitioning op_procs by job
+    root_op_procs = op_procs.filter(lambda p: p.parent not in op_procs).order_by(Process.start)
+    return conv_procs_orm(root_op_procs, fmt=fmt)
+
 
 # This function returns a list of jobs based on some filtering and ordering.
 # The output format can be set to pandas dataframe, list of dicts or list
