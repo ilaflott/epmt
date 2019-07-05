@@ -212,7 +212,7 @@ def op_roots(jobs, tag, fmt='dict'):
         logger.warning('op_roots is slow currently for job sizes > 10')
     op_procs = get_procs(jobs, tag, fmt='orm')
     # TODO: This probably can be sped up by partitioning op_procs by job
-    root_op_procs = op_procs.filter(lambda p: p.parent not in op_procs).order_by(Process.start)
+    root_op_procs = op_procs.filter(lambda p: p.parent not in op_procs).order_by(Process.job, Process.start)
     return conv_procs_orm(root_op_procs, fmt=fmt)
 
 
