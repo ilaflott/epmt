@@ -214,10 +214,15 @@ def unique_dicts(dicts, exclude_keys=[]):
             new_dicts.append(new_d)
     else:
         new_dicts = dicts
+    # the numpy approach doesn't work in python 3
     #from numpy import unique, array
     #return unique(array(new_dicts)).tolist()
-    #return list(map(dict, frozenset(frozenset(d.items()) for d in new_dicts)))
-    #return list(map(dict, frozenset(frozenset([(k,d[k]) for k in sorted(d.keys())]) for d in new_dicts)))
+
+    # the commented code below changes the input ordering and makes
+    # the returned list ordering different in python 2/3
+    # return list(map(dict, frozenset(frozenset(d.items()) for d in new_dicts)))
+
+    # here the code below gives a deterministic dentical ordering for python 2/3
     all_dicts_set = set()
     ordered_dicts = []
     for d in new_dicts:
@@ -323,3 +328,12 @@ def conv_dict_byte2str(bytes_dict):
             str_dict[key] = value
     return str_dict
 
+# returns a hashable dict in the form of a frozenset of dict items
+# ordered by dict keys
+def frozen_dict(d):
+    l = [(str(k), str(d[k]) if isString(d[k]) else d[k]) for k in d.keys()]   
+    return frozenset(l)
+
+def str_dict(d):
+    new_dict = { str(k): str(v) if isString(v) else v for k, v in d.items() }
+    return dumps(new_dict, sort_keys=True)
