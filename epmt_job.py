@@ -549,7 +549,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     if all_tags:
         logger.info("found %d distinct sets of process tags",len(all_tags))
         # convert each of the pickled tags back into a dict
-        j.proc_sums[settings.all_tags_field] = [ loads(t) for t in all_tags ]
+        j.proc_sums[settings.all_tags_field] = [ loads(t) for t in sorted(all_tags) ]
     else:
         logger.debug('no process tags found')
         j.proc_sums[settings.all_tags_field] = []
