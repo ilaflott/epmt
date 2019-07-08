@@ -172,13 +172,13 @@ class QueryAPI(unittest.TestCase):
         #from hashlib import md5
         df = eq.op_metrics(['685000', '685003', '685016'], group_by_tag=True)
         self.assertEqual(df.shape,(459,31), 'wrong op_metrics grouped shape when no tag specified')
-        #self.assertEqual([int(x) for x in df.duration.values][:10], [59307, 726994, 40546, 41714, 710, 33893, 32604, 733204, 3683612, 32278], 'wrong duration column for group op_metrics, with no tag specified')
-        self.assertEqual([int(x) for x in df.duration.values][:10], [59307, 32077, 40546, 41714, 710, 33893, 32604, 733204, 727517, 716], 'wrong duration column for group op_metrics, with no tag specified')
+        self.assertEqual(list(df['tags'].values[:10]), [{u'op_instance': u'11', u'op_sequence': u'66', u'op': u'cp'}, {u'op_instance': u'15', u'op_sequence': u'79', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'247', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'251', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'255', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'259', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'263', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'267', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'271', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'30', u'op': u'cp'}], 'wrong tags ordering in grouped op_metrics')
+        self.assertEqual([int(x) for x in df.duration.values][:10], [13307735, 13384651, 3699824, 3679446, 3683612, 3689543, 3702057, 3735581, 3709788, 13480939], 'wrong duration values in grouped op_metrics')
 
         df = eq.op_metrics(['685000', '685003', '685016'], tags=['op:hsmget', 'op:mv'], group_by_tag=True)
         self.assertEqual(df.shape, (2,31), 'wrong op_metrics shape with tags specified')
-        self.assertEqual(list(df.tags.values), [{u'op': u'mv'}, {u'op': u'hsmget'}])
-        self.assertEqual(list(df['exclusive_cpu_time'].values), [30292583.0, 208577324.0])
+        self.assertEqual(list(df.tags.values), [{u'op': u'hsmget'}, {u'op': u'mv'}])
+        self.assertEqual(list(df['exclusive_cpu_time'].values), [208577324.0, 30292583.0])
 
     @db_session
     def test_root(self):

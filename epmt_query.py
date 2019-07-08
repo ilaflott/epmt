@@ -24,7 +24,7 @@ set_logging(settings.verbose if hasattr(settings, 'verbose') else 0, check=True)
 
 ### Put EPMT imports below, after logging is set up
 from models import Job, Process, ReferenceModel, Host
-from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key
+from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key, stringify_dicts
 from epmt_stat import modified_z_score
 from epmt_job import setup_orm_db
 
@@ -787,6 +787,8 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=F
     if not tags:
         logger.warning('No tags found across all processes of job(s)')
         return None
+    #from hashlib import md5
+    #print(md5(str(stringify_dicts(tags)).encode('utf-8')).hexdigest())
 
     all_procs = []
     # we iterate over tags, where each tag is dictionary

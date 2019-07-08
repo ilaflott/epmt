@@ -261,13 +261,13 @@ def fold_dicts(dicts):
 def group_dicts_by_key(dicts, key = 'tags', exclude = []):
     groups = {}
     for d in dicts:
-        k = dumps(d[key])
+        k = dumps(d[key], sort_keys=True)
         if not k in groups:
             groups[k] = []
         groups[k].append(d)
     exclude.append(key)
     out = []
-    for k in groups.keys():
+    for k in sorted(groups.keys()):
         sum_dict = sum_dicts_list(groups[k], exclude)
         key_val = loads(k)
         sum_dict[key] = key_val
@@ -334,6 +334,12 @@ def frozen_dict(d):
     l = [(str(k), str(d[k]) if isString(d[k]) else d[k]) for k in d.keys()]   
     return frozenset(l)
 
+# return a stringified version of the dictionary
 def str_dict(d):
     new_dict = { str(k): str(v) if isString(v) else v for k, v in d.items() }
     return dumps(new_dict, sort_keys=True)
+
+def stringify_dicts(dicts):
+    return [ str_dict(d) for d in dicts ]
+
+
