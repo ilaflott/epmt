@@ -29,7 +29,7 @@ def setUpModule():
     if settings.db_params.get('filename') != ':memory:':
         print('db_params MUST use in-memory sqlite for testing', file=stderr)
         exit(1)
-    setup_orm_db(settings, drop=False)
+    setup_orm_db(settings, drop=True)
     print('\n' + str(settings.db_params))
     datafiles='test/data/misc/*.tgz'
     print('setUpModule: importing {0}'.format(datafiles))
@@ -55,7 +55,7 @@ class EPMTCmds(unittest.TestCase):
         self.assertEqual(retval, True, 'wrong list jobs return value')
     def test_list_refmodels(self):
         with capture() as (out,err):
-            retval = epmt_list_refmodels([])
+            retval = epmt_list_refmodels('')
         self.assertEqual(retval, False, 'wrong list jobs return value')
     def test_list_op_metrics(self):
         with capture() as (out,err):
