@@ -216,7 +216,16 @@ def unique_dicts(dicts, exclude_keys=[]):
         new_dicts = dicts
     #from numpy import unique, array
     #return unique(array(new_dicts)).tolist()
-    return list(map(dict, frozenset(frozenset(i.items()) for i in new_dicts)))
+    #return list(map(dict, frozenset(frozenset(d.items()) for d in new_dicts)))
+    #return list(map(dict, frozenset(frozenset([(k,d[k]) for k in sorted(d.keys())]) for d in new_dicts)))
+    all_dicts_set = set()
+    ordered_dicts = []
+    for d in new_dicts:
+        x = frozenset([(k,d[k]) for k in sorted(d.keys())])
+        if not x in all_dicts_set:
+            all_dicts_set.add(x)
+            ordered_dicts.append(d)
+    return ordered_dicts
 
 # fold a list of dictionaries such as:
 # INPUT: [{'abc': 100, 'def': 200}, {'abc': 150, 'ghi': 10}

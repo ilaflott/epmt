@@ -2,6 +2,7 @@
 from __future__ import print_function
 import unittest
 from sys import stderr, exit
+import sys
 from glob import glob
 from pony.orm import db_session
 from models import db
@@ -17,7 +18,7 @@ set_logging(-1)
 
 # Put EPMT imports only after we have called set_logging()
 import epmt_query as eq
-from epmtlib import timing
+from epmtlib import timing, isString
 from epmt_job import setup_orm_db
 from epmt_cmds import epmt_submit
 import epmt_default_settings as settings
@@ -139,11 +140,15 @@ class QueryAPI(unittest.TestCase):
                     self.assertEqual(sorted(list(out['jobid'].values)), sorted(ref), 'error in {0} -> {1}'.format(inp_fmt, out_fmt))
 
     @db_session
-    def test_unique_proc_tags(self):
+    def test_job_proc_tags(self):
         tags = eq.job_proc_tags(['685000', '685016'], fold=False)
         self.assertEqual(len(tags), 89, "wrong unique process tags count")
         from hashlib import md5
-        self.assertEqual(md5(str(sorted(tags))).hexdigest(), '7083bed0954830e2daa34a1113209177', 'wrong hash of tags')
+        if sys.version_info > (3,0):
+            self.assertEqual(md5(str(tags).encode('utf-8')).hexdigest(), 'be79bc9285c2e64f2dbf4530a266eb03')
+        else:
+            self.assertEqual(md5(str([{ str(k): d[k] if not isString(d[k]) else str(d[k]) for k in sorted(d.keys()) } for d in tags]).encode('utf-8')).hexdigest(), '1b3b7d99e1260b9ef10ef886358e5928', 'wrong hash of tags')
+            self.assertEqual(md5(str(sorted(tags))).hexdigest(), '7083bed0954830e2daa34a1113209177', 'wrong hash of tags')
 
     @db_session
     def test_op_metrics(self):
@@ -157,7 +162,8 @@ class QueryAPI(unittest.TestCase):
 
         df = eq.op_metrics(['685000', '685003', '685016'])
         self.assertEqual(df.shape,(573,33), 'wrong op_metrics shape when no tag specified')
-        self.assertEqual([int(x) for x in df.duration.values][:10], [277371, 3607753, 95947, 3683612, 114, 94, 4087414, 362007, 367143, 29337], 'wrong op_metrics when no tag specified')
+        #self.assertEqual([int(x) for x in df.duration.values][:10], [277371, 3607753, 95947, 3683612, 114, 94, 4087414, 362007, 367143, 29337], 'wrong op_metrics when no tag specified')
+        self.assertEqual([int(x) for x in df.duration.values][:10], [6598692, 6709043, 6707903, 6676748, 6939098, 6541841, 6788901, 6125293, 6427261, 6472072], 'wrong op_metrics when no tag specified')
 
         df = eq.op_metrics(['685000', '685003', '685016'], tags=['op:hsmget', 'op:mv'])
         self.assertEqual(df.shape, (6,33), 'wrong op_metrics shape with tags specified')
@@ -169,8 +175,8 @@ class QueryAPI(unittest.TestCase):
         #from hashlib import md5
         df = eq.op_metrics(['685000', '685003', '685016'], group_by_tag=True)
         self.assertEqual(df.shape,(459,31), 'wrong op_metrics grouped shape when no tag specified')
-        #self.assertEqual(md5(str([int(x) for x in list(df.duration)])).hexdigest(), '8e2de8e38d7aade5e4c3b274dc34bfc0', 'wrong hash of duration column for group op_metrics, with no tag specified')
-        self.assertEqual([int(x) for x in df.duration.values][:10], [59307, 726994, 40546, 41714, 710, 33893, 32604, 733204, 3683612, 32278], 'wrong duration column for group op_metrics, with no tag specified')
+        #self.assertEqual([int(x) for x in df.duration.values][:10], [59307, 726994, 40546, 41714, 710, 33893, 32604, 733204, 3683612, 32278], 'wrong duration column for group op_metrics, with no tag specified')
+        self.assertEqual([int(x) for x in df.duration.values][:10], [59307, 32077, 40546, 41714, 710, 33893, 32604, 733204, 727517, 716], 'wrong duration column for group op_metrics, with no tag specified')
 
         df = eq.op_metrics(['685000', '685003', '685016'], tags=['op:hsmget', 'op:mv'], group_by_tag=True)
         self.assertEqual(df.shape, (2,31), 'wrong op_metrics shape with tags specified')

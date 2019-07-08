@@ -3,6 +3,7 @@ from __future__ import print_function
 from pony.orm import *
 from models import *
 from sys import stdout, argv, stderr, exit
+import sys
 from os.path import basename
 from glob import glob
 import fnmatch
@@ -43,7 +44,7 @@ def create_job(jobid,user):
         logger.info("Creating job %s",jobid)
         job = Job(jobid=jobid,user=user)
     else:
-        logger.error("Job %s (at %s) is already in the database",job.jobid,job.start)
+        logger.warning("Job %s (at %s) is already in the database",job.jobid,job.start)
         return None
     return job
 
@@ -150,8 +151,11 @@ def load_process_from_pandas(df, h, j, u, settings):
     # saving the json to the database:
     # exception:    raise TypeError(repr(o) + " is not JSON serializable")
     # So, instead we use this workaround:
-    json_ms = df.drop(labels=settings.skip_for_thread_sums, axis=1).sum(axis=0).to_json()
-    thread_metric_sums = loads(json_ms)
+    if sys.version_info > (3,0):
+        json_ms = df.drop(labels=settings.skip_for_thread_sums, axis=1).sum(axis=0).to_json()
+        thread_metric_sums = loads(json_ms)
+    else:
+        thread_metric_sums = df.drop(labels=settings.skip_for_thread_sums, axis=1).sum(axis=0).to_dict()
 
     # we add a composite metric comprising of user+system time as this
     # is needed in queries, and Pony doesn't allow operations on json fields
