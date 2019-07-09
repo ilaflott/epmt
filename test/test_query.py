@@ -103,7 +103,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(len(procs), 630, 'wrong count of processes in ORM format using filter')
         self.assertEqual(int(procs.first().duration), 7005558348, 'wrong order when using orm with filter and order')
 
-        df = eq.get_procs(limit=5, order='desc(p.exclusive_cpu_time)', fmt='pandas')
+        df = eq.get_procs(limit=5, order='desc(p.cpu_time)', fmt='pandas')
         self.assertEqual(df.shape, (5,50), "incorrect dataframe shape")
         self.assertEqual('685016', df.loc[0,'job'], "ordering of processes wrong in dataframe")
 
@@ -150,7 +150,7 @@ class QueryAPI(unittest.TestCase):
     @db_session
     def test_op_metrics(self):
         df = eq.op_metrics(['685000', '685016'])
-        self.assertEqual(df.shape, (178,33), "wrong dataframe shape for op_metrics")
+        self.assertEqual(df.shape, (178,32), "wrong dataframe shape for op_metrics")
         top = df[['job', 'tags', 'duration']].sort_values('duration', axis=0, ascending=False)[:1]
         self.assertEqual(top.tags.values[0], {u'op_instance': u'2', u'op_sequence': u'89', u'op': u'dmput'})
         self.assertEqual(int(top.duration.values[0]), 7008334182)
@@ -158,12 +158,12 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual([int(f) for f in list(df.duration.values)], [6463542235, 7008334182])
 
         df = eq.op_metrics(['685000', '685003', '685016'])
-        self.assertEqual(df.shape,(573,33), 'wrong op_metrics shape when no tag specified')
+        self.assertEqual(df.shape,(573,32), 'wrong op_metrics shape when no tag specified')
         #self.assertEqual([int(x) for x in df.duration.values][:10], [277371, 3607753, 95947, 3683612, 114, 94, 4087414, 362007, 367143, 29337], 'wrong op_metrics when no tag specified')
         self.assertEqual([int(x) for x in df.duration.values][:10], [6598692, 6709043, 6707903, 6676748, 6939098, 6541841, 6788901, 6125293, 6427261, 6472072], 'wrong op_metrics when no tag specified')
 
         df = eq.op_metrics(['685000', '685003', '685016'], tags=['op:hsmget', 'op:mv'])
-        self.assertEqual(df.shape, (6,33), 'wrong op_metrics shape with tags specified')
+        self.assertEqual(df.shape, (6,32), 'wrong op_metrics shape with tags specified')
         self.assertEqual(list(df.duration.values), [18116213243, 6688820532, 7585973173, 25706545, 212902301, 62601798])
         self.assertEqual(list(df.tags.values), [{'op': 'hsmget'}, {'op': 'hsmget'}, {'op': 'hsmget'}, {'op': 'mv'}, {'op': 'mv'}, {'op': 'mv'}])
 
@@ -171,14 +171,14 @@ class QueryAPI(unittest.TestCase):
     def test_op_metrics_grouped(self):
         #from hashlib import md5
         df = eq.op_metrics(['685000', '685003', '685016'], group_by_tag=True)
-        self.assertEqual(df.shape,(459,31), 'wrong op_metrics grouped shape when no tag specified')
+        self.assertEqual(df.shape,(459,30), 'wrong op_metrics grouped shape when no tag specified')
         self.assertEqual(list(df['tags'].values[:10]), [{u'op_instance': u'11', u'op_sequence': u'66', u'op': u'cp'}, {u'op_instance': u'15', u'op_sequence': u'79', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'247', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'251', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'255', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'259', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'263', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'267', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'271', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'30', u'op': u'cp'}], 'wrong tags ordering in grouped op_metrics')
         self.assertEqual([int(x) for x in df.duration.values][:10], [13307735, 13384651, 3699824, 3679446, 3683612, 3689543, 3702057, 3735581, 3709788, 13480939], 'wrong duration values in grouped op_metrics')
 
         df = eq.op_metrics(['685000', '685003', '685016'], tags=['op:hsmget', 'op:mv'], group_by_tag=True)
-        self.assertEqual(df.shape, (2,31), 'wrong op_metrics shape with tags specified')
+        self.assertEqual(df.shape, (2,30), 'wrong op_metrics shape with tags specified')
         self.assertEqual(list(df.tags.values), [{u'op': u'hsmget'}, {u'op': u'mv'}])
-        self.assertEqual(list(df['exclusive_cpu_time'].values), [208577324.0, 30292583.0])
+        self.assertEqual(list(df['cpu_time'].values), [208577324.0, 30292583.0])
 
     @db_session
     def test_root(self):

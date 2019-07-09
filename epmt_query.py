@@ -796,7 +796,7 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=F
         procs = get_procs(jobs, tag = t, exact_tag_only = exact_tags_only, fmt='orm')
         # group the Query response we got by jobid
         # we use group_concat to join the thread_sums json into a giant string
-        procs_grp_by_job = select((p.job, count(p.id), sum(p.duration), sum(p.exclusive_cpu_time), sum(p.numtids), group_concat(p.threads_sums, sep='@@@')) for p in procs)
+        procs_grp_by_job = select((p.job, count(p.id), sum(p.duration), sum(p.cpu_time), sum(p.numtids), group_concat(p.threads_sums, sep='@@@')) for p in procs)
         for row in procs_grp_by_job:
             (j, nprocs, duration, excl_cpu, ntids, threads_sums_str) = row
             # convert from giant string to array of strings where each list
@@ -812,7 +812,7 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=F
             # also add some sums we obtained in the query
             # we add synthetic alias keys for jobid and cpu_time for
             # a more consistent user experience
-            sum_dict.update({'job': j.jobid, 'jobid': j.jobid, 'tags': t, 'num_procs': nprocs, 'num_tids': ntids, 'exclusive_cpu_time': excl_cpu, 'duration': duration, 'cpu_time': excl_cpu})
+            sum_dict.update({'job': j.jobid, 'jobid': j.jobid, 'tags': t, 'num_procs': nprocs, 'numtids': ntids, 'cpu_time': excl_cpu, 'duration': duration})
             all_procs.append(sum_dict)
 
     if group_by_tag:

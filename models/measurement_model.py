@@ -46,6 +46,7 @@ class Job(db.Entity):
     account = Optional('Account')
     queue = Optional('Queue')
 #   ppr = Optional('PostProcessRun')
+    # exclusive cpu time
     cpu_time = Optional(float)
     ref_models = Set('ReferenceModel')
 
@@ -67,8 +68,8 @@ class Process(db.Entity):
     threads_df = Optional(Json)
     threads_sums = Optional(Json)
     numtids = Required(int, default=1)
-# save some useful timing information for threads
-    exclusive_cpu_time = Optional(float)
+    # exclusive cpu time
+    cpu_time = Optional(float)
 # sum of cpu times of all descendants + process_cpu_time
     inclusive_cpu_time = Optional(float)
 # These should probably be abstracted/reduced

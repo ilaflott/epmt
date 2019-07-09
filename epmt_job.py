@@ -162,7 +162,7 @@ def load_process_from_pandas(df, h, j, u, settings):
     # in a Query
     # TODO: can this be removed?
     thread_metric_sums['user+system'] = thread_metric_sums.get('usertime', 0) + thread_metric_sums.get('systemtime', 0)
-    p.exclusive_cpu_time = float(thread_metric_sums['user+system'])
+    p.cpu_time = float(thread_metric_sums['user+system'])
 
     # convert the threads dataframe to a json
     # using the 'split' argument creates a json of the form:
@@ -567,7 +567,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         # computing process inclusive times
         logger.info("synthesizing aggregates across job processes..")
         for proc in all_procs:
-            proc.inclusive_cpu_time = float(proc.exclusive_cpu_time + sum(proc.descendants.exclusive_cpu_time))
+            proc.inclusive_cpu_time = float(proc.cpu_time + sum(proc.descendants.cpu_time))
             nthreads += proc.numtids
             threads_sums_across_procs = sum_dicts(threads_sums_across_procs, proc.threads_sums)
             j.hosts.add(proc.host)
@@ -592,7 +592,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     j.duration = int(d.total_seconds()*1000000)
     # the cpu time for a job is the sum of the exclusive times
     # of all processes in the job
-    j.cpu_time = sum(j.processes.exclusive_cpu_time)
+    j.cpu_time = sum(j.processes.cpu_time)
     if root_proc:
         if root_proc.exitcode != j.exitcode:
             logger.warning('metadata shows the job exit code is {0}, but root process exit code is {1}'.format(j.exitcode, root_proc.exitcode))
