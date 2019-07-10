@@ -1,0 +1,160 @@
+Timer unit: 1e-06 s
+
+Total time: 118.742 s
+File: ./epmt_job.py
+Function: ETL_job_dict at line 229
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   229                                           @db_session
+   230                                           @profile
+   231                                           def ETL_job_dict(metadata, filedict, settings, tarfile=None):
+   232                                           # Only fields used for now
+   233         1         15.0     15.0      0.0      jobid = metadata['job_pl_id']
+   234         1         11.0     11.0      0.0      username = metadata['job_pl_username']
+   235                                           #
+   236         1       1129.0   1129.0      0.0      logger.info("Processing job id %s",jobid)
+   237         1          5.0      5.0      0.0      hostname = ""
+   238         1          4.0      4.0      0.0      file = ""
+   239                                           # Damn NAN's for empty strings require converters, and empty integers need floats
+   240         1          5.0      5.0      0.0      conv_dic = { 'exename':str, 
+   241         1          4.0      4.0      0.0                   'path':str, 
+   242         1          5.0      5.0      0.0                   'args':str } 
+   243         1          4.0      4.0      0.0      dtype_dic = { 
+   244         1          4.0      4.0      0.0          'pid':                        float,
+   245         1          4.0      4.0      0.0          'generation':                 float,
+   246         1          4.0      4.0      0.0          'ppid':                       float,
+   247         1          5.0      5.0      0.0          'pgid':                       float,
+   248         1          4.0      4.0      0.0          'sid':                        float,
+   249         1          5.0      5.0      0.0          'numtids':                    float }
+   250                                           
+   251         1          6.0      6.0      0.0      standards = [ "exename","path","args","pid","generation","ppid","pgid","sid","numtids","tid","start","end" ]
+   252                                           
+   253         1         69.0     69.0      0.0      then = datetime.datetime.now()
+   254         1         15.0     15.0      0.0      csvt = datetime.timedelta()
+   255         1         21.0     21.0      0.0      earliest_process = datetime.datetime.utcnow()
+   256         1         55.0     55.0      0.0      latest_process = datetime.datetime.fromtimestamp(0)
+   257                                           #    stdout.write('-')
+   258                                           # Hostname, job, metricname objects
+   259                                           # Iterate over hosts
+   260         1         40.0     40.0      0.0      logger.debug("Iterating over %d hosts for job ID %s, user %s...",len(filedict.keys()),jobid,username)
+   261         1      11525.0  11525.0      0.0      u = lookup_or_create_user(username)
+   262         1       5103.0   5103.0      0.0      j = create_job(jobid,u,metadata)
+   263         1          2.0      2.0      0.0      if not j:
+   264                                           # We might have leaked a username to the database here
+   265                                           # FIX!        
+   266                                                   return None
+   267                                           
+   268         1          2.0      2.0      0.0      didsomething = False
+   269         1          1.0      1.0      0.0      oldcomment = None
+   270         1          1.0      1.0      0.0      mns = []
+   271         1          2.0      2.0      0.0      tags = []
+   272         1          1.0      1.0      0.0      all_tags = []
+   273         1          1.0      1.0      0.0      all_procs = []
+   274                                           
+   275         1          2.0      2.0      0.0      for hostname, files in filedict.iteritems():
+   276         1          7.0      7.0      0.0          logger.debug("Processing host %s",hostname)
+   277         1       3814.0   3814.0      0.0          h = lookup_or_create_host(hostname)
+   278         1          2.0      2.0      0.0          cntmax = len(files)
+   279         1          2.0      2.0      0.0          cnt = 0
+   280      1000       2363.0      2.4      0.0          for f in files:
+   281      1000      12144.0     12.1      0.0              logger.debug("Processing file %s",f)
+   282                                           #
+   283                                           #            stdout.write('\b')            # erase the last written char
+   284                                           #            stdout.write(spinner.next())  # write the next character
+   285                                           #            stdout.flush()                # flush stdout buffer (actual character display)
+   286                                           #
+   287      1000       9888.0      9.9      0.0              csv = datetime.datetime.now()
+   288      1000   44610300.0  44610.3     37.6              rows,comment = extract_tags_from_comment_line(f,tarfile=tarfile)
+   289                                           # Check comment/tags cache
+   290      1000       3935.0      3.9      0.0              if comment and comment != oldcomment:
+   291         1        174.0    174.0      0.0                  logger.info("Missed tag cache %s",comment)
+   292         1       2839.0   2839.0      0.0                  tags = lookup_or_create_tags([comment])
+   293         1          3.0      3.0      0.0                  oldcomment = comment
+   294                                           # Merge all tags into one list for job
+   295         1          5.0      5.0      0.0                  all_tags = list(set().union(all_tags,tags))
+   296                                           
+   297      1000       2097.0      2.1      0.0              if tarfile:
+   298      1000   44113129.0  44113.1     37.2                  info = tarfile.getmember(f)
+   299      1000      44115.0     44.1      0.0                  flo = tarfile.extractfile(info)
+   300                                                       else:
+   301                                                           flo = f
+   302                                                           
+   303      1000     556979.0    557.0      0.5              from pandas import read_csv
+   304      1000       2218.0      2.2      0.0              pf = read_csv(flo,
+   305      1000       1839.0      1.8      0.0                            sep=",",
+   306                                           #                          dtype=dtype_dic, 
+   307      1000       2018.0      2.0      0.0                            converters=conv_dic,
+   308      1000   24514872.0  24514.9     20.6                            skiprows=rows, escapechar='\\')
+   309      1000      26372.0     26.4      0.0              if pf.empty:
+   310                                                           logger.error("Something wrong with file %s, readcsv returned empty, skipping...",f)
+   311                                                           continue
+   312                                           
+   313                                           # Lookup or create the necessary objects, only happens once!
+   314      1000       2522.0      2.5      0.0              if not mns:
+   315                                                           # for metric in pf.columns[settings.metrics_offset:].values.tolist():
+   316                                                           #     mns[metric] = lookup_or_create_metricname(metric)
+   317         1        164.0    164.0      0.0                  mns = pf.columns[settings.metrics_offset:].values.tolist()
+   318                                           # Make Process/Thread/Metrics objects in DB
+   319      1000    4755584.0   4755.6      4.0              p = load_process_from_pandas(pf, h, j, u, tags, mns)
+   320      1000       2989.0      3.0      0.0              if not p:
+   321                                                           logger.error("Failed loading from pandas, file %s!",f);
+   322                                                           continue
+   323      1000       2449.0      2.4      0.0              all_procs.append(p)
+   324                                           # Compute duration of job
+   325      1000      12279.0     12.3      0.0              if (p.start < earliest_process):
+   326         2         13.0      6.5      0.0                  earliest_process = p.start
+   327      1000       8017.0      8.0      0.0              if (p.end > latest_process):
+   328       328       2311.0      7.0      0.0                  latest_process = p.end
+   329                                           # Debugging/progress
+   330      1000       2060.0      2.1      0.0              cnt += 1
+   331      1000      23361.0     23.4      0.0              csvt += datetime.datetime.now() - csv
+   332      1000       2685.0      2.7      0.0              if cnt % 1000 == 0:
+   333         1        272.0    272.0      0.0                      logger.info("Did %d of %d...%.2f/sec",cnt,cntmax,cnt/csvt.total_seconds())
+   334         1          8.0      8.0      0.0                      exit(0)
+   335                                           #
+   336                                                   if cnt:
+   337                                                       didsomething = True
+   338                                           
+   339                                           #    stdout.write('\b')            # erase the last written char
+   340                                           
+   341                                               if filedict:
+   342                                                   if not didsomething:
+   343                                                       logger.warning("Something went wrong in parsing CSV files")
+   344                                                       return False
+   345                                               else:
+   346                                                   logger.warning("Submitting job with no CSV data")
+   347                                           
+   348                                           # Add sum of tags to job        
+   349                                               if all_tags:
+   350                                                   logger.info("Adding %d tags to job",len(all_tags))
+   351                                                   j.tags.add(all_tags)
+   352                                           # Add all processes to job
+   353                                               if all_procs:
+   354                                                   logger.info("Adding %d processes to job",len(all_procs))
+   355                                                   j.processes.add(all_procs)
+   356                                           # Update start/end/duration of job
+   357                                           #       j.start = earliest_process
+   358                                           #        j.end = latest_process
+   359                                           #
+   360                                           #
+   361                                           #
+   362                                               j.start = metadata["job_pl_start"]
+   363                                               j.end = metadata["job_el_stop"]
+   364                                               d = j.end - j.start
+   365                                               j.duration = int(d.total_seconds()*1000000)
+   366                                               
+   367                                           #
+   368                                           #
+   369                                           #
+   370                                               logger.info("Earliest process start: %s",j.start)
+   371                                               logger.info("Latest process end: %s",j.end)
+   372                                               logger.info("Computed duration of job: %f us, %.2f m",j.duration,j.duration/60000000)
+   373                                               now = datetime.datetime.now() 
+   374                                               logger.info("Staged import of %d processes, %d threads", 
+   375                                                           len(j.processes),len(j.processes.threads))
+   376                                               logger.info("Staged import took %s, %f processes per second",
+   377                                                           now - then,len(j.processes)/float((now-then).total_seconds()))
+   378                                                           
+   379                                               return j
+

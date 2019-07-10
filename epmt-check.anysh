@@ -1,0 +1,13 @@
+rm -rf ./1 ./1.tgz
+rm -rf /tmp/epmt 
+epmt -h >/dev/null       # help path 1
+epmt help >/dev/null     # help path 2
+epmt check		 # Check platform and settings.py
+epmt -j1 source          # Print shell command
+epmt -j1 start           # Generate prolog
+epmt -j1 dump >/dev/null # Parse/print job_metadata
+epmt -v -j1 run sleep 1     # Run command, if no papiex just run command silently
+epmt -j1 stop            # Generate epilog and append
+epmt -j1 dump >/dev/null # Parse/print job_metadata
+epmt -v -j1 stage           # Move to medium term storage
+epmt submit ./1.tgz      # Submit from staged storage

@@ -46,11 +46,10 @@ Outlier detection and averaging
 
 # Bugs
 
-- Deleting a job, CASCADE?
+- Deleting a job, CASCADE option to ORM?
 - Input pattern not configurable like it should be
-
+- May leak a user to DB during failed import
 # Performance
-
 - Job import time
 
 # EPMT Functionality

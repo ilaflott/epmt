@@ -25,12 +25,14 @@
 *.rar
 *.tar
 *.zip
+*.xz 
 
 # Logs and databases #
 ######################
 *.log
 *.sql
 *.sqlite
+data/postgres
 
 # OS generated files #
 ######################
@@ -42,9 +44,14 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
-data
 .cache
 .ipython
 .jupyter
 .local
 OutliersData/*.dir
+
+# user settings
+settings.py
+
+# virtualenv
+venv*
