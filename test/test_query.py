@@ -227,6 +227,16 @@ class QueryAPI(unittest.TestCase):
         n = eq.delete_refmodels(r['id'])
         self.assertEqual(n, 1, 'wrong ref_model delete count')
 
+    @db_session
+    def test_dm_calc(self):
+        jobs = eq.get_jobs(['685000', '685003', '685016'], fmt='orm')
+        self.assertEqual(jobs.count(), 3)
+        (perc, df, j_cpu) = eq.dm_calc(jobs)
+        self.assertEqual(perc, 43.16, 'wrong dm percent')
+        self.assertEqual(df.shape, (6, 30), 'wrong df shape')
+        self.assertEqual(df['cpu_time'].sum(), 273510353.0, 'wrong dm cpu time sum')
+        self.assertEqual(j_cpu, 633756327.0, 'wrong job cpu time sum')
+
 
     def test_zz_delete_jobs(self):
         #with self.assertRaises(EnvironmentError):

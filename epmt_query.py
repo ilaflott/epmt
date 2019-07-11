@@ -852,3 +852,17 @@ def delete_jobs(jobs, force = False):
     logger.debug('committing deletion')
     commit()
     return num_jobs
+
+@db_session
+def dm_calc(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op:dmput', 'op:hsmget', 'op:rm', 'op:cp']):
+    logger.debug('dm ops: {0}'.format(tags))
+    jobs = __jobs_col(jobs)
+    logger.debug('number of jobs: {0}'.format(len(jobs)))
+    tags = tags_list(tags)
+    dm_ops_df = op_metrics(jobs, tags = tags, group_by_tag = True)
+    jobs_cpu_time = 0.0
+    for j in jobs:
+        jobs_cpu_time += j.cpu_time
+    dm_cpu_time = dm_ops_df['cpu_time'].sum()
+    dm_percent = round((100 * dm_cpu_time / jobs_cpu_time), 2)
+    return (dm_percent, dm_ops_df, jobs_cpu_time)
