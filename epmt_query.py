@@ -853,6 +853,8 @@ def delete_jobs(jobs, force = False):
     commit()
     return num_jobs
 
+
+# use dm_calc_iter instead, this is here for reference only.
 @db_session
 def dm_calc(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op:dmput', 'op:hsmget', 'op:rm', 'op:cp']):
     logger.debug('dm ops: {0}'.format(tags))
@@ -866,3 +868,41 @@ def dm_calc(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op
     dm_cpu_time = dm_ops_df['cpu_time'].sum()
     dm_percent = round((100 * dm_cpu_time / jobs_cpu_time), 2)
     return (dm_percent, dm_ops_df, jobs_cpu_time)
+
+# This does the same data movement calculation as dm_calc, but has
+# a *far lower memory footprint, and is twice as fast*. Plus it
+# produces an additional dataframe that aggregates across tags by job
+# allowing us to compute min/max/std_dev across jobs for DM.
+@db_session
+def dm_calc_iter(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op:dmput', 'op:hsmget', 'op:rm', 'op:cp'], features = ['cpu_time']):
+    logger.debug('dm ops: {0}'.format(tags))
+    jobs = __jobs_col(jobs)
+    logger.debug('number of jobs: {0}'.format(len(jobs)))
+    tags = tags_list(tags)
+    jobs_cpu_time = 0.0
+    df_list = []
+    agg_ops_by_job = []
+    n = 0
+    start_time = datetime.now()
+    for j in jobs:
+        n += 1
+        jobs_cpu_time += j.cpu_time
+        job_dm_ops_df = op_metrics(j, tags = tags, group_by_tag = True)
+        job_dm_ops_df.insert(0, 'jobid', j.jobid)
+        df_list.append(job_dm_ops_df)
+        agg_dict = {'jobid': j.jobid, 'job_cpu_time': j.cpu_time}
+        for f in features:
+            agg_dict['dm_' + f] = job_dm_ops_df[f].sum()
+            if hasattr(j, f):
+                job_total = getattr(j, f)
+                if job_total != 0:
+                    agg_dict['dm_' + f + '%'] = round(100*agg_dict['dm_' + f]/job_total)
+        agg_ops_by_job.append(agg_dict)
+        if (n % 10 == 0):
+            elapsed_time = datetime.now() - start_time
+            logger.debug('processed %d of %d jobs at %.2f jobs/sec', n, len(jobs), n/elapsed_time.total_seconds())
+    dm_ops_df = pd.concat(df_list).reset_index(drop=True)
+    dm_agg_df_by_job = pd.DataFrame(agg_ops_by_job)
+    dm_cpu_time = dm_ops_df['cpu_time'].sum()
+    dm_percent = round((100 * dm_cpu_time / jobs_cpu_time), 3)
+    return (dm_percent, dm_ops_df, jobs_cpu_time, dm_agg_df_by_job)
