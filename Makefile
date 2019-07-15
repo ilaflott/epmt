@@ -56,7 +56,7 @@ check-python-driver-csh:
 	@echo; echo "Testing /bin/csh..."
 	env -i PATH=$(PWD):$$PATH $(FORCE_DEFAULT_SETTINGS) /bin/csh -v epmt-check.anysh
 check-example-bash:
-	@echo; echo "Testing /bin/csh with epmt-example.csh..."
+	@echo; echo "Testing /bin/bash with epmt-example.anysh..."
 	env -i PATH=$(PWD):$(PATH) $(FORCE_DEFAULT_SETTINGS) /bin/bash -Eeux epmt-example.anysh
 check-example-csh:
 	@echo; echo "Testing /bin/csh with epmt-example.csh..."
