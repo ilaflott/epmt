@@ -227,15 +227,29 @@ class QueryAPI(unittest.TestCase):
         n = eq.delete_refmodels(r['id'])
         self.assertEqual(n, 1, 'wrong ref_model delete count')
 
+    # @db_session
+    # def test_dm_calc(self):
+    #     jobs = eq.get_jobs(['685000', '685003', '685016'], fmt='orm')
+    #     self.assertEqual(jobs.count(), 3)
+    #     (perc, df, j_cpu) = eq.dm_calc(jobs)
+    #     self.assertEqual(perc, 43.16, 'wrong dm percent')
+    #     self.assertEqual(df.shape, (6, 30), 'wrong df shape')
+    #     self.assertEqual(df['cpu_time'].sum(), 273510353.0, 'wrong dm cpu time sum')
+    #     self.assertEqual(j_cpu, 633756327.0, 'wrong job cpu time sum')
+
     @db_session
-    def test_dm_calc(self):
+    def test_dm_calc_iter(self):
         jobs = eq.get_jobs(['685000', '685003', '685016'], fmt='orm')
         self.assertEqual(jobs.count(), 3)
-        (perc, df, j_cpu) = eq.dm_calc(jobs)
-        self.assertEqual(perc, 43.16, 'wrong dm percent')
-        self.assertEqual(df.shape, (6, 30), 'wrong df shape')
-        self.assertEqual(df['cpu_time'].sum(), 273510353.0, 'wrong dm cpu time sum')
-        self.assertEqual(j_cpu, 633756327.0, 'wrong job cpu time sum')
+        (dm_percent, df, all_jobs_cpu_time, agg_df) = eq.dm_calc_iter(jobs) 
+        self.assertEqual(dm_percent, 43.157, 'wrong dm percent')
+        self.assertEqual(df.shape, (17, 31))
+        self.assertEqual(all_jobs_cpu_time, 633756327.0, 'wrong job cpu time sum')
+        self.assertEqual(agg_df.shape, (3, 4))
+        self.assertEqual(list(agg_df['dm_cpu_time'].values), [69603181.0, 61358737.0, 142548435.0])
+        self.assertEqual(list(agg_df['dm_cpu_time%'].values), [62.0, 66.0, 33])
+        self.assertEqual(list(agg_df['jobid'].values), ['685000', '685003', '685016'])
+        self.assertEqual(list(agg_df['job_cpu_time'].values), [113135329.0, 93538033.0, 427082965.0])
 
 
     def test_zz_delete_jobs(self):

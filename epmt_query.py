@@ -854,12 +854,17 @@ def delete_jobs(jobs, force = False):
     return num_jobs
 
 
-# use dm_calc_iter instead, this is here for reference only.
+# This function has a high memory footprint, and you should only use it
+# for small collection of jobs. For large collections (len(jobs) > 100), use
+# dm_calc_iter instead
 @db_session
 def dm_calc(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op:dmput', 'op:hsmget', 'op:rm', 'op:cp']):
     logger.debug('dm ops: {0}'.format(tags))
     jobs = __jobs_col(jobs)
-    logger.debug('number of jobs: {0}'.format(len(jobs)))
+    num_jobs = len(jobs)
+    logger.debug('number of jobs: {0}'.format(num_jobs))
+    if (num_jobs > 100):
+        logger.warning('job count ({0}) > 100: it is recommended to use dm_calc_iter instead for a lower memory footprint and faster time-to-solution'.format(num_jobs))
     tags = tags_list(tags)
     dm_ops_df = op_metrics(jobs, tags = tags, group_by_tag = True)
     jobs_cpu_time = 0.0
