@@ -3,9 +3,11 @@ setenv USER testuser
 rm -rf ./1 ./1.tgz
 rm -rf /tmp/epmt 
 ./epmt -j1 start           # Generate prolog
-set env_vars = "`./epmt -j1 source`"
-echo "$env_vars"
-eval "$env_vars"           # Setup environment
+eval `epmt -j1 source`     # Setup environment
+echo $PAPIEX_OPTIONS
+echo $PAPIEX_OUTPUT
+echo $LD_PRELOAD
+
 # Workload
 sleep 1
 # End Workload
