@@ -48,6 +48,43 @@ WARNING:epmt_cmds:JOB_USER unset: Using username root as JOB_USER
 collect functionality (papiex+epmt)
 	       epmt run -a /bin/sleep 1
 	       Pass
+
+### Running unit tests with Python's `unittest` module
+
+We have a comprehensive set of unit tests that can be invoked as follows:
+
+```
+$ python -m unittest discover
+
+{'filename': ':memory:', 'provider': 'sqlite'}
+setUpModule: importing test/data/misc/*.tgz
+Imported successfully - job: failed-exitcode processes: 1 rate: 54.5643040323
+Imported successfully - job: 685000 processes: 3480 rate: 374.482987496
+'setUpModule' took: 10.2743 sec
+......
+{'filename': ':memory:', 'provider': 'sqlite'}
+setUpModule: importing test/data/misc/685000.tgz
+'setUpModule' took: 0.0117 sec
+..
+{'filename': ':memory:', 'provider': 'sqlite'}
+setUpModdule: importing test/data/query/*.tgz
+Imported successfully - job: 685000 processes: 3480 rate: 367.989366376
+Imported successfully - job: 685003 processes: 3785 rate: 368.269617338
+Imported successfully - job: 685016 processes: 3412 rate: 368.965343103
+'setUpModule' took: 31.8878 sec
+...............
+{'filename': ':memory:', 'provider': 'sqlite'}
+setUpModule: importing test/data/outliers/*.tgz
+Imported successfully - job: kern-6656-20190614-190245 processes: 10600 rate: 353.525545172
+Imported successfully - job: kern-6656-20190614-192044-outlier processes: 10600 rate: 351.265328962
+Imported successfully - job: kern-6656-20190614-194024 processes: 10600 rate: 352.45282394
+Imported successfully - job: kern-6656-20190614-191138 processes: 10600 rate: 352.341328069
+'setUpModule' took: 132.7657 sec
+.........
+----------------------------------------------------------------------
+Ran 32 tests in 215.512s
+
+OK
 ```
 
 ## Collecting Performance Data
