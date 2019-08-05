@@ -51,7 +51,8 @@ collect functionality (papiex+epmt)
 
 ### Running unit tests with Python's `unittest` module
 
-We have a comprehensive set of unit tests that can be invoked as follows:
+We have a comprehensive set of unit tests. Navigate to the top-level folder
+in the installation, and run the following command:
 
 ```
 $ python -m unittest discover
