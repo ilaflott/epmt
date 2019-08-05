@@ -44,10 +44,25 @@ THREAD_SUMS_FIELD_IN_PROC='threads_sums'
 #     return conv_jobs(entities, merge_sub_sums, fmt) if e1.__class__.__name__ == 'Job' else conv_procs_orm(entities, merge_sub_sums, fmt)
 
 
-# jobs is a jobs collection (Pony) or a list of Job objects,
-# or a list of jobids, or a pandas dataframe or a dictlist of jobs.
-# 'merge_sums' is silently ignored for fmt 'orm' or 'terse'
 def conv_jobs(jobs, fmt='dict', merge_sums = True):
+    """
+
+    conv_jobs will convert 'jobs' from one format to another. 
+    The input format need not be specified (it will be auto-detected).
+    The output format is specified using 'fmt'.
+
+    jobs: jobs collection (Pony) or a list of Job objects,
+          or a list of jobids, or a pandas dataframe or a dictlist of jobs.
+
+    fmt: Output format, one of: 'dict', 'orm', 'pandas' or 'terse'
+    
+    merge_sums: Is an advanced option. It defaults to True, which means
+                underlying sums across processes for a job are shown
+                as first-class columns rather than a nested dictionary.
+                This option is silently ignored for 'orm' and 'terse' formats.
+
+    """
+
     jobs = __jobs_col(jobs)
     if fmt == 'orm':
         return jobs
@@ -57,7 +72,7 @@ def conv_jobs(jobs, fmt='dict', merge_sums = True):
     # convert the ORM into a list of dictionaries, excluding blacklisted fields
     out_list = [ j.to_dict() for j in jobs ]
 
-    # do we need to merge threads' sum fields into the process?
+    # do we need to merge process' sum fields into the job?
     if merge_sums:
         for j in out_list:
             # check if dicts have any common fields, if so,
@@ -154,35 +169,35 @@ def __jobs_col(jobs):
 def timeline(jobs = [], limit=0, fltr='', when=None, hosts=[], fmt='pandas'):
     return get_procs(jobs, fmt=fmt, order='p.start', limit=limit, fltr=fltr, when=when, hosts=hosts)
 
-#
-# get the root process of the job
-# The job is either a Job object or a jobid
-#
-# EXAMPLE:
-# >>> eq.root('685016',fmt='terse')
-# 7266
-#
-# >>> p = eq.root('685016',fmt='orm')
-# >>> p.id
-# 7266
-# >>> p.exename
-# u'tcsh'
-# >>> p.args
-# u'-f /home/Jeffrey.Durachta/ESM4/DECK/ESM4_historical_D151/gfdl.ncrc4-intel16-prod-openmp/scripts/postProcess/ESM4_historical_D151_ocean_month_rho2_1x1deg_18840101.tags'
-# >>> p.descendants.count()
-# 3381
-#
-# >>> df = eq.root('685016', fmt='pandas')
-# >>> df.shape
-# (1,49)
-# >>> df.loc[0,'pid']
-# 122181
-#
-# >>> p = eq.root('685016')
-# >>> p['id'],p['exename']
-# (7266, u'tcsh')
 @db_session
 def root(job, fmt='dict'):
+    """
+    Get the root process of a job. The job is either a Job object or a jobid
+    
+    EXAMPLE:
+    >>> eq.root('685016',fmt='terse')
+    7266
+    
+    >>> p = eq.root('685016',fmt='orm')
+    >>> p.id
+    7266
+    >>> p.exename
+    u'tcsh'
+    >>> p.descendants.count()
+    3381
+    
+    >>> df = eq.root('685016', fmt='pandas')
+    >>> df.shape
+    (1,49)
+    >>> df.loc[0,'pid']
+    122181
+    
+    >>> p = eq.root('685016')
+    >>> p['id'],p['exename']
+    (7266, u'tcsh')
+
+    """
+
     if isString(job):
         job = Job[job]
     p = job.processes.order_by('p.start').limit(1)
@@ -216,70 +231,72 @@ def op_roots(jobs, tag, fmt='dict'):
     return conv_procs_orm(root_op_procs, fmt=fmt)
 
 
-# This function returns a list of jobs based on some filtering and ordering.
-# The output format can be set to pandas dataframe, list of dicts or list
-# of ORM objects. See 'fmt' option.
-#
-#
-# jobs   : Optional list of jobs to narrow the search space. The jobs can
-#          a list of jobids (i.e., list of strings), or the result of a Pony
-#          query on Job (i.e., a Query object), or a pandas dataframe of jobs
-#          
-#
-# tag    : Optional dictionary or string of key/value pairs. If set to ''
-#          or {], then exact_tag_match will be implicitly set, and only
-#          those jobs that have an empty tag will match. 
-#
-# fltr   : Optional filter in the form of a lamdba function or a string
-#          e.g., lambda j: count(j.processes) > 100 will filter jobs more than 100 processes
-#          or, 'j.duration > 100000' will filter jobs whose duration is more than 100000
-#
-# order  : Optionally sort the output by setting this to a lambda function or string
-#          e.g, to sort by job duration descending:
-#               order = 'desc(j.duration)'
-#          or, to sort jobs by the sum of durations of their processes, do:
-#               order = lambda j: sum(j.processes.duration)
-#          If not set, this defaults to desc(j.created_at), in other words
-#          jobs are returned in the reverse order of ingestion.
-#
-# limit  : Restrict the output list a specified number of jobs. Defaults to 20.
-#          When set to 0, it means no limit
-#
-# offset : When returning query results, skip offset rows. "offset"
-#          defaults to 0. 
-#
-# when   : Restrict the output to jobs running at 'when' time. 'when'
-#          can be specified as a Python datetime. You can also choose
-#          to specify 'when' as jobid or a Job object. In which 
-#          case the output will be restricted to those jobs that 
-#          had an overlap with the specified 'when' job. 
-#
-# hosts  : Restrict the output to those jobs that ran on 'hosts'.
-#          'hosts' is a list of hostnames/Host objects. A job is
-#          consider to match if the intersection of j.hosts and hosts is non-empty
-#
-# fmt    : Control the output format. One of 'dict', 'pandas', 'orm', 'terse'
-#          'dict': each job object is converted to a dict, and the entire
-#                  output is a list of dictionaries
-#          'pandas': Output a pandas dataframe with one row for each matching job
-#          'orm':  returns a Pony Query object (ADVANCED)
-#          'terse': In this format only the primary key ID is printed for each job
-#
-# merge_proc_sums: By default True, which means the fields inside job.proc_sums
-#          will be hoisted up one level to become first-class members of the job.
-#          This will make aggregates across processes appear as part of the job
-#          If False, the job will contain job.proc_sums, which will be a dict
-#          of key/value pairs, where each is an process attribute, such as numtids,
-#          and the value is the sum acorss all processes of the job.
-#
-# exact_tag_only: If set, tag will be considered matched if saved tag
-#          identically matches the passed tag. The default is False, which
-#          means if the tag in the database are a superset of the passed
-#          tag a match will considered.
-#
-#
 @db_session
 def get_jobs(jobs = [], tag=None, fltr = '', order = None, limit = None, offset = 0, when=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tag_only = False):
+    """
+
+    This function returns a list of jobs based on some filtering and ordering.
+    The output format can be set to pandas dataframe, list of dicts or list
+    of ORM objects based on the 'fmt' option.
+    
+    
+    jobs   : Optional list of jobs to narrow the search space. The jobs can
+             a list of jobids (i.e., list of strings), or the result of a Pony
+             query on Job (i.e., a Query object), or a pandas dataframe of jobs
+             
+    
+    tag    : Optional dictionary or string of key/value pairs. If set to ''
+             or {], then exact_tag_match will be implicitly set, and only
+             those jobs that have an empty tag will match. 
+    
+    fltr   : Optional filter in the form of a lamdba function or a string
+             e.g., lambda j: count(j.processes) > 100 will filter jobs more than 100 processes
+             or, 'j.duration > 100000' will filter jobs whose duration is more than 100000
+    
+    order  : Optionally sort the output by setting this to a lambda function or string
+             e.g, to sort by job duration descending:
+                  order = 'desc(j.duration)'
+             or, to sort jobs by the sum of durations of their processes, do:
+                  order = lambda j: sum(j.processes.duration)
+             If not set, this defaults to desc(j.created_at), in other words
+             jobs are returned in the reverse order of ingestion.
+    
+    limit  : Restrict the output list a specified number of jobs. Defaults to 20.
+             When set to 0, it means no limit
+    
+    offset : When returning query results, skip offset rows. "offset"
+             defaults to 0. 
+    
+    when   : Restrict the output to jobs running at 'when' time. 'when'
+             can be specified as a Python datetime. You can also choose
+             to specify 'when' as jobid or a Job object. In which 
+             case the output will be restricted to those jobs that 
+             had an overlap with the specified 'when' job. 
+    
+    hosts  : Restrict the output to those jobs that ran on 'hosts'.
+             'hosts' is a list of hostnames/Host objects. A job is
+             consider to match if the intersection of j.hosts and hosts is non-empty
+    
+    fmt    : Control the output format. One of 'dict', 'pandas', 'orm', 'terse'
+             'dict': each job object is converted to a dict, and the entire
+                     output is a list of dictionaries
+             'pandas': Output a pandas dataframe with one row for each matching job
+             'orm':  returns a Pony Query object (ADVANCED)
+             'terse': In this format only the primary key ID is printed for each job
+    
+    merge_proc_sums: By default True, which means the fields inside job.proc_sums
+             will be hoisted up one level to become first-class members of the job.
+             This will make aggregates across processes appear as part of the job
+             If False, the job will contain job.proc_sums, which will be a dict
+             of key/value pairs, where each is an process attribute, such as numtids,
+             and the value is the sum acorss all processes of the job.
+    
+    exact_tag_only: If set, tag will be considered matched if saved tag
+             identically matches the passed tag. The default is False, which
+             means if the tag in the database are a superset of the passed
+             tag a match will considered.
+    
+    """
 
     # set defaults for limit and ordering only if the user doesn't specify jobs
     if (type(jobs) not in [Query, QueryResult, pd.DataFrame]) and (jobs in [[], '', None]):
@@ -338,80 +355,87 @@ def get_jobs(jobs = [], tag=None, fltr = '', order = None, limit = None, offset 
     return conv_jobs(qs, fmt, merge_proc_sums)
 
 
-# Filter a supplied list of jobs to find a match
-# by tag or some primary keys. If no jobs list is provided,
-# then the query will be run against all processes.
-#
-# All fields are optional and sensible defaults are assumed.
-#
-# tag : is a dictionary or string of key/value pairs and is optional.
-#       If set to '' or {}, exact_tag_match will be implicitly
-#       set, and only those processes with an empty tag will match.
-#
-# fltr: is a lambda expression or a string of the form:
-#       lambda p: p.duration > 1000
-#        OR
-#       'p.duration > 1000 and p.numtids < 4'
-#
-# limit: if set, limits the total number of results
-# 
-# when   : Restrict the output to processes running at 'when' time. 'when'
-#          can be specified as a Python datetime. You can also choose
-#          to specify 'when' as process PK or a Process object. In which 
-#          case the output will be restricted to those processes that 
-#          had an overlap with the specified 'when' process. 
-#
-# hosts  : Restrict the output to those processes that ran on 'hosts'.
-#          'hosts' is a list of hostnames/Host objects. A process is
-#          consider to match if process.host is in the list of 'hosts'
-#
-# fmt :   Output format, is one of 'dict', 'orm', 'pandas', 'terse'
-#         'dict': This is the default, and in this case
-#                 each process is output as a python dictionary, 
-#                 and the entire output is a list of dictionaries.
-#         'pandas': output is a pandas dataframe
-#         'orm': output is an ORM Query object (ADVANCED)
-#         'terse': output contains only the database ids of matching processes
-#
-# merge_threads_sums: By default, this is True, and this means threads sums are
-#          are folded into the process. If set to False, the threads'
-#          sums will be available as a separate field THREAD_SUMS_FIELD_IN_PROC.
-#          Flattening makes subsequent processing easier as all the
-#          thread aggregates such as 'usertime', 'systemtime' are available
-#          as first-class members of the process. This option is silently
-#          ignored if output format 'fmt' is set to 'orm', and ORM
-#          objects will not be merge_threads_sumsed.
-#
-# exact_tag_only: If set, tag will be considered matched if saved tag
-#          identically matches the passed tag. The default is False, which
-#          means if the tag in the database are a superset of the passed
-#          tag a match will considered.
-#
-# For example, to get all processes for a particular Job, with jobid '32046', which
-# are multithreaded, you would do:
-#
-#   get_procs(jobs = ['32046'], fltr = 'p.numtids > 1')
-#
-# To filter all processes that have tag = {'app': 'fft'}, you would do:
-# get_procs(tag = {'app': 'fft'})
-#
-# to get a pandas dataframe:
-# qs1 = get_procs(tag = {'app': 'fft'}, fmt = 'pandas')
-#
-# to filter processes for a job '1234' and order by process duration,
-# getting the top 10 results, and keeping the final output in ORM format:
-# 
-# q = get_procs(['1234'], order = 'desc(p.duration)', limit=10, fmt='orm')
-#
-# now, let's filter processes with duration > 100000 and order them by user+system time,
-# and let's get the output into a pandas dataframe:
-# q = get_procs(fltr = (lambda p: p.duration > 100000), order = 'desc(p.threads_sums["user+system"]', fmt='pandas')
-# Observe, that while 'user+system' is a metric available in the threads_sums field,
-# by using the default merge_threads_sums=True, it will be available as column in the output
-# dataframe. The output will be pre-sorted on this field because we have set 'order'
 #
 @db_session
 def get_procs(jobs = [], tag = None, fltr = None, order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_threads_sums=True, exact_tag_only = False):
+    """
+    
+    Filter a supplied list of jobs to find a match
+    by tag or some primary keys. If no jobs list is provided,
+    then the query will be run against all processes.
+    
+    All fields are optional and sensible defaults are assumed.
+    
+    tag : is a dictionary or string of key/value pairs and is optional.
+          If set to '' or {}, exact_tag_match will be implicitly
+          set, and only those processes with an empty tag will match.
+    
+    fltr: is a lambda expression or a string of the form:
+          lambda p: p.duration > 1000
+           OR
+          'p.duration > 1000 and p.numtids < 4'
+    
+    limit: if set, limits the total number of results
+    
+    when   : Restrict the output to processes running at 'when' time. 'when'
+             can be specified as a Python datetime. You can also choose
+             to specify 'when' as process PK or a Process object. In which 
+             case the output will be restricted to those processes that 
+             had an overlap with the specified 'when' process. 
+    
+    hosts  : Restrict the output to those processes that ran on 'hosts'.
+             'hosts' is a list of hostnames/Host objects. A process is
+             consider to match if process.host is in the list of 'hosts'
+    
+    fmt :   Output format, is one of 'dict', 'orm', 'pandas', 'terse'
+            'dict': This is the default, and in this case
+                    each process is output as a python dictionary, 
+                    and the entire output is a list of dictionaries.
+            'pandas': output is a pandas dataframe
+            'orm': output is an ORM Query object (ADVANCED)
+            'terse': output contains only the database ids of matching processes
+    
+    merge_threads_sums: By default, this is True, and this means threads sums are
+             are folded into the process. If set to False, the threads'
+             sums will be available as a separate field THREAD_SUMS_FIELD_IN_PROC.
+             Flattening makes subsequent processing easier as all the
+             thread aggregates such as 'usertime', 'systemtime' are available
+             as first-class members of the process. This option is silently
+             ignored if output format 'fmt' is set to 'orm', and ORM
+             objects will not be merge_threads_sumsed.
+    
+    exact_tag_only: If set, tag will be considered matched if saved tag
+             identically matches the passed tag. The default is False, which
+             means if the tag in the database are a superset of the passed
+             tag a match will considered.
+    
+    For example, to get all processes for a particular Job, with jobid '32046', which
+    are multithreaded, you would do:
+    
+      get_procs(jobs = ['32046'], fltr = 'p.numtids > 1')
+    
+    To filter all processes that have tag = {'app': 'fft'}, you would do:
+    get_procs(tag = {'app': 'fft'})
+    
+    to get a pandas dataframe:
+    qs1 = get_procs(tag = {'app': 'fft'}, fmt = 'pandas')
+    
+    to filter processes for a job '1234' and order by process duration,
+    getting the top 10 results, and keeping the final output in ORM format:
+    
+    q = get_procs(['1234'], order = 'desc(p.duration)', limit=10, fmt='orm')
+    
+    now, let's filter processes with duration > 100000 and order them by user+system time,
+    and let's get the output into a pandas dataframe:
+
+    q = get_procs(fltr = (lambda p: p.duration > 100000), order = 'desc(p.threads_sums["user+system"]', fmt='pandas')
+
+    Observe, that while 'user+system' is a metric available in the threads_sums field,
+    by using the default merge_threads_sums=True, it will be available as column in the output
+    dataframe. The output will be pre-sorted on this field because we have set 'order'
+
+    """
+
     if jobs:
         jobs = __jobs_col(jobs)
         qs = Process.select(lambda p: p.job in jobs)
@@ -501,14 +525,18 @@ def get_thread_metrics(*processes):
     return pd.concat(df_list) if len(df_list) > 1 else df_list[0]
 
 
-# gets all the unique tags across all processes of a job or list of jobs
-# jobs: is a single job id or a Job object, or a list of jobids/list of job objects
-# If 'fold' is set, then tags will be merged to compact the output
-# otherwise, the expanded list of dictionaries is returned
-# 'exclude' is an optional list of keys to exclude from each tag (if present)
-
 @db_session
 def job_proc_tags(jobs = [], exclude=[], fold=False):
+    """
+    gets all the unique tags across all processes of a job or collection of jobs
+
+    jobs   : is a single job id or a Job object, or a list of jobids/list of job objects
+
+    fold   : if set to True, this will compact the output to make it more readable
+             otherwise, the expanded list of dictionaries is returned
+
+    exclude: an optional list of keys to exclude from each tag (if present)
+    """
     jobs = __jobs_col(jobs)
     tags = []
     for j in jobs:
@@ -758,24 +786,33 @@ def __unique_proc_tags_for_job(job, exclude=[], fold=True):
     return fold_dicts(tags) if fold else tags
 
 
-# returns a list of dicts (or dataframe), each row is of the form:
-# <job-id>,<tag>, metric1, metric2, etc..
-# You pass as argument a job or a list of jobs, and
-# tags is passed in as a list of strings or dictionaries. You
-# may optionally pass a single tag as a string or dict.
-# If exatct_tags_only is set (default False), then a match
-# means there is an exact match of the tag dictionaries.
-# If no tags are passed, then the set of unique tags for the jobs
-# will be used.
-# 
-# group_by_tag: If set, rows that have the same tag will be coalesced
-#               and their column values will be aggregated. As a 
-#               consequence, the output will not have job/jobid columns
-#
-# In this function, fmt is only allowed 'pandas' or 'dict'
-#
 @db_session
 def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=False, fmt='pandas'):
+    """
+    Aggregates metrics across processes for one or or more operations.
+    The returned output is of the form:
+
+    <job-id>,<tag1>, metric11, metric12, ...
+    <job-id>,<tag2>, metric21, metric22, ...
+
+    where, <metric11> is the sum across process for the tag1 for metric1
+
+    jobs        : Is a single job or a collection of jobs
+
+    tags        : List of strings or a list of dictionaries. You may also
+                  pass a single tag as a string or dict. If no tags are supplied, 
+                  then the set of unique tags for the jobs will be used.
+    
+    exact_tags  : If exact_tags_only is set (default False), then a match
+                  means there is an exact match of the tag dictionaries.
+
+    group_by_tag: If set, rows that have the same tag will be coalesced
+                  and their column values will be aggregated. As a 
+                  consequence, the output will not have job/jobid columns
+    
+    fmt:          One of 'dict' or 'pandas'. Defaults to 'pandas'
+
+    """
     if not jobs:
         logger.warning('You need to specify one or more jobs for op_metrics')
         return None
