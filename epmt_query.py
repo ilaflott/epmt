@@ -631,63 +631,62 @@ def _refmodel_scores(col, outlier_methods, features):
             ret[m.__name__][c] = m(df[c])[1:]
     return ret
 #
-# This function creates a reference model and returns
-# the ID of the newly-created model in the database
-# 
-#
-# jobs:     points to a list of Jobs (or pony JobSet) or jobids
-#
-# tag:      A string or dict consisting of key/value pairs. This
-#           tag is saved for the refmodel, and may be used
-#           in a filter while retrieving the refmodel.
-#
-# op_tags:  A list of strings or dicts. This is optional,
-#           if set, it will restrict the model to the filtered ops.
-#           op_tags are distinct from "tag". op_tags are used to
-#           obtain the set of processes over which an aggregation
-#           is performed using op_metrics. 
-#
-# outlier_methods: Is a list of methods that are used to obtain
-#          scores. Each method is passed a vector consisting
-#          of the value of 'feature' for all the jobs. The
-#          method will return a vector of scores. This
-#          vector of scores will be saved (or some processed
-#          form of it). If methods is not specified then it
-#          will at present be set to modified_z_score.
-#
-# features: List of fields of each job that should be used
-#          for outlier detection. 
-#          Defaults to: ['duration', 'cpu_time', 'num_procs']
-#
-# exact_tag_only: Default False. If set, all tag matches require
-#          exact dictionary match, and a superset match won't do.
-#
-# e.g,.
-#
-# create a job ref model with a list of jobids
-# eq.create_refmodel(jobs=[u'615503', u'625135'])
-#
-# or use pony orm query result:
-# >>> jobs = eq.get_jobs(tag='exp_component:atmos', fmt='orm')
-# >>> r = eq.create_refmodel(jobs)
-#
-# to create a refmodel for ops we need to either set op_tags
-# to a list of tags for the ops, or use the wildcard (*):
-# >>> r = eq.create_refmodel(jobs, tag='exp_name:linux_kernel', op_tags='*')
-#
-# >>> r['id'], r['tags'], r['jobs']
-# (11, {'exp_name': 'linux_kernel'}, [u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-192044-outlier', u'kern-6656-20190614-194024'])
-#
-# >>> r['op_tags']
-# [{u'op_instance': u'4', u'op_sequence': u'4', u'op': u'build'}, {u'op_instance': u'5', u'op_sequence': u'5', u'op': u'clean'}, {u'op_instance': u'3', u'op_sequence': u'3', u'op': u'configure'}, {u'op_instance': u'1', u'op_sequence': u'1', u'op': u'download'}, {u'op_instance': u'2', u'op_sequence': u'2', u'op': u'extract'}]
-
-#
-#
 @db_session
 def create_refmodel(jobs=[], tag={}, op_tags=[], 
                     outlier_methods=[modified_z_score], 
                     features=['duration', 'cpu_time', 'num_procs'], exact_tag_only=False,
                     fmt='dict'):
+    """
+    This function creates a reference model and returns
+    the ID of the newly-created model in the database
+    
+    
+    jobs:     points to a list of Jobs (or pony JobSet) or jobids
+    
+    tag:      A string or dict consisting of key/value pairs. This
+              tag is saved for the refmodel, and may be used
+              in a filter while retrieving the model.
+    
+    op_tags:  A list of strings or dicts. This is optional,
+              if set, it will restrict the model to the filtered ops.
+              op_tags are distinct from "tag". op_tags are used to
+              obtain the set of processes over which an aggregation
+              is performed using op_metrics. 
+    
+    outlier_methods: Is a list of methods that are used to obtain
+             scores. Each method is passed a vector consisting
+             of the value of 'feature' for all the jobs. The
+             method will return a vector of scores. This
+             vector of scores will be saved (or some processed
+             form of it). If methods is not specified then it
+             will at present be set to modified_z_score.
+    
+    features: List of fields of each job that should be used
+             for outlier detection. 
+             Defaults to: ['duration', 'cpu_time', 'num_procs']
+    
+    exact_tag_only: Default False. If set, all tag matches require
+             exact dictionary match, and a superset match won't do.
+    
+    e.g,.
+    
+    create a job ref model with a list of jobids
+    eq.create_refmodel(jobs=[u'615503', u'625135'])
+    
+    or use pony orm query result:
+    >>> jobs = eq.get_jobs(tag='exp_component:atmos', fmt='orm')
+    >>> r = eq.create_refmodel(jobs)
+    
+    to create a refmodel for ops we need to either set op_tags
+    to a list of tags for the ops, or use the wildcard (*):
+    >>> r = eq.create_refmodel(jobs, tag='exp_name:linux_kernel', op_tags='*')
+    
+    >>> r['id'], r['tags'], r['jobs']
+    (11, {'exp_name': 'linux_kernel'}, [u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-192044-outlier', u'kern-6656-20190614-194024'])
+    
+    >>> r['op_tags']
+    [{u'op_instance': u'4', u'op_sequence': u'4', u'op': u'build'}, {u'op_instance': u'5', u'op_sequence': u'5', u'op': u'clean'}, {u'op_instance': u'3', u'op_sequence': u'3', u'op': u'configure'}, {u'op_instance': u'1', u'op_sequence': u'1', u'op': u'download'}, {u'op_instance': u'2', u'op_sequence': u'2', u'op': u'extract'}]
+    """
     if (not jobs) or len(jobs)==0:
         logger.error('You need to specify one or more jobs to create a reference model')
         return None
