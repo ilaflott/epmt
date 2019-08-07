@@ -37,12 +37,6 @@ setup_orm_db(settings)
 PROC_SUMS_FIELD_IN_JOB='proc_sums'
 THREAD_SUMS_FIELD_IN_PROC='threads_sums'
 
-# figure out the entity type and then call the appropriate 
-# convertor. For now we know its either a collection of Job or Process objects
-# def conv_orm(entities, merge_sub_sums=True, fmt='dict'):
-#     e1 = entities[0] if type(entities) == list else entities.first()
-#     return conv_jobs(entities, merge_sub_sums, fmt) if e1.__class__.__name__ == 'Job' else conv_procs_orm(entities, merge_sub_sums, fmt)
-
 
 def conv_jobs(jobs, fmt='dict', merge_sums = True):
     """
@@ -86,8 +80,10 @@ def conv_jobs(jobs, fmt='dict', merge_sums = True):
     return pd.DataFrame(out_list) if fmt=='pandas' else out_list
 
 
-# procs is an ORM Query object on Process or a list of Process objects
-def conv_procs_orm(procs, merge_sums = True, fmt='dict'):
+def __conv_procs_orm(procs, merge_sums = True, fmt='dict'):
+    """
+    Converts an ORM Query object to a format of choice
+    """
     if fmt=='orm':
         return procs
 
@@ -111,11 +107,13 @@ def conv_procs_orm(procs, merge_sums = True, fmt='dict'):
             del p[THREAD_SUMS_FIELD_IN_PROC]
     return pd.DataFrame(out_list) if fmt == 'pandas' else out_list
 
-# this is an internal function to take a collection of jobs
-# in a variety of formats and return output in a specified format
-# You should not use this function directly, but instead use
-# conv_jobs()
+
 def __jobs_col(jobs):
+    """
+    This is an internal function to take a collection of jobs
+    in a variety of formats and return output in a specified format
+    You should not use this function directly, but instead use conv_jobs()
+    """
     if type(jobs) in [Query, QueryResult]:
         return jobs
     if ((type(jobs) != pd.DataFrame) and not(jobs)):
@@ -142,32 +140,35 @@ def __jobs_col(jobs):
     return jobs
 
 
-# this function returns a timeline of processes
-# ordered chronologically by start time.
-# jobs is either a collection of jobs or a single job, where 
-# jobs can be specified as jobids or Job objects.
-# 
-# The function takes the same arguments as get_procs is a very
-# slim wrapper over it, just setting an ordering by start time.
-#
-# >>> eq.timeline([u'685000', u'685016'], limit=5)[['job', 'exename', 'start', 'id']]
-#       job    exename                      start    id
-# 0  685000       tcsh 2019-06-15 11:52:04.126892  3413
-# 1  685000       tcsh 2019-06-15 11:52:04.133795  3414
-# 2  685000      mkdir 2019-06-15 11:52:04.142141  3415
-# 3  685000  modulecmd 2019-06-15 11:52:04.176020  3416
-# 4  685000       test 2019-06-15 11:52:04.192758  3417
-#
-# >>> eq.timeline([u'685000', u'685016'], limit=5, hosts=[Host[u'pp313'], Host[u'pp208']])[['job', 'exename', 'start', 'host']]
-#       job    exename                      start   host
-# 0  685000       tcsh 2019-06-15 11:52:04.126892  pp208
-# 1  685000       tcsh 2019-06-15 11:52:04.133795  pp208
-# 2  685000      mkdir 2019-06-15 11:52:04.142141  pp208
-# 3  685000  modulecmd 2019-06-15 11:52:04.176020  pp208
-# 4  685000       test 2019-06-15 11:52:04.192758  pp208
-#
 def timeline(jobs = [], limit=0, fltr='', when=None, hosts=[], fmt='pandas'):
+    """
+    Timeline returns a timeline of processes ordered chronologically 
+    by start time. 
+
+    jobs : Is either a collection of jobs or a single job, where 
+           jobs can be specified as jobids or Job objects.
+    
+    The function takes the same arguments as get_procs is a very
+    thin wrapper over it, just setting an ordering by start time.
+    
+    >>> eq.timeline([u'685000', u'685016'], limit=5)[['job', 'exename', 'start', 'id']]
+          job    exename                      start    id
+    0  685000       tcsh 2019-06-15 11:52:04.126892  3413
+    1  685000       tcsh 2019-06-15 11:52:04.133795  3414
+    2  685000      mkdir 2019-06-15 11:52:04.142141  3415
+    3  685000  modulecmd 2019-06-15 11:52:04.176020  3416
+    4  685000       test 2019-06-15 11:52:04.192758  3417
+    
+    >>> eq.timeline([u'685000', u'685016'], limit=5, hosts=[Host[u'pp313'], Host[u'pp208']])[['job', 'exename', 'start', 'host']]
+          job    exename                      start   host
+    0  685000       tcsh 2019-06-15 11:52:04.126892  pp208
+    1  685000       tcsh 2019-06-15 11:52:04.133795  pp208
+    2  685000      mkdir 2019-06-15 11:52:04.142141  pp208
+    3  685000  modulecmd 2019-06-15 11:52:04.176020  pp208
+    4  685000       test 2019-06-15 11:52:04.192758  pp208
+    """
     return get_procs(jobs, fmt=fmt, order='p.start', limit=limit, fltr=fltr, when=when, hosts=hosts)
+
 
 @db_session
 def root(job, fmt='dict'):
@@ -195,30 +196,30 @@ def root(job, fmt='dict'):
     >>> p = eq.root('685016')
     >>> p['id'],p['exename']
     (7266, u'tcsh')
-
     """
-
     if isString(job):
         job = Job[job]
     p = job.processes.order_by('p.start').limit(1)
     if fmt == 'orm': return p.to_list().pop()
     if fmt == 'terse': return p.to_list().pop().id
 
-    plist = conv_procs_orm(p, fmt='dict')
+    plist = __conv_procs_orm(p, fmt='dict')
     return pd.DataFrame(plist) if fmt == 'pandas' else plist.pop()
 
-# This function returns the root process(es) for an operation
-# for one or more jobs. Ideally, you would use this function with
-# a single job, but we allow a job collection for flexibility.
-# Bear in mind, for a large job collection, op_roots is presently a
-# *slow* query. 
-#
-# tag: is a single tag (string or dictionary of key/value pairs)
-#
-# Returns a collection of processes in the format specified.
-# The processes are sorted by jobid and within a job by start time
 @db_session
 def op_roots(jobs, tag, fmt='dict'):
+    """
+    This function returns the root process(es) for an operation
+    for one or more jobs. Ideally, you would use this function with
+    a single job, but we allow a job collection for flexibility.
+    Bear in mind, for a large job collection, op_roots is presently a
+    *slow* query. 
+    
+    tag: is a single tag (string or dictionary of key/value pairs)
+    
+    op_root returns a collection of processes in the format specified.
+    The processes are sorted by jobid and within a job by start time
+    """
     jobs = __jobs_col(jobs)
     if not tag:
         logger.error('You must specify a tag (string or dict)')
@@ -228,17 +229,15 @@ def op_roots(jobs, tag, fmt='dict'):
     op_procs = get_procs(jobs, tag, fmt='orm')
     # TODO: This probably can be sped up by partitioning op_procs by job
     root_op_procs = op_procs.filter(lambda p: p.parent not in op_procs).order_by(Process.job, Process.start)
-    return conv_procs_orm(root_op_procs, fmt=fmt)
+    return __conv_procs_orm(root_op_procs, fmt=fmt)
 
 
 @db_session
 def get_jobs(jobs = [], tag=None, fltr = '', order = None, limit = None, offset = 0, when=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tag_only = False):
     """
-
     This function returns a list of jobs based on some filtering and ordering.
     The output format can be set to pandas dataframe, list of dicts or list
     of ORM objects based on the 'fmt' option.
-    
     
     jobs   : Optional list of jobs to narrow the search space. The jobs can
              a list of jobids (i.e., list of strings), or the result of a Pony
@@ -295,9 +294,7 @@ def get_jobs(jobs = [], tag=None, fltr = '', order = None, limit = None, offset 
              identically matches the passed tag. The default is False, which
              means if the tag in the database are a superset of the passed
              tag a match will considered.
-    
     """
-
     # set defaults for limit and ordering only if the user doesn't specify jobs
     if (type(jobs) not in [Query, QueryResult, pd.DataFrame]) and (jobs in [[], '', None]):
         if (fmt != 'orm') and (limit == None): 
@@ -359,7 +356,6 @@ def get_jobs(jobs = [], tag=None, fltr = '', order = None, limit = None, offset 
 @db_session
 def get_procs(jobs = [], tag = None, fltr = None, order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_threads_sums=True, exact_tag_only = False):
     """
-    
     Filter a supplied list of jobs to find a match
     by tag or some primary keys. If no jobs list is provided,
     then the query will be run against all processes.
@@ -433,9 +429,7 @@ def get_procs(jobs = [], tag = None, fltr = None, order = '', limit = 0, when=No
     Observe, that while 'user+system' is a metric available in the threads_sums field,
     by using the default merge_threads_sums=True, it will be available as column in the output
     dataframe. The output will be pre-sorted on this field because we have set 'order'
-
     """
-
     if jobs:
         jobs = __jobs_col(jobs)
         qs = Process.select(lambda p: p.job in jobs)
@@ -486,19 +480,20 @@ def get_procs(jobs = [], tag = None, fltr = None, order = '', limit = 0, when=No
     if fmt == 'orm':
         return qs
 
-    return conv_procs_orm(qs, merge_threads_sums, fmt)
+    return __conv_procs_orm(qs, merge_threads_sums, fmt)
 
 
 
-# Returns:
-# thread metrics dataframe for one or more processes
-# None if error
-# where each process is specified as either as a Process object or 
-# the database ID of a process.
-# If multiple processes are specified then dataframes are concatenated
-# using pandas into a single dataframe
 @db_session
 def get_thread_metrics(*processes):
+    """
+    Returns a thread metrics dataframe for one or more processes
+    and None if error,
+    where each process is specified as either as a Process object or 
+    the database ID of a process.
+    If multiple processes are specified then dataframes are concatenated
+    using pandas into a single dataframe
+    """
     # handle the case where the user supplied a python list rather
     # spread out arguments
     if type(processes[0]) == list:
@@ -550,21 +545,25 @@ def job_proc_tags(jobs = [], exclude=[], fold=False):
 get_job_proc_tags = job_proc_tags
 
 
-# This function returns reference models filtered using tag and fltr
-# tag refers to a single dict of key/value pairs or a string
-# fltr is a lambda function or a string containing a pony expression
-# limit is used to limit the number of output items, 0 means no limit
-# order is used to order the output list, its a lambda function or a string
-# exact_tag_only is used to match the DB tag with the supplied tag:
-#   the full dictionary must match for a successful match. Default False.
-# merge_nested_fields is used to hoist attributes from the 'computed'
-#   fields in the reference model, so they appear as first-class fields.
-# fmt is one of 'orm', 'pandas', 'dict'. Default is 'dict'
-# example usage:
-#   get_refmodels(tag = 'exp_name:ESM4;exp_component:ice_1x1', fmt='pandas')
-#
+
 @db_session
 def get_refmodels(tag = {}, fltr=None, limit=0, order='', exact_tag_only=False, merge_nested_fields=True, fmt='dict'):
+    """
+    This function returns reference models filtered using tag and fltr
+
+    tag   : refers to a single dict of key/value pairs or a string
+    fltr  : a lambda function or a string containing a pony expression
+    limit : used to limit the number of output items, 0 means no limit
+    order : used to order the output list, its a lambda function or a string
+    exact_tag_only: is used to match the DB tag with the supplied tag:
+            the full dictionary must match for a successful match. Default False.
+    merge_nested_fields: used to hoist attributes from the 'computed'
+            fields in the reference model, so they appear as first-class fields.
+    fmt   : one of 'orm', 'pandas', 'dict'. Default is 'dict'
+
+    EXAMPLE:
+      get_refmodels(tag = 'exp_name:ESM4;exp_component:ice_1x1', fmt='pandas')
+    """
     qs = ReferenceModel.select()
 
     # filter using tag if set
@@ -738,6 +737,11 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
 # returns the number of models deleted.
 @db_session
 def delete_refmodels(*ref_ids):
+    """
+    Deletes one or more reference models. The reference models are specified
+    using their IDs. The functions the returns the number of reference models
+    deleted (either all the requested models will be deleted or none (0))
+    """
     if not ref_ids:
         logger.warning("You must specify one or more reference model IDs to delete")
         return 0
@@ -863,15 +867,14 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=F
 # alias for get_op_metrics, for compat
 op_metrics = get_op_metrics
 
-# this function deletes one or more jobs
-# It requires 'force' to be set if number of jobs to delete > 1
-# Returns: number of jobs deleted or 0 if none deleted.
-# The function will either delete all requested jobs or none.
 @db_session
 def delete_jobs(jobs, force = False):
-    #global settings
-    #if not(settings.allow_job_deletion):
-    #    raise EnvironmentError('allow_job_deletion needs to be True in settings.py to delete jobs')
+    """
+    delete_jobs deletes one or more jobs
+    It requires 'force' to be set if number of jobs to delete > 1
+    Returns: number of jobs deleted or 0 if none deleted.
+    The function will either delete all requested jobs or none.
+    """
     jobs = __jobs_col(jobs)
     num_jobs = len(jobs)
     if num_jobs > 1 and not force:
@@ -890,11 +893,13 @@ def delete_jobs(jobs, force = False):
     return num_jobs
 
 
-# This function has a high memory footprint, and you should only use it
-# for small collection of jobs. For large collections (len(jobs) > 100), use
-# dm_calc_iter instead
 @db_session
 def dm_calc(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op:dmput', 'op:hsmget', 'op:rm', 'op:cp']):
+    """
+    This function has a high memory footprint, and you should only use it
+    for small collection of jobs (len(jobs) < 100). For large collections
+    use dm_calc_iter instead
+    """
     logger.debug('dm ops: {0}'.format(tags))
     jobs = __jobs_col(jobs)
     num_jobs = len(jobs)
@@ -910,12 +915,14 @@ def dm_calc(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op
     dm_percent = round((100 * dm_cpu_time / jobs_cpu_time), 2)
     return (dm_percent, dm_ops_df, jobs_cpu_time)
 
-# This does the same data movement calculation as dm_calc, but has
-# a *far lower memory footprint, and is twice as fast*. Plus it
-# produces an additional dataframe that aggregates across tags by job
-# allowing us to compute min/max/std_dev across jobs for DM.
 @db_session
 def dm_calc_iter(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op:dmput', 'op:hsmget', 'op:rm', 'op:cp'], features = ['cpu_time']):
+    """
+    This does the same data movement calculation as dm_calc, but has
+    a *far lower memory footprint, and is twice as fast*. Plus it
+    produces an additional dataframe that aggregates across tags by job
+    allowing us to compute min/max/std_dev across jobs for DM.
+    """
     logger.debug('dm ops: {0}'.format(tags))
     jobs = __jobs_col(jobs)
     logger.debug('number of jobs: {0}'.format(len(jobs)))
