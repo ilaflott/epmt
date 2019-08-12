@@ -1,6 +1,5 @@
 from __future__ import print_function
-from sys import stderr
-from datetime import datetime
+from datetime import datetime, timedelta
 import pandas as pd
 from pony.orm.core import Query, QueryResult
 from pony.orm import *
@@ -233,7 +232,7 @@ def op_roots(jobs, tag, fmt='dict'):
 
 
 @db_session
-def get_jobs(jobs = [], tag=None, fltr = '', order = None, limit = None, offset = 0, when=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tag_only = False):
+def get_jobs(jobs = [], tag=None, fltr = '', order = None, limit = None, offset = 0, when=None, before=None, after=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tag_only = False):
     """
     This function returns a list of jobs based on some filtering and ordering.
     The output format can be set to pandas dataframe, list of dicts or list
@@ -270,7 +269,30 @@ def get_jobs(jobs = [], tag=None, fltr = '', order = None, limit = None, offset 
              can be specified as a Python datetime. You can also choose
              to specify 'when' as jobid or a Job object. In which 
              case the output will be restricted to those jobs that 
-             had an overlap with the specified 'when' job. 
+             had an overlap with the specified 'when' job.
+
+    before : Restrict the output to jobs ended before time specified.
+             'before' can be specified either as a python datetime or
+             a Unix timestamp or a string. If a negative integer is specified,
+             then the time is interpreted as an negative hours offset from
+             the current time.
+                 '08/13/2019 23:29' (string)
+                 1565606303 (Unix timestamp)
+                 datetime.datetime(2019, 8, 13, 23, 29) (datetime object)
+                 -24 => '24 hours ago'
+                 -720 => '24 x 30 hours ago = 30 days ago'
+
+    after  : Restrict the output to jobs started after time specified.
+             'after' can be specified either as a python datetime or
+             a Unix timestamp or a string. If a negative integer is specified,
+             then the time is interpreted as an negative hours offset from
+             the current time.
+                 '08/13/2019 23:29' (string)
+                 1565606303 (Unix timestamp)
+                 datetime.datetime(2019, 8, 13, 23, 29) (datetime object)
+                 -24 => '24 hours ago'
+                 -720 => '24 x 30 hours ago = 30 days ago'
+             
     
     hosts  : Restrict the output to those jobs that ran on 'hosts'.
              'hosts' is a list of hostnames/Host objects. A job is
@@ -326,6 +348,37 @@ def get_jobs(jobs = [], tag=None, fltr = '', order = None, limit = None, offset 
         else:
             when_job = Job[when] if isString(when) else when
             qs = qs.filter(lambda j: j.start <= when_job.end and j.end >= when_job.start)
+
+    if before != None:
+        if type(before) == str:
+            try:
+                before = datetime.strptime(before, '%m/%d/%Y %H:%M')
+            except Exception as e:
+                logger.error('could not convert "before" string to datetime: %s' % str(e))
+                return None
+        elif type(before) in (int, float):
+            if before > 0:
+                before = datetime.fromtimestamp((int)(before))
+            else:
+                before = datetime.now() - timedelta(hours=(-before))
+        # else after is a datetime object
+        qs = qs.filter(lambda j: j.end <= before)
+
+    if after != None:
+        if type(after) == str:
+            try:
+                after = datetime.strptime(after, '%m/%d/%Y %H:%M')
+            except Exception as e:
+                logger.error('could not convert "after" string to datetime: %s' % str(e))
+                return None
+        elif type(after) in (int, float):
+            if after > 0:
+                after = datetime.fromtimestamp((int)(after))
+            else:
+                after = datetime.now() - timedelta(hours=(-after))
+        # else after is a datetime object
+        qs = qs.filter(lambda j: j.start >= after)
+                
 
     if hosts:
         if isString(hosts) or (type(hosts) == Host):

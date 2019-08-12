@@ -86,6 +86,18 @@ class QueryAPI(unittest.TestCase):
         df = eq.get_jobs(order='desc(j.duration)', limit=1, fmt='pandas')
         self.assertEqual(df.shape[0], 1, 'job query with limit')
         self.assertEqual('685016', df.loc[0,'jobid'], "jobs dataframe query with order")
+        jobs = eq.get_jobs(before=0, fmt='terse')
+        self.assertEqual(jobs, [u'685016', u'685003', u'685000'])
+        jobs = eq.get_jobs(after=0, fmt='terse')
+        self.assertEqual(jobs, [])
+        jobs = eq.get_jobs(before='06/15/2019 00:00', fmt='terse')
+        self.assertEqual(jobs, [])
+        jobs = eq.get_jobs(after='06/15/2019 00:00', fmt='terse')
+        self.assertEqual(jobs, [u'685016', u'685003', u'685000'])
+        jobs = eq.get_jobs(before=-720, fmt='terse')
+        self.assertEqual(jobs, [u'685016', u'685003', u'685000'])
+        jobs = eq.get_jobs(after=-720, fmt='terse')
+        self.assertEqual(jobs, [])
 
     @db_session
     def test_procs(self):
@@ -260,6 +272,8 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(n, 0, 'multiple jobs deleted without "force"')
         n = eq.delete_jobs(['685000', '685016'], force=True)
         self.assertEqual(n, 2, 'jobs not deleted even with "force"')
+        n = eq.delete_jobs(eq.get_jobs(fmt='orm', before=-720))
+        self.assertEqual(n, 1)
 
 
 if __name__ == '__main__':
