@@ -274,24 +274,24 @@ def get_jobs(jobs = [], tag=None, fltr = '', order = None, limit = None, offset 
     before : Restrict the output to jobs ended before time specified.
              'before' can be specified either as a python datetime or
              a Unix timestamp or a string. If a negative integer is specified,
-             then the time is interpreted as an negative hours offset from
+             then the time is interpreted as a negative days offset from
              the current time.
                  '08/13/2019 23:29' (string)
                  1565606303 (Unix timestamp)
                  datetime.datetime(2019, 8, 13, 23, 29) (datetime object)
-                 -24 => '24 hours ago'
-                 -720 => '24 x 30 hours ago = 30 days ago'
+                 -1 => 1 day ago
+                 -30 => 30 days ago
 
     after  : Restrict the output to jobs started after time specified.
              'after' can be specified either as a python datetime or
              a Unix timestamp or a string. If a negative integer is specified,
-             then the time is interpreted as an negative hours offset from
+             then the time is interpreted as a negative days offset from
              the current time.
                  '08/13/2019 23:29' (string)
                  1565606303 (Unix timestamp)
                  datetime.datetime(2019, 8, 13, 23, 29) (datetime object)
-                 -24 => '24 hours ago'
-                 -720 => '24 x 30 hours ago = 30 days ago'
+                 -1 => 1 day ago
+                 -30 => 30 days ago
              
     
     hosts  : Restrict the output to those jobs that ran on 'hosts'.
@@ -360,7 +360,7 @@ def get_jobs(jobs = [], tag=None, fltr = '', order = None, limit = None, offset 
             if before > 0:
                 before = datetime.fromtimestamp((int)(before))
             else:
-                before = datetime.now() - timedelta(hours=(-before))
+                before = datetime.now() - timedelta(days=(-before))
         # else after is a datetime object
         qs = qs.filter(lambda j: j.end <= before)
 
@@ -375,7 +375,7 @@ def get_jobs(jobs = [], tag=None, fltr = '', order = None, limit = None, offset 
             if after > 0:
                 after = datetime.fromtimestamp((int)(after))
             else:
-                after = datetime.now() - timedelta(hours=(-after))
+                after = datetime.now() - timedelta(days=(-after))
         # else after is a datetime object
         qs = qs.filter(lambda j: j.start >= after)
                 
@@ -921,16 +921,20 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=F
 op_metrics = get_op_metrics
 
 @db_session
-def delete_jobs(jobs, force = False, ndays=None):
+def delete_jobs(jobs, force = False, before=None, after=None):
     """
     Deletes one or more jobs and returns the number of jobs deleted.
 
-    jobs : One or more jobs. [] selects all jobs.
+    jobs  : One or more jobs. [] selects all jobs. You would normally
+            use [] with 'before' or 'after' options.
 
-    force: By default, False. 'force' has to be set to True to allow
-           deletion of multiple jobs.
+    force : By default, False. 'force' has to be set to True to allow
+            deletion of multiple jobs.
 
-    age  : Only delete jobs older than specified 'ndays' number of days
+    before,
+    after : time specified as cutoff. See 'get_jobs' to see how to specify
+            these options.
+            
 
     The function will either delete all requested jobs or none. The delete
     is done in an atomic transaction.
@@ -943,11 +947,21 @@ def delete_jobs(jobs, force = False, ndays=None):
         delete_jobs([], force=True)
 
         # deletes all jobs older than 30 days
-        delete_jobs([], force=True, ndays=30)
+        delete_jobs([], force=True, before=-30)
+
+        # delete jobs before Jan 21, 2018 09:55
+        delete_jobs([], force=True, before='01/21/2018 09:55')
+
+        # delete jobs executed in the last 7 days
+        delete_jobs([], force=True, after=-7)
+
     """
+
     jobs = __jobs_col(jobs)
-    if ndays != None:
-        jobs = get_jobs(jobs, before=-24*ndays, fmt='orm')
+
+    if ((before != None) or (after != None)):
+        jobs = get_jobs(jobs, before=before, after=after, fmt='orm')
+
     num_jobs = len(jobs)
     if num_jobs > 1 and not force:
         logger.warning('You must set force=True when calling this function as you want to delete more than one job')

@@ -94,9 +94,9 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(jobs, [])
         jobs = eq.get_jobs(after='06/15/2019 00:00', fmt='terse')
         self.assertEqual(jobs, [u'685016', u'685003', u'685000'])
-        jobs = eq.get_jobs(before=-720, fmt='terse')
+        jobs = eq.get_jobs(before=-30, fmt='terse')
         self.assertEqual(jobs, [u'685016', u'685003', u'685000'])
-        jobs = eq.get_jobs(after=-720, fmt='terse')
+        jobs = eq.get_jobs(after=-30, fmt='terse')
         self.assertEqual(jobs, [])
 
     @db_session
@@ -270,17 +270,21 @@ class QueryAPI(unittest.TestCase):
         #settings.allow_job_deletion = True
         n = eq.delete_jobs(['685000', '685016'])
         self.assertEqual(n, 0, 'multiple jobs deleted without "force"')
-        # test 'ndays' option:
-        # get first job
+
+        # test before/after
         j = eq.get_jobs(fmt='orm')[:][-1]
-        ndays = (datetime.datetime.now() - j.start).days + 1
-        n = eq.delete_jobs([], force=True, ndays=ndays)
-        self.assertEqual(n, 0, 'ndays argument not working')
+        ndays = (datetime.datetime.now() - j.start).days 
+        n = eq.delete_jobs([], force=True, after=-ndays)
+        self.assertEqual(n, 0)
+        n = eq.delete_jobs([], force=True, after='06/16/2019 00:00')
+        self.assertEqual(n, 0)
+        n = eq.delete_jobs([], force=True, before='06/15/2019 00:00')
+        self.assertEqual(n, 0)
 
         n = eq.delete_jobs(['685000', '685016'], force=True)
         self.assertEqual(n, 2, 'jobs not deleted even with "force"')
 
-        n = eq.delete_jobs([], force=True, ndays=ndays-1)
+        n = eq.delete_jobs([], force=True, before=-(ndays-1))
         self.assertEqual(n, 1)
 
 
