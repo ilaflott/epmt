@@ -921,14 +921,33 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=F
 op_metrics = get_op_metrics
 
 @db_session
-def delete_jobs(jobs, force = False):
+def delete_jobs(jobs, force = False, ndays=None):
     """
-    delete_jobs deletes one or more jobs
-    It requires 'force' to be set if number of jobs to delete > 1
-    Returns: number of jobs deleted or 0 if none deleted.
-    The function will either delete all requested jobs or none.
+    Deletes one or more jobs and returns the number of jobs deleted.
+
+    jobs : One or more jobs. [] selects all jobs.
+
+    force: By default, False. 'force' has to be set to True to allow
+           deletion of multiple jobs.
+
+    age  : Only delete jobs older than specified 'ndays' number of days
+
+    The function will either delete all requested jobs or none. The delete
+    is done in an atomic transaction.
+
+    EXAMPLE:
+        # to delete multiple jobs
+        delete_jobs(['685003', '685016'], force=True)
+
+        # to delete ALL jobs. Careful!!
+        delete_jobs([], force=True)
+
+        # deletes all jobs older than 30 days
+        delete_jobs([], force=True, ndays=30)
     """
     jobs = __jobs_col(jobs)
+    if ndays != None:
+        jobs = get_jobs(jobs, before=-24*ndays, fmt='orm')
     num_jobs = len(jobs)
     if num_jobs > 1 and not force:
         logger.warning('You must set force=True when calling this function as you want to delete more than one job')

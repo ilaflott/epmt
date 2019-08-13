@@ -263,16 +263,24 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(list(agg_df['jobid'].values), ['685000', '685003', '685016'])
         self.assertEqual(list(agg_df['job_cpu_time'].values), [113135329.0, 93538033.0, 427082965.0])
 
-
+    @db_session
     def test_zz_delete_jobs(self):
         #with self.assertRaises(EnvironmentError):
         #    eq.delete_jobs('685000')
         #settings.allow_job_deletion = True
         n = eq.delete_jobs(['685000', '685016'])
         self.assertEqual(n, 0, 'multiple jobs deleted without "force"')
+        # test 'ndays' option:
+        # get first job
+        j = eq.get_jobs(fmt='orm')[:][-1]
+        ndays = (datetime.datetime.now() - j.start).days + 1
+        n = eq.delete_jobs([], force=True, ndays=ndays)
+        self.assertEqual(n, 0, 'ndays argument not working')
+
         n = eq.delete_jobs(['685000', '685016'], force=True)
         self.assertEqual(n, 2, 'jobs not deleted even with "force"')
-        n = eq.delete_jobs(eq.get_jobs(fmt='orm', before=-720))
+
+        n = eq.delete_jobs([], force=True, ndays=ndays-1)
         self.assertEqual(n, 1)
 
 
