@@ -825,6 +825,8 @@ def epmt_stage(forced_jobid, forced_user, other_dirs):
 # depends on args being global
 #
 def epmt_entrypoint(args, help):
+    if args.verbose == None:
+        args.verbose = 0
     set_logging(args.verbose, check=True)
     init_settings(settings)
     if not args.verbose:
