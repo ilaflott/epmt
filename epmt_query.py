@@ -269,7 +269,8 @@ def get_jobs(jobs = [], tag=None, fltr = '', order = None, limit = None, offset 
              can be specified as a Python datetime. You can also choose
              to specify 'when' as jobid or a Job object. In which 
              case the output will be restricted to those jobs that 
-             had an overlap with the specified 'when' job.
+             had an overlap with the specified 'when' job. 'when' may also
+             be specified as a string of the form: 'mm/dd/YYYY HH:MM'.
 
     before : Restrict the output to jobs ended before time specified.
              'before' can be specified either as a python datetime or
@@ -296,7 +297,8 @@ def get_jobs(jobs = [], tag=None, fltr = '', order = None, limit = None, offset 
     
     hosts  : Restrict the output to those jobs that ran on 'hosts'.
              'hosts' is a list of hostnames/Host objects. A job is
-             consider to match if the intersection of j.hosts and hosts is non-empty
+             considered to match if the intersection of j.hosts and 
+             hosts is non-empty
     
     fmt    : Control the output format. One of 'dict', 'pandas', 'orm', 'terse'
              'dict': each job object is converted to a dict, and the entire
@@ -343,6 +345,12 @@ def get_jobs(jobs = [], tag=None, fltr = '', order = None, limit = None, offset 
         qs = qs.filter(fltr)
 
     if when:
+        if type(when) == str:
+            try:
+                when = datetime.strptime(when, '%m/%d/%Y %H:%M')
+            except Exception as e:
+                logger.error('could not convert "when" string to datetime: %s' % str(e))
+                return None
         if type(when) == datetime:
             qs = qs.filter(lambda j: j.start <= when and j.end >= when)
         else:
@@ -386,7 +394,15 @@ def get_jobs(jobs = [], tag=None, fltr = '', order = None, limit = None, offset 
             hosts = [hosts]
         if type(hosts) == list:
             # if the list contains of strings then we want the Host objects
-            hosts = [Host[h] if isString(h) else h for h in hosts]
+            _hosts = []
+            for h in hosts:
+                if isString(h):
+                    try:
+                        h = Host[h]
+                    except:
+                        continue
+                _hosts.append(h)
+            hosts = _hosts
         qs = select(j for j in qs for h in j.hosts if h in hosts)
 
     if order:

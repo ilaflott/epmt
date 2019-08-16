@@ -5,7 +5,7 @@ from sys import stderr, exit
 import sys
 from glob import glob
 from pony.orm import db_session
-from models import db
+from models import db, Job
 from pony.orm.core import Query, QueryResult
 import pandas as pd
 import datetime
@@ -97,6 +97,35 @@ class QueryAPI(unittest.TestCase):
         jobs = eq.get_jobs(before=-30, fmt='terse')
         self.assertEqual(jobs, [u'685016', u'685003', u'685000'])
         jobs = eq.get_jobs(after=-30, fmt='terse')
+        self.assertEqual(jobs, [])
+        # hosts
+        jobs = eq.get_jobs(hosts=[], fmt='terse')
+        self.assertEqual(jobs, [u'685016', u'685003', u'685000'])
+        jobs = eq.get_jobs(hosts=['pp208', 'pp212'], fmt='terse')
+        self.assertEqual(jobs, [u'685003', u'685000'])
+        jobs = eq.get_jobs(hosts=['pp208', 'pp209', 'pp212'], fmt='terse')
+        self.assertEqual(jobs, [u'685003', u'685000'])
+        jobs = eq.get_jobs(hosts=['pp208', 'pp313', 'pp212'], fmt='terse')
+        self.assertEqual(jobs, [u'685016', u'685003', u'685000'])
+        # when
+        jobs = eq.get_jobs(when='06/15/2019 08:00', fmt='terse')
+        self.assertEqual(jobs, [u'685016', u'685003', u'685000'])
+        jobs = eq.get_jobs(when='06/15/2019 07:00', fmt='terse')
+        self.assertEqual(jobs, [])
+        jobs = eq.get_jobs(when='06/15/2019 09:00', fmt='terse')
+        self.assertEqual(jobs, [u'685016', u'685003', u'685000'])
+        jobs = eq.get_jobs(when='06/15/2019 10:00', fmt='terse')
+        self.assertEqual(jobs, [])
+        jobs = eq.get_jobs(when=Job['685003'], fmt='terse')
+        self.assertEqual(jobs, [u'685016', u'685003', u'685000'])
+        # hosts + when
+        jobs = eq.get_jobs(hosts = 'pp208', when='06/15/2019 08:00', fmt='terse')
+        self.assertEqual(jobs, [u'685000'])
+        jobs = eq.get_jobs(hosts = 'pp208', when='06/15/2019 11:00', fmt='terse')
+        self.assertEqual(jobs, [])
+        jobs = eq.get_jobs(when='06/15/2019 08:00', hosts=['pp208', 'pp212'], fmt='terse')
+        self.assertEqual(jobs, [u'685003', u'685000'])
+        jobs = eq.get_jobs(when='06/16/2019 08:00', hosts=['pp208', 'pp212'], fmt='terse')
         self.assertEqual(jobs, [])
 
     @db_session
