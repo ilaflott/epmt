@@ -5,7 +5,7 @@ from sys import stderr, exit
 import sys
 from glob import glob
 from pony.orm import db_session
-from models import db, Job
+from models import db, Job, Process
 from pony.orm.core import Query, QueryResult
 import pandas as pd
 import datetime
@@ -159,6 +159,20 @@ class QueryAPI(unittest.TestCase):
         p = procs_with_tag.first()
         self.assertEqual(int(p.duration), 207384313, 'wrong duration or order when used with tag and filter')
         self.assertEqual(p.descendants.count(), 85, 'wrong descendant count or order when used with tag and filter')
+        # hosts, when
+        procs = eq.get_procs('685000', when=datetime.datetime(2019, 6, 15, 11, 53), fmt='terse')
+        pids = [Process[p].pid for p in procs]
+        self.assertEqual(pids, [6098, 6226])
+        procs = eq.get_procs('685000', when='06/15/2019 11:53', fmt='terse')
+        pids = [Process[p].pid for p in procs]
+        self.assertEqual(pids, [6098, 6226])
+        self.assertEqual(eq.get_procs('685000', hosts=['pp208'], fmt='orm').count(), 3480)
+        self.assertEqual(eq.get_procs('685000', hosts=['pp208', 'pp209'], fmt='orm').count(), 3480)
+        self.assertEqual(eq.get_procs('685000', hosts=['pp209'], fmt='orm').count(), 0)
+        self.assertEqual(eq.get_procs(['685000', '685003'], hosts=['pp208', 'pp212'], fmt='orm').count(), 
+7265)
+        self.assertEqual(eq.get_procs(['685000', '685003'], hosts=['pp212'], fmt='orm').count(), 3785)
+
 
     @db_session
     def test_jobs_conv(self):

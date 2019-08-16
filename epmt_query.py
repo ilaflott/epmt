@@ -446,7 +446,8 @@ def get_procs(jobs = [], tag = None, fltr = None, order = '', limit = 0, when=No
              can be specified as a Python datetime. You can also choose
              to specify 'when' as process PK or a Process object. In which 
              case the output will be restricted to those processes that 
-             had an overlap with the specified 'when' process. 
+             had an overlap with the specified 'when' process. 'when' may also
+             be specified as a string of the form: 'mm/dd/YYYY HH:MM'
     
     hosts  : Restrict the output to those processes that ran on 'hosts'.
              'hosts' is a list of hostnames/Host objects. A process is
@@ -524,6 +525,12 @@ def get_procs(jobs = [], tag = None, fltr = None, order = '', limit = 0, when=No
         qs = qs.filter(fltr)
 
     if when:
+        if type(when) == str:
+            try:
+                when = datetime.strptime(when, '%m/%d/%Y %H:%M')
+            except Exception as e:
+                logger.error('could not convert "when" string to datetime: %s' % str(e))
+                return None
         if type(when) == datetime:
             qs = qs.filter(lambda p: p.start <= when and p.end >= when)
         else:
@@ -536,7 +543,15 @@ def get_procs(jobs = [], tag = None, fltr = None, order = '', limit = 0, when=No
             hosts = [hosts]
         if type(hosts) == list:
             # if the list contains of strings then we want the Host objects
-            hosts = [Host[h] if isString(h) else h for h in hosts]
+            _hosts = []
+            for h in hosts:
+                if isString(h):
+                    try:
+                        h = Host[h]
+                    except:
+                        continue
+                _hosts.append(h)
+            hosts = _hosts
         qs = qs.filter(lambda p: p.host in hosts)
 
     if order:
