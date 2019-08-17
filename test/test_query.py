@@ -129,6 +129,16 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(jobs, [])
 
     @db_session
+    def conv_jobs(self):
+        for fmt in ['dict', 'terse', 'pandas', 'orm']:
+            jobs = eq.get_jobs(['685000', '685003'], fmt=fmt)
+            self.assertEqual(eq.conv_jobs(jobs, fmt='terse'), ['685000', '685003'])
+            self.assertEqual(eq.conv_jobs(jobs, fmt='orm')[:], [Job[u'685000'], Job[u'685003']])
+            self.assertEqual(list(eq.conv_jobs(jobs, fmt='pandas')['jobid'].values), [u'685000', u'685003'])
+            self.assertEqual([j['jobid'] for j in eq.conv_jobs(jobs, fmt='dict')], ['685000', '685003'])
+
+
+    @db_session
     def test_procs(self):
         procs = eq.get_procs(['685016'], fmt='terse')
         self.assertEqual(type(procs), list, 'wrong procs format with terse')
