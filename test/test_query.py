@@ -129,16 +129,6 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(jobs, [])
 
     @db_session
-    def conv_jobs(self):
-        for fmt in ['dict', 'terse', 'pandas', 'orm']:
-            jobs = eq.get_jobs(['685000', '685003'], fmt=fmt)
-            self.assertEqual(eq.conv_jobs(jobs, fmt='terse'), ['685000', '685003'])
-            self.assertEqual(eq.conv_jobs(jobs, fmt='orm')[:], [Job[u'685000'], Job[u'685003']])
-            self.assertEqual(list(eq.conv_jobs(jobs, fmt='pandas')['jobid'].values), [u'685000', u'685003'])
-            self.assertEqual([j['jobid'] for j in eq.conv_jobs(jobs, fmt='dict')], ['685000', '685003'])
-
-
-    @db_session
     def test_procs(self):
         procs = eq.get_procs(['685016'], fmt='terse')
         self.assertEqual(type(procs), list, 'wrong procs format with terse')
@@ -147,6 +137,20 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(len(procs), 6892, 'wrong count of processes in ORM format')
         df = eq.get_procs(fmt='pandas', limit=10)
         self.assertEqual(df.shape, (10,50), "incorrect dataframe shape with limit")
+
+    @db_session
+    def test_procs_convert(self):
+        for inform in ['dict', 'terse', 'pandas', 'orm']:
+            procs = eq.get_procs('685000', fmt=inform)
+            for outform in ['dict', 'terse', 'pandas', 'orm']:
+                procs2 = eq.conv_procs(procs, fmt=outform)
+                self.assertEqual(len(procs), 3480)
+                if type(procs) == pd.DataFrame:
+                    self.assertTrue(eq.conv_procs(procs2, fmt=inform).equals(procs))
+                else:
+                    if inform != 'orm':
+                        self.assertEqual(eq.conv_procs(procs2, fmt=inform), procs)
+
 
     @db_session
     def test_procs_advanced(self):
@@ -185,7 +189,14 @@ class QueryAPI(unittest.TestCase):
 
 
     @db_session
-    def test_jobs_conv(self):
+    def test_jobs_convert(self):
+        for fmt in ['dict', 'terse', 'pandas', 'orm']:
+            jobs = eq.get_jobs(['685000', '685003'], fmt=fmt)
+            self.assertEqual(eq.conv_jobs(jobs, fmt='terse'), ['685000', '685003'])
+            self.assertEqual(eq.conv_jobs(jobs, fmt='orm')[:], [Job[u'685000'], Job[u'685003']])
+            self.assertEqual(list(eq.conv_jobs(jobs, fmt='pandas')['jobid'].values), [u'685000', u'685003'])
+            self.assertEqual([j['jobid'] for j in eq.conv_jobs(jobs, fmt='dict')], ['685000', '685003'])
+
         ref = eq.get_jobs(fmt='terse')
         for inp_fmt in ['terse','orm','pandas','dict']:
             jobs = eq.get_jobs(fmt=inp_fmt)

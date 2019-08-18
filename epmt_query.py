@@ -106,11 +106,56 @@ def __conv_procs_orm(procs, merge_sums = True, fmt='dict'):
             del p[THREAD_SUMS_FIELD_IN_PROC]
     return pd.DataFrame(out_list) if fmt == 'pandas' else out_list
 
+def __procs_col(procs):
+    """
+    This is an internal function to take a collection of
+    procs in a variety of formats and return output in the
+    ORM format
+    """
+    if type(procs) in [Query, QueryResult]:
+        return procs
+    if ((type(procs) != pd.DataFrame) and not(procs)):
+        # empty list => select all processes
+        return Process.select()
+    if type(procs) == pd.DataFrame:
+        procs = [int(pk) for pk in list(procs['id'])]
+    if isString(procs):
+        if ',' in procs:
+            # procs a string of comma-separated ids
+            procs = [ int(p.strip()) for p in procs.split(",") ]
+        else:
+            # procs is a single id, but specified as a string
+            procs = Process[int(procs)]
+    if type(procs) == int:
+        # a single primary key
+        procs = Process[procs]
+
+    if type(procs) == Process:
+        # is it a singular Process?
+        procs = [procs]
+
+    if type(procs) in [list, set]:
+        # procs is a list of Process objects or a list of primary keys or a list of dicts
+        # so first convert the dict list to a bid list
+        procs = [ p['id'] if type(p) == dict else p for p in procs ]
+        procs = [ Process[p] if type(p)==int else p for p in procs ]
+        # and now convert to a pony Query object so the user can chain
+        procs = Process.select(lambda p: p in procs)
+    return procs
+
+def conv_procs(procs, fmt='pandas'):
+    """
+    Converts a collection of processes specified in any format
+    (orm, pandas, dict-list or terse) to the format specified
+    by 'fmt'
+    """
+    procs = __procs_col(procs)
+    return __conv_procs_orm(procs, fmt=fmt)
 
 def __jobs_col(jobs):
     """
     This is an internal function to take a collection of jobs
-    in a variety of formats and return output in a specified format
+    in a variety of formats and return output in the ORM format.
     You should not use this function directly, but instead use conv_jobs()
     """
     if type(jobs) in [Query, QueryResult]:
