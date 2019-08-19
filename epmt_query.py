@@ -277,7 +277,7 @@ def op_roots(jobs, tag, fmt='dict'):
 
 
 @db_session
-def get_jobs(jobs = [], tag=None, fltr = '', order = None, limit = None, offset = 0, when=None, before=None, after=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tag_only = False):
+def get_jobs(jobs = [], tags=None, fltr = '', order = None, limit = None, offset = 0, when=None, before=None, after=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tag_only = False):
     """
     This function returns a list of jobs based on some filtering and ordering.
     The output format can be set to pandas dataframe, list of dicts or list
@@ -288,9 +288,21 @@ def get_jobs(jobs = [], tag=None, fltr = '', order = None, limit = None, offset 
              query on Job (i.e., a Query object), or a pandas dataframe of jobs
              
     
-    tag    : Optional dictionary or string of key/value pairs. If set to ''
-             or {], then exact_tag_match will be implicitly set, and only
+    tags   : Optional dictionary or string of key/value pairs. If set to ''
+             or {}, then exact_tag_match will be implicitly set, and only
              those jobs that have an empty tag will match. 
+
+             For example:
+             eq.get_jobs(tags='ocn_res:0.5l75;exp_component:ocean_cobalt_fdet_100')
+             gives the job(s) that match *both* ocn_res and exp_component key/values.
+
+             tags may also be specified as a list of strings or dicts. In that 
+             case the resulting match is a superset of the matches from the 
+             individual tags. For example:
+             eq.get_jobs(tags=['ocn_res:0.5l75;exp_component:ocean_cobalt_fdet_100', 'ocn_res:0.5l75;exp_component:ocean_annual_rho2_1x1deg'], fmt='terse')
+             This returns a union of jobs that match 'ocn_res:0.5l75;exp_component:ocean_cobalt_fdet_100'
+             and those that match 'ocn_res:0.5l75;exp_component:ocean_annual_rho2_1x1deg'
+
     
     fltr   : Optional filter in the form of a lamdba function or a string
              e.g., lambda j: count(j.processes) > 100 will filter jobs more than 100 processes
@@ -374,16 +386,30 @@ def get_jobs(jobs = [], tag=None, fltr = '', order = None, limit = None, offset 
 
     # filter using tag if set
     # Remember, tag = {} demands an exact match with an empty dict!
-    if tag != None:
-        if type(tag) == str:
-            tag = tag_from_string(tag)
-        if exact_tag_only or (tag == {}):
-            qs = qs.filter(lambda j: j.tags == tag)
-        else:
-            # we consider a match if the job tag is a superset
-            # of the passed tag
-            for (k,v) in tag.items():
-                qs = qs.filter(lambda j: j.tags[k] == v)
+    if tags != None:
+        tags = tags_list(tags)
+        qs_tags = []
+        idx = 0
+        tag_query = ''
+        for t in tags:
+            qst = Job.select()
+            if type(t) == str:
+                t = tag_from_string(t)
+            if exact_tag_only or (t == {}):
+                qst = qst.filter(lambda j: j.tags == t)
+            else:
+                # we consider a match if the job tag is a superset
+                # of the passed tag
+                for (k,v) in t.items():
+                    qst = qst.filter(lambda j: j.tags[k] == v)
+            qs_tags.append(qst[:])
+            tag_query = tag_query + ' or (j in qs_tags[{0}])'.format(idx) if tag_query else '(j in qs_tags[0])'
+            #logger.debug(tag_query)
+            #logger.debug(qs_tags)
+            #logger.debug(Job.select().filter(tag_query)[:])
+            idx += 1
+        logger.debug('tag filter: {0}'.format(tag_query))
+        qs = qs.filter(tag_query)
 
     # if fltr is a lambda function or a string apply it
     if fltr:
@@ -802,7 +828,7 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
     eq.create_refmodel(jobs=[u'615503', u'625135'])
     
     or use pony orm query result:
-    >>> jobs = eq.get_jobs(tag='exp_component:atmos', fmt='orm')
+    >>> jobs = eq.get_jobs(tags='exp_component:atmos', fmt='orm')
     >>> r = eq.create_refmodel(jobs)
     
     to create a refmodel for ops we need to either set op_tags

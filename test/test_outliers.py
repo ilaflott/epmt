@@ -57,7 +57,7 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_outlier_jobs(self):
-        jobs = eq.get_jobs(tag='exp_name:linux_kernel', fmt='orm')
+        jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm')
         (df, parts) = eod.detect_outlier_jobs(jobs)
         self.assertEqual(len(df[df.duration > 0]), 1, "incorrect count of duration outliers")
         self.assertEqual(len(df[df.cpu_time > 0]), 1, "incorrect count of cpu_time outliers")
@@ -69,8 +69,8 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_outlier_jobs_trained(self):
-        all_jobs = eq.get_jobs(tag='exp_name:linux_kernel', fmt='orm')
-        jobs_ex_outl = eq.get_jobs(tag='exp_name:linux_kernel', fmt='orm', fltr='"outlier" not in j.jobid')
+        all_jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm')
+        jobs_ex_outl = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm', fltr='"outlier" not in j.jobid')
         r = eq.create_refmodel(jobs_ex_outl, fmt='terse')
         (df, parts) = eod.detect_outlier_jobs(all_jobs, trained_model=r)
         self.assertEqual(len(df[df.duration > 0]), 1, "incorrect count of duration outliers")
@@ -90,8 +90,8 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_outlier_ops_trained(self):
-        all_jobs = eq.get_jobs(tag='exp_name:linux_kernel', fmt='orm')
-        jobs_ex_outl = eq.get_jobs(tag='exp_name:linux_kernel', fmt='orm', fltr='"outlier" not in j.jobid')
+        all_jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm')
+        jobs_ex_outl = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm', fltr='"outlier" not in j.jobid')
         r = eq.create_refmodel(jobs_ex_outl, fmt='terse', op_tags='*')
         (df, parts, _, _ , _) = eod.detect_outlier_ops(all_jobs, trained_model=r)
         self.assertEqual(df.shape, (20,5))
@@ -119,7 +119,7 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_outlier_ops(self):
-        jobs = eq.get_jobs(tag='exp_name:linux_kernel', fmt='orm')
+        jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm')
         (df, parts, _, _, _) = eod.detect_outlier_ops(jobs)
         self.assertEqual(df.shape, (20,5), "wrong shape of df from detect_outlier_ops")
         self.assertEqual(len(df[df.duration > 0]), 3, 'wrong outlier count for duration')
@@ -143,7 +143,7 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_partition_jobs(self):
-        jobs = eq.get_jobs(tag='launch_id:6656', fmt='orm')
+        jobs = eq.get_jobs(tags='launch_id:6656', fmt='orm')
         self.assertEqual(len(jobs), 4, "incorrect job count using tags")
         parts = eod.partition_jobs(jobs, fmt='terse')
         self.assertEqual(len(parts), 3, "incorrect count of items in partition dict")
@@ -153,7 +153,7 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_partition_jobs_by_ops(self):
-        jobs = eq.get_jobs(fmt='terse', tag='exp_name:linux_kernel')
+        jobs = eq.get_jobs(fmt='terse', tags='exp_name:linux_kernel')
         parts = eod.partition_jobs_by_ops(jobs)
         self.assertEqual(len(parts), 5, "incorrect number of tags in output")
         parts = { frozen_dict(loads(k)): v for k,v in parts.items() }
@@ -171,8 +171,8 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_rca_jobs(self):
-        ref_jobs = eq.get_jobs(tag='exp_name:linux_kernel', fltr='"outlier" not in j.jobid', fmt='orm')
-        outlier_job = eq.get_jobs(tag='exp_name:linux_kernel', fltr='"outlier" in j.jobid', fmt='orm')
+        ref_jobs = eq.get_jobs(tags='exp_name:linux_kernel', fltr='"outlier" not in j.jobid', fmt='orm')
+        outlier_job = eq.get_jobs(tags='exp_name:linux_kernel', fltr='"outlier" in j.jobid', fmt='orm')
         (res, df, sl) = eod.detect_rootcause(ref_jobs, outlier_job)
         self.assertTrue(res, 'detect_rootcause returned False')
         self.assertEqual(list(df.columns.values), ['cpu_time', 'duration', 'num_procs'], 'wrong order of features returned by RCA')
@@ -181,8 +181,8 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_rca_ops(self):
-        ref_jobs = eq.get_jobs(tag='exp_name:linux_kernel', fltr='"outlier" not in j.jobid', fmt='orm')
-        outlier_job = eq.get_jobs(tag='exp_name:linux_kernel', fltr='"outlier" in j.jobid', fmt='orm')
+        ref_jobs = eq.get_jobs(tags='exp_name:linux_kernel', fltr='"outlier" not in j.jobid', fmt='orm')
+        outlier_job = eq.get_jobs(tags='exp_name:linux_kernel', fltr='"outlier" in j.jobid', fmt='orm')
         (res, df, sl) = eod.detect_rootcause_op(ref_jobs, outlier_job, tag='op_sequence:4')
         self.assertTrue(res, 'detect_rootcause_op returned False')
         self.assertEqual(list(df.columns.values), ['cpu_time', 'duration', 'num_procs'], 'wrong order of features returned by RCA')
@@ -191,7 +191,7 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_trained_model(self):
-        jobs = eq.get_jobs(tag='exp_name:linux_kernel', fltr='"outlier" not in j.jobid', fmt='terse')
+        jobs = eq.get_jobs(tags='exp_name:linux_kernel', fltr='"outlier" not in j.jobid', fmt='terse')
         self.assertEqual(len(jobs), 3)
         r = eq.create_refmodel(jobs, tag='exp_name:linux_kernel_test')
         self.assertEqual(r['tags'], {'exp_name': 'linux_kernel_test'})

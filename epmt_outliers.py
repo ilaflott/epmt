@@ -73,7 +73,7 @@ def partition_jobs_by_ops(jobs, tags=[], features=FEATURES, methods=[modified_z_
         ([ref_jobs],[outlier_jobs).
     
     EXAMPLE:
-    >>> jobs = eq.get_jobs(tag = 'exp_name:linux_kernel', fmt='terse)
+    >>> jobs = eq.get_jobs(tags = 'exp_name:linux_kernel', fmt='terse)
     >>> parts = eod.partition_jobs_by_ops(jobs)
     >>> pprint(parts)
     {'{"op_instance": "1", "op_sequence": "1", "op": "download"}': (set[u'kern-6656-20190614-190245',
@@ -118,7 +118,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
     and the value is a tuple like ([ref_jobs], [outlier_jobs])
     
     EXAMPLE:
-    >>> jobs = eq.get_jobs(fmt='orm', tag='exp_name:linux_kernel') 
+    >>> jobs = eq.get_jobs(fmt='orm', tags='exp_name:linux_kernel') 
     >>> len(jobs)
     4
     >>> (df, parts) = eod.detect_outlier_jobs(jobs)
