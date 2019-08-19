@@ -79,10 +79,14 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(len(jobs), 2, 'jobs orm query with filter option')
         jobs = eq.get_jobs(tags='exp_component:ocean_month_rho2_1x1deg', fmt='terse')
         self.assertEqual(len(jobs), 1, 'jobs query with tag option')
+
+        # empty tag check
+        Job['685016'].set(tags={})
         jobs = eq.get_jobs(tags='', fmt='terse')
-        self.assertEqual(len(jobs), 0, 'jobs query with empty tag option')
+        self.assertEqual(jobs, ['685016'], 'jobs query with empty tag option')
         jobs = eq.get_jobs(tags={}, fmt='terse')
-        self.assertEqual(len(jobs), 0, 'jobs query with {} tag option')
+        self.assertEqual(jobs, ['685016'], 'jobs query with {} tag option')
+
         jobs = eq.get_jobs(tags=['ocn_res:0.5l75;exp_component:ocean_cobalt_fdet_100', 'ocn_res:0.5l75;exp_component:ocean_annual_rho2_1x1deg'], fmt='terse')
         self.assertEqual(jobs, ['685003', '685000'], 'jobs query with a tags list')
         df = eq.get_jobs(order='desc(j.duration)', limit=1, fmt='pandas')
@@ -167,9 +171,12 @@ class QueryAPI(unittest.TestCase):
         # empty tag query
         procs = eq.get_procs(tag='', fmt='terse')
         self.assertEqual(len(procs), 0, 'procs query with empty tag option')
-        procs = eq.get_jobs(tags={}, fmt='terse')
+        procs = eq.get_procs(tag={}, fmt='terse')
         self.assertEqual(len(procs), 0, 'procs query with {} tag option')
-
+        Process[1].set(tags={})
+        procs = eq.get_procs(tag={}, fmt='terse')
+        self.assertEqual(procs, [1])
+        
         procs_with_tag = eq.get_procs(tag='op_sequence:4', fltr='p.duration > 10000000', order='desc(p.duration)', fmt='orm')
         self.assertEqual(len(procs_with_tag), 2, 'incorrect process count when using tag and filter')
         p = procs_with_tag.first()
