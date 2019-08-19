@@ -93,11 +93,18 @@ class OutliersAPI(unittest.TestCase):
         all_jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm')
         jobs_ex_outl = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm', fltr='"outlier" not in j.jobid')
         r = eq.create_refmodel(jobs_ex_outl, fmt='terse', op_tags='*')
-        (df, parts, _, _ , _) = eod.detect_outlier_ops(all_jobs, trained_model=r)
-        self.assertEqual(df.shape, (20,5))
+        features = ['rssmax', 'cpu_time', 'duration', 'num_procs']
+        (df, parts, _, _ , sorted_features) = eod.detect_outlier_ops(all_jobs, trained_model=r, features=features)
+        self.assertEqual(df.shape, (20,6))
         self.assertEqual(set(df[df.duration > 0]['jobid']), set([u'kern-6656-20190614-192044-outlier']))
         self.assertEqual(set(df[df.cpu_time > 0]['jobid']), set([u'kern-6656-20190614-192044-outlier']))
         self.assertEqual(set(df[df.num_procs > 0]['jobid']), set([]))
+        df_cols = list(df.columns)
+        self.assertEqual(len(sorted_features), len(features))
+        # ensure the df feature columns are ordered correctly
+        self.assertNotEqual(sorted_features, features)
+        self.assertEqual(df_cols[2:], sorted_features)
+
         parts = { frozen_dict(loads(k)): v for k,v in parts.items() }
         self.assertEqual(parts[frozen_dict({"op_instance": "4", "op_sequence": "4", "op": "build"})], (set([u'kern-6656-20190614-194024', u'kern-6656-20190614-190245', u'kern-6656-20190614-191138']), set([u'kern-6656-20190614-192044-outlier'])))
 

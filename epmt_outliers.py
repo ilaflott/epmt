@@ -195,7 +195,10 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
      (df, dict_of_partitions, scores_df, sorted_tags, sorted_features)
     where:
      df is the dataframe that is sorted by decreasing tag importance, and
-     shows whether each of the jobs is an outlier or not by feature.
+     has a bitmask showing whether a particular operation of a job was an
+     outlier when contrasted with the same operation in other jobs. The 
+     columns of 'df' are sorted in decreasing order of feature importance
+     from left to right.
     
     The dict_of_partitions is indexed by the tag, and the value 
     is a tuple, consisting of the (<ref_part>,<outlier_part>) for the tag.
@@ -382,7 +385,11 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
         q_outlier = "|".join(["{0} > 0".format(f) for f in features])
         dft_outlier = dft.query(q_outlier).reset_index(drop=True)
         parts[dumps(tag)] = (set(dft_ref['jobid'].values), (set(dft_outlier['jobid'].values)))
-    return (sorted_df, parts, tag_scores_df, sorted_tags, sorted_features)
+
+    # order the columns in the dataframe by decreasing feature importance (left to right)
+    final_df = sorted_df[['jobid', 'tags']+sorted_features]
+
+    return (final_df, parts, tag_scores_df, sorted_tags, sorted_features)
 
     
 def detect_outlier_processes(processes, trained_model=None, 
