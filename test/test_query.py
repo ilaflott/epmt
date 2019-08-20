@@ -168,6 +168,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(df.shape, (5,50), "incorrect dataframe shape")
         self.assertEqual('685016', df.loc[0,'job'], "ordering of processes wrong in dataframe")
 
+        ## Tags
         # empty tag query
         procs = eq.get_procs(tags='', fmt='terse')
         self.assertEqual(len(procs), 0, 'procs query with empty tag option')
@@ -184,6 +185,15 @@ class QueryAPI(unittest.TestCase):
         p = procs_with_tag.first()
         self.assertEqual(int(p.duration), 207384313, 'wrong duration or order when used with tag and filter')
         self.assertEqual(p.descendants.count(), 85, 'wrong descendant count or order when used with tag and filter')
+
+        self.assertEqual(eq.get_procs(tags='op_sequence:4', fmt='orm').count(), 270)
+        self.assertEqual(eq.get_procs(tags='op_sequence:5', fmt='orm').count(), 285)
+        self.assertEqual(eq.get_procs(tags=['op_sequence:4', 'op_sequence:5'], fmt='orm').count(), 555)
+        s1 = set(eq.get_procs(tags='op_sequence:5', fmt='terse'))
+        s2 = set(eq.get_procs(tags='op_sequence:4', fmt='terse'))
+        s = set(eq.get_procs(tags=['op_sequence:4', 'op_sequence:5'], fmt='terse'))
+        self.assertEqual(s, s1 | s2)
+
         # hosts, when
         procs = eq.get_procs('685000', when=datetime.datetime(2019, 6, 15, 11, 53), fmt='terse')
         pids = [Process[p].pid for p in procs]
