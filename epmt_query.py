@@ -393,8 +393,6 @@ def get_jobs(jobs = [], tags=None, fltr = '', order = None, limit = None, offset
         tag_query = ''
         for t in tags:
             qst = Job.select()
-            if type(t) == str:
-                t = tag_from_string(t)
             if exact_tag_only or (t == {}):
                 qst = qst.filter(lambda j: j.tags == t)
             else:
@@ -861,10 +859,12 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
             op_tags = job_proc_tags(jobs, fold=False)
         # do we have a single tag in string or dict form? 
         # we eventually want a list of dicts
-        elif type(op_tags) == str:
-            op_tags = [tag_from_string(op_tags)]
-        elif type(op_tags) == dict:
-            op_tags = [op_tags]
+        # elif type(op_tags) == str:
+        #     op_tags = [tag_from_string(op_tags)]
+        # elif type(op_tags) == dict:
+        #     op_tags = [op_tags]
+        else:
+            op_tags = tags_list(op_tags)
         # let's get the dataframe of metrics aggregated by op_tags
         ops_df = get_op_metrics(jobs = jobs, tags = op_tags, exact_tags_only = exact_tag_only, fmt='pandas')
         scores = {}
