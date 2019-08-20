@@ -347,7 +347,7 @@ class QueryAPI(unittest.TestCase):
         # test before/after
         j = eq.get_jobs(fmt='orm')[:][-1]
         ndays = (datetime.datetime.now() - j.start).days 
-        n = eq.delete_jobs([], force=True, after=-ndays)
+        n = eq.delete_jobs([], force=True, after=-(ndays-1))
         self.assertEqual(n, 0)
         n = eq.delete_jobs([], force=True, after='06/16/2019 00:00')
         self.assertEqual(n, 0)
