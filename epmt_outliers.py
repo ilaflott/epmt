@@ -388,8 +388,9 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
 
     # order the columns in the dataframe by decreasing feature importance (left to right)
     final_df = sorted_df[['jobid', 'tags']+sorted_features]
+    final_scores_df = tag_scores_df[['tags']+sorted_features]
 
-    return (final_df, parts, tag_scores_df, sorted_tags, sorted_features)
+    return (final_df, parts, final_scores_df, sorted_tags, sorted_features)
 
     
 def detect_outlier_processes(processes, trained_model=None, 

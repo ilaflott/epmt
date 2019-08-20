@@ -94,16 +94,30 @@ class OutliersAPI(unittest.TestCase):
         jobs_ex_outl = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm', fltr='"outlier" not in j.jobid')
         r = eq.create_refmodel(jobs_ex_outl, fmt='terse', op_tags='*')
         features = ['rssmax', 'cpu_time', 'duration', 'num_procs']
-        (df, parts, _, _ , sorted_features) = eod.detect_outlier_ops(all_jobs, trained_model=r, features=features)
+        (df, parts, scores_df, sorted_tags, sorted_features) = eod.detect_outlier_ops(all_jobs, trained_model=r, features=features)
         self.assertEqual(df.shape, (20,6))
         self.assertEqual(set(df[df.duration > 0]['jobid']), set([u'kern-6656-20190614-192044-outlier']))
         self.assertEqual(set(df[df.cpu_time > 0]['jobid']), set([u'kern-6656-20190614-192044-outlier']))
         self.assertEqual(set(df[df.num_procs > 0]['jobid']), set([]))
         df_cols = list(df.columns)
         self.assertEqual(len(sorted_features), len(features))
-        # ensure the df feature columns are ordered correctly
+        # ensure feature order is right
+        self.assertEqual(sorted_features, ['cpu_time', 'duration', 'rssmax', 'num_procs'])
         self.assertNotEqual(sorted_features, features)
+        # ensure df has the right feature order
         self.assertEqual(df_cols[2:], sorted_features)
+        # esnure scores_df has the right order
+        self.assertEqual(list(scores_df.columns)[1:], sorted_features)
+
+        # ensure tag importance order is correct
+        self.assertEqual(sorted_tags, [{u'op_instance': u'5', u'op_sequence': u'5', u'op': u'clean'}, {u'op_instance': u'4', u'op_sequence': u'4', u'op': u'build'}, {u'op_instance': u'3', u'op_sequence': u'3', u'op': u'configure'}, {u'op_instance': u'2', u'op_sequence': u'2', u'op': u'extract'}, {u'op_instance': u'1', u'op_sequence': u'1', u'op': u'download'}])
+        # check scores_df[tags] is ordered right
+        self.assertEqual([loads(t) for t in list(scores_df['tags'])], sorted_tags)
+        # check df[tags] is ordered right
+        uniq_tags = []
+        for t in list(df['tags']):
+            if not t in uniq_tags: uniq_tags.append(t)
+        self.assertEqual(uniq_tags, sorted_tags)
 
         parts = { frozen_dict(loads(k)): v for k,v in parts.items() }
         self.assertEqual(parts[frozen_dict({"op_instance": "4", "op_sequence": "4", "op": "build"})], (set([u'kern-6656-20190614-194024', u'kern-6656-20190614-190245', u'kern-6656-20190614-191138']), set([u'kern-6656-20190614-192044-outlier'])))
