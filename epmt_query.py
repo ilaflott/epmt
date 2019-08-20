@@ -392,19 +392,10 @@ def get_jobs(jobs = [], tags=None, fltr = '', order = None, limit = None, offset
         idx = 0
         tag_query = ''
         for t in tags:
-            qst = Job.select()
-            if exact_tag_only or (t == {}):
-                qst = qst.filter(lambda j: j.tags == t)
-            else:
-                # we consider a match if the job tag is a superset
-                # of the passed tag
-                for (k,v) in t.items():
-                    qst = qst.filter(lambda j: j.tags[k] == v)
+            qst = qs
+            qst = __tag_filter(qst, t, exact_tag_only)
             qs_tags.append(qst[:])
             tag_query = tag_query + ' or (j in qs_tags[{0}])'.format(idx) if tag_query else '(j in qs_tags[0])'
-            #logger.debug(tag_query)
-            #logger.debug(qs_tags)
-            #logger.debug(Job.select().filter(tag_query)[:])
             idx += 1
         logger.debug('tag filter: {0}'.format(tag_query))
         qs = qs.filter(tag_query)
@@ -606,11 +597,20 @@ def get_procs(jobs = [], tags = None, fltr = None, order = '', limit = 0, when=N
         for t in tags:
             qst = qs
             qst = __tag_filter(qst, t, exact_tag_only)
+            # Important!
+            # we are forced to have the modal code below as we want
+            # to significantly speed up the common case of a single
+            # tag. The slice operator [:] is really slow. We are forced
+            # to use it for the case when list contains more than one tag
+            # since due to a bug in Pony lazy evaluation of the union query
+            # doesn't work.
             qs_tags.append(qst[:] if (len(tags) > 1) else qst)
             tag_query = tag_query + ' or (p in qs_tags[{0}])'.format(idx) if tag_query else '(p in qs_tags[0])'
             idx += 1
         logger.debug('tag filter: {0}'.format(tag_query))
-        qs = qs.filter(tag_query) if (len(tags) > 0) else qs_tags[0]
+        # read comment marked "Important!" above to understand why
+        # we have the modal code below
+        qs = qs.filter(tag_query) if (len(tags) > 1) else qs_tags[0]
 
     # if tag != None:
     #     if type(tag) == str:
