@@ -169,15 +169,17 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual('685016', df.loc[0,'job'], "ordering of processes wrong in dataframe")
 
         # empty tag query
-        procs = eq.get_procs(tag='', fmt='terse')
+        procs = eq.get_procs(tags='', fmt='terse')
         self.assertEqual(len(procs), 0, 'procs query with empty tag option')
-        procs = eq.get_procs(tag={}, fmt='terse')
+        procs = eq.get_procs(tags={}, fmt='terse')
         self.assertEqual(len(procs), 0, 'procs query with {} tag option')
         Process[1].set(tags={})
-        procs = eq.get_procs(tag={}, fmt='terse')
+        procs = eq.get_procs(tags={}, fmt='terse')
         self.assertEqual(procs, [1])
         
-        procs_with_tag = eq.get_procs(tag='op_sequence:4', fltr='p.duration > 10000000', order='desc(p.duration)', fmt='orm')
+        procs_with_tag = eq.get_procs(tags='op_sequence:4', fltr='p.duration > 10000000', order='desc(p.duration)', fmt='orm')
+        self.assertEqual(len(procs_with_tag), 2, 'incorrect process count when using tag and filter')
+        procs_with_tag = eq.get_procs(tags={'op_sequence': 4}, fltr='p.duration > 10000000', order='desc(p.duration)', fmt='orm')
         self.assertEqual(len(procs_with_tag), 2, 'incorrect process count when using tag and filter')
         p = procs_with_tag.first()
         self.assertEqual(int(p.duration), 207384313, 'wrong duration or order when used with tag and filter')

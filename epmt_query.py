@@ -492,7 +492,7 @@ def get_jobs(jobs = [], tags=None, fltr = '', order = None, limit = None, offset
 
 #
 @db_session
-def get_procs(jobs = [], tag = None, fltr = None, order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_threads_sums=True, exact_tag_only = False):
+def get_procs(jobs = [], tags = None, fltr = None, order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_threads_sums=True, exact_tag_only = False):
     """
     Filter a supplied list of jobs to find a match
     by tag or some primary keys. If no jobs list is provided,
@@ -500,9 +500,29 @@ def get_procs(jobs = [], tag = None, fltr = None, order = '', limit = 0, when=No
     
     All fields are optional and sensible defaults are assumed.
     
-    tag : is a dictionary or string of key/value pairs and is optional.
+    tags: is either a single tag specified as a dictionary or string of 
+          key/value pairs, or a list of tags.
+
           If set to '' or {}, exact_tag_match will be implicitly
           set, and only those processes with an empty tag will match.
+
+          Example of a single tag:
+
+             tags="op_sequence:4;op_instance:3"
+
+             above gives processes that have *both* op_sequence == 4, and op_instance == 3.
+             The same can also be specified as:
+
+             tags={'op_sequence': 4, 'op_instance': 3}
+
+          Multiple tags:
+             tags may also be specified as a list of strings or dicts. In that 
+             case the resulting match is a superset of the matches from the 
+             individual tags. For example:
+             tags=["op_sequence:4;op_instance:3", "op_sequence:5;op_instance:2"]
+             will return the union of procs that match the tag, "op_sequence:4;op_instance:3",
+             and the tag - "op_sequence:5;op_instance:2"
+
     
     fltr: is a lambda expression or a string of the form:
           lambda p: p.duration > 1000
@@ -549,11 +569,11 @@ def get_procs(jobs = [], tag = None, fltr = None, order = '', limit = 0, when=No
     
       get_procs(jobs = ['32046'], fltr = 'p.numtids > 1')
     
-    To filter all processes that have tag = {'app': 'fft'}, you would do:
-    get_procs(tag = {'app': 'fft'})
+    To filter all processes that have tags = {'app': 'fft'}, you would do:
+    get_procs(tags = {'app': 'fft'})
     
     to get a pandas dataframe:
-    qs1 = get_procs(tag = {'app': 'fft'}, fmt = 'pandas')
+    qs1 = get_procs(tags = {'app': 'fft'}, fmt = 'pandas')
     
     to filter processes for a job '1234' and order by process duration,
     getting the top 10 results, and keeping the final output in ORM format:
@@ -576,18 +596,32 @@ def get_procs(jobs = [], tag = None, fltr = None, order = '', limit = 0, when=No
         # no jobs set, so expand the scope to all Process objects
         qs = Process.select()
 
-    # filter using tag if set
+    # filter using tags if set
     # Remember, tag = {} demands an exact match with an empty dict!
-    if tag != None:
-        if type(tag) == str:
-            tag = tag_from_string(tag)
-        if exact_tag_only or (tag == {}):
-            qs = qs.filter(lambda p: p.tags == tag)
-        else:
-            # we consider a match if the job tag is a superset
-            # of the passed tag
-            for (k,v) in tag.items():
-                qs = qs.filter(lambda p: p.tags[k] == v)
+    if tags != None:
+        tags = tags_list(tags)
+        qs_tags = []
+        idx = 0
+        tag_query = ''
+        for t in tags:
+            qst = qs
+            qst = __tag_filter(qst, t, exact_tag_only)
+            qs_tags.append(qst[:] if (len(tags) > 1) else qst)
+            tag_query = tag_query + ' or (p in qs_tags[{0}])'.format(idx) if tag_query else '(p in qs_tags[0])'
+            idx += 1
+        logger.debug('tag filter: {0}'.format(tag_query))
+        qs = qs.filter(tag_query) if (len(tags) > 0) else qs_tags[0]
+
+    # if tag != None:
+    #     if type(tag) == str:
+    #         tag = tag_from_string(tag)
+    #     if exact_tag_only or (tag == {}):
+    #         qs = qs.filter(lambda p: p.tags == tag)
+    #     else:
+    #         # we consider a match if the job tag is a superset
+    #         # of the passed tag
+    #         for (k,v) in tag.items():
+    #             qs = qs.filter(lambda p: p.tags[k] == v)
 
     # if fltr is a lambda function or a string apply it
     if fltr:
@@ -635,6 +669,18 @@ def get_procs(jobs = [], tag = None, fltr = None, order = '', limit = 0, when=No
 
     return __conv_procs_orm(qs, merge_threads_sums, fmt)
 
+
+
+@db_session
+def __tag_filter(qs, tag, exact_match):
+    if exact_match or (tag == {}):
+        qs = qs.filter(lambda p: p.tags == tag)
+    else:
+        # we consider a match if the job tag is a superset
+        # of the passed tag
+        for (k,v) in tag.items():
+            qs = qs.filter(lambda p: p.tags[k] == v)
+    return qs
 
 
 @db_session
@@ -988,7 +1034,7 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=F
     all_procs = []
     # we iterate over tags, where each tag is dictionary
     for t in tags:
-        procs = get_procs(jobs, tag = t, exact_tag_only = exact_tags_only, fmt='orm')
+        procs = get_procs(jobs, tags = t, exact_tag_only = exact_tags_only, fmt='orm')
         # group the Query response we got by jobid
         # we use group_concat to join the thread_sums json into a giant string
         procs_grp_by_job = select((p.job, count(p.id), sum(p.duration), sum(p.cpu_time), sum(p.numtids), group_concat(p.threads_sums, sep='@@@')) for p in procs)
