@@ -1,6 +1,6 @@
 from __future__ import print_function
 #from __future__ import unicode_literals
-from pony.orm import *
+#from pony.orm import *
 from models import *
 from sys import stdout, argv, stderr, exit
 import sys
@@ -375,7 +375,7 @@ def _check_and_create_metadata(raw_metadata):
 
     return metadata
 
-@db_session
+#@db_session
 def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 # Synthesize what we need
     metadata = _check_and_create_metadata(raw_metadata)
@@ -616,7 +616,8 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 def setup_orm_db(settings,drop=False,create=True):
     logger.info("Binding to DB: %s", settings.db_params)
     try:
-        db.bind(**settings.db_params)
+        #db.bind(**settings.db_params)
+        engine = db.engine_from_config(settings.db_params, prefix='')
     except Exception as e:
         if (type(e).__name__ == "BindingError"):
             pass
@@ -627,7 +628,8 @@ def setup_orm_db(settings,drop=False,create=True):
 
     try:
         logger.info("Generating mapping from schema...")
-        db.generate_mapping(create_tables=True)
+        db.Base.metadata.create_all(engine) 
+        #db.generate_mapping(create_tables=True)
     except Exception as e:
         if (type(e).__name__ == "BindingError"):
             pass
@@ -638,8 +640,8 @@ def setup_orm_db(settings,drop=False,create=True):
         
     if drop:
         logger.warning("DROPPING ALL DATA AND TABLES!")
-        db.drop_all_tables(with_all_data=True)
-        db.create_tables()
+        #db.drop_all_tables(with_all_data=True)
+        #db.create_tables()
     return True
 
 #
