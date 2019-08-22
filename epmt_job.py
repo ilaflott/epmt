@@ -1,7 +1,6 @@
 from __future__ import print_function
 #from __future__ import unicode_literals
 #from pony.orm import *
-from models import *
 from sys import stdout, argv, stderr, exit
 import sys
 from os.path import basename
@@ -612,37 +611,6 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     print("Imported successfully - job:",jobid,"processes:",len(j.processes),"rate:",len(j.processes)/float((now-then).total_seconds()))
     logger.info("Committing job to database..")
     return j
-
-def setup_orm_db(settings,drop=False,create=True):
-    logger.info("Binding to DB: %s", settings.db_params)
-    try:
-        #db.bind(**settings.db_params)
-        engine = db.engine_from_config(settings.db_params, prefix='')
-    except Exception as e:
-        if (type(e).__name__ == "BindingError"):
-            pass
-        else:
-            logger.error("Binding to DB, check database existance and connection parameters")
-            logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
-            return False
-
-    try:
-        logger.info("Generating mapping from schema...")
-        db.Base.metadata.create_all(engine) 
-        #db.generate_mapping(create_tables=True)
-    except Exception as e:
-        if (type(e).__name__ == "BindingError"):
-            pass
-        else:
-            logger.error("Mapping to DB, did the schema change? Perhaps drop and create?")
-            logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
-            return False
-        
-    if drop:
-        logger.warning("DROPPING ALL DATA AND TABLES!")
-        #db.drop_all_tables(with_all_data=True)
-        #db.create_tables()
-    return True
 
 #
 # We should remove below here
