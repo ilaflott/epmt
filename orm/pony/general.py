@@ -36,4 +36,3 @@ def setup_db(settings,drop=False,create=True):
         db.drop_all_tables(with_all_data=True)
         db.create_tables()
     return True
-

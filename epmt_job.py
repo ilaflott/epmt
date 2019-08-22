@@ -1,6 +1,5 @@
 from __future__ import print_function
-#from __future__ import unicode_literals
-#from pony.orm import *
+import orm
 from sys import stdout, argv, stderr, exit
 import sys
 from os.path import basename
@@ -38,10 +37,10 @@ def sortKeyFunc(s):
     return int(t2[0]+t2[1])
 
 def create_job(jobid,user):
-    job = Job.get(jobid=jobid)
+    job = orm.get(orm.Job, jobid=jobid)
     if job is None:
         logger.info("Creating job %s",jobid)
-        job = Job(jobid=jobid,user=user)
+        job = orm.create(Job, jobid=jobid,user=user)
     else:
         logger.warning("Job %s (at %s) is already in the database",job.jobid,job.start)
         return None

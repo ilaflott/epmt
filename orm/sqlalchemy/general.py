@@ -30,4 +30,3 @@ def setup_db(settings,drop=False,create=True):
     if drop:
         logger.warning("Not implemented for sqlalchemy")
     return True
-
