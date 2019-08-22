@@ -2,15 +2,16 @@
 from sqlalchemy import *
 from sqlalchemy.orm import backref, relationship
 from sqlalchemy.ext.declarative import declarative_base
-from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
 
+from logging import getLogger
 logger = getLogger(__name__)  # you can use other name
 import init_logging
 
+logger.info('sqlalchemy orm selected')
 Base = declarative_base()
 
 def setup_db(settings,drop=False,create=True):
-    logger.info("Parsing settings to create engine: %s", settings.db_params)
+    logger.info("Creating engine with db_params: %s", settings.db_params)
     try:
         engine = engine_from_config(settings.db_params, prefix='')
     except Exception as e:

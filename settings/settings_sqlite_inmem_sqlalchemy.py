@@ -1,5 +1,6 @@
 from epmt_default_settings import *
 
+orm = 'sqlalchemy'
 db_params = { 'url': 'sqlite:///:memory:', 'echo': True }
 
 # You can alter the settings below to override defaults

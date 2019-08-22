@@ -30,5 +30,7 @@ all_tags_field = 'all_proc_tags'
 outlier_thresholds = { 'modified_z_score': 2.5, 'iqr': [20,80], 'z_score': 3.0 }
 outlier_features = ['duration', 'cpu_time', 'num_procs']
 
-# we expect the following to be overriden in settings.py
+# we expect the settings below to be overriden in settings.py
+# depending on the template of your choice
+orm = 'pony'
 db_params = {'provider': 'sqlite', 'filename': ':memory:'}
