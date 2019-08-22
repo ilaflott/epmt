@@ -5,6 +5,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
 
 logger = getLogger(__name__)  # you can use other name
+import init_logging
 
 Base = declarative_base()
 

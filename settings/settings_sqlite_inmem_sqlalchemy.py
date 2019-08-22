@@ -1,6 +1,6 @@
 from epmt_default_settings import *
 
-db_params = {'provider': 'sqlite', 'filename': ':memory:'}
+db_params = { 'url': 'sqlite:///:memory:', 'echo': True }
 
 # You can alter the settings below to override defaults
 #

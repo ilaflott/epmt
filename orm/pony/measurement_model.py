@@ -2,8 +2,7 @@
 # Physical/measurement model 
 #
 
-from pony.orm import *
-from .general import db
+from .general import *
 import datetime
 
 # Removing/changing hosts needs to be addressed

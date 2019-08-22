@@ -2,8 +2,7 @@
 # Logical Model
 #
 
-from pony.orm import *
-from .general import db
+from .general import *
 import datetime
 
 class ReferenceModel(db.Entity):
