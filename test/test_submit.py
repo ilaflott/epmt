@@ -3,12 +3,9 @@ from __future__ import print_function
 import unittest
 from sys import stderr, exit
 from glob import glob
-from pony.orm import db_session
+from orm import db_session, setup_db, Job
 from os import environ
 import datetime
-#from models import db
-#from pony.orm.core import Query
-#import pandas as pd
 
 # put this above all epmt imports
 environ['EPMT_USE_DEFAULT_SETTINGS'] = "1"
@@ -17,18 +14,16 @@ set_logging(-1)
 
 # Put EPMT imports only after we have called set_logging()
 import epmt_query as eq
-from epmt_job import setup_orm_db
 from epmtlib import timing, capture
 from epmt_cmds import epmt_submit
 import epmt_default_settings as settings
-from models import Job
 
 @timing
 def setUpModule():
     if settings.db_params.get('filename') != ':memory:':
         print('db_params MUST use in-memory sqlite for testing', file=stderr)
         exit(1)
-    setup_orm_db(settings, drop=False)
+    setup_db(settings, drop=False)
     print('\n' + str(settings.db_params))
     datafiles='test/data/misc/685000.tgz'
     print('setUpModule: importing {0}'.format(datafiles))

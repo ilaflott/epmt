@@ -209,8 +209,8 @@ def verify_papiex_options():
 def verify_db_params():
     print("settings.db_params =",str(settings.db_params))
     try:
-        from epmt_job import setup_orm_db
-        if setup_orm_db(settings) == False:
+        from orm import setup_db
+        if setup_db(settings) == False:
             PrintFail()
             return False
         else:
@@ -713,8 +713,9 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
 #        exit(1)
 
 # Now we touch the Database
-    from epmt_job import setup_orm_db, ETL_job_dict
-    if setup_orm_db(settings) == False:
+    from orm import setup_db
+    from epmt_job import ETL_job_dict
+    if setup_db(settings) == False:
         return False
     j = ETL_job_dict(metadata,filedict,settings,tarfile=tar)
     if not j:

@@ -1,8 +1,7 @@
 from __future__ import print_function
 from datetime import datetime, timedelta
 import pandas as pd
-from pony.orm.core import Query, QueryResult
-from pony.orm import *
+from orm import *
 from json import loads, dumps
 from os import environ
 from logging import getLogger
@@ -22,16 +21,14 @@ else:
 set_logging(settings.verbose if hasattr(settings, 'verbose') else 0, check=True)
 
 ### Put EPMT imports below, after logging is set up
-from models import Job, Process, ReferenceModel, Host
 from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key, stringify_dicts
 from epmt_stat import modified_z_score
-from epmt_job import setup_orm_db
 
 if using_default_settings:
     logger.warning('ignoring settings.py and using defaults in epmt_default_settings')
 
 init_settings(settings)
-setup_orm_db(settings)
+setup_db(settings)
 
 PROC_SUMS_FIELD_IN_JOB='proc_sums'
 THREAD_SUMS_FIELD_IN_PROC='threads_sums'

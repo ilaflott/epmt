@@ -1,5 +1,6 @@
 from __future__ import print_function
 import orm
+from orm import db_session
 from sys import stdout, argv, stderr, exit
 import sys
 from os.path import basename
@@ -11,6 +12,7 @@ from os import getuid
 from json import dumps, loads
 from pwd import getpwnam, getpwuid
 from epmtlib import tag_from_string, sum_dicts, unique_dicts, fold_dicts
+import datetime
 
 logger = getLogger(__name__)  # you can use other name
 
@@ -374,7 +376,7 @@ def _check_and_create_metadata(raw_metadata):
 
     return metadata
 
-#@db_session
+@db_session
 def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 # Synthesize what we need
     metadata = _check_and_create_metadata(raw_metadata)

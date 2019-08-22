@@ -4,8 +4,7 @@ import unittest
 from sys import stderr, exit
 from glob import glob
 from os import environ
-from pony.orm import db_session
-from models import db
+from orm import db_session, setup_db
 from json import loads
 
 # put this above all epmt imports so they use defaults
@@ -19,7 +18,6 @@ import epmt_query as eq
 import epmt_outliers as eod
 from epmtlib import timing, frozen_dict
 from epmt_cmds import epmt_submit
-from epmt_job import setup_orm_db
 import epmt_default_settings as settings
 
 @timing
@@ -27,7 +25,7 @@ def setUpModule():
     if settings.db_params.get('filename') != ':memory:':
         print('db_params MUST use in-memory sqlite for testing', file=stderr)
         exit(1)
-    setup_orm_db(settings, drop=True)
+    setup_db(settings, drop=True)
     print('\n' + str(settings.db_params))
     datafiles='test/data/outliers/*.tgz'
     print('setUpModule: importing {0}'.format(datafiles))

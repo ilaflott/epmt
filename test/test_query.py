@@ -4,8 +4,7 @@ import unittest
 from sys import stderr, exit
 import sys
 from glob import glob
-from pony.orm import db_session
-from models import db, Job, Process
+from orm import db_session, setup_db, Job, Process
 from pony.orm.core import Query, QueryResult
 import pandas as pd
 import datetime
@@ -19,7 +18,6 @@ set_logging(-1)
 # Put EPMT imports only after we have called set_logging()
 import epmt_query as eq
 from epmtlib import timing, isString, frozen_dict, str_dict
-from epmt_job import setup_orm_db
 from epmt_cmds import epmt_submit
 import epmt_default_settings as settings
 
@@ -29,7 +27,7 @@ def setUpModule():
     if settings.db_params.get('filename') != ':memory:':
         print('db_params MUST use in-memory sqlite for testing', file=stderr)
         exit(1)
-    setup_orm_db(settings, drop=True)
+    setup_db(settings, drop=True)
     print('\n' + str(settings.db_params))
     datafiles='test/data/query/*.tgz'
     print('setUpModdule: importing {0}'.format(datafiles))
@@ -197,10 +195,10 @@ class QueryAPI(unittest.TestCase):
         # hosts, when
         procs = eq.get_procs('685000', when=datetime.datetime(2019, 6, 15, 11, 53), fmt='terse')
         pids = [Process[p].pid for p in procs]
-        self.assertEqual(pids, [6098, 6226])
+        self.assertEqual(set(pids), set([6098, 6226]))
         procs = eq.get_procs('685000', when='06/15/2019 11:53', fmt='terse')
         pids = [Process[p].pid for p in procs]
-        self.assertEqual(pids, [6098, 6226])
+        self.assertEqual(set(pids), set([6098, 6226]))
         self.assertEqual(eq.get_procs('685000', hosts=['pp208'], fmt='orm').count(), 3480)
         self.assertEqual(eq.get_procs('685000', hosts=['pp208', 'pp209'], fmt='orm').count(), 3480)
         self.assertEqual(eq.get_procs('685000', hosts=['pp209'], fmt='orm').count(), 0)

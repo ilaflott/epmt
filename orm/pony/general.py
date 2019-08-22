@@ -1,5 +1,8 @@
 # general.py
+from pony.orm.core import Query, QueryResult
+from pony.orm.ormtypes import TrackedDict
 from pony.orm import *
+
 from logging import getLogger
 logger = getLogger(__name__)  # you can use other name
 import init_logging

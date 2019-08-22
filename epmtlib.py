@@ -6,7 +6,6 @@ from os import environ, unlink, devnull
 from contextlib import contextmanager
 from subprocess import call
 from json import dumps, loads
-from pony.orm.ormtypes import TrackedDict
 
 try:
     from StringIO import StringIO
@@ -161,6 +160,7 @@ def tag_from_string(s, delim = ';', sep = ':', tag_default_value = '1'):
 # the input can be a list of strings or a single string.
 # each string will be converted to a dict
 def tags_list(tags):
+    from orm import TrackedDict
     # do we have a single tag in string or dict form? 
     if isString(tags):
         tags = [tag_from_string(tags)]
