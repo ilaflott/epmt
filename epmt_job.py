@@ -37,10 +37,10 @@ def sortKeyFunc(s):
     return int(t2[0]+t2[1])
 
 def create_job(jobid,user):
-    job = orm.get(orm.Job, jobid=jobid)
+    job = orm.get_(orm.Job, jobid=jobid)
     if job is None:
         logger.info("Creating job %s",jobid)
-        job = orm.create(Job, jobid=jobid,user=user)
+        job = orm.create_(orm.Job, jobid=jobid,user=user)
     else:
         logger.warning("Job %s (at %s) is already in the database",job.jobid,job.start)
         return None
@@ -65,17 +65,17 @@ def create_job(jobid,user):
                     
 
 def lookup_or_create_host(hostname):
-    host = Host.get(name=hostname)
+    host = orm.get_(orm.Host, name=hostname)
     if host is None:
         logger.info("Creating host %s",hostname)
-        host = Host(name=hostname)
+        host = orm.create_(orm.Host, name=hostname)
     return host
 
 def lookup_or_create_user(username):
-    user = User.get(name=username)
+    user = orm.get_(orm.User, name=username)
     if user is None:
         logger.info("Creating user %s",username)
-        user = User(name=username)
+        user = orm.create_(orm.User, name=username)
     return user
 
 
@@ -114,17 +114,18 @@ def load_process_from_pandas(df, h, j, u, settings):
         host = lookup_or_create_host(h)
 
     try:
-            p = Process(exename=df['exename'][0],
-                        args=df['args'][0],
-                        path=df['path'][0],
-                        pid=int(df['pid'][0]),
-                        ppid=int(df['ppid'][0]),
-                        pgid=int(df['pgid'][0]),
-                        sid=int(df['sid'][0]),
-                        gen=int(df['generation'][0]),
-                        host=host,
-                        job=j,
-                        user=u)
+            p = orm.create_(orm.Process, 
+                           exename=df['exename'][0],
+                           args=df['args'][0],
+                           path=df['path'][0],
+                           pid=int(df['pid'][0]),
+                           ppid=int(df['ppid'][0]),
+                           pgid=int(df['pgid'][0]),
+                           sid=int(df['sid'][0]),
+                           gen=int(df['generation'][0]),
+                           host=host,
+                           job=j,
+                           user=u)
     except Exception as e:
         logger.error("%s",e)
         logger.error("Corrupted CSV or invalid input type");

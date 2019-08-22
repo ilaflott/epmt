@@ -16,6 +16,9 @@ class User(db.Base):
     id = db.Column(db.Integer, primary_key = True)
     jobs = db.relationship('Job', back_populates='user')
 
+    def __repr__(self):
+        return "<User (id=%s, name='%s')>" % (str(self.id), self.name)
+
 class Host(db.Base):
     __tablename__ = 'hosts'
     created_at = db.Column(db.DateTime, default=db.func.now())
@@ -52,7 +55,7 @@ class Job(db.Base):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     user = db.relationship('User', back_populates = "jobs")
 
-    processes = db.relationship('Process', cascade="all,delete", backref="job")
+    processes = db.relationship('Process', cascade="all,delete", back_populates="job")
     tags = db.Column(db.JSON)
     # exclusive cpu time
     cpu_time = db.Column(db.Float)
@@ -78,7 +81,7 @@ class Process(db.Base):
     tags = db.Column(db.JSON)
 
     host_id = db.Column(db.String, db.ForeignKey('hosts.name'))
-    host = db.relationship('Host', backref="processes")
+    host = db.relationship('Host', back_populates="processes")
 
     threads_df = db.Column(db.JSON)
     threads_sums = db.Column(db.JSON)

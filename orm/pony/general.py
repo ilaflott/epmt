@@ -8,6 +8,7 @@ db = Database()
 
 logger.info('Pony ORM selected')
 
+### API ###
 def setup_db(settings,drop=False,create=True):
     logger.info("Binding to DB: %s", settings.db_params)
     try:
@@ -36,3 +37,16 @@ def setup_db(settings,drop=False,create=True):
         db.drop_all_tables(with_all_data=True)
         db.create_tables()
     return True
+
+@db_session
+def get_(model, pk=None, **kwargs):
+    if pk != None:
+        try:
+            return model[pk]
+        except:
+            return None
+    return model.get(**kwargs)
+
+@db_session
+def create_(model, **kwargs):
+    return model(**kwargs)
