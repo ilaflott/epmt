@@ -1,7 +1,9 @@
 # general.py
 from sqlalchemy import *
-from sqlalchemy.orm import backref, relationship, sessionmaker
+from sqlalchemy.orm import backref, relationship, sessionmaker, scoped_session
 from sqlalchemy.ext.declarative import declarative_base
+import threading
+from functools import wraps
 
 from logging import getLogger
 logger = getLogger(__name__)  # you can use other name
@@ -9,9 +11,34 @@ import init_logging
 
 logger.info('sqlalchemy orm selected')
 Base = declarative_base()
-Session = sessionmaker()
+
+# we use this to keep track of db_session nesting since we only
+# want to commit and remove the session when the top of the stack is popped
+thr_data = threading.local()
+thr_data.nestlevel = 0
+Session = None
 
 ### sqlalchemy-specific API implementation ###
+def db_session(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        session = Session()  # (this is now a scoped session)
+        thr_data.nestlevel += 1
+        completed = False
+        try:
+            retval = func(*args, **kwargs) # No need to pass session explicitly
+            completed = True
+        except:
+            session.rollback()
+            raise
+        finally:
+            thr_data.nestlevel -= 1
+            if thr_data.nestlevel == 0: 
+                if completed:
+                    session.commit()
+                #Session.remove()  # NOTE: *remove* rather than *close* here
+        return retval
+    return wrapper
 
 def setup_db(settings,drop=False,create=True):
     logger.info("Creating engine with db_params: %s", settings.db_params)
@@ -29,8 +56,11 @@ def setup_db(settings,drop=False,create=True):
         logger.error("Mapping to DB, did the schema change? Perhaps drop and create?")
         logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
         return False
-    logger.info('Creating session..')
-    Session.configure(bind=engine)
+    logger.info('Creating scoped session..')
+    #Session.configure(bind=engine)
+    session_factory = sessionmaker(bind=engine)
+    global Session
+    Session = scoped_session(session_factory)
     if drop:
         logger.warning("Not implemented for sqlalchemy")
     return True
@@ -38,23 +68,25 @@ def setup_db(settings,drop=False,create=True):
 # get_(Job, '6355501')
 # or
 # get_(User, name='John.Doe')
+@db_session
 def get_(model, pk=None, **kwargs):
-    return get_session().query(model).get(pk) if (pk != None) else get_session().query(model).filter_by(**kwargs).one_or_none()
+    return Session.query(model).get(pk) if (pk != None) else Session.query(model).filter_by(**kwargs).one_or_none()
 
-def create_(model, autocommit=True, **kwargs):
+@db_session
+def create_(model, **kwargs):
     o = model(**kwargs)
-    s = get_session()
-    s.add(o)
-    if autocommit:
-        s.commit()
+    Session.add(o)
     return o
 
+@db_session
 def commit_():
-    get_session().commit()
+    Session.commit()
 
 ### end API ###
 
-def get_session():
-    if hasattr(get_session, 'session'): return get_session.session
-    get_session.session = Session()
-    return get_session.session
+# def get_session():
+#     if hasattr(get_session, 'session'): return get_session.session
+#     get_session.session = Session()
+#     return get_session.session
+
+

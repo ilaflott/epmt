@@ -1,4 +1,5 @@
 import general as db
+from general import db_session
 import datetime
 
 
@@ -16,6 +17,7 @@ class User(db.Base):
     id = db.Column(db.Integer, primary_key = True)
     jobs = db.relationship('Job', back_populates='user')
 
+    @db_session
     def __repr__(self):
         return "<User (id=%s, name='%s')>" % (str(self.id), self.name)
 
