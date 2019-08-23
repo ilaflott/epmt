@@ -264,8 +264,8 @@ def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
 def _proc_ancestors(pid_map, proc, ancestor_pid):
     if ancestor_pid in pid_map:
         ancestor = pid_map[ancestor_pid]
-        ancestor.descendants.add(proc)
-        proc.ancestors.add(ancestor)
+        orm.add_to_collection_(ancestor.descendants, proc)
+        orm.add_to_collection_(proc.ancestors, ancestor)
         # now that we have done this node let's go to its parent
         _proc_ancestors(pid_map, proc, ancestor.ppid)
 
@@ -277,7 +277,7 @@ def _create_process_tree(pid_map):
         if ppid in pid_map:
             parent = pid_map[ppid]
             proc.parent = parent
-            parent.children.add(proc)
+            orm.add_to_collection_(parent.children, proc)
     for (pid, proc) in pid_map.items():
         ppid = proc.ppid
         _proc_ancestors(pid_map, proc, ppid)
@@ -571,9 +571,9 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             proc.inclusive_cpu_time = float(proc.cpu_time + sum(proc.descendants.cpu_time))
             nthreads += proc.numtids
             threads_sums_across_procs = sum_dicts(threads_sums_across_procs, proc.threads_sums)
-            j.hosts.add(proc.host)
+            orm.add_to_collection_(j.hosts, proc.host)
         logger.info("Adding %d processes (%d threads) to job",len(all_procs), nthreads)
-        j.processes.add(all_procs)
+        orm.add_to_collection_(j.processes, all_procs)
     j.proc_sums['num_procs'] = len(all_procs)
     j.proc_sums['num_threads'] = nthreads
     # merge the threads sums across all processes in the job.proc_sums dict

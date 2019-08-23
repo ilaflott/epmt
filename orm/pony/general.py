@@ -41,7 +41,6 @@ def setup_db(settings,drop=False,create=True):
         db.create_tables()
     return True
 
-@db_session
 def get_(model, pk=None, **kwargs):
     if pk != None:
         try:
@@ -50,6 +49,11 @@ def get_(model, pk=None, **kwargs):
             return None
     return model.get(**kwargs)
 
-@db_session
 def create_(model, **kwargs):
     return model(**kwargs)
+
+def commit_():
+    return commit()
+
+def add_to_collection_(collection, item):
+    return collection.add(item)

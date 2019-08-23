@@ -78,9 +78,11 @@ def create_(model, **kwargs):
     Session.add(o)
     return o
 
-@db_session
 def commit_():
-    Session.commit()
+    return Session.commit()
+
+def add_to_collection_(collection, item):
+    return collection.append(item)
 
 ### end API ###
 
