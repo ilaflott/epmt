@@ -68,11 +68,9 @@ def setup_db(settings,drop=False,create=True):
 # get_(Job, '6355501')
 # or
 # get_(User, name='John.Doe')
-@db_session
 def get_(model, pk=None, **kwargs):
     return Session.query(model).get(pk) if (pk != None) else Session.query(model).filter_by(**kwargs).one_or_none()
 
-@db_session
 def create_(model, **kwargs):
     o = model(**kwargs)
     Session.add(o)
@@ -82,7 +80,15 @@ def commit_():
     return Session.commit()
 
 def add_to_collection_(collection, item):
-    return collection.append(item)
+    if type(item) == list:
+        for o in item:
+            collection.append(o)
+        return collection
+    else:
+        return collection.append(item)
+
+def sum_attribute_(collection, attribute):
+    return sum([getattr(c, attribute) for c in collection])
 
 ### end API ###
 

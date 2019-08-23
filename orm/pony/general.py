@@ -57,3 +57,6 @@ def commit_():
 
 def add_to_collection_(collection, item):
     return collection.add(item)
+
+def sum_attribute_(collection, attribute):
+    return sum(getattr(collection, attribute))

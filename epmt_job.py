@@ -568,7 +568,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         # computing process inclusive times
         logger.info("synthesizing aggregates across job processes..")
         for proc in all_procs:
-            proc.inclusive_cpu_time = float(proc.cpu_time + sum(proc.descendants.cpu_time))
+            proc.inclusive_cpu_time = float(proc.cpu_time + orm.sum_attribute_(proc.descendants, 'cpu_time'))
             nthreads += proc.numtids
             threads_sums_across_procs = sum_dicts(threads_sums_across_procs, proc.threads_sums)
             orm.add_to_collection_(j.hosts, proc.host)
@@ -593,7 +593,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     j.duration = int(d.total_seconds()*1000000)
     # the cpu time for a job is the sum of the exclusive times
     # of all processes in the job
-    j.cpu_time = sum(j.processes.cpu_time)
+    j.cpu_time = orm.sum_attribute_(j.processes, 'cpu_time')
     if root_proc:
         if root_proc.exitcode != j.exitcode:
             logger.warning('metadata shows the job exit code is {0}, but root process exit code is {1}'.format(j.exitcode, root_proc.exitcode))

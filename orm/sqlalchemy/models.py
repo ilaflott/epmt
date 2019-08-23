@@ -8,6 +8,10 @@ refmodel_job_associations_table = db.Table('refmodel_job_associations', db.Base.
     db.Column('refmodel_id', db.Integer, db.ForeignKey('refmodels.id'))
 )
 
+host_job_associations_table = db.Table('host_job_associations', db.Base.metadata,
+    db.Column('jobid', db.String, db.ForeignKey('jobs.jobid')),
+    db.Column('hostname', db.String, db.ForeignKey('hosts.name'))
+)
 
 class User(db.Base):
     __tablename__ = 'users'
@@ -16,10 +20,11 @@ class User(db.Base):
     name = db.Column(db.String, unique=True)
     id = db.Column(db.Integer, primary_key = True)
     jobs = db.relationship('Job', back_populates='user')
+    processes = db.relationship('Process', back_populates='user')
 
     @db_session
     def __repr__(self):
-        return "<User (id=%s, name='%s')>" % (str(self.id), self.name)
+        return "User['%s']" % (self.name)
 
 class Host(db.Base):
     __tablename__ = 'hosts'
@@ -27,6 +32,11 @@ class Host(db.Base):
     updated_at = db.Column(db.DateTime, onupdate=datetime.datetime.now)
     name = db.Column(db.String, primary_key=True)
     processes = db.relationship('Process', back_populates='host')
+    jobs = db.relationship('Job', back_populates='hosts', secondary=host_job_associations_table)
+
+    @db_session
+    def __repr__(self):
+        return "Host['%s']" % (self.name)
 
 class ReferenceModel(db.Base):
     __tablename__ = 'refmodels'
@@ -37,6 +47,9 @@ class ReferenceModel(db.Base):
     op_tags = db.Column(db.JSON)
     computed = db.Column(db.JSON)
     jobs = db.relationship('Job', back_populates='ref_models', secondary=refmodel_job_associations_table)
+    @db_session
+    def __repr__(self):
+        return "ReferenceModel[%d]" % (self.id)
 
 class Job(db.Base):
     __tablename__ = 'jobs'
@@ -58,10 +71,15 @@ class Job(db.Base):
     user = db.relationship('User', back_populates = "jobs")
 
     processes = db.relationship('Process', cascade="all,delete", back_populates="job")
+    hosts = db.relationship('Host', back_populates='jobs', secondary=host_job_associations_table)
     tags = db.Column(db.JSON)
     # exclusive cpu time
     cpu_time = db.Column(db.Float)
     ref_models = db.relationship('ReferenceModel', back_populates="jobs", secondary=refmodel_job_associations_table)
+
+    @db_session
+    def __repr__(self):
+        return "Job['%s']" % (self.jobid)
 
 class ProcessAssociation(db.Base):
     __tablename__ = 'process_associations'
@@ -73,6 +91,9 @@ class Process(db.Base):
     created_at = db.Column(db.DateTime, default=db.func.now())
     updated_at = db.Column(db.DateTime, onupdate=datetime.datetime.now)
     id = db.Column(db.Integer, primary_key = True)
+
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    user = db.relationship('User', back_populates = "processes")
 
     jobid = db.Column(db.String, db.ForeignKey('jobs.jobid'))
     job = db.relationship('Job', back_populates='processes')
@@ -108,3 +129,7 @@ class Process(db.Base):
     children= db.relationship('Process', backref=db.backref('parent', remote_side=[id]))
     ancestors = db.relationship('ProcessAssociation',backref='descendants', primaryjoin=id==ProcessAssociation.fk_ancestor)
     descendants = db.relationship('ProcessAssociation',backref='ancestors', primaryjoin=id==ProcessAssociation.fk_descendant )
+
+    @db_session
+    def __repr__(self):
+        return "Process[%d]" % (self.id)
