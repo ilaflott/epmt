@@ -63,7 +63,7 @@ def setup_db(settings,drop=False,create=True):
         return False
     logger.info('Creating scoped session..')
     #Session.configure(bind=engine)
-    session_factory = sessionmaker(bind=engine)
+    session_factory = sessionmaker(bind=engine, expire_on_commit=False)
     global Session
     Session = scoped_session(session_factory)
     thr_data.Session = Session

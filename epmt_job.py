@@ -65,16 +65,21 @@ def create_job(jobid,user):
 #	metadata['job_el_from_batch'] = from_batch
 #	metadata['job_el_status'] = status
                     
-
+created_hosts = {}
 def lookup_or_create_host(hostname):
-    host = orm.get_(orm.Host, name=hostname)
+    host = orm.get_(orm.Host, hostname) if (not(hostname in created_hosts)) else created_hosts[hostname]
     if host is None:
         logger.info("Creating host %s",hostname)
         host = orm.create_(orm.Host, name=hostname)
+        # for sqlalchemy the created_hosts map is crucial for boosting performance
+        # However with Pony we end up caching objects from different db_sessions
+        # and so we don't want use our create_hosts map with Pony
+        if settings.orm == 'sqlalchemy':
+            created_hosts[hostname] = host
     return host
 
 def lookup_or_create_user(username):
-    user = orm.get_(orm.User, name=username)
+    user = orm.get_(orm.User, username)
     if user is None:
         logger.info("Creating user %s",username)
         user = orm.create_(orm.User, name=username)
