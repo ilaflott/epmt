@@ -23,6 +23,7 @@ def db_session(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         session = Session()  # (this is now a scoped session)
+        thr_data.session = session
         thr_data.nestlevel += 1
         completed = False
         try:
@@ -49,6 +50,10 @@ def setup_db(settings,drop=False,create=True):
         logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
         return False
 
+    if drop:
+        logger.warning("DROPPING ALL DATA AND TABLES!")
+        Base.metadata.drop_all(engine)
+
     logger.info("Generating mapping from schema...")
     try:
         Base.metadata.create_all(engine)
@@ -61,8 +66,7 @@ def setup_db(settings,drop=False,create=True):
     session_factory = sessionmaker(bind=engine)
     global Session
     Session = scoped_session(session_factory)
-    if drop:
-        logger.warning("Not implemented for sqlalchemy")
+    thr_data.Session = Session
     return True
 
 # get_(Job, '6355501')
