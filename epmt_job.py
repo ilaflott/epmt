@@ -576,12 +576,14 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         _create_process_tree(pid_map)
         # computing process inclusive times
         logger.info("synthesizing aggregates across job processes..")
+        hosts = set()
         for proc in all_procs:
             proc.inclusive_cpu_time = float(proc.cpu_time + orm.sum_attribute_(proc.descendants, 'cpu_time'))
             nthreads += proc.numtids
             threads_sums_across_procs = sum_dicts(threads_sums_across_procs, proc.threads_sums)
-            orm.add_to_collection_(j.hosts, proc.host)
+            hosts.add(proc.host)
         logger.info("Adding %d processes (%d threads) to job",len(all_procs), nthreads)
+        j.hosts = list(hosts)
         orm.add_to_collection_(j.processes, all_procs)
     proc_sums['num_procs'] = len(all_procs)
     proc_sums['num_threads'] = nthreads
