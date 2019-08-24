@@ -4,13 +4,18 @@ import datetime
 
 
 refmodel_job_associations_table = db.Table('refmodel_job_associations', db.Base.metadata,
-    db.Column('jobid', db.String, db.ForeignKey('jobs.jobid')),
+    db.Column('jobid', db.String, db.ForeignKey('jobs.jobid'), primary_key=True),
     db.Column('refmodel_id', db.Integer, db.ForeignKey('refmodels.id'))
 )
 
 host_job_associations_table = db.Table('host_job_associations', db.Base.metadata,
-    db.Column('jobid', db.String, db.ForeignKey('jobs.jobid')),
-    db.Column('hostname', db.String, db.ForeignKey('hosts.name'))
+    db.Column('jobid', db.String, db.ForeignKey('jobs.jobid'), primary_key=True),
+    db.Column('hostname', db.String, db.ForeignKey('hosts.name'), primary_key=True)
+)
+
+ancestor_descendant_associations_table = db.Table('ancestor_descendant_associations', db.Base.metadata,
+    db.Column('ancestor', db.Integer, db.ForeignKey('processes.id'), primary_key=True),
+    db.Column('descendant', db.Integer, db.ForeignKey('processes.id'), primary_key=True)
 )
 
 class User(db.Base):
@@ -81,10 +86,10 @@ class Job(db.Base):
     def __repr__(self):
         return "Job['%s']" % (self.jobid)
 
-class ProcessAssociation(db.Base):
-    __tablename__ = 'process_associations'
-    fk_ancestor = db.Column(db.Integer, db.ForeignKey('processes.id'), primary_key=True)
-    fk_descendant = db.Column(db.Integer, db.ForeignKey('processes.id'), primary_key=True)
+#class ProcessAssociation(db.Base):
+#    __tablename__ = 'process_associations'
+#    fk_ancestor = db.Column(db.Integer, db.ForeignKey('processes.id'), primary_key=True)
+#    fk_descendant = db.Column(db.Integer, db.ForeignKey('processes.id'), primary_key=True)
 
 class Process(db.Base):
     __tablename__ = 'processes'
@@ -127,8 +132,9 @@ class Process(db.Base):
     # while parent is included in the ancestors
     parent_id = db.Column(db.Integer, db.ForeignKey('processes.id'))
     children= db.relationship('Process', backref=db.backref('parent', remote_side=[id]))
-    ancestors = db.relationship('ProcessAssociation',backref='descendants', primaryjoin=id==ProcessAssociation.fk_ancestor)
-    descendants = db.relationship('ProcessAssociation',backref='ancestors', primaryjoin=id==ProcessAssociation.fk_descendant )
+    #ancestors = db.relationship('ProcessAssociation',backref='descendants', primaryjoin=id==ProcessAssociation.fk_ancestor)
+    #descendants = db.relationship('ProcessAssociation',backref='ancestors', primaryjoin=id==ProcessAssociation.fk_descendant )
+    ancestors = db.relationship('Process', backref='descendants', secondary=ancestor_descendant_associations_table, primaryjoin=id==ancestor_descendant_associations_table.c.descendant, secondaryjoin=id==ancestor_descendant_associations_table.c.ancestor)
 
     @db_session
     def __repr__(self):

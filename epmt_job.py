@@ -265,7 +265,11 @@ def _proc_ancestors(pid_map, proc, ancestor_pid):
     if ancestor_pid in pid_map:
         ancestor = pid_map[ancestor_pid]
         orm.add_to_collection_(ancestor.descendants, proc)
-        orm.add_to_collection_(proc.ancestors, ancestor)
+
+        # we don't need to do the reverse mapping (below) as that's
+        # implied using the ORM backref
+        # orm.add_to_collection_(proc.ancestors, ancestor)
+
         # now that we have done this node let's go to its parent
         _proc_ancestors(pid_map, proc, ancestor.ppid)
 
