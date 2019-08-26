@@ -619,9 +619,9 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     logger.info("Latest process end: %s",j.end)
     logger.info("Computed duration of job: %f us, %.2f m",j.duration,j.duration/60000000)
     now = datetime.datetime.now() 
-    logger.info("Staged import of %d processes", len(j.processes))
+    logger.info("Staged import of %d processes", len(all_procs))
     logger.info("Staged import took %s, %f processes per second",
-                now - then,len(j.processes)/float((now-then).total_seconds()))
+                now - then,len(all_procs)/float((now-then).total_seconds()))
     print("Imported successfully - job:",jobid,"processes:",len(all_procs),"rate:",len(all_procs)/float((now-then).total_seconds()))
     logger.info("Committing job to database..")
     commit_()

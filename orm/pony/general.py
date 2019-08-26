@@ -64,7 +64,7 @@ def sum_attribute_(collection, attribute):
 def is_query(obj):
     return type(obj) in (Query, QueryResult)
 
-def __jobs_col(jobs):
+def jobs_col(jobs):
     """
     This is an internal function to take a collection of jobs
     in a variety of formats and return output in the ORM format.

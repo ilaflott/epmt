@@ -103,9 +103,9 @@ def is_query(obj):
 
 def jobs_col(jobs):
     """
-    This is an internal function to take a collection of jobs
-    in a variety of formats and return output in the ORM format.
-    You should not use this function directly, but instead use conv_jobs()
+    This is an internal function that returns a Job Query object.
+    The input can be collection of jobs spcified as a string, a list
+    of strings, list of dicts, a dataframe or a list of Job objects.
     """
     from pandas import DataFrame
     from epmtlib import isString
@@ -130,7 +130,7 @@ def jobs_col(jobs):
         # jobs is a list of Job objects or a list of jobids or a list of dicts
         # so first convert the dict list to a jobid list
         jobs = [ j['jobid'] if type(j) == dict else j for j in jobs ]
-        #jobs = [ Job[j] if isString(j) else j for j in jobs ]
+        jobs = [ j.jobid if type(j)==Job else j for j in jobs ]
         # and now convert to a Query object so the user can chain
         jobs = Session.query(Job).filter(Job.jobid.in_(jobs))
     return jobs

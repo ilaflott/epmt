@@ -53,14 +53,25 @@ def conv_jobs(jobs, fmt='dict', merge_sums = True):
 
     """
 
-    jobs = __jobs_col(jobs)
+    jobs = jobs_col(jobs)
     if fmt == 'orm':
         return jobs
     if fmt=='terse':
         return [ j.jobid for j in jobs ]
 
     # convert the ORM into a list of dictionaries, excluding blacklisted fields
-    out_list = [ j.to_dict() for j in jobs ]
+    try:
+        out_list = [ j.to_dict() for j in jobs ]
+    except AttributeError:
+        # sqlachemy doesn't have a to_dict() method, so use __dict__ attribute
+        # TODO:
+        # the code below should be abstracted by the ORM API, ideally
+        out_list = [ j.__dict__ for j in jobs ]
+        for j in out_list:
+            del j['processes']
+            j['hosts'] = [h.name for h in j['hosts']]
+            # TODO:
+            # one should also replace 'user_id' by the user name
 
     # do we need to merge process' sum fields into the job?
     if merge_sums:
@@ -149,37 +160,6 @@ def conv_procs(procs, fmt='pandas'):
     procs = __procs_col(procs)
     return __conv_procs_orm(procs, fmt=fmt)
 
-def __jobs_col(jobs):
-    """
-    This is an internal function to take a collection of jobs
-    in a variety of formats and return output in the ORM format.
-    You should not use this function directly, but instead use conv_jobs()
-    """
-    if is_query(jobs):
-        return jobs
-    if ((type(jobs) != pd.DataFrame) and not(jobs)):
-        return Job.select()
-    if type(jobs) == pd.DataFrame:
-        jobs = list(jobs['jobid'])
-    if isString(jobs):
-        if ',' in jobs:
-            # jobs a string of comma-separated job ids
-            jobs = [ j.strip() for j in jobs.split(",") ]
-        else:
-            # job is a single jobid
-            jobs = Job[jobs]
-    if type(jobs) == Job:
-        # is it a singular job?
-        jobs = [jobs]
-    if type(jobs) in [list, set]:
-        # jobs is a list of Job objects or a list of jobids or a list of dicts
-        # so first convert the dict list to a jobid list
-        jobs = [ j['jobid'] if type(j) == dict else j for j in jobs ]
-        jobs = [ Job[j] if isString(j) else j for j in jobs ]
-        # and now convert to a pony Query object so the user can chain
-        jobs = Job.select(lambda j: j in jobs)
-    return jobs
-
 
 def timeline(jobs = [], limit=0, fltr='', when=None, hosts=[], fmt='pandas'):
     """
@@ -261,7 +241,7 @@ def op_roots(jobs, tag, fmt='dict'):
     op_root returns a collection of processes in the format specified.
     The processes are sorted by jobid and within a job by start time
     """
-    jobs = __jobs_col(jobs)
+    jobs = jobs_col(jobs)
     if not tag:
         logger.error('You must specify a tag (string or dict)')
         return None
@@ -374,12 +354,12 @@ def get_jobs(jobs = [], tags=None, fltr = '', order = None, limit = None, offset
              tag a match will considered.
     """
     # set defaults for limit and ordering only if the user doesn't specify jobs
-    if (not(is_query(jobs)) and (type(jobs) != pd.DataFrame) and (jobs in [[], '', None]):
+    if (not(is_query(jobs))) and (type(jobs) != pd.DataFrame) and (jobs in [[], '', None]):
         if (fmt != 'orm') and (limit == None): 
             limit = 20
         if order == None: order = 'desc(j.created_at)'
       
-    qs = __jobs_col(jobs)
+    qs = jobs_col(jobs)
 
     # filter using tag if set
     # Remember, tag = {} demands an exact match with an empty dict!
@@ -578,7 +558,7 @@ def get_procs(jobs = [], tags = None, fltr = None, order = '', limit = 0, when=N
     dataframe. The output will be pre-sorted on this field because we have set 'order'
     """
     if jobs:
-        jobs = __jobs_col(jobs)
+        jobs = jobs_col(jobs)
         qs = Process.select(lambda p: p.job in jobs)
     else:
         # no jobs set, so expand the scope to all Process objects
@@ -728,7 +708,7 @@ def job_proc_tags(jobs = [], exclude=[], fold=False):
 
     exclude: an optional list of keys to exclude from each tag (if present)
     """
-    jobs = __jobs_col(jobs)
+    jobs = jobs_col(jobs)
     tags = []
     for j in jobs:
         unique_tags_for_job = __unique_proc_tags_for_job(j, exclude, fold = False)
@@ -1102,7 +1082,7 @@ def delete_jobs(jobs, force = False, before=None, after=None):
 
     """
 
-    jobs = __jobs_col(jobs)
+    jobs = jobs_col(jobs)
 
     if ((before != None) or (after != None)):
         jobs = get_jobs(jobs, before=before, after=after, fmt='orm')
@@ -1132,7 +1112,7 @@ def dm_calc(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op
     use dm_calc_iter instead
     """
     logger.debug('dm ops: {0}'.format(tags))
-    jobs = __jobs_col(jobs)
+    jobs = jobs_col(jobs)
     num_jobs = len(jobs)
     logger.debug('number of jobs: {0}'.format(num_jobs))
     if (num_jobs > 100):
@@ -1155,7 +1135,7 @@ def dm_calc_iter(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv'
     allowing us to compute min/max/std_dev across jobs for DM.
     """
     logger.debug('dm ops: {0}'.format(tags))
-    jobs = __jobs_col(jobs)
+    jobs = jobs_col(jobs)
     logger.debug('number of jobs: {0}'.format(len(jobs)))
     tags = tags_list(tags)
     jobs_cpu_time = 0.0
