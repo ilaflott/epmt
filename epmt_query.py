@@ -155,7 +155,7 @@ def __jobs_col(jobs):
     in a variety of formats and return output in the ORM format.
     You should not use this function directly, but instead use conv_jobs()
     """
-    if type(jobs) in [Query, QueryResult]:
+    if is_query(jobs):
         return jobs
     if ((type(jobs) != pd.DataFrame) and not(jobs)):
         return Job.select()
@@ -374,7 +374,7 @@ def get_jobs(jobs = [], tags=None, fltr = '', order = None, limit = None, offset
              tag a match will considered.
     """
     # set defaults for limit and ordering only if the user doesn't specify jobs
-    if (type(jobs) not in [Query, QueryResult, pd.DataFrame]) and (jobs in [[], '', None]):
+    if (not(is_query(jobs)) and (type(jobs) != pd.DataFrame) and (jobs in [[], '', None]):
         if (fmt != 'orm') and (limit == None): 
             limit = 20
         if order == None: order = 'desc(j.created_at)'

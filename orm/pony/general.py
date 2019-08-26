@@ -60,3 +60,37 @@ def add_to_collection_(collection, item):
 
 def sum_attribute_(collection, attribute):
     return sum(getattr(collection, attribute))
+
+def is_query(obj):
+    return type(obj) in (Query, QueryResult)
+
+def __jobs_col(jobs):
+    """
+    This is an internal function to take a collection of jobs
+    in a variety of formats and return output in the ORM format.
+    """
+    if is_query(jobs):
+        return jobs
+    from pd import DataFrame
+    if ((type(jobs) != DataFrame) and not(jobs)):
+        return Job.select()
+    if type(jobs) == DataFrame:
+        jobs = list(jobs['jobid'])
+    if isString(jobs):
+        if ',' in jobs:
+            # jobs a string of comma-separated job ids
+            jobs = [ j.strip() for j in jobs.split(",") ]
+        else:
+            # job is a single jobid
+            jobs = Job[jobs]
+    if type(jobs) == Job:
+        # is it a singular job?
+        jobs = [jobs]
+    if type(jobs) in [list, set]:
+        # jobs is a list of Job objects or a list of jobids or a list of dicts
+        # so first convert the dict list to a jobid list
+        jobs = [ j['jobid'] if type(j) == dict else j for j in jobs ]
+        jobs = [ Job[j] if isString(j) else j for j in jobs ]
+        # and now convert to a pony Query object so the user can chain
+        jobs = Job.select(lambda j: j in jobs)
+    return jobs

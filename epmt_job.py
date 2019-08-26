@@ -1,6 +1,6 @@
 from __future__ import print_function
 import orm
-from orm import db_session
+from orm import db_session, commit_
 from sys import stdout, argv, stderr, exit
 import sys
 from os.path import basename
@@ -79,7 +79,7 @@ def lookup_or_create_host(hostname):
     return host
 
 def lookup_or_create_user(username):
-    user = orm.get_(orm.User, username)
+    user = orm.get_(orm.User, name=username)
     if user is None:
         logger.info("Creating user %s",username)
         user = orm.create_(orm.User, name=username)
@@ -624,6 +624,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 now - then,len(j.processes)/float((now-then).total_seconds()))
     print("Imported successfully - job:",jobid,"processes:",len(all_procs),"rate:",len(all_procs)/float((now-then).total_seconds()))
     logger.info("Committing job to database..")
+    commit_()
     return j
 
 #

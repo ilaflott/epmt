@@ -2,6 +2,7 @@
 from sqlalchemy import *
 from sqlalchemy.orm import backref, relationship, sessionmaker, scoped_session
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm.query import Query
 import threading
 from functools import wraps
 
@@ -42,6 +43,10 @@ def db_session(func):
     return wrapper
 
 def setup_db(settings,drop=False,create=True):
+    global Session
+    if Session:
+        logger.info('Skipping DB setup as it is already initialized')
+        return True
     logger.info("Creating engine with db_params: %s", settings.db_params)
     try:
         engine = engine_from_config(settings.db_params, prefix='')
@@ -64,7 +69,6 @@ def setup_db(settings,drop=False,create=True):
     logger.info('Creating scoped session..')
     #Session.configure(bind=engine)
     session_factory = sessionmaker(bind=engine, expire_on_commit=False)
-    global Session
     Session = scoped_session(session_factory)
     thr_data.Session = Session
     return True
@@ -93,6 +97,44 @@ def add_to_collection_(collection, item):
 
 def sum_attribute_(collection, attribute):
     return sum([getattr(c, attribute) for c in collection])
+
+def is_query(obj):
+    return (type(obj) == Query)
+
+def jobs_col(jobs):
+    """
+    This is an internal function to take a collection of jobs
+    in a variety of formats and return output in the ORM format.
+    You should not use this function directly, but instead use conv_jobs()
+    """
+    from pandas import DataFrame
+    from epmtlib import isString
+    from .models import Job
+    if is_query(jobs):
+        return jobs
+    if ((type(jobs) != DataFrame) and not(jobs)):
+        return Session.query(Job)
+    if type(jobs) == DataFrame:
+        jobs = list(jobs['jobid'])
+    if isString(jobs):
+        if ',' in jobs:
+            # jobs a string of comma-separated job ids
+            jobs = [ j.strip() for j in jobs.split(",") ]
+        else:
+            # job is a single jobid
+            jobs = Session.query(Job).filter_by(jobid=jobs)
+    if type(jobs) == Job:
+        # is it a singular job?
+        return Session.query(Job).filter(Job.jobid == jobs.jobid)
+    if type(jobs) in [list, set]:
+        # jobs is a list of Job objects or a list of jobids or a list of dicts
+        # so first convert the dict list to a jobid list
+        jobs = [ j['jobid'] if type(j) == dict else j for j in jobs ]
+        #jobs = [ Job[j] if isString(j) else j for j in jobs ]
+        # and now convert to a Query object so the user can chain
+        jobs = Session.query(Job).filter(Job.jobid.in_(jobs))
+    return jobs
+
 
 ### end API ###
 
