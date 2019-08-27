@@ -156,14 +156,11 @@ def orm_get_jobs_(qs, tags, order, limit, offset, when, before, after, hosts, ex
         qs_tags = []
         idx = 0
         tag_query = ''
+        org_qs = qs
         for t in tags:
-            qst = qs
-            qst = tag_filter_(qst, t, exact_tag_only)
-            qs_tags.append(qst[:])
-            tag_query = tag_query + ' or (j in qs_tags[{0}])'.format(idx) if tag_query else '(j in qs_tags[0])'
+            qst = tag_filter_(org_qs, t, exact_tag_only)
+            qs = qst if (idx == 0) else qs.union(qst)
             idx += 1
-        logger.debug('tag filter: {0}'.format(tag_query))
-        qs = qs.filter(tag_query)
 
     if when:
         if type(when) == datetime:
@@ -180,31 +177,30 @@ def orm_get_jobs_(qs, tags, order, limit, offset, when, before, after, hosts, ex
                 
 
     if hosts:
-        qs = select(j for j in qs for h in j.hosts if h in hosts)
+        qs = qs.join(Host, Job.hosts).filter(Host.name.in_(hosts))
 
     if order:
         qs = qs.order_by(order)
 
     # finally set limits on the number of jobs returned
     if limit:
-        qs = qs.limit(int(limit), offset=offset)
-    else:
-        if offset:
-            qs = qs.limit(offset=offset)
+        qs = qs.limit(int(limit))
+    if offset:
+        qs = qs.offset(offset)
 
-    if fmt == 'orm':
-        return qs
+    return qs
 
-    return conv_jobs(qs, fmt, merge_proc_sums)
 
-def tag_filter_(qs, tag, exact_match):
+def tag_filter_(qs, tag, exact_match, model=None):
+    from .models import Job, Process
+    if (model == None): model = Job
     if exact_match or (tag == {}):
-        qs = qs.filter(lambda p: p.tags == tag)
+        qs = qs.filter(model.tags == tag)
     else:
         # we consider a match if the job tag is a superset
         # of the passed tag
         for (k,v) in tag.items():
-            qs = qs.filter(lambda p: p.tags[k] == v)
+            qs = qs.filter(model.tags[k] == v)
     return qs
 
 
