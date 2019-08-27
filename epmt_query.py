@@ -60,18 +60,7 @@ def conv_jobs(jobs, fmt='dict', merge_sums = True):
         return [ j.jobid for j in jobs ]
 
     # convert the ORM into a list of dictionaries, excluding blacklisted fields
-    try:
-        out_list = [ j.to_dict() for j in jobs ]
-    except AttributeError:
-        # sqlachemy doesn't have a to_dict() method, so use __dict__ attribute
-        # TODO:
-        # the code below should be abstracted by the ORM API, ideally
-        out_list = [ j.__dict__ for j in jobs ]
-        for j in out_list:
-            del j['processes']
-            j['hosts'] = [h.name for h in j['hosts']]
-            # TODO:
-            # one should also replace 'user_id' by the user name
+    out_list = [ to_dict(j) for j in jobs ]
 
     # do we need to merge process' sum fields into the job?
     if merge_sums:

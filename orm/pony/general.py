@@ -94,3 +94,6 @@ def jobs_col(jobs):
         # and now convert to a pony Query object so the user can chain
         jobs = Job.select(lambda j: j in jobs)
     return jobs
+
+def to_dict(obj):
+    return obj.to_dict()

@@ -45,7 +45,7 @@ def db_session(func):
 def setup_db(settings,drop=False,create=True):
     global Session
     if Session:
-        logger.info('Skipping DB setup as it is already initialized')
+        logger.debug('skipping DB setup as it has already been initialized')
         return True
     logger.info("Creating engine with db_params: %s", settings.db_params)
     try:
@@ -134,6 +134,18 @@ def jobs_col(jobs):
         # and now convert to a Query object so the user can chain
         jobs = Session.query(Job).filter(Job.jobid.in_(jobs))
     return jobs
+
+
+def to_dict(obj):
+    from .models import Job, User
+    d = obj.__dict__
+    if type(obj) == Job:
+        if 'processes' in d:
+            del d['processes']
+        d['hosts'] = [h.name for h in obj.hosts]
+        d['user'] = Session.query(User).get(d['user_id']).name
+    return d
+
 
 
 ### end API ###

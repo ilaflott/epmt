@@ -86,6 +86,7 @@ class Job(db.Base):
     def __repr__(self):
         return "Job['%s']" % (self.jobid)
 
+
 #class ProcessAssociation(db.Base):
 #    __tablename__ = 'process_associations'
 #    fk_ancestor = db.Column(db.Integer, db.ForeignKey('processes.id'), primary_key=True)
