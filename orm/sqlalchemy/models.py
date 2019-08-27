@@ -1,5 +1,5 @@
-import general as db
 from general import db_session
+import general as db
 import datetime
 
 

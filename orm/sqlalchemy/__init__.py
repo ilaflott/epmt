@@ -1,2 +1,2 @@
-from general import *
-from models import *
+from .general import *
+from .models import *

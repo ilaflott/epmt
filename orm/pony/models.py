@@ -1,15 +1,11 @@
-#
-# Physical/measurement model 
-#
-
 from .general import *
-import datetime
+from datetime import datetime
 
 # Removing/changing hosts needs to be addressed
 #
 class Host(db.Entity):
-    created_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
-    updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
+    created_at = Required(datetime, default=datetime.utcnow)
+    updated_at = Required(datetime, default=datetime.utcnow)
     info_dict = Optional(Json)
     # end template
     name = PrimaryKey(str)
@@ -20,18 +16,18 @@ class Host(db.Entity):
 #
 class Job(db.Entity):
 # Rollup entries, computed at insert time
-    start = Required(datetime.datetime, default=datetime.datetime.utcnow)
-    end = Required(datetime.datetime, default=datetime.datetime.utcnow)
+    start = Required(datetime, default=datetime.utcnow)
+    end = Required(datetime, default=datetime.utcnow)
     duration = Required(float, default=0)
     proc_sums = Optional(Json) # proc_sums contains aggregates across processes
 # End rollups
-    created_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
-    updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
+    created_at = Required(datetime, default=datetime.utcnow)
+    updated_at = Required(datetime, default=datetime.utcnow)
     info_dict = Optional(Json)
 # End generic template
     env_dict = Optional(Json)
     env_changes_dict = Optional(Json)
-    submit = Optional(datetime.datetime)
+    submit = Optional(datetime)
     jobid = PrimaryKey(str)
     jobname = Optional(str)
     jobscriptname = Optional(str)
@@ -51,12 +47,12 @@ class Job(db.Entity):
 
 class Process(db.Entity):
 # Rollup entries, computed at insert time
-    start = Required(datetime.datetime, default=datetime.datetime.utcnow)
-    end = Required(datetime.datetime, default=datetime.datetime.utcnow)
+    start = Required(datetime, default=datetime.utcnow)
+    end = Required(datetime, default=datetime.utcnow)
     duration = Required(float, default=0)
 # End rollup
-    created_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
-    updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
+    created_at = Required(datetime, default=datetime.utcnow)
+    updated_at = Required(datetime, default=datetime.utcnow)
 #   info_dict = Optional(Json)
 # End generic template
     tags = Optional(Json)
@@ -93,11 +89,11 @@ class Process(db.Entity):
 
 # class Thread(db.Entity):
 # # These are measured
-#   start = Required(datetime.datetime)
-#   end = Required(datetime.datetime)
+#   start = Required(datetime)
+#   end = Required(datetime)
 # # This is computed at insert time
 #   duration = Required(float)
-# # updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
+# # updated_at = Required(datetime, default=datetime.utcnow)
 # # info_dict = Optional(Json)
 # # End generic template
 #   tid = Required(int)
@@ -121,8 +117,8 @@ class Process(db.Entity):
 #   thread = Required(Thread)
 
 class User(db.Entity):
-    created_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
-    updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
+    created_at = Required(datetime, default=datetime.utcnow)
+    updated_at = Required(datetime, default=datetime.utcnow)
     info_dict = Optional(Json)
     # end template
     name = PrimaryKey(str)
@@ -134,8 +130,8 @@ class User(db.Entity):
     processes = Set('Process', cascade_delete=True)
 
 class Group(db.Entity):
-    created_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
-    updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
+    created_at = Required(datetime, default=datetime.utcnow)
+    updated_at = Required(datetime, default=datetime.utcnow)
     info_dict = Optional(Json)
     # end template
     name = PrimaryKey(str)
@@ -145,8 +141,8 @@ class Group(db.Entity):
     users = Set('User')
 
 class Queue(db.Entity):
-    created_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
-    updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
+    created_at = Required(datetime, default=datetime.utcnow)
+    updated_at = Required(datetime, default=datetime.utcnow)
     info_dict = Optional(Json)
     # end template
     name = PrimaryKey(str)
@@ -154,10 +150,20 @@ class Queue(db.Entity):
     jobs = Set('Job')   
 
 class Account(db.Entity):
-    created_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
-    updated_at = Required(datetime.datetime, default=datetime.datetime.utcnow)
+    created_at = Required(datetime, default=datetime.utcnow)
+    updated_at = Required(datetime, default=datetime.utcnow)
     info_dict = Optional(Json)
     # end template
     name = PrimaryKey(str)
     id = Optional(int,unique=True)
-    jobs = Set('Job')   
+    jobs = Set('Job')
+
+class ReferenceModel(db.Entity):
+    created_at = Required(datetime, default=datetime.utcnow)
+    updated_at = Required(datetime, default=datetime.utcnow)
+    info_dict = Optional(Json)
+    tags = Optional(Json)
+    op_tags = Optional(Json)
+    computed = Optional(Json)
+    jobs = Set('Job')
+

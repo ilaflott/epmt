@@ -146,6 +146,67 @@ def to_dict(obj):
         d['user'] = Session.query(User).get(d['user_id']).name
     return d
 
+def orm_get_jobs_(qs, tags, order, limit, offset, when, before, after, hosts, exact_tag_only):
+    from .models import Job, Host
+
+    # filter using tag if set
+    # Remember, tag = {} demands an exact match with an empty dict!
+    if tags != None:
+        tags = tags_list(tags)
+        qs_tags = []
+        idx = 0
+        tag_query = ''
+        for t in tags:
+            qst = qs
+            qst = tag_filter_(qst, t, exact_tag_only)
+            qs_tags.append(qst[:])
+            tag_query = tag_query + ' or (j in qs_tags[{0}])'.format(idx) if tag_query else '(j in qs_tags[0])'
+            idx += 1
+        logger.debug('tag filter: {0}'.format(tag_query))
+        qs = qs.filter(tag_query)
+
+    if when:
+        if type(when) == datetime:
+            qs = qs.filter(Job.start <= when, Job.end >= when)
+        else:
+            when_job = get_(Job, when) if isString(when) else when
+            qs = qs.filter(Job.start <= when_job.end, Job.end >= when_job.start)
+
+    if before != None:
+        qs = qs.filter(Job.end <= before)
+
+    if after != None:
+        qs = qs.filter(Job.start >= after)
+                
+
+    if hosts:
+        qs = select(j for j in qs for h in j.hosts if h in hosts)
+
+    if order:
+        qs = qs.order_by(order)
+
+    # finally set limits on the number of jobs returned
+    if limit:
+        qs = qs.limit(int(limit), offset=offset)
+    else:
+        if offset:
+            qs = qs.limit(offset=offset)
+
+    if fmt == 'orm':
+        return qs
+
+    return conv_jobs(qs, fmt, merge_proc_sums)
+
+def tag_filter_(qs, tag, exact_match):
+    if exact_match or (tag == {}):
+        qs = qs.filter(lambda p: p.tags == tag)
+    else:
+        # we consider a match if the job tag is a superset
+        # of the passed tag
+        for (k,v) in tag.items():
+            qs = qs.filter(lambda p: p.tags[k] == v)
+    return qs
+
 
 
 ### end API ###

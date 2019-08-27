@@ -269,18 +269,26 @@ def get_jobs(jobs = [], tags=None, fltr = '', order = None, limit = None, offset
              This returns a union of jobs that match 'ocn_res:0.5l75;exp_component:ocean_cobalt_fdet_100'
              and those that match 'ocn_res:0.5l75;exp_component:ocean_annual_rho2_1x1deg'
 
-    
-    fltr   : Optional filter in the form of a lamdba function or a string
+   fltr   : Optional filter whose format will depend on the ORM. 
+             For sqlalchemy, you can use something like:
+             fltr(Job.jobid == '685000')
+             fltr(Job.jobid.in_(['685000', '685016']))
+
+             For Pony, you can use a lamdba function or a string
              e.g., lambda j: count(j.processes) > 100 will filter jobs more than 100 processes
              or, 'j.duration > 100000' will filter jobs whose duration is more than 100000
     
     order  : Optionally sort the output by setting this to a lambda function or string
              e.g, to sort by job duration descending:
-                  order = 'desc(j.duration)'
-             or, to sort jobs by the sum of durations of their processes, do:
-                  order = lambda j: sum(j.processes.duration)
-             If not set, this defaults to desc(j.created_at), in other words
+                  order = desc(Job.created_at)
+             If not set, this defaults to desc(Job.created_at), in other words
              jobs are returned in the reverse order of ingestion.
+
+             If you are using Pony as the ORM layer, then you can also pass
+             in a lambda function, such as:
+                 lambda j: j.created_at
+             or a string like 'desc(j.created_at)'
+
     
     limit  : Restrict the output list a specified number of jobs. Defaults to 20.
              When set to 0, it means no limit
@@ -319,9 +327,9 @@ def get_jobs(jobs = [], tags=None, fltr = '', order = None, limit = None, offset
              
     
     hosts  : Restrict the output to those jobs that ran on 'hosts'.
-             'hosts' is a list of hostnames/Host objects. A job is
-             considered to match if the intersection of j.hosts and 
-             hosts is non-empty
+             'hosts' is a list of hostnames specified as a comma-separated
+             string, or a list of strings. A job is considered to match if 
+             the intersection of j.hosts and hosts is non-empty
     
     fmt    : Control the output format. One of 'dict', 'pandas', 'orm', 'terse'
              'dict': each job object is converted to a dict, and the entire
@@ -346,27 +354,10 @@ def get_jobs(jobs = [], tags=None, fltr = '', order = None, limit = None, offset
     if (not(is_query(jobs))) and (type(jobs) != pd.DataFrame) and (jobs in [[], '', None]):
         if (fmt != 'orm') and (limit == None): 
             limit = 20
-        if order == None: order = 'desc(j.created_at)'
+        if order == None: order = desc(Job.created_at)
       
     qs = jobs_col(jobs)
 
-    # filter using tag if set
-    # Remember, tag = {} demands an exact match with an empty dict!
-    if tags != None:
-        tags = tags_list(tags)
-        qs_tags = []
-        idx = 0
-        tag_query = ''
-        for t in tags:
-            qst = qs
-            qst = __tag_filter(qst, t, exact_tag_only)
-            qs_tags.append(qst[:])
-            tag_query = tag_query + ' or (j in qs_tags[{0}])'.format(idx) if tag_query else '(j in qs_tags[0])'
-            idx += 1
-        logger.debug('tag filter: {0}'.format(tag_query))
-        qs = qs.filter(tag_query)
-
-    # if fltr is a lambda function or a string apply it
     if fltr:
         qs = qs.filter(fltr)
 
@@ -377,11 +368,6 @@ def get_jobs(jobs = [], tags=None, fltr = '', order = None, limit = None, offset
             except Exception as e:
                 logger.error('could not convert "when" string to datetime: %s' % str(e))
                 return None
-        if type(when) == datetime:
-            qs = qs.filter(lambda j: j.start <= when and j.end >= when)
-        else:
-            when_job = Job[when] if isString(when) else when
-            qs = qs.filter(lambda j: j.start <= when_job.end and j.end >= when_job.start)
 
     if before != None:
         if type(before) == str:
@@ -395,8 +381,6 @@ def get_jobs(jobs = [], tags=None, fltr = '', order = None, limit = None, offset
                 before = datetime.fromtimestamp((int)(before))
             else:
                 before = datetime.now() - timedelta(days=(-before))
-        # else after is a datetime object
-        qs = qs.filter(lambda j: j.end <= before)
 
     if after != None:
         if type(after) == str:
@@ -410,36 +394,13 @@ def get_jobs(jobs = [], tags=None, fltr = '', order = None, limit = None, offset
                 after = datetime.fromtimestamp((int)(after))
             else:
                 after = datetime.now() - timedelta(days=(-after))
-        # else after is a datetime object
-        qs = qs.filter(lambda j: j.start >= after)
-                
 
     if hosts:
-        if isString(hosts) or (type(hosts) == Host):
+        if isString(hosts):
             # user probably forgot to wrap in a list
-            hosts = [hosts]
-        if type(hosts) == list:
-            # if the list contains of strings then we want the Host objects
-            _hosts = []
-            for h in hosts:
-                if isString(h):
-                    try:
-                        h = Host[h]
-                    except:
-                        continue
-                _hosts.append(h)
-            hosts = _hosts
-        qs = select(j for j in qs for h in j.hosts if h in hosts)
+            hosts = hosts.split(",")
 
-    if order:
-        qs = qs.order_by(order)
-
-    # finally set limits on the number of jobs returned
-    if limit:
-        qs = qs.limit(int(limit), offset=offset)
-    else:
-        if offset:
-            qs = qs.limit(offset=offset)
+    qs = orm_get_jobs_(qs, tags, order, limit, offset, when, before, after, hosts, exact_tag_only)
 
     if fmt == 'orm':
         return qs
@@ -562,7 +523,7 @@ def get_procs(jobs = [], tags = None, fltr = None, order = '', limit = 0, when=N
         tag_query = ''
         for t in tags:
             qst = qs
-            qst = __tag_filter(qst, t, exact_tag_only)
+            qst = tag_filter_(qst, t, exact_tag_only)
             # Important!
             # we are forced to have the modal code below as we want
             # to significantly speed up the common case of a single
@@ -634,19 +595,6 @@ def get_procs(jobs = [], tags = None, fltr = None, order = '', limit = 0, when=N
         return qs
 
     return __conv_procs_orm(qs, merge_threads_sums, fmt)
-
-
-
-@db_session
-def __tag_filter(qs, tag, exact_match):
-    if exact_match or (tag == {}):
-        qs = qs.filter(lambda p: p.tags == tag)
-    else:
-        # we consider a match if the job tag is a superset
-        # of the passed tag
-        for (k,v) in tag.items():
-            qs = qs.filter(lambda p: p.tags[k] == v)
-    return qs
 
 
 @db_session

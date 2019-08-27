@@ -69,9 +69,11 @@ def jobs_col(jobs):
     This is an internal function to take a collection of jobs
     in a variety of formats and return output in the ORM format.
     """
+    from pandas import DataFrame
+    from epmtlib import isString
+    from .models import Job
     if is_query(jobs):
         return jobs
-    from pd import DataFrame
     if ((type(jobs) != DataFrame) and not(jobs)):
         return Job.select()
     if type(jobs) == DataFrame:
@@ -97,3 +99,76 @@ def jobs_col(jobs):
 
 def to_dict(obj):
     return obj.to_dict()
+
+def orm_get_jobs_(qs, tags, order, limit, offset, when, before, after, hosts, exact_tag_only):
+    from .models import Job, Host
+    from epmtlib import tags_list, isString
+    from datetime import datetime
+    # filter using tag if set
+    # Remember, tag = {} demands an exact match with an empty dict!
+    if tags != None:
+        tags = tags_list(tags)
+        qs_tags = []
+        idx = 0
+        tag_query = ''
+        for t in tags:
+            qst = qs
+            qst = tag_filter_(qst, t, exact_tag_only)
+            qs_tags.append(qst[:])
+            tag_query = tag_query + ' or (j in qs_tags[{0}])'.format(idx) if tag_query else '(j in qs_tags[0])'
+            idx += 1
+        logger.debug('tag filter: {0}'.format(tag_query))
+        qs = qs.filter(tag_query)
+
+    if when:
+        if type(when) == datetime:
+            qs = qs.filter(lambda j: j.start <= when and j.end >= when)
+        else:
+            when_job = Job[when] if isString(when) else when
+            qs = qs.filter(lambda j: j.start <= when_job.end and j.end >= when_job.start)
+
+    if before != None:
+        qs = qs.filter(lambda j: j.end <= before)
+
+    if after != None:
+        qs = qs.filter(lambda j: j.start >= after)
+                
+
+    if hosts:
+        if isString(hosts) or (type(hosts) == Host):
+            # user probably forgot to wrap in a list
+            hosts = [hosts]
+        if type(hosts) == list:
+            # if the list contains of strings then we want the Host objects
+            _hosts = []
+            for h in hosts:
+                if isString(h):
+                    try:
+                        h = Host[h]
+                    except:
+                        continue
+                _hosts.append(h)
+            hosts = _hosts
+        qs = select(j for j in qs for h in j.hosts if h in hosts)
+
+    if order:
+        qs = qs.order_by(order)
+
+    # finally set limits on the number of jobs returned
+    if limit:
+        qs = qs.limit(int(limit), offset=offset)
+    else:
+        if offset:
+            qs = qs.limit(offset=offset)
+
+    return qs
+
+def tag_filter_(qs, tag, exact_match):
+    if exact_match or (tag == {}):
+        qs = qs.filter(lambda p: p.tags == tag)
+    else:
+        # we consider a match if the job tag is a superset
+        # of the passed tag
+        for (k,v) in tag.items():
+            qs = qs.filter(lambda p: p.tags[k] == v)
+    return qs
