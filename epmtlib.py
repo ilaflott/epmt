@@ -160,10 +160,10 @@ def tag_from_string(s, delim = ';', sep = ':', tag_default_value = '1'):
 # the input can be a list of strings or a single string.
 # each string will be converted to a dict
 def tags_list(tags):
-    from orm import TrackedDict
+    from pony.orm.ormtypes import TrackedDict
     # do we have a single tag in string or dict form? 
     if isString(tags):
-        tags = [tag_from_string(tags)]
+        tags = [tag_from_string(t) for t in tags.split(";")]
     elif type(tags) in [dict, TrackedDict]:
         tags = [tags]
     tags = [tag_from_string(t) if type(t)==str else t for t in tags]

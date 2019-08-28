@@ -1,5 +1,7 @@
 # general.py
 from sqlalchemy import *
+#from sqlalchemy.event import listens_for
+#from sqlalchemy.pool import Pool
 from sqlalchemy.orm import backref, relationship, sessionmaker, scoped_session
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.query import Query
@@ -55,6 +57,11 @@ def setup_db(settings,drop=False,create=True):
         logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
         return False
 
+    ## print the compile options
+    # with engine.connect() as con:
+    #     rs = con.execute('PRAGMA compile_options')
+    #     for row in rs: print row
+
     if drop:
         logger.warning("DROPPING ALL DATA AND TABLES!")
         Base.metadata.drop_all(engine)
@@ -63,7 +70,7 @@ def setup_db(settings,drop=False,create=True):
     try:
         Base.metadata.create_all(engine)
     except Exception as e:
-        logger.error("Mapping to DB, did the schema change? Perhaps drop and create?")
+        #logger.error("Mapping to DB, did the schema change? Perhaps drop and create?")
         logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
         return False
     logger.info('Creating scoped session..')
@@ -148,6 +155,7 @@ def to_dict(obj):
 
 def orm_get_jobs_(qs, tags, order, limit, offset, when, before, after, hosts, exact_tag_only):
     from .models import Job, Host
+    from epmtlib import tags_list
 
     # filter using tag if set
     # Remember, tag = {} demands an exact match with an empty dict!
@@ -155,9 +163,11 @@ def orm_get_jobs_(qs, tags, order, limit, offset, when, before, after, hosts, ex
         tags = tags_list(tags)
         qs_tags = []
         idx = 0
-        tag_query = ''
         org_qs = qs
         for t in tags:
+            # tag_filter_ reqturs a query object corresponding to
+            # the jobs that match a particular tag. We, then, do
+            # do a UNION (OR operation) across these query sets.
             qst = tag_filter_(org_qs, t, exact_tag_only)
             qs = qst if (idx == 0) else qs.union(qst)
             idx += 1
@@ -179,7 +189,7 @@ def orm_get_jobs_(qs, tags, order, limit, offset, when, before, after, hosts, ex
     if hosts:
         qs = qs.join(Host, Job.hosts).filter(Host.name.in_(hosts))
 
-    if order:
+    if not(order is None):
         qs = qs.order_by(order)
 
     # finally set limits on the number of jobs returned
@@ -200,7 +210,10 @@ def tag_filter_(qs, tag, exact_match, model=None):
         # we consider a match if the job tag is a superset
         # of the passed tag
         for (k,v) in tag.items():
-            qs = qs.filter(model.tags[k] == v)
+            #qs = qs.filter(model.tags[k] == cast(v, JSON))
+            #qs = qs.filter(cast(model.tags[k], String) == type_coerce(v, JSON))
+            #qs = qs.filter(model.tags[k] == str(v))
+            qs = qs.filter(text("json_extract({0}.tags, '$.{1}') = '{2}'".format(model.__tablename__, k, v)))
     return qs
 
 
@@ -212,4 +225,18 @@ def tag_filter_(qs, tag, exact_match, model=None):
 #     get_session.session = Session()
 #     return get_session.session
 
+#@listens_for(Pool, "connect")
+#def connect(dbapi_connection, connection_rec):
+#    #print(dbapi_connection)
+#    #print(connection_rec)
+#    cursor = dbapi_connection.cursor()
+#    result = cursor.execute("PRAGMA compile_options;")
+#    cursor.close()
+#    print("result=", result)
+#    dbapi_connection.execute("PRAGMA compile_options;")
+#    logger.info("loading json1 extension")
+#     dbapi_connection.enable_load_extension(True)
+#     dbapi_connection.load_extension("./json1.so")
+#     dbapi_connection.enable_load_extension(False)
+#     #dbapi_connection.do_sqlite_things()
 
