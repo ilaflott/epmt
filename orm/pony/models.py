@@ -7,7 +7,6 @@ class Host(db.Entity):
     created_at = Required(datetime, default=datetime.utcnow)
     updated_at = Required(datetime, default=datetime.utcnow)
     info_dict = Optional(Json)
-    # end template
     name = PrimaryKey(str)
     processes = Set('Process')
     jobs = Set('Job')
@@ -19,47 +18,40 @@ class Job(db.Entity):
     start = Required(datetime, default=datetime.utcnow)
     end = Required(datetime, default=datetime.utcnow)
     duration = Required(float, default=0)
+    info_dict = Optional(Json)
     proc_sums = Optional(Json) # proc_sums contains aggregates across processes
-# End rollups
     created_at = Required(datetime, default=datetime.utcnow)
     updated_at = Required(datetime, default=datetime.utcnow)
-    info_dict = Optional(Json)
-# End generic template
     env_dict = Optional(Json)
     env_changes_dict = Optional(Json)
     submit = Optional(datetime)
     jobid = PrimaryKey(str)
     jobname = Optional(str)
-    jobscriptname = Optional(str)
     sessionid = Optional(int)
     exitcode = Optional(int)
     user = Required('User')
-    groups = Set('Group')
+    #groups = Set('Group')
     hosts = Set('Host')
     processes = Set('Process', cascade_delete=True)
     tags = Optional(Json)
-    account = Optional('Account')
-    queue = Optional('Queue')
-#   ppr = Optional('PostProcessRun')
+    #account = Optional('Account')
+    #queue = Optional('Queue')
     # exclusive cpu time
     cpu_time = Optional(float)
     ref_models = Set('ReferenceModel')
 
 class Process(db.Entity):
-# Rollup entries, computed at insert time
     start = Required(datetime, default=datetime.utcnow)
     end = Required(datetime, default=datetime.utcnow)
     duration = Required(float, default=0)
-# End rollup
     created_at = Required(datetime, default=datetime.utcnow)
     updated_at = Required(datetime, default=datetime.utcnow)
-#   info_dict = Optional(Json)
-# End generic template
+    info_dict = Optional(Json)
     tags = Optional(Json)
     job = Required('Job')
     host = Required('Host')
     user = Required('User')
-    group = Optional('Group')
+    #group = Optional('Group')
     threads_df = Optional(Json)
     threads_sums = Optional(Json)
     numtids = Required(int, default=1)
@@ -123,40 +115,38 @@ class User(db.Entity):
     # end template
     name = PrimaryKey(str)
     id = Optional(int,unique=True)
-    groups = Set('Group')
-#   exps = Set('Experiment')
-#   pprs = Set('PostProcessRun')
+    #groups = Set('Group')
     jobs = Set('Job')
     processes = Set('Process', cascade_delete=True)
 
-class Group(db.Entity):
-    created_at = Required(datetime, default=datetime.utcnow)
-    updated_at = Required(datetime, default=datetime.utcnow)
-    info_dict = Optional(Json)
-    # end template
-    name = PrimaryKey(str)
-    id = Required(int,unique=True)
-    jobs = Set('Job')
-    processes = Set('Process')
-    users = Set('User')
+# class Group(db.Entity):
+#     created_at = Required(datetime, default=datetime.utcnow)
+#     updated_at = Required(datetime, default=datetime.utcnow)
+#     info_dict = Optional(Json)
+#     # end template
+#     name = PrimaryKey(str)
+#     id = Required(int,unique=True)
+#     jobs = Set('Job')
+#     processes = Set('Process')
+#     users = Set('User')
 
-class Queue(db.Entity):
-    created_at = Required(datetime, default=datetime.utcnow)
-    updated_at = Required(datetime, default=datetime.utcnow)
-    info_dict = Optional(Json)
-    # end template
-    name = PrimaryKey(str)
-    id = Optional(int,unique=True)
-    jobs = Set('Job')   
+# class Queue(db.Entity):
+#     created_at = Required(datetime, default=datetime.utcnow)
+#     updated_at = Required(datetime, default=datetime.utcnow)
+#     info_dict = Optional(Json)
+#     # end template
+#     name = PrimaryKey(str)
+#     id = Optional(int,unique=True)
+#     jobs = Set('Job')   
 
-class Account(db.Entity):
-    created_at = Required(datetime, default=datetime.utcnow)
-    updated_at = Required(datetime, default=datetime.utcnow)
-    info_dict = Optional(Json)
-    # end template
-    name = PrimaryKey(str)
-    id = Optional(int,unique=True)
-    jobs = Set('Job')
+# class Account(db.Entity):
+#     created_at = Required(datetime, default=datetime.utcnow)
+#     updated_at = Required(datetime, default=datetime.utcnow)
+#     info_dict = Optional(Json)
+#     # end template
+#     name = PrimaryKey(str)
+#     id = Optional(int,unique=True)
+#     jobs = Set('Job')
 
 class ReferenceModel(db.Entity):
     created_at = Required(datetime, default=datetime.utcnow)

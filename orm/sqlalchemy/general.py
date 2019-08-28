@@ -32,7 +32,8 @@ def db_session(func):
         try:
             retval = func(*args, **kwargs) # No need to pass session explicitly
             completed = True
-        except:
+        except Exception as e:
+            logger.error('Exception occurred: {0}\nWill rollback session..'.format(e))
             session.rollback()
             raise
         finally:

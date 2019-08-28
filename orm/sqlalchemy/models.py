@@ -24,6 +24,7 @@ class User(db.Base):
     updated_at = db.Column(db.DateTime, onupdate=datetime.datetime.now)
     name = db.Column(db.String, unique=True)
     id = db.Column(db.Integer, primary_key = True)
+    info_dict = db.Column(db.JSON)
     jobs = db.relationship('Job', back_populates='user')
     processes = db.relationship('Process', back_populates='user')
 
@@ -36,6 +37,7 @@ class Host(db.Base):
     created_at = db.Column(db.DateTime, default=db.func.now())
     updated_at = db.Column(db.DateTime, onupdate=datetime.datetime.now)
     name = db.Column(db.String, primary_key=True)
+    info_dict = db.Column(db.JSON)
     processes = db.relationship('Process', back_populates='host')
     jobs = db.relationship('Job', back_populates='hosts', secondary=host_job_associations_table)
 
@@ -51,6 +53,7 @@ class ReferenceModel(db.Base):
     tags = db.Column(db.JSON)
     op_tags = db.Column(db.JSON)
     computed = db.Column(db.JSON)
+    info_dict = db.Column(db.JSON)
     jobs = db.relationship('Job', back_populates='ref_models', secondary=refmodel_job_associations_table)
     @db_session
     def __repr__(self):
@@ -60,6 +63,7 @@ class Job(db.Base):
     __tablename__ = 'jobs'
     created_at = db.Column(db.DateTime, default=db.func.now())
     updated_at = db.Column(db.DateTime, onupdate=datetime.datetime.now)
+    info_dict = db.Column(db.JSON)
 
     start = db.Column(db.DateTime, default=datetime.datetime.now)
     end = db.Column(db.DateTime, default=datetime.datetime.now)
@@ -96,6 +100,7 @@ class Process(db.Base):
     __tablename__ = 'processes'
     created_at = db.Column(db.DateTime, default=db.func.now())
     updated_at = db.Column(db.DateTime, onupdate=datetime.datetime.now)
+    info_dict = db.Column(db.JSON)
     id = db.Column(db.Integer, primary_key = True)
 
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))

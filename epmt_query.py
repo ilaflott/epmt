@@ -1050,7 +1050,7 @@ def dm_calc(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op
     """
     logger.debug('dm ops: {0}'.format(tags))
     jobs = jobs_col(jobs)
-    num_jobs = len(jobs)
+    num_jobs = jobs.count()
     logger.debug('number of jobs: {0}'.format(num_jobs))
     if (num_jobs > 100):
         logger.warning('job count ({0}) > 100: it is recommended to use dm_calc_iter instead for a lower memory footprint and faster time-to-solution'.format(num_jobs))
