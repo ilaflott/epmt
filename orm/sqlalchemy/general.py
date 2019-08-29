@@ -33,7 +33,11 @@ def db_session(func):
             retval = func(*args, **kwargs) # No need to pass session explicitly
             completed = True
         except Exception as e:
-            logger.error('Exception occurred: {0}\nWill rollback session..'.format(e))
+            import traceback, sys
+            logger.error('\nException occurred: {0}\nWill rollback session..'.format(e))
+            print('-'*60)
+            traceback.print_exc(file=sys.stdout)
+            print('-'*60)
             session.rollback()
             raise
         finally:
@@ -86,6 +90,14 @@ def setup_db(settings,drop=False,create=True):
 # get_(User, name='John.Doe')
 def get_(model, pk=None, **kwargs):
     return Session.query(model).get(pk) if (pk != None) else Session.query(model).filter_by(**kwargs).one_or_none()
+
+def orm_set(o, **kwargs):
+    for k in kwargs.keys():
+        setattr(o, k, kwargs[k])
+    #print('type Session', type(Session))
+    #print('type object', type(o))
+    #Session.add(o)
+    return o
 
 def create_(model, **kwargs):
     o = model(**kwargs)
@@ -145,18 +157,19 @@ def jobs_col(jobs):
 
 
 def to_dict(obj):
-    from .models import Job, User
+    from .models import Job, User, Host
     d = obj.__dict__
     if type(obj) == Job:
         if 'processes' in d:
             del d['processes']
-        d['hosts'] = [h.name for h in obj.hosts]
+        d['hosts'] = [h.name if type(h) == Host else h for h in obj.hosts]
         d['user'] = Session.query(User).get(d['user_id']).name
     return d
 
 def orm_get_jobs_(qs, tags, order, limit, offset, when, before, after, hosts, exact_tag_only):
     from .models import Job, Host
-    from epmtlib import tags_list
+    from epmtlib import tags_list, isString
+    from datetime import datetime
 
     # filter using tag if set
     # Remember, tag = {} demands an exact match with an empty dict!

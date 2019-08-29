@@ -49,6 +49,10 @@ def get_(model, pk=None, **kwargs):
             return None
     return model.get(**kwargs)
 
+def orm_set(o, **kwargs):
+    o.set(**kwargs)
+    return o
+
 def create_(model, **kwargs):
     return model(**kwargs)
 

@@ -350,11 +350,12 @@ def get_jobs(jobs = [], tags=None, fltr = '', order = None, limit = None, offset
              means if the tag in the database are a superset of the passed
              tag a match will considered.
     """
+    from datetime import datetime
     # set defaults for limit and ordering only if the user doesn't specify jobs
     if (not(is_query(jobs))) and (type(jobs) != pd.DataFrame) and (jobs in [[], '', None]):
         if (fmt != 'orm') and (limit == None): 
             limit = 20
-        if order == None: order = desc(Job.created_at)
+        if order is None: order = desc(Job.created_at)
       
     qs = jobs_col(jobs)
 
@@ -1071,9 +1072,10 @@ def dm_calc_iter(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv'
     produces an additional dataframe that aggregates across tags by job
     allowing us to compute min/max/std_dev across jobs for DM.
     """
+    from datetime import datetime
     logger.debug('dm ops: {0}'.format(tags))
     jobs = jobs_col(jobs)
-    logger.debug('number of jobs: {0}'.format(len(jobs)))
+    logger.debug('number of jobs: {0}'.format(jobs.count))
     tags = tags_list(tags)
     jobs_cpu_time = 0.0
     df_list = []
