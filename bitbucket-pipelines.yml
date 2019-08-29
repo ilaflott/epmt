@@ -26,5 +26,5 @@ pipelines:
           - pip3 install -r requirements.txt
           - apt-get update && apt-get install -y csh tcsh
           - rm -f settings.py; ln -s settings/settings_sqlite_inmem.py settings.py  # Setup in mem sqlite
-          - python3 -m py_compile epmt *.py models/*.py		# Compile everything
+          - python3 -m py_compile epmt *.py orm/*/*.py		# Compile everything
           - env -i PATH=${PWD}:${PATH} python3 -m unittest discover -s test -v
