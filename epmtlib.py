@@ -163,7 +163,7 @@ def tags_list(tags):
     from pony.orm.ormtypes import TrackedDict
     # do we have a single tag in string or dict form? 
     if isString(tags):
-        tags = [tag_from_string(t) for t in tags.split(";")]
+        tags = [tag_from_string(tags)]
     elif type(tags) in [dict, TrackedDict]:
         tags = [tags]
     tags = [tag_from_string(t) if type(t)==str else t for t in tags]

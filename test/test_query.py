@@ -16,16 +16,17 @@ from epmtlib import set_logging
 set_logging(-1)
 
 # Put EPMT imports only after we have called set_logging()
-import epmt_default_settings as settings
-
-#settings.orm = 'sqlalchemy'
-#settings.db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
 import epmt_query as eq
 from epmtlib import timing, isString, frozen_dict, str_dict
 from epmt_cmds import epmt_submit
+import epmt_default_settings as settings
+
 
 @timing
 def setUpModule():
+    if settings.db_params.get('filename') != ':memory:':
+        print('db_params MUST use in-memory sqlite for testing', file=stderr)
+        exit(1)
     setup_db(settings, drop=True)
     print('\n' + str(settings.db_params))
     datafiles='test/data/query/*.tgz'
@@ -55,14 +56,13 @@ class QueryAPI(unittest.TestCase):
 #     def tearDown(self):
 #         pass
 
-    def test_001_jobs(self):
+    def test_jobs(self):
         jobs = eq.get_jobs(fmt='terse')
         self.assertEqual(type(jobs), list, 'wrong jobs format with terse')
         self.assertEqual(len(jobs), 3, 'job count in db wrong')
         self.assertEqual(jobs, [u'685016', u'685003', u'685000'], 'job ordering not in reverse order of submission')
         df = eq.get_jobs(fmt='pandas')
-        self.assertEqual(df.shape[0], 3)
-        self.assertTrue(df.shape[1] >= 44)
+        self.assertEqual(df.shape, (3, 47), 'wrong jobs dataframe shape')
         df = eq.get_jobs('685016', fmt='pandas')
         self.assertEqual(df['jobid'][0], '685016', "cannot specify job as a single job id string")
         self.assertEqual(df.shape[0],1, "wrong selection of jobs when specified as a string")
@@ -70,7 +70,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(len(jobs), 2, 'job count wrong when selected a comma-separated string')
 
     @db_session
-    def test_002_jobs_advanced(self):
+    def test_jobs_advanced(self):
         jobs = eq.get_jobs(fmt='terse', limit=2, offset=1)
         self.assertEqual(jobs, [u'685003', u'685000'], 'job limit/offset not working')
         jobs = eq.get_jobs(fltr=lambda j: '685000' not in j.jobid, fmt='orm')
@@ -133,7 +133,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(jobs, [])
 
     @db_session
-    def test_010_procs(self):
+    def test_procs(self):
         procs = eq.get_procs(['685016'], fmt='terse')
         self.assertEqual(type(procs), list, 'wrong procs format with terse')
         self.assertEqual(len(procs), 3412, 'wrong count of processes in terse')
@@ -143,7 +143,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(df.shape, (10,50), "incorrect dataframe shape with limit")
 
     @db_session
-    def test_011_procs_convert(self):
+    def test_procs_convert(self):
         for inform in ['dict', 'terse', 'pandas', 'orm']:
             procs = eq.get_procs('685000', fmt=inform)
             for outform in ['dict', 'terse', 'pandas', 'orm']:
@@ -157,7 +157,7 @@ class QueryAPI(unittest.TestCase):
 
 
     @db_session
-    def test_012_procs_advanced(self):
+    def test_procs_advanced(self):
         procs = eq.get_procs(fltr=lambda p: p.duration > 1000000, order='desc(p.duration)', fmt='orm')
         self.assertEqual(len(procs), 630, 'wrong count of processes in ORM format using filter')
         self.assertEqual(int(procs.first().duration), 7005558348, 'wrong order when using orm with filter and order')
@@ -208,7 +208,7 @@ class QueryAPI(unittest.TestCase):
 
 
     @db_session
-    def test_005_jobs_convert(self):
+    def test_jobs_convert(self):
         for fmt in ['dict', 'terse', 'pandas', 'orm']:
             jobs = eq.get_jobs(['685000', '685003'], fmt=fmt)
             self.assertEqual(eq.conv_jobs(jobs, fmt='terse'), ['685000', '685003'])
@@ -235,7 +235,7 @@ class QueryAPI(unittest.TestCase):
                     self.assertEqual(sorted(list(out['jobid'].values)), sorted(ref), 'error in {0} -> {1}'.format(inp_fmt, out_fmt))
 
     @db_session
-    def test_006_job_proc_tags(self):
+    def test_job_proc_tags(self):
         tags = eq.job_proc_tags(['685000', '685016'], fold=False)
         self.assertEqual(len(tags), 89, "wrong unique process tags count")
         tags = [ str_dict(d) for d in tags ]
@@ -243,7 +243,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(md5(str(tags).encode('utf-8')).hexdigest(), 'bd7eabf266aa5b179bbe4d65b35bd47f', 'wrong hash for job_proc_tags')
 
     @db_session
-    def test_100_op_metrics(self):
+    def test_op_metrics(self):
         df = eq.op_metrics(['685000', '685016'])
         self.assertEqual(df.shape, (178,32), "wrong dataframe shape for op_metrics")
         top = df[['job', 'tags', 'duration']].sort_values('duration', axis=0, ascending=False)[:1]
@@ -263,7 +263,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(list(df.tags.values), [{'op': 'hsmget'}, {'op': 'hsmget'}, {'op': 'hsmget'}, {'op': 'mv'}, {'op': 'mv'}, {'op': 'mv'}])
 
     @db_session
-    def test_101_op_metrics_grouped(self):
+    def test_op_metrics_grouped(self):
         #from hashlib import md5
         df = eq.op_metrics(['685000', '685003', '685016'], group_by_tag=True)
         self.assertEqual(df.shape,(459,30), 'wrong op_metrics grouped shape when no tag specified')
@@ -276,7 +276,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(list(df['cpu_time'].values), [208577324.0, 30292583.0])
 
     @db_session
-    def test_007_root(self):
+    def test_root(self):
         p = eq.root('685016')
         self.assertEqual((p['pid'], p['exename']), (122181, u'tcsh'))
         p = eq.root('685016', fmt='orm')
@@ -286,7 +286,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(df.loc[0,'pid'], 122181)
 
     @db_session
-    def test_030_op_roots(self):
+    def test_op_roots(self):
         op_root_procs = eq.op_roots(['685000', '685003', '685016'], 'op_sequence:1', fmt='orm')
         l = eq.select((p.job.jobid, p.pid) for p in op_root_procs)[:]
         self.assertEqual(l, [(u'685000', 6226), (u'685000', 10042), (u'685000', 10046), (u'685000', 10058), (u'685000', 10065), (u'685000', 10066), (u'685003', 29079), (u'685003', 31184), (u'685003', 31185), (u'685003', 31191), (u'685003', 31198), (u'685003', 31199), (u'685016', 122259), (u'685016', 128848), (u'685016', 128849), (u'685016', 128855), (u'685016', 128862), (u'685016', 128863)])
@@ -295,7 +295,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(list(df['pid'].values), [6226, 10042, 10046, 10058, 10065, 10066, 29079, 31184, 31185, 31191, 31198, 31199, 122259, 128848, 128849, 128855, 128862, 128863])
 
     @db_session
-    def test_015_timeline(self):
+    def test_timeline(self):
         jobs = eq.get_jobs(fmt='orm')
         procs = eq.timeline(jobs, fmt='orm')
         p1 = procs.first()
@@ -306,7 +306,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(pids, [122181, 122182, 122183, 122184, 122185])
 
     @db_session
-    def test_200_refmodel_crud(self):
+    def test_refmodel_crud(self):
         jobs = eq.get_jobs(fmt='terse')
         self.assertEqual(len(jobs), 3)
         model_name = 'test_model'
@@ -323,7 +323,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(n, 1, 'wrong ref_model delete count')
 
     @db_session
-    def test_300_dm_calc(self):
+    def test_dm_calc(self):
         jobs = eq.get_jobs(['685000', '685003', '685016'], fmt='orm')
         self.assertEqual(jobs.count(), 3)
         (perc, df, j_cpu) = eq.dm_calc(jobs)
@@ -333,7 +333,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(j_cpu, 633756327.0, 'wrong job cpu time sum')
 
     @db_session
-    def test_310_dm_calc_iter(self):
+    def test_dm_calc_iter(self):
         jobs = eq.get_jobs(['685000', '685003', '685016'], fmt='orm')
         self.assertEqual(jobs.count(), 3)
         (dm_percent, df, all_jobs_cpu_time, agg_df) = eq.dm_calc_iter(jobs) 
@@ -347,7 +347,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(list(agg_df['job_cpu_time'].values), [113135329.0, 93538033.0, 427082965.0])
 
     @db_session
-    def test_999_delete_jobs(self):
+    def test_zz_delete_jobs(self):
         #with self.assertRaises(EnvironmentError):
         #    eq.delete_jobs('685000')
         #settings.allow_job_deletion = True
