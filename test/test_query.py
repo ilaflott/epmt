@@ -4,7 +4,6 @@ import unittest
 from sys import stderr, exit
 import sys
 from glob import glob
-from pony.orm.core import Query, QueryResult
 import pandas as pd
 import datetime
 from os import environ
@@ -24,7 +23,7 @@ if environ.get('EPMT_USE_SQLALCHEMY'):
     settings.db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
 
 from epmtlib import timing, isString, frozen_dict, str_dict
-from orm import db_session, setup_db, Job, Process, get_, desc
+from orm import db_session, setup_db, Job, Process, get_, desc, is_query
 import epmt_query as eq
 from epmt_cmds import epmt_submit
 
@@ -222,7 +221,6 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(eq.get_procs(['685000', '685003'], hosts=['pp212'], fmt='orm').count(), 3785)
 
 
-    @unittest.skipIf(settings.orm == 'sqlalchemy', "skipped for sqlalchemy")
     @db_session
     def test_jobs_convert(self):
         for fmt in ['dict', 'terse', 'pandas', 'orm']:
@@ -243,7 +241,7 @@ class QueryAPI(unittest.TestCase):
                     self.assertEqual(type(out), list,'output format not terse when input fmt: {0}'.format(inp_fmt))
                     self.assertEqual(sorted(out), sorted(ref), 'error in {0} -> {1}'.format(inp_fmt, out_fmt))
                 elif out_fmt == 'orm':
-                    self.assertIn(type(out), [Query, QueryResult],'output format not ORM when input fmt: {0}'.format(inp_fmt))
+                    self.assertTrue(is_query(out), 'output format not ORM when input fmt: {0}'.format(inp_fmt))
                     self.assertEqual(sorted([j.jobid for j in out]), sorted(ref), 'error in {0} -> {1}'.format(inp_fmt, out_fmt))
                 elif out_fmt == 'dict':
                     self.assertTrue((type(out) == list) and (type(out[0]) == dict),'output format not dictlist when input fmt: {0}'.format(inp_fmt))
