@@ -78,7 +78,7 @@ class Job(Base):
     user_id = Column(Integer, ForeignKey('users.id'))
     user = relationship('User', back_populates = "jobs")
 
-    processes = relationship('Process', cascade="all,delete", back_populates="job")
+    processes = relationship('Process', cascade="all", back_populates="job")
     hosts = relationship('Host', back_populates='jobs', secondary=host_job_associations_table)
     tags = Column(JSON)
     # exclusive cpu time

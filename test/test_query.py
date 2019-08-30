@@ -250,7 +250,6 @@ class QueryAPI(unittest.TestCase):
                     self.assertEqual(type(out), pd.DataFrame,'output format not dataframe when input fmt: {0}'.format(inp_fmt))
                     self.assertEqual(sorted(list(out['jobid'].values)), sorted(ref), 'error in {0} -> {1}'.format(inp_fmt, out_fmt))
 
-    @unittest.skipIf(settings.orm == 'sqlalchemy', "skipped for sqlalchemy")
     @db_session
     def test_job_proc_tags(self):
         tags = eq.job_proc_tags(['685000', '685016'], fold=False)
@@ -371,7 +370,6 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(list(agg_df['jobid'].values), ['685000', '685003', '685016'])
         self.assertEqual(list(agg_df['job_cpu_time'].values), [113135329.0, 93538033.0, 427082965.0])
 
-    @unittest.skipIf(settings.orm == 'sqlalchemy', "skipped for sqlalchemy")
     @db_session
     def test_zz_delete_jobs(self):
         #with self.assertRaises(EnvironmentError):

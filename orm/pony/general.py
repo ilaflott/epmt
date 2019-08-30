@@ -56,6 +56,19 @@ def orm_set(o, **kwargs):
 def create_(model, **kwargs):
     return model(**kwargs)
 
+def orm_delete(o):
+    o.delete()
+
+def orm_delete_jobs(jobs):
+    for j in jobs:
+        for p in j.processes:
+            p.parent = None
+    for j in jobs:
+        for p in j.processes:
+            p.delete()
+    jobs.delete()
+
+
 def commit_():
     return commit()
 

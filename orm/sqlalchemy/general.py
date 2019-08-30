@@ -104,6 +104,14 @@ def create_(model, **kwargs):
     Session.add(o)
     return o
 
+def orm_delete(o):
+    Session.delete(o)
+
+def orm_delete_jobs(jobs):
+    for j in jobs:
+        Session.delete(j)
+    Session.commit()
+
 def commit_():
     return Session.commit()
 
