@@ -1,146 +1,145 @@
-from general import db_session
-import general as db
-import datetime
+from .general import *
+from datetime import datetime
 
 
-refmodel_job_associations_table = db.Table('refmodel_job_associations', db.Base.metadata,
-    db.Column('jobid', db.String, db.ForeignKey('jobs.jobid'), primary_key=True),
-    db.Column('refmodel_id', db.Integer, db.ForeignKey('refmodels.id'))
+refmodel_job_associations_table = Table('refmodel_job_associations', Base.metadata,
+    Column('jobid', String, ForeignKey('jobs.jobid'), primary_key=True),
+    Column('refmodel_id', Integer, ForeignKey('refmodels.id'))
 )
 
-host_job_associations_table = db.Table('host_job_associations', db.Base.metadata,
-    db.Column('jobid', db.String, db.ForeignKey('jobs.jobid'), primary_key=True),
-    db.Column('hostname', db.String, db.ForeignKey('hosts.name'), primary_key=True)
+host_job_associations_table = Table('host_job_associations', Base.metadata,
+    Column('jobid', String, ForeignKey('jobs.jobid'), primary_key=True),
+    Column('hostname', String, ForeignKey('hosts.name'), primary_key=True)
 )
 
-ancestor_descendant_associations_table = db.Table('ancestor_descendant_associations', db.Base.metadata,
-    db.Column('ancestor', db.Integer, db.ForeignKey('processes.id'), primary_key=True),
-    db.Column('descendant', db.Integer, db.ForeignKey('processes.id'), primary_key=True)
+ancestor_descendant_associations_table = Table('ancestor_descendant_associations', Base.metadata,
+    Column('ancestor', Integer, ForeignKey('processes.id'), primary_key=True),
+    Column('descendant', Integer, ForeignKey('processes.id'), primary_key=True)
 )
 
-class User(db.Base):
+class User(Base):
     __tablename__ = 'users'
-    created_at = db.Column(db.DateTime, default=db.func.now())
-    updated_at = db.Column(db.DateTime, onupdate=datetime.datetime.now)
-    name = db.Column(db.String, unique=True)
-    id = db.Column(db.Integer, primary_key = True)
-    info_dict = db.Column(db.JSON)
-    jobs = db.relationship('Job', back_populates='user')
-    processes = db.relationship('Process', back_populates='user')
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, onupdate=datetime.now)
+    name = Column(String, unique=True)
+    id = Column(Integer, primary_key = True)
+    info_dict = Column(JSON)
+    jobs = relationship('Job', back_populates='user')
+    processes = relationship('Process', back_populates='user')
 
     @db_session
     def __repr__(self):
         return "User['%s']" % (self.name)
 
-class Host(db.Base):
+class Host(Base):
     __tablename__ = 'hosts'
-    created_at = db.Column(db.DateTime, default=db.func.now())
-    updated_at = db.Column(db.DateTime, onupdate=datetime.datetime.now)
-    name = db.Column(db.String, primary_key=True)
-    info_dict = db.Column(db.JSON)
-    processes = db.relationship('Process', back_populates='host')
-    jobs = db.relationship('Job', back_populates='hosts', secondary=host_job_associations_table)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, onupdate=datetime.now)
+    name = Column(String, primary_key=True)
+    info_dict = Column(JSON)
+    processes = relationship('Process', back_populates='host')
+    jobs = relationship('Job', back_populates='hosts', secondary=host_job_associations_table)
 
     @db_session
     def __repr__(self):
         return "Host['%s']" % (self.name)
 
-class ReferenceModel(db.Base):
+class ReferenceModel(Base):
     __tablename__ = 'refmodels'
-    created_at = db.Column(db.DateTime, default=db.func.now())
-    updated_at = db.Column(db.DateTime, onupdate=datetime.datetime.now)
-    id = db.Column(db.Integer, primary_key = True)
-    tags = db.Column(db.JSON)
-    op_tags = db.Column(db.JSON)
-    computed = db.Column(db.JSON)
-    info_dict = db.Column(db.JSON)
-    jobs = db.relationship('Job', back_populates='ref_models', secondary=refmodel_job_associations_table)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, onupdate=datetime.now)
+    id = Column(Integer, primary_key = True)
+    tags = Column(JSON)
+    op_tags = Column(JSON)
+    computed = Column(JSON)
+    info_dict = Column(JSON)
+    jobs = relationship('Job', back_populates='ref_models', secondary=refmodel_job_associations_table)
     @db_session
     def __repr__(self):
         return "ReferenceModel[%d]" % (self.id)
 
-class Job(db.Base):
+class Job(Base):
     __tablename__ = 'jobs'
-    created_at = db.Column(db.DateTime, default=db.func.now())
-    updated_at = db.Column(db.DateTime, onupdate=datetime.datetime.now)
-    info_dict = db.Column(db.JSON)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, onupdate=datetime.now)
+    info_dict = Column(JSON)
 
-    start = db.Column(db.DateTime, default=datetime.datetime.now)
-    end = db.Column(db.DateTime, default=datetime.datetime.now)
-    duration = db.Column(db.Float, default=0)
-    proc_sums = db.Column(db.JSON) # aggregates across processes of job
-    env_dict = db.Column(db.JSON)
-    env_changes_dict = db.Column(db.JSON)
-    submit = db.Column(db.DateTime)
-    jobid = db.Column(db.String, primary_key=True)
-    jobname = db.Column(db.String)
-    exitcode = db.Column(db.Integer)
+    start = Column(DateTime, default=datetime.now)
+    end = Column(DateTime, default=datetime.now)
+    duration = Column(Float, default=0)
+    proc_sums = Column(JSON) # aggregates across processes of job
+    env_dict = Column(JSON)
+    env_changes_dict = Column(JSON)
+    submit = Column(DateTime)
+    jobid = Column(String, primary_key=True)
+    jobname = Column(String)
+    exitcode = Column(Integer)
 
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    user = db.relationship('User', back_populates = "jobs")
+    user_id = Column(Integer, ForeignKey('users.id'))
+    user = relationship('User', back_populates = "jobs")
 
-    processes = db.relationship('Process', cascade="all,delete", back_populates="job")
-    hosts = db.relationship('Host', back_populates='jobs', secondary=host_job_associations_table)
-    tags = db.Column(db.JSON)
+    processes = relationship('Process', cascade="all,delete", back_populates="job")
+    hosts = relationship('Host', back_populates='jobs', secondary=host_job_associations_table)
+    tags = Column(JSON)
     # exclusive cpu time
-    cpu_time = db.Column(db.Float)
-    ref_models = db.relationship('ReferenceModel', back_populates="jobs", secondary=refmodel_job_associations_table)
+    cpu_time = Column(Float)
+    ref_models = relationship('ReferenceModel', back_populates="jobs", secondary=refmodel_job_associations_table)
 
     @db_session
     def __repr__(self):
         return "Job['%s']" % (self.jobid)
 
 
-#class ProcessAssociation(db.Base):
+#class ProcessAssociation(Base):
 #    __tablename__ = 'process_associations'
-#    fk_ancestor = db.Column(db.Integer, db.ForeignKey('processes.id'), primary_key=True)
-#    fk_descendant = db.Column(db.Integer, db.ForeignKey('processes.id'), primary_key=True)
+#    fk_ancestor = Column(Integer, ForeignKey('processes.id'), primary_key=True)
+#    fk_descendant = Column(Integer, ForeignKey('processes.id'), primary_key=True)
 
-class Process(db.Base):
+class Process(Base):
     __tablename__ = 'processes'
-    created_at = db.Column(db.DateTime, default=db.func.now())
-    updated_at = db.Column(db.DateTime, onupdate=datetime.datetime.now)
-    info_dict = db.Column(db.JSON)
-    id = db.Column(db.Integer, primary_key = True)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, onupdate=datetime.now)
+    info_dict = Column(JSON)
+    id = Column(Integer, primary_key = True)
 
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    user = db.relationship('User', back_populates = "processes")
+    user_id = Column(Integer, ForeignKey('users.id'))
+    user = relationship('User', back_populates = "processes")
 
-    jobid = db.Column(db.String, db.ForeignKey('jobs.jobid'))
-    job = db.relationship('Job', back_populates='processes')
+    jobid = Column(String, ForeignKey('jobs.jobid'))
+    job = relationship('Job', back_populates='processes')
 
-    start = db.Column(db.DateTime, default=datetime.datetime.now)
-    end = db.Column(db.DateTime, default=datetime.datetime.now)
-    duration = db.Column(db.Float, default=0)
-    tags = db.Column(db.JSON)
+    start = Column(DateTime, default=datetime.now)
+    end = Column(DateTime, default=datetime.now)
+    duration = Column(Float, default=0)
+    tags = Column(JSON)
 
-    host_id = db.Column(db.String, db.ForeignKey('hosts.name'))
-    host = db.relationship('Host', back_populates="processes")
+    host_id = Column(String, ForeignKey('hosts.name'))
+    host = relationship('Host', back_populates="processes")
 
-    threads_df = db.Column(db.JSON)
-    threads_sums = db.Column(db.JSON)
-    numtids = db.Column(db.Integer, default=1)
+    threads_df = Column(JSON)
+    threads_sums = Column(JSON)
+    numtids = Column(Integer, default=1)
     # exclusive cpu time
-    cpu_time = db.Column(db.Float)
+    cpu_time = Column(Float)
     # sum of cpu times of all descendants + process_cpu_time
-    inclusive_cpu_time = db.Column(db.Float)
-    exename = db.Column(db.String)
-    path = db.Column(db.String)
-    args = db.Column(db.String)
-    pid = db.Column(db.Integer)
-    ppid = db.Column(db.Integer)
-    pgid = db.Column(db.Integer)
-    sid = db.Column(db.Integer)
-    gen = db.Column(db.Integer)
-    exitcode = db.Column(db.Integer)
+    inclusive_cpu_time = Column(Float)
+    exename = Column(String)
+    path = Column(String)
+    args = Column(String)
+    pid = Column(Integer)
+    ppid = Column(Integer)
+    pgid = Column(Integer)
+    sid = Column(Integer)
+    gen = Column(Integer)
+    exitcode = Column(Integer)
     # for creating a process graph
     # a child process is also included in the list of descendants
     # while parent is included in the ancestors
-    parent_id = db.Column(db.Integer, db.ForeignKey('processes.id'))
-    children= db.relationship('Process', backref=db.backref('parent', remote_side=[id]))
-    #ancestors = db.relationship('ProcessAssociation',backref='descendants', primaryjoin=id==ProcessAssociation.fk_ancestor)
-    #descendants = db.relationship('ProcessAssociation',backref='ancestors', primaryjoin=id==ProcessAssociation.fk_descendant )
-    ancestors = db.relationship('Process', backref='descendants', secondary=ancestor_descendant_associations_table, primaryjoin=id==ancestor_descendant_associations_table.c.descendant, secondaryjoin=id==ancestor_descendant_associations_table.c.ancestor)
+    parent_id = Column(Integer, ForeignKey('processes.id'))
+    children= relationship('Process', backref=backref('parent', remote_side=[id]))
+    #ancestors = relationship('ProcessAssociation',backref='descendants', primaryjoin=id==ProcessAssociation.fk_ancestor)
+    #descendants = relationship('ProcessAssociation',backref='ancestors', primaryjoin=id==ProcessAssociation.fk_descendant )
+    ancestors = relationship('Process', backref='descendants', secondary=ancestor_descendant_associations_table, primaryjoin=id==ancestor_descendant_associations_table.c.descendant, secondaryjoin=id==ancestor_descendant_associations_table.c.ancestor)
 
     @db_session
     def __repr__(self):

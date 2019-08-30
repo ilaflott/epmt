@@ -158,7 +158,7 @@ def jobs_col(jobs):
 
 def to_dict(obj):
     from .models import Job, User, Host
-    d = obj.__dict__
+    d = obj.__dict__.copy()
     if type(obj) == Job:
         if 'processes' in d:
             del d['processes']

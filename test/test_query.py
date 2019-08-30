@@ -7,22 +7,25 @@ from glob import glob
 from pony.orm.core import Query, QueryResult
 import pandas as pd
 import datetime
-
-# put this above all epmt imports
 from os import environ
+
+# append the parent directory of this test to the module search path
+#from os.path import dirname
+#sys.path.append(dirname(__file__) + "/..")
+
 environ['EPMT_USE_DEFAULT_SETTINGS'] = "1"
 from epmtlib import set_logging
 set_logging(-1)
 
 # Put EPMT imports only after we have called set_logging()
-
 import epmt_default_settings as settings
-settings.orm = 'sqlalchemy'
-settings.db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
+if environ.get('EPMT_USE_SQLALCHEMY'):
+    settings.orm = 'sqlalchemy'
+    settings.db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
 
-from orm import db_session, setup_db, Job, Process, orm_set, get_, desc
-import epmt_query as eq
 from epmtlib import timing, isString, frozen_dict, str_dict
+from orm import db_session, setup_db, Job, Process, get_, desc
+import epmt_query as eq
 from epmt_cmds import epmt_submit
 
 
@@ -87,7 +90,7 @@ class QueryAPI(unittest.TestCase):
 
         # empty tag check
         j = get_(Job, '685016')
-        orm_set(j, tags={})
+        j.tags = {}
         jobs = eq.get_jobs(tags='', fmt='terse')
         self.assertEqual(jobs, ['685016'], 'jobs query with empty tag option')
         jobs = eq.get_jobs(tags={}, fmt='terse')
@@ -141,6 +144,7 @@ class QueryAPI(unittest.TestCase):
         jobs = eq.get_jobs(when='06/16/2019 08:00', hosts=['pp208', 'pp212'], fmt='terse')
         self.assertEqual(jobs, [])
 
+    @unittest.skipIf(settings.orm == 'sqlalchemy', "skipped for sqlalchemy")
     @db_session
     def test_procs(self):
         procs = eq.get_procs(['685016'], fmt='terse')
@@ -151,6 +155,7 @@ class QueryAPI(unittest.TestCase):
         df = eq.get_procs(fmt='pandas', limit=10)
         self.assertEqual(df.shape, (10,50), "incorrect dataframe shape with limit")
 
+    @unittest.skipIf(settings.orm == 'sqlalchemy', "skipped for sqlalchemy")
     @db_session
     def test_procs_convert(self):
         for inform in ['dict', 'terse', 'pandas', 'orm']:
@@ -165,6 +170,7 @@ class QueryAPI(unittest.TestCase):
                         self.assertEqual(eq.conv_procs(procs2, fmt=inform), procs)
 
 
+    @unittest.skipIf(settings.orm == 'sqlalchemy', "skipped for sqlalchemy")
     @db_session
     def test_procs_advanced(self):
         procs = eq.get_procs(fltr=lambda p: p.duration > 1000000, order='desc(p.duration)', fmt='orm')
@@ -367,6 +373,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(list(agg_df['jobid'].values), ['685000', '685003', '685016'])
         self.assertEqual(list(agg_df['job_cpu_time'].values), [113135329.0, 93538033.0, 427082965.0])
 
+    @unittest.skipIf(settings.orm == 'sqlalchemy', "skipped for sqlalchemy")
     @db_session
     def test_zz_delete_jobs(self):
         #with self.assertRaises(EnvironmentError):
@@ -394,5 +401,5 @@ class QueryAPI(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-    #suite = unittest.TestLoader().loadTestsFromTestCase(QueryAPI)
-    #unittest.TextTestRunner(verbosity=2).run(suite)
+    suite = unittest.TestLoader().loadTestsFromTestCase(QueryAPI)
+    unittest.TextTestRunner(verbosity=2).run(suite)
