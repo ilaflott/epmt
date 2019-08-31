@@ -158,10 +158,89 @@ def jobs_col(jobs):
 def to_dict(obj, **kwargs):
     return obj.to_dict(**kwargs)
 
-def orm_get_jobs_(qs, tags, order, limit, offset, when, before, after, hosts, exact_tag_only):
+def orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only):
+    from .models import Process, Host
+    from epmtlib import tags_list, isString
+    from datetime import datetime
+    if jobs:
+        jobs = jobs_col(jobs)
+        qs = Process.select(lambda p: p.job in jobs)
+    else:
+        # no jobs set, so expand the scope to all Process objects
+        qs = Process.select()
+
+    # filter using tags if set
+    # Remember, tag = {} demands an exact match with an empty dict!
+    if tags != None:
+        tags = tags_list(tags)
+        qs_tags = []
+        idx = 0
+        tag_query = ''
+        for t in tags:
+            qst = qs
+            qst = tag_filter_(qst, t, exact_tag_only)
+            # Important!
+            # we are forced to have the modal code below as we want
+            # to significantly speed up the common case of a single
+            # tag. The slice operator [:] is really slow. We are forced
+            # to use it for the case when list contains more than one tag
+            # since due to a bug in Pony lazy evaluation of the union query
+            # doesn't work.
+            qs_tags.append(qst[:] if (len(tags) > 1) else qst)
+            tag_query = tag_query + ' or (p in qs_tags[{0}])'.format(idx) if tag_query else '(p in qs_tags[0])'
+            idx += 1
+        logger.debug('tag filter: {0}'.format(tag_query))
+        # read comment marked "Important!" above to understand why
+        # we have the modal code below
+        qs = qs.filter(tag_query) if (len(tags) > 1) else qs_tags[0]
+
+    # if fltr is a lambda function or a string apply it
+    if fltr:
+        qs = qs.filter(fltr)
+
+    if when:
+        if type(when) == datetime:
+            qs = qs.filter(lambda p: p.start <= when and p.end >= when)
+        else:
+            when_process = Process[when] if isString(when) else when
+            qs = qs.filter(lambda p: p.start <= when_process.end and p.end >= when_process.start)
+
+    if hosts:
+        if isString(hosts) or (type(hosts) == Host):
+            # user probably forgot to wrap in a list
+            hosts = [hosts]
+        if type(hosts) == list:
+            # if the list contains of strings then we want the Host objects
+            _hosts = []
+            for h in hosts:
+                if isString(h):
+                    try:
+                        h = Host[h]
+                    except:
+                        continue
+                _hosts.append(h)
+            hosts = _hosts
+        qs = qs.filter(lambda p: p.host in hosts)
+
+    if order:
+        qs = qs.order_by(order)
+
+    # finally set limits on the number of processes returned
+    if limit:
+        qs = qs.limit(int(limit))
+
+    return qs
+
+
+
+def orm_get_jobs_(qs, tags, fltr, order, limit, offset, when, before, after, hosts, exact_tag_only):
     from .models import Job, Host
     from epmtlib import tags_list, isString
     from datetime import datetime
+
+    if fltr:
+        qs = qs.filter(fltr)
+
     # filter using tag if set
     # Remember, tag = {} demands an exact match with an empty dict!
     if tags != None:

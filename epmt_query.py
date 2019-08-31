@@ -323,9 +323,6 @@ def get_jobs(jobs = [], tags=None, fltr = '', order = None, limit = None, offset
       
     qs = jobs_col(jobs)
 
-    if fltr:
-        qs = qs.filter(fltr)
-
     if when:
         if type(when) == str:
             try:
@@ -365,7 +362,7 @@ def get_jobs(jobs = [], tags=None, fltr = '', order = None, limit = None, offset
             # user probably forgot to wrap in a list
             hosts = hosts.split(",")
 
-    qs = orm_get_jobs_(qs, tags, order, limit, offset, when, before, after, hosts, exact_tag_only)
+    qs = orm_get_jobs_(qs, tags, fltr, order, limit, offset, when, before, after, hosts, exact_tag_only)
 
     if fmt == 'orm':
         return qs
@@ -472,52 +469,6 @@ def get_procs(jobs = [], tags = None, fltr = None, order = '', limit = 0, when=N
     by using the default merge_threads_sums=True, it will be available as column in the output
     dataframe. The output will be pre-sorted on this field because we have set 'order'
     """
-    if jobs:
-        jobs = jobs_col(jobs)
-        qs = Process.select(lambda p: p.job in jobs)
-    else:
-        # no jobs set, so expand the scope to all Process objects
-        qs = Process.select()
-
-    # filter using tags if set
-    # Remember, tag = {} demands an exact match with an empty dict!
-    if tags != None:
-        tags = tags_list(tags)
-        qs_tags = []
-        idx = 0
-        tag_query = ''
-        for t in tags:
-            qst = qs
-            qst = tag_filter_(qst, t, exact_tag_only)
-            # Important!
-            # we are forced to have the modal code below as we want
-            # to significantly speed up the common case of a single
-            # tag. The slice operator [:] is really slow. We are forced
-            # to use it for the case when list contains more than one tag
-            # since due to a bug in Pony lazy evaluation of the union query
-            # doesn't work.
-            qs_tags.append(qst[:] if (len(tags) > 1) else qst)
-            tag_query = tag_query + ' or (p in qs_tags[{0}])'.format(idx) if tag_query else '(p in qs_tags[0])'
-            idx += 1
-        logger.debug('tag filter: {0}'.format(tag_query))
-        # read comment marked "Important!" above to understand why
-        # we have the modal code below
-        qs = qs.filter(tag_query) if (len(tags) > 1) else qs_tags[0]
-
-    # if tag != None:
-    #     if type(tag) == str:
-    #         tag = tag_from_string(tag)
-    #     if exact_tag_only or (tag == {}):
-    #         qs = qs.filter(lambda p: p.tags == tag)
-    #     else:
-    #         # we consider a match if the job tag is a superset
-    #         # of the passed tag
-    #         for (k,v) in tag.items():
-    #             qs = qs.filter(lambda p: p.tags[k] == v)
-
-    # if fltr is a lambda function or a string apply it
-    if fltr:
-        qs = qs.filter(fltr)
 
     if when:
         if type(when) == str:
@@ -526,38 +477,17 @@ def get_procs(jobs = [], tags = None, fltr = None, order = '', limit = 0, when=N
             except Exception as e:
                 logger.error('could not convert "when" string to datetime: %s' % str(e))
                 return None
-        if type(when) == datetime:
-            qs = qs.filter(lambda p: p.start <= when and p.end >= when)
-        else:
-            when_process = Process[when] if isString(when) else when
-            qs = qs.filter(lambda p: p.start <= when_process.end and p.end >= when_process.start)
 
     if hosts:
-        if isString(hosts) or (type(hosts) == Host):
+        if isString(hosts):
             # user probably forgot to wrap in a list
-            hosts = [hosts]
-        if type(hosts) == list:
-            # if the list contains of strings then we want the Host objects
-            _hosts = []
-            for h in hosts:
-                if isString(h):
-                    try:
-                        h = Host[h]
-                    except:
-                        continue
-                _hosts.append(h)
-            hosts = _hosts
-        qs = qs.filter(lambda p: p.host in hosts)
+            hosts = hosts.split(",")
 
-    if order:
-        qs = qs.order_by(order)
-
-    # finally set limits on the number of processes returned
-    if limit:
-        qs = qs.limit(int(limit))
+    qs = orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only)
 
     if fmt == 'orm':
         return qs
+
 
     return __conv_procs_orm(qs, merge_threads_sums, fmt)
 

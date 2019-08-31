@@ -227,10 +227,17 @@ def to_dict(obj, **kwargs):
         del d['user_id']
     return d
 
-def orm_get_jobs_(qs, tags, order, limit, offset, when, before, after, hosts, exact_tag_only):
+def orm_get_jobs_(qs, tags, fltr, order, limit, offset, when, before, after, hosts, exact_tag_only):
     from .models import Job, Host
     from epmtlib import tags_list, isString
     from datetime import datetime
+
+    if fltr:
+        if isString(fltr):
+            # sql query, so use the text function
+            qs = qs.filter(text(fltr))
+        else:
+            qs = qs.filter(fltr)
 
     # filter using tag if set
     # Remember, tag = {} demands an exact match with an empty dict!
