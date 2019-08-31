@@ -227,6 +227,61 @@ def to_dict(obj, **kwargs):
         del d['user_id']
     return d
 
+
+def orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only):
+    from .models import Process, Host
+    from epmtlib import tags_list, isString
+    from datetime import datetime
+    if jobs:
+        jobs = jobs_col(jobs)
+        jobs = [j.jobid for j in jobs]
+        qs = Session.query(Process).filter(Process.jobid.in_(jobs))
+    else:
+        # no jobs set, so expand the scope to all Process objects
+        qs = Session.query(Process)
+
+    if not (fltr is None):
+        if isString(fltr):
+            # sql query, so use the text function
+            qs = qs.filter(text(fltr))
+        else:
+            qs = qs.filter(fltr)
+
+    # filter using tag if set
+    # Remember, tag = {} demands an exact match with an empty dict!
+    if tags != None:
+        tags = tags_list(tags)
+        qs_tags = []
+        idx = 0
+        org_qs = qs
+        for t in tags:
+            # tag_filter_ reqturs a query object corresponding to
+            # the jobs that match a particular tag. We, then, do
+            # do a UNION (OR operation) across these query sets.
+            qst = tag_filter_(org_qs, t, exact_tag_only)
+            qs = qst if (idx == 0) else qs.union(qst)
+            idx += 1
+
+
+    if when:
+        if type(when) == datetime:
+            qs = qs.filter(Process.start <= when, Process.end >= when)
+        else:
+            when_process = get_(Process, when) if isString(when) else when
+            qs = qs.filter(Process.start <= when_process.end, Process.end >= when_process.start)
+
+    if hosts:
+        qs = qs.filter(Process.host.name.in_(hosts))
+
+    if not(order is None):
+        qs = qs.order_by(order)
+
+    # finally set limits on the number of jobs returned
+    if limit:
+        qs = qs.limit(int(limit))
+
+    return qs
+
 def orm_get_jobs_(qs, tags, fltr, order, limit, offset, when, before, after, hosts, exact_tag_only):
     from .models import Job, Host
     from epmtlib import tags_list, isString

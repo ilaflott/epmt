@@ -372,7 +372,7 @@ def get_jobs(jobs = [], tags=None, fltr = '', order = None, limit = None, offset
 
 #
 @db_session
-def get_procs(jobs = [], tags = None, fltr = None, order = '', limit = 0, when=None, hosts=[], fmt='dict', merge_threads_sums=True, exact_tag_only = False):
+def get_procs(jobs = [], tags = None, fltr = None, order = None, limit = 0, when=None, hosts=[], fmt='dict', merge_threads_sums=True, exact_tag_only = False):
     """
     Filter a supplied list of jobs to find a match
     by tag or some primary keys. If no jobs list is provided,

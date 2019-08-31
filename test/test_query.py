@@ -143,14 +143,13 @@ class QueryAPI(unittest.TestCase):
         jobs = eq.get_jobs(when='06/16/2019 08:00', hosts=['pp208', 'pp212'], fmt='terse')
         self.assertEqual(jobs, [])
 
-    @unittest.skipIf(settings.orm == 'sqlalchemy', "skipped for sqlalchemy")
     @db_session
     def test_procs(self):
         procs = eq.get_procs(['685016'], fmt='terse')
         self.assertEqual(type(procs), list, 'wrong procs format with terse')
         self.assertEqual(len(procs), 3412, 'wrong count of processes in terse')
         procs = eq.get_procs(['685016', '685000'], fmt='orm')
-        self.assertEqual(len(procs), 6892, 'wrong count of processes in ORM format')
+        self.assertEqual(procs.count(), 6892, 'wrong count of processes in ORM format')
         df = eq.get_procs(fmt='pandas', limit=10)
         self.assertEqual(df.shape, (10,50), "incorrect dataframe shape with limit")
 
