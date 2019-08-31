@@ -129,6 +129,47 @@ def sum_attribute_(collection, attribute):
 def is_query(obj):
     return (type(obj) == Query)
 
+def procs_col(procs):
+    """
+    This is an internal function to take a collection of
+    procs in a variety of formats and return output in the
+    ORM format
+    """
+    from pandas import DataFrame
+    from .models import Process
+    from epmtlib import isString
+    if is_query(procs):
+        return procs
+    if ((type(procs) != DataFrame) and not(procs)):
+        # empty list => select all processes
+        return Session.query(Process)
+    if type(procs) == DataFrame:
+        procs = [int(pk) for pk in list(procs['id'])]
+    if isString(procs):
+        if ',' in procs:
+            # procs a string of comma-separated ids
+            procs = [ int(p.strip()) for p in procs.split(",") ]
+        else:
+            # procs is a single id, but specified as a string
+            procs = [int(procs)]
+    if type(procs) == int:
+        # a single primary key
+        procs = [procs]
+
+    if type(procs) == Process:
+        # is it a singular Process?
+        procs = [procs.id]
+
+    if type(procs) in [list, set]:
+        # procs is a list of Process objects or a list of primary keys or a list of dicts
+        # so first convert the dict list to a bid list
+        procs = [ p['id'] if type(p) == dict else p for p in procs ]
+        procs = [ p.id if type(p)==Process else p for p in procs ]
+        # and now convert to a pony Query object so the user can chain
+        procs = Session.query(Process).filter(Process.id.in_(procs))
+    return procs
+
+
 def jobs_col(jobs):
     """
     This is an internal function that returns a Job Query object.
@@ -164,14 +205,26 @@ def jobs_col(jobs):
     return jobs
 
 
-def to_dict(obj):
-    from .models import Job, User, Host
+def to_dict(obj, **kwargs):
+    from .models import Job, Process, User, Host
+    from epmtlib import isString
     d = obj.__dict__.copy()
-    if type(obj) == Job:
-        if 'processes' in d:
-            del d['processes']
+    excludes = kwargs['exclude'] if 'exclude' in kwargs else []
+    if isString(excludes):
+        excludes = [excludes]
+    for k in excludes:
+        if k in d:
+            del d[k]
+    if type(obj) == Process:
+        d['job'] = obj.jobid
+        d['jobid'] = obj.jobid
+        del d['parent_id']
+        d['parent'] = obj.parent.id
+    if 'hosts' in d:
         d['hosts'] = [h.name if type(h) == Host else h for h in obj.hosts]
+    if 'user_id' in d:
         d['user'] = Session.query(User).get(d['user_id']).name
+        del d['user_id']
     return d
 
 def orm_get_jobs_(qs, tags, order, limit, offset, when, before, after, hosts, exact_tag_only):

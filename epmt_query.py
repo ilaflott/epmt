@@ -60,7 +60,7 @@ def conv_jobs(jobs, fmt='dict', merge_sums = True):
         return [ j.jobid for j in jobs ]
 
     # convert the ORM into a list of dictionaries, excluding blacklisted fields
-    out_list = [ to_dict(j) for j in jobs ]
+    out_list = [ to_dict(j, exclude = 'processes') for j in jobs ]
 
     # do we need to merge process' sum fields into the job?
     if merge_sums:
@@ -87,7 +87,7 @@ def __conv_procs_orm(procs, merge_sums = True, fmt='dict'):
         return [ p.id for p in procs ]
 
     # convert the ORM into a list of dictionaries, excluding blacklisted fields
-    out_list = [ p.to_dict(exclude = 'threads_df') for p in procs ]
+    out_list = [ to_dict(p, exclude = ['ancestors', 'descendants', 'children', 'threads_df']) for p in procs ]
 
     # do we need to merge threads' sum fields into the process?
     if merge_sums:
@@ -103,42 +103,6 @@ def __conv_procs_orm(procs, merge_sums = True, fmt='dict'):
             del p[THREAD_SUMS_FIELD_IN_PROC]
     return pd.DataFrame(out_list) if fmt == 'pandas' else out_list
 
-def __procs_col(procs):
-    """
-    This is an internal function to take a collection of
-    procs in a variety of formats and return output in the
-    ORM format
-    """
-    if type(procs) in [Query, QueryResult]:
-        return procs
-    if ((type(procs) != pd.DataFrame) and not(procs)):
-        # empty list => select all processes
-        return Process.select()
-    if type(procs) == pd.DataFrame:
-        procs = [int(pk) for pk in list(procs['id'])]
-    if isString(procs):
-        if ',' in procs:
-            # procs a string of comma-separated ids
-            procs = [ int(p.strip()) for p in procs.split(",") ]
-        else:
-            # procs is a single id, but specified as a string
-            procs = Process[int(procs)]
-    if type(procs) == int:
-        # a single primary key
-        procs = Process[procs]
-
-    if type(procs) == Process:
-        # is it a singular Process?
-        procs = [procs]
-
-    if type(procs) in [list, set]:
-        # procs is a list of Process objects or a list of primary keys or a list of dicts
-        # so first convert the dict list to a bid list
-        procs = [ p['id'] if type(p) == dict else p for p in procs ]
-        procs = [ Process[p] if type(p)==int else p for p in procs ]
-        # and now convert to a pony Query object so the user can chain
-        procs = Process.select(lambda p: p in procs)
-    return procs
 
 def conv_procs(procs, fmt='pandas'):
     """
@@ -146,7 +110,7 @@ def conv_procs(procs, fmt='pandas'):
     (orm, pandas, dict-list or terse) to the format specified
     by 'fmt'
     """
-    procs = __procs_col(procs)
+    procs = procs_col(procs)
     return __conv_procs_orm(procs, fmt=fmt)
 
 

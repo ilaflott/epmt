@@ -81,6 +81,47 @@ def sum_attribute_(collection, attribute):
 def is_query(obj):
     return type(obj) in (Query, QueryResult)
 
+def procs_col(procs):
+    """
+    This is an internal function to take a collection of
+    procs in a variety of formats and return output in the
+    ORM format
+    """
+    from pandas import DataFrame
+    from .models import Process
+    from epmtlib import isString
+    if type(procs) in [Query, QueryResult]:
+        return procs
+    if ((type(procs) != DataFrame) and not(procs)):
+        # empty list => select all processes
+        return Process.select()
+    if type(procs) == DataFrame:
+        procs = [int(pk) for pk in list(procs['id'])]
+    if isString(procs):
+        if ',' in procs:
+            # procs a string of comma-separated ids
+            procs = [ int(p.strip()) for p in procs.split(",") ]
+        else:
+            # procs is a single id, but specified as a string
+            procs = Process[int(procs)]
+    if type(procs) == int:
+        # a single primary key
+        procs = Process[procs]
+
+    if type(procs) == Process:
+        # is it a singular Process?
+        procs = [procs]
+
+    if type(procs) in [list, set]:
+        # procs is a list of Process objects or a list of primary keys or a list of dicts
+        # so first convert the dict list to a bid list
+        procs = [ p['id'] if type(p) == dict else p for p in procs ]
+        procs = [ Process[p] if type(p)==int else p for p in procs ]
+        # and now convert to a pony Query object so the user can chain
+        procs = Process.select(lambda p: p in procs)
+    return procs
+
+
 def jobs_col(jobs):
     """
     This is an internal function to take a collection of jobs
@@ -114,8 +155,8 @@ def jobs_col(jobs):
         jobs = Job.select(lambda j: j in jobs)
     return jobs
 
-def to_dict(obj):
-    return obj.to_dict()
+def to_dict(obj, **kwargs):
+    return obj.to_dict(**kwargs)
 
 def orm_get_jobs_(qs, tags, order, limit, offset, when, before, after, hosts, exact_tag_only):
     from .models import Job, Host
