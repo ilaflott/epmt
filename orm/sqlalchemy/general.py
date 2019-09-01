@@ -262,7 +262,7 @@ def orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only):
             # tag_filter_ reqturs a query object corresponding to
             # the jobs that match a particular tag. We, then, do
             # do a UNION (OR operation) across these query sets.
-            qst = tag_filter_(org_qs, t, exact_tag_only)
+            qst = tag_filter_(org_qs, t, exact_tag_only, Process)
             qs = qst if (idx == 0) else qs.union(qst)
             idx += 1
 
@@ -275,7 +275,7 @@ def orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only):
             qs = qs.filter(Process.start <= when_process.end, Process.end >= when_process.start)
 
     if hosts:
-        qs = qs.filter(Process.host.name.in_(hosts))
+        qs = qs.join(Host, Process.host).filter(Host.name.in_(hosts))
 
     if not(order is None):
         qs = qs.order_by(order)

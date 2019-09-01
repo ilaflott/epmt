@@ -173,34 +173,46 @@ class QueryAPI(unittest.TestCase):
                         self.assertEqual(eq.conv_procs(procs2, fmt=inform), procs)
 
 
-    @unittest.skipIf(settings.orm == 'sqlalchemy', "skipped for sqlalchemy")
     @db_session
     def test_procs_advanced(self):
-        procs = eq.get_procs(fltr=lambda p: p.duration > 1000000, order='desc(p.duration)', fmt='orm')
-        self.assertEqual(len(procs), 630, 'wrong count of processes in ORM format using filter')
+        if settings.orm == 'sqlalchemy':
+            procs = eq.get_procs(fltr=(Process.duration > 1000000), order=desc(Process.duration), fmt='orm')
+        else:
+            procs = eq.get_procs(fltr=lambda p: p.duration > 1000000, order='desc(p.duration)', fmt='orm')
+        self.assertEqual(procs.count(), 630, 'wrong count of processes in ORM format using filter')
         self.assertEqual(int(procs.first().duration), 7005558348, 'wrong order when using orm with filter and order')
 
-        df = eq.get_procs(limit=5, order='desc(p.cpu_time)', fmt='pandas')
+        df = eq.get_procs(limit=5, order=desc(Process.cpu_time), fmt='pandas')
         self.assertEqual(df.shape, (5,50), "incorrect dataframe shape")
         self.assertEqual('685016', df.loc[0,'job'], "ordering of processes wrong in dataframe")
 
         ## Tags
         # empty tag query
         procs = eq.get_procs(tags='', fmt='terse')
-        self.assertEqual(len(procs), 0, 'procs query with empty tag option')
+        self.assertEqual(len(procs), 0)
         procs = eq.get_procs(tags={}, fmt='terse')
         self.assertEqual(len(procs), 0, 'procs query with {} tag option')
-        Process[1].set(tags={})
+        p = get_(Process, 1)
+        p.tags={}
         procs = eq.get_procs(tags={}, fmt='terse')
         self.assertEqual(procs, [1])
-        
-        procs_with_tag = eq.get_procs(tags='op_sequence:4', fltr='p.duration > 10000000', order='desc(p.duration)', fmt='orm')
-        self.assertEqual(len(procs_with_tag), 2, 'incorrect process count when using tag and filter')
-        procs_with_tag = eq.get_procs(tags={'op_sequence': 4}, fltr='p.duration > 10000000', order='desc(p.duration)', fmt='orm')
-        self.assertEqual(len(procs_with_tag), 2, 'incorrect process count when using tag and filter')
+
+        if settings.orm == 'sqlalchemy': 
+            procs_with_tag = eq.get_procs(tags='op_sequence:4', fltr=(Process.duration > 10000000), order=desc(Process.duration), fmt='orm')
+        else:
+            procs_with_tag = eq.get_procs(tags='op_sequence:4', fltr='p.duration > 10000000', order='desc(p.duration)', fmt='orm')
+        self.assertEqual(procs_with_tag.count(), 2, 'incorrect process count when using tag and filter')
+        if settings.orm == 'sqlalchemy': 
+            procs_with_tag = eq.get_procs(tags={'op_sequence': 4}, fltr=(Process.duration > 10000000), order=desc(Process.duration), fmt='orm')
+        else:
+            procs_with_tag = eq.get_procs(tags={'op_sequence': 4}, fltr='p.duration > 10000000', order='desc(p.duration)', fmt='orm')
+        self.assertEqual(procs_with_tag.count(), 2)
         p = procs_with_tag.first()
-        self.assertEqual(int(p.duration), 207384313, 'wrong duration or order when used with tag and filter')
-        self.assertEqual(p.descendants.count(), 85, 'wrong descendant count or order when used with tag and filter')
+        self.assertEqual(int(p.duration), 207384313)
+        if settings.orm == 'sqlalchemy':
+            self.assertEqual(len(p.descendants[:]), 85)
+        else:
+            self.assertEqual(p.descendants.count(), 85)
 
         self.assertEqual(eq.get_procs(tags='op_sequence:4', fmt='orm').count(), 270)
         self.assertEqual(eq.get_procs(tags='op_sequence:5', fmt='orm').count(), 285)
@@ -211,11 +223,11 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(s, s1 | s2)
 
         # hosts, when
-        procs = eq.get_procs('685000', when=datetime.datetime(2019, 6, 15, 11, 53), fmt='terse')
-        pids = [Process[p].pid for p in procs]
+        procs = eq.get_procs('685000', when=datetime.datetime(2019, 6, 15, 11, 53), fmt='orm')
+        pids = [p.pid for p in procs]
         self.assertEqual(set(pids), set([6098, 6226]))
-        procs = eq.get_procs('685000', when='06/15/2019 11:53', fmt='terse')
-        pids = [Process[p].pid for p in procs]
+        procs = eq.get_procs('685000', when='06/15/2019 11:53', fmt='orm')
+        pids = [p.pid for p in procs]
         self.assertEqual(set(pids), set([6098, 6226]))
         self.assertEqual(eq.get_procs('685000', hosts=['pp208'], fmt='orm').count(), 3480)
         self.assertEqual(eq.get_procs('685000', hosts=['pp208', 'pp209'], fmt='orm').count(), 3480)
