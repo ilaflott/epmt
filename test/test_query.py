@@ -158,14 +158,13 @@ class QueryAPI(unittest.TestCase):
         df = eq.get_procs(fmt='pandas', limit=10)
         self.assertEqual(df.shape, (10,50))
 
-    @unittest.skipIf(settings.orm == 'sqlalchemy', "skipped for sqlalchemy")
     @db_session
     def test_procs_convert(self):
         for inform in ['dict', 'terse', 'pandas', 'orm']:
             procs = eq.get_procs('685000', fmt=inform)
+            self.assertEqual(procs.count() if inform=='orm' else len(procs), 3480)
             for outform in ['dict', 'terse', 'pandas', 'orm']:
                 procs2 = eq.conv_procs(procs, fmt=outform)
-                self.assertEqual(len(procs), 3480)
                 if type(procs) == pd.DataFrame:
                     self.assertTrue(eq.conv_procs(procs2, fmt=inform).equals(procs))
                 else:
