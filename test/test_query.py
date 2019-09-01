@@ -68,7 +68,12 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(len(jobs), 3, 'job count in db wrong')
         self.assertEqual(jobs, [u'685016', u'685003', u'685000'], 'job ordering not in reverse order of submission')
         df = eq.get_jobs(fmt='pandas')
-        self.assertIn(df.shape, ((3, 47), (3,46)))
+        # sqlalchemy has 4 fewer fields, which we eventually want to remove from
+        # the job model
+        self.assertIn(df.shape, ((3,43), (3,47)))
+        # pony has some extra fields we don't care about and will probably remove:
+        # 'account', 'jobscriptname', 'sessionid', 'queue'
+        self.assertEqual(set(df.columns.values) - set(['account', 'jobscriptname', 'sessionid', 'queue']), set(['PERF_COUNT_SW_CPU_CLOCK', 'all_proc_tags', 'cancelled_write_bytes', 'cpu_time', 'created_at', 'delayacct_blkio_time', 'duration', 'end', 'env_changes_dict', 'env_dict', 'exitcode', 'guest_time', 'inblock', 'info_dict', 'invol_ctxsw', 'jobid', 'jobname', 'majflt', 'minflt', 'num_procs', 'num_threads', 'outblock', 'processor', 'rchar', 'rdtsc_duration', 'read_bytes', 'rssmax', 'start', 'submit', 'syscr', 'syscw', 'systemtime', 'tags', 'time_oncpu', 'time_waiting', 'timeslices', 'updated_at', 'user', 'user+system', 'usertime', 'vol_ctxsw', 'wchar', 'write_bytes']))
         df = eq.get_jobs('685016', fmt='pandas')
         self.assertEqual(df['jobid'][0], '685016', "cannot specify job as a single job id string")
         self.assertEqual(df.shape[0],1, "wrong selection of jobs when specified as a string")
@@ -151,7 +156,7 @@ class QueryAPI(unittest.TestCase):
         procs = eq.get_procs(['685016', '685000'], fmt='orm')
         self.assertEqual(procs.count(), 6892, 'wrong count of processes in ORM format')
         df = eq.get_procs(fmt='pandas', limit=10)
-        self.assertEqual(df.shape, (10,50), "incorrect dataframe shape with limit")
+        self.assertEqual(df.shape, (10,50))
 
     @unittest.skipIf(settings.orm == 'sqlalchemy', "skipped for sqlalchemy")
     @db_session

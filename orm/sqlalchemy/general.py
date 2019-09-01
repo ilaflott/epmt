@@ -215,13 +215,17 @@ def to_dict(obj, **kwargs):
     for k in excludes:
         if k in d:
             del d[k]
+    if '_sa_instance_state' in d:
+        del d['_sa_instance_state']
     if type(obj) == Process:
         d['job'] = obj.jobid
         d['jobid'] = obj.jobid
         del d['parent_id']
-        d['parent'] = obj.parent.id
+        del d['host_id']
+        d['parent'] = obj.parent.id if obj.parent else None
     if 'hosts' in d:
-        d['hosts'] = [h.name if type(h) == Host else h for h in obj.hosts]
+        #d['hosts'] = [h.name if type(h) == Host else h for h in obj.hosts]
+        del d['hosts']
     if 'user_id' in d:
         d['user'] = Session.query(User).get(d['user_id']).name
         del d['user_id']
