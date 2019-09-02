@@ -145,7 +145,12 @@ def timeline(jobs = [], limit=0, fltr='', when=None, hosts=[], fmt='pandas'):
 
 @db_session
 def get_roots(jobs, fmt='dict'):
-    return get_procs(jobs, order=Process.start, fltr=(Process.parent == None), fmt=fmt)
+    '''
+    Returns the root (top-level) processes of a job (or job collection)
+    A top-level process is defined as a process with no parent in the
+    set of processes that constitute the job.
+    '''
+    return get_procs(jobs, order=Process.start, fltr=((Process.parent == None) if settings.orm == 'sqlalchemy' else 'p.parent == None'), fmt=fmt)
 
 @db_session
 def root(job, fmt='dict'):
