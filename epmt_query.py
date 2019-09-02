@@ -143,6 +143,9 @@ def timeline(jobs = [], limit=0, fltr='', when=None, hosts=[], fmt='pandas'):
     """
     return get_procs(jobs, fmt=fmt, order='p.start', limit=limit, fltr=fltr, when=when, hosts=hosts)
 
+@db_session
+def get_roots(jobs, fmt='dict'):
+    return get_procs(jobs, order=Process.start, fltr=(Process.parent == None), fmt=fmt)
 
 @db_session
 def root(job, fmt='dict'):
@@ -171,14 +174,18 @@ def root(job, fmt='dict'):
     >>> p['id'],p['exename']
     (7266, u'tcsh')
     """
-    if isString(job):
-        job = Job[job]
-    p = job.processes.order_by('p.start').limit(1)
-    if fmt == 'orm': return p.to_list().pop()
-    if fmt == 'terse': return p.to_list().pop().id
+    # if isString(job):
+    #     job = get_(Job, job)
+    # p = job.processes.order_by(Process.start).limit(1)
+    # if fmt == 'orm': return p.to_list().pop()
+    # if fmt == 'terse': return p.to_list().pop().id
 
-    plist = __conv_procs_orm(p, fmt='dict')
-    return pd.DataFrame(plist) if fmt == 'pandas' else plist.pop()
+    # plist = __conv_procs_orm(p, fmt='dict')
+    # return pd.DataFrame(plist) if fmt == 'pandas' else plist.pop()
+    ret = get_procs(job, order=Process.start, limit=1, fmt=fmt)
+    # for all formats other than pandas we just pop the first item
+    # from the iterable
+    return ret if (fmt == 'pandas') else ret[0]
 
 @db_session
 def op_roots(jobs, tag, fmt='dict'):

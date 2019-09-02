@@ -308,7 +308,6 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(list(df.tags.values), [{u'op': u'hsmget'}, {u'op': u'mv'}])
         self.assertEqual(list(df['cpu_time'].values), [208577324.0, 30292583.0])
 
-    @unittest.skipIf(settings.orm == 'sqlalchemy', "skipped for sqlalchemy")
     @db_session
     def test_root(self):
         p = eq.root('685016')
