@@ -285,7 +285,6 @@ class QueryAPI(unittest.TestCase):
 
         df = eq.op_metrics(['685000', '685003', '685016'])
         self.assertEqual(df.shape,(573,32), 'wrong op_metrics shape when no tag specified')
-        #self.assertEqual([int(x) for x in df.duration.values][:10], [277371, 3607753, 95947, 3683612, 114, 94, 4087414, 362007, 367143, 29337], 'wrong op_metrics when no tag specified')
         self.assertEqual([int(x) for x in df.duration.values][:10], [6598692, 6709043, 6707903, 6676748, 6939098, 6541841, 6788901, 6125293, 6427261, 6472072], 'wrong op_metrics when no tag specified')
 
         df = eq.op_metrics(['685000', '685003', '685016'], tags=['op:hsmget', 'op:mv'])
@@ -320,12 +319,13 @@ class QueryAPI(unittest.TestCase):
         pids = [p.pid for p in eq.get_roots(['685000', '685003'], fmt='orm')]
         self.assertEqual(pids, [6098, 29001, 31171, 31291, 10015, 10168, 32139, 11002, 32315, 11172, 1311, 1490, 12990, 13118, 13220, 1652, 1941, 13597, 14403, 14547, 2321, 2655, 26466, 26469, 26500, 26726, 26729, 26760, 26986, 26989, 27020, 27246, 27249, 27280, 27506, 27509, 27540, 27775, 27833, 27836, 27867, 28093, 28129, 8082, 8179, 8231, 8283, 8335, 8387, 8439, 8491, 8543, 8603, 8655, 8707, 8863, 8997, 9044, 9090, 9126, 9162, 9198, 9237, 9881, 9930, 9979, 10028, 10077, 10126, 10175])
 
-    @unittest.skipIf(settings.orm == 'sqlalchemy', "skipped for sqlalchemy")
     @db_session
     def test_op_roots(self):
-        op_root_procs = eq.op_roots(['685000', '685003', '685016'], 'op_sequence:1', fmt='orm')
-        l = eq.select((p.job.jobid, p.pid) for p in op_root_procs)[:]
-        self.assertEqual(l, [(u'685000', 6226), (u'685000', 10042), (u'685000', 10046), (u'685000', 10058), (u'685000', 10065), (u'685000', 10066), (u'685003', 29079), (u'685003', 31184), (u'685003', 31185), (u'685003', 31191), (u'685003', 31198), (u'685003', 31199), (u'685016', 122259), (u'685016', 128848), (u'685016', 128849), (u'685016', 128855), (u'685016', 128862), (u'685016', 128863)])
+        op_root_procs = eq.op_roots(['685000', '685003'], 'op_sequence:4', fmt='orm')
+        self.assertEqual([p.pid for p in op_root_procs], [11023, 11185, 11187, 32160, 32328, 32330])
+        #op_root_procs = eq.op_roots(['685000', '685003', '685016'], 'op_sequence:1', fmt='orm')
+        #l = eq.select((p.job.jobid, p.pid) for p in op_root_procs)[:]
+        #self.assertEqual(l, [(u'685000', 6226), (u'685000', 10042), (u'685000', 10046), (u'685000', 10058), (u'685000', 10065), (u'685000', 10066), (u'685003', 29079), (u'685003', 31184), (u'685003', 31185), (u'685003', 31191), (u'685003', 31198), (u'685003', 31199), (u'685016', 122259), (u'685016', 128848), (u'685016', 128849), (u'685016', 128855), (u'685016', 128862), (u'685016', 128863)])
         df = eq.op_roots(['685000', '685003', '685016'], 'op_sequence:1', fmt='pandas')
         self.assertEqual(df.shape, (18,50))
         self.assertEqual(list(df['pid'].values), [6226, 10042, 10046, 10058, 10065, 10066, 29079, 31184, 31185, 31191, 31198, 31199, 122259, 128848, 128849, 128855, 128862, 128863])

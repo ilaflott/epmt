@@ -213,8 +213,14 @@ def op_roots(jobs, tag, fmt='dict'):
     if jobs.count() > 10:
         logger.warning('op_roots is slow currently for job sizes > 10')
     op_procs = get_procs(jobs, tag, fmt='orm')
-    # TODO: This probably can be sped up by partitioning op_procs by job
-    root_op_procs = op_procs.filter(lambda p: p.parent not in op_procs).order_by(Process.job, Process.start)
+    if settings.orm == 'sqlalchemy':
+        from sqlalchemy.orm import aliased
+        ProcessAlias = aliased(Process)
+        op_procs_pk = [p.id for p in op_procs]
+        root_op_procs = op_procs.join(ProcessAlias, Process.parent).filter(~ProcessAlias.id.in_(op_procs_pk)).order_by(Process.jobid, Process.start)
+    else:
+        # TODO: This probably can be sped up by partitioning op_procs by job
+        root_op_procs = op_procs.filter(lambda p: p.parent not in op_procs).order_by(Process.job, Process.start)
     return __conv_procs_orm(root_op_procs, fmt=fmt)
 
 
