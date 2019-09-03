@@ -293,10 +293,8 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(list(df.duration.values), [18116213243, 6688820532, 7585973173, 25706545, 212902301, 62601798])
         self.assertEqual(list(df.tags.values), [{'op': 'hsmget'}, {'op': 'hsmget'}, {'op': 'hsmget'}, {'op': 'mv'}, {'op': 'mv'}, {'op': 'mv'}])
 
-    @unittest.skipIf(settings.orm == 'sqlalchemy', "skipped for sqlalchemy")
     @db_session
     def test_op_metrics_grouped(self):
-        #from hashlib import md5
         df = eq.op_metrics(['685000', '685003', '685016'], group_by_tag=True)
         self.assertEqual(df.shape,(459,30), 'wrong op_metrics grouped shape when no tag specified')
         self.assertEqual(list(df['tags'].values[:10]), [{u'op_instance': u'11', u'op_sequence': u'66', u'op': u'cp'}, {u'op_instance': u'15', u'op_sequence': u'79', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'247', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'251', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'255', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'259', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'263', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'267', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'271', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'30', u'op': u'cp'}], 'wrong tags ordering in grouped op_metrics')
