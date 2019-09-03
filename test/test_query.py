@@ -359,7 +359,6 @@ class QueryAPI(unittest.TestCase):
         n = eq.delete_refmodels(r['id'])
         self.assertEqual(n, 1, 'wrong ref_model delete count')
 
-    @unittest.skipIf(settings.orm == 'sqlalchemy', "skipped for sqlalchemy")
     @db_session
     def test_dm_calc(self):
         jobs = eq.get_jobs(['685000', '685003', '685016'], fmt='orm')

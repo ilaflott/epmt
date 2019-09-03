@@ -590,7 +590,13 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             hosts.add(proc.host)
         logger.info("Adding %d processes (%d threads) to job",len(all_procs), nthreads)
         j.hosts = list(hosts)
-        orm.add_to_collection_(j.processes, all_procs)
+        # we MUST NOT add all_procs to j.processes below
+        # as we already associated the process with the job
+        # when we created the process. The ORM automatically does the backref.
+        # In particular, in sqlalchemy, uncommenting the line below creates 
+        # duplicate bindings.
+        # orm.add_to_collection_(j.processes, all_procs)
+
     proc_sums['num_procs'] = len(all_procs)
     proc_sums['num_threads'] = nthreads
     # merge the threads sums across all processes in the job.proc_sums dict
@@ -611,7 +617,9 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     j.duration = int(d.total_seconds()*1000000)
     # the cpu time for a job is the sum of the exclusive times
     # of all processes in the job
-    j.cpu_time = orm.sum_attribute_(j.processes, 'cpu_time')
+    # We use list-comprehension and aggregation over slower ORM ops
+    # j.cpu_time = orm.sum_attribute_(j.processes, 'cpu_time')
+    j.cpu_time = sum([p.cpu_time for p in all_procs])
     if root_proc:
         if root_proc.exitcode != j.exitcode:
             logger.warning('metadata shows the job exit code is {0}, but root process exit code is {1}'.format(j.exitcode, root_proc.exitcode))
