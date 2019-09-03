@@ -365,10 +365,10 @@ class QueryAPI(unittest.TestCase):
         jobs = eq.get_jobs(['685000', '685003', '685016'], fmt='orm')
         self.assertEqual(jobs.count(), 3)
         (perc, df, j_cpu) = eq.dm_calc(jobs)
-        self.assertEqual(perc, 43.16, 'wrong dm percent')
-        self.assertEqual(df.shape, (6, 30), 'wrong df shape')
-        self.assertEqual(df['cpu_time'].sum(), 273510353.0, 'wrong dm cpu time sum')
-        self.assertEqual(j_cpu, 633756327.0, 'wrong job cpu time sum')
+        self.assertEqual(perc, 43.16)
+        self.assertEqual(df.shape, (6, 30))
+        self.assertEqual(df['cpu_time'].sum(), 273510353.0)
+        self.assertEqual(j_cpu, 633756327.0)
 
     @unittest.skipIf(settings.orm == 'sqlalchemy', "skipped for sqlalchemy")
     @db_session

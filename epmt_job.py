@@ -272,7 +272,8 @@ def _proc_ancestors(pid_map, proc, ancestor_pid):
         orm.add_to_collection_(ancestor.descendants, proc)
 
         # we don't need to do the reverse mapping (below) as that's
-        # implied using the ORM backref
+        # implied using the ORM backref. And if we uncomment it,
+        # then sqlalchemy tries to add a duplicate record
         # orm.add_to_collection_(proc.ancestors, ancestor)
 
         # now that we have done this node let's go to its parent
@@ -281,12 +282,17 @@ def _proc_ancestors(pid_map, proc, ancestor_pid):
 
 def _create_process_tree(pid_map):
     logger.info("creating process tree..")
+    parent_map = {}
     for (pid, proc) in pid_map.items():
         ppid = proc.ppid
         if ppid in pid_map:
             parent = pid_map[ppid]
             proc.parent = parent
-            orm.add_to_collection_(parent.children, proc)
+            # commented out line below as it's automatically
+            # implied by the proc.parent assignment above.
+            # If we uncomment it, then on sqlalchemy, each
+            # parent will have duplicate nodes for each child.
+            # orm.add_to_collection_(parent.children, proc)
     for (pid, proc) in pid_map.items():
         ppid = proc.ppid
         _proc_ancestors(pid_map, proc, ppid)
