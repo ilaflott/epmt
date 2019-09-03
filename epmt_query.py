@@ -141,7 +141,7 @@ def timeline(jobs = [], limit=0, fltr='', when=None, hosts=[], fmt='pandas'):
     3  685000  modulecmd 2019-06-15 11:52:04.176020  pp208
     4  685000       test 2019-06-15 11:52:04.192758  pp208
     """
-    return get_procs(jobs, fmt=fmt, order='p.start', limit=limit, fltr=fltr, when=when, hosts=hosts)
+    return get_procs(jobs, fmt=fmt, order=(Process.start), limit=limit, fltr=fltr, when=when, hosts=hosts)
 
 @db_session
 def get_roots(jobs, fmt='dict'):
