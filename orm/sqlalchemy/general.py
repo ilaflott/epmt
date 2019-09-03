@@ -232,17 +232,19 @@ def to_dict(obj, **kwargs):
     return d
 
 
-def orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only):
+def orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only, columns=None):
     from .models import Process, Host
     from epmtlib import tags_list, isString
     from datetime import datetime
+    if columns is None:
+        columns = [Process]
     if jobs:
         jobs = jobs_col(jobs)
         jobs = [j.jobid for j in jobs]
-        qs = Session.query(Process).filter(Process.jobid.in_(jobs))
+        qs = Session.query(*columns).filter(Process.jobid.in_(jobs))
     else:
         # no jobs set, so expand the scope to all Process objects
-        qs = Session.query(Process)
+        qs = Session.query(*columns)
 
     if not (fltr is None):
         if isString(fltr):

@@ -273,7 +273,6 @@ class QueryAPI(unittest.TestCase):
         from hashlib import md5
         self.assertEqual(md5(str(tags).encode('utf-8')).hexdigest(), 'bd7eabf266aa5b179bbe4d65b35bd47f', 'wrong hash for job_proc_tags')
 
-    @unittest.skipIf(settings.orm == 'sqlalchemy', "skipped for sqlalchemy")
     @db_session
     def test_op_metrics(self):
         df = eq.op_metrics(['685000', '685016'])

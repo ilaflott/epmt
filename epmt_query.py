@@ -855,10 +855,13 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=F
     all_procs = []
     # we iterate over tags, where each tag is dictionary
     for t in tags:
-        procs = get_procs(jobs, tags = t, exact_tag_only = exact_tags_only, fmt='orm')
         # group the Query response we got by jobid
         # we use group_concat to join the thread_sums json into a giant string
-        procs_grp_by_job = select((p.job, count(p.id), sum(p.duration), sum(p.cpu_time), sum(p.numtids), group_concat(p.threads_sums, sep='@@@')) for p in procs)
+        if settings.orm == 'sqlalchemy':
+            procs_grp_by_job = orm_get_procs(jobs, t, None, None, 0, None, [], exact_tags_only, [Process.jobid, func.count(Process.id), func.sum(Process.duration), func.sum(Process.cpu_time), func.sum(Process.numtids), func.group_concat(Process.threads_sums, '@@@')]).group_by(Process.jobid)
+        else:
+            procs = get_procs(jobs, tags = t, exact_tag_only = exact_tags_only, fmt='orm')
+            procs_grp_by_job = select((p.job, count(p.id), sum(p.duration), sum(p.cpu_time), sum(p.numtids), group_concat(p.threads_sums, sep='@@@')) for p in procs)
         for row in procs_grp_by_job:
             (j, nprocs, duration, excl_cpu, ntids, threads_sums_str) = row
             # convert from giant string to array of strings where each list
@@ -874,7 +877,8 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=F
             # also add some sums we obtained in the query
             # we add synthetic alias keys for jobid and cpu_time for
             # a more consistent user experience
-            sum_dict.update({'job': j.jobid, 'jobid': j.jobid, 'tags': t, 'num_procs': nprocs, 'numtids': ntids, 'cpu_time': excl_cpu, 'duration': duration})
+            jobid = j.jobid if (type(j) == Job) else j
+            sum_dict.update({'job': jobid, 'jobid': jobid, 'tags': t, 'num_procs': nprocs, 'numtids': ntids, 'cpu_time': excl_cpu, 'duration': duration})
             all_procs.append(sum_dict)
 
     if group_by_tag:
