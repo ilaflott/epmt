@@ -369,7 +369,6 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(df['cpu_time'].sum(), 273510353.0)
         self.assertEqual(j_cpu, 633756327.0)
 
-    @unittest.skipIf(settings.orm == 'sqlalchemy', "skipped for sqlalchemy")
     @db_session
     def test_dm_calc_iter(self):
         jobs = eq.get_jobs(['685000', '685003', '685016'], fmt='orm')
