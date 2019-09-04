@@ -721,10 +721,11 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
 
     # do we have a list of jobids?
     # if so, we need to get the actual DB objects for them
-    if type(jobs) == set:
-        jobs = list(jobs)
-    if type(jobs) == list and isString(jobs[0]):
-        jobs = Job.select(lambda j: j.jobid in jobs)
+    #if type(jobs) == set:
+    #    jobs = list(jobs)
+    #if type(jobs) == list and isString(jobs[0]):
+    #    jobs = Job.select(lambda j: j.jobid in jobs)
+    jobs = jobs_col(jobs)
 
     if op_tags:
         if op_tags == '*':
