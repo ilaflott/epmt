@@ -4,7 +4,7 @@ from datetime import datetime
 
 refmodel_job_associations_table = Table('refmodel_job_associations', Base.metadata,
     Column('jobid', String, ForeignKey('jobs.jobid'), primary_key=True),
-    Column('refmodel_id', Integer, ForeignKey('refmodels.id'))
+    Column('refmodel_id', Integer, ForeignKey('refmodels.id'), primary_key=True)
 )
 
 host_job_associations_table = Table('host_job_associations', Base.metadata,

@@ -490,7 +490,7 @@ def detect_rootcause_op(jobs, inp, tag, features = FEATURES,  methods = [modifie
         jobs = eq.conv_jobs(get_(ReferenceModel, jobs).jobs, fmt='orm')
     jobs = eq.conv_jobs(jobs, fmt='orm')
     inp = eq.conv_jobs(inp, fmt='orm')
-    if len(inp) > 1:
+    if inp.count() > 1:
         print('You can only do RCA for a single "inp" job')
         return (False, None, None)
     tag = tag_from_string(tag) if (type(tag) == str) else tag

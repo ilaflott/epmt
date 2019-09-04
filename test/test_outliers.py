@@ -168,7 +168,7 @@ class OutliersAPI(unittest.TestCase):
     @db_session
     def test_partition_jobs(self):
         jobs = eq.get_jobs(tags='launch_id:6656', fmt='orm')
-        self.assertEqual(len(jobs), 4, "incorrect job count using tags")
+        self.assertEqual(jobs.count(), 4, "incorrect job count using tags")
         parts = eod.partition_jobs(jobs, fmt='terse')
         self.assertEqual(len(parts), 3, "incorrect count of items in partition dict")
         self.assertEqual(parts['cpu_time'], (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-194024', u'kern-6656-20190614-191138']), set([u'kern-6656-20190614-192044-outlier'])))
@@ -217,11 +217,12 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(df.shape, (12,3), "wrong dataframe format")
         self.assertEqual([int(x) for x in list(df.loc['modified_z_score_ratio'])], [379, 56, 0], "wrong madz score ratios")
 
+    @unittest.skipIf(settings.orm == 'sqlalchemy', "skipped for sqlalchemy")
     @db_session
     def test_trained_model(self):
         fltr = (~Job.jobid.like('%outlier%')) if settings.orm == 'sqlalchemy' else '"outlier" not in j.jobid'
         jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm', fltr=fltr)
-        self.assertEqual(len(jobs), 3)
+        self.assertEqual(jobs.count(), 3)
         r = eq.create_refmodel(jobs, tag='exp_name:linux_kernel_test')
         self.assertEqual(r['tags'], {'exp_name': 'linux_kernel_test'})
         rq = eq.get_refmodels(tag='exp_name:linux_kernel_test', fmt='orm')
