@@ -17,6 +17,7 @@ pipelines:
           - env -i PATH=${PWD}:${PATH} /bin/bash -Eeux epmt-example.anysh
           - env -i PATH=${PWD}:${PATH} /bin/bash epmt-check-stage-submit.sh
           - env -i PATH=${PWD}:${PATH} python -m unittest discover -s test -v
+          - env -i PATH=${PWD}:${PATH} EPMT_USE_SQLALCHEMY=1 python -m unittest -v -f test.test_query
     - step:
         image: python:3.5
         caches:

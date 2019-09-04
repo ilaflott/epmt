@@ -91,6 +91,7 @@ def setup_db(settings,drop=False,create=True):
 def get_(model, pk=None, **kwargs):
     return Session.query(model).get(pk) if (pk != None) else Session.query(model).filter_by(**kwargs).one_or_none()
 
+
 def orm_set(o, **kwargs):
     for k in kwargs.keys():
         setattr(o, k, kwargs[k])
@@ -111,6 +112,23 @@ def orm_delete_jobs(jobs):
     for j in jobs:
         Session.delete(j)
     Session.commit()
+
+def orm_delete_refmodels(ref_ids):
+    from .models import ReferenceModel
+    ref_models = Session.query(ReferenceModel).filter(ReferenceModel.id.in_(ref_ids))
+    n = ref_models.count()
+    if n < len(ref_ids):
+        logger.warning("Request for deleting {0} model(s), but only found {1} models from your selection to delete".format(len(ref_ids), n))
+    if n > 0:
+        try:
+            for r in ref_models:
+                Session.delete(r)
+            Session.commit()
+        except Exception as e:
+            logger.error(str(e))
+            return 0
+    return n
+
 
 def commit_():
     return Session.commit()
@@ -206,7 +224,7 @@ def jobs_col(jobs):
 
 
 def to_dict(obj, **kwargs):
-    from .models import Job, Process, User, Host
+    from .models import Job, Process, User, Host, ReferenceModel
     from epmtlib import isString
     d = obj.__dict__.copy()
     excludes = kwargs['exclude'] if 'exclude' in kwargs else []
@@ -217,6 +235,11 @@ def to_dict(obj, **kwargs):
             del d[k]
     if '_sa_instance_state' in d:
         del d['_sa_instance_state']
+    if type(obj) == ReferenceModel:
+        if kwargs.get('with_collections'):
+            d['jobs'] = [j.jobid if type(j) == Job else j for j in obj.jobs ]
+        else:
+            del d['jobs']
     if type(obj) == Process:
         d['job'] = obj.jobid
         d['jobid'] = obj.jobid
@@ -224,8 +247,10 @@ def to_dict(obj, **kwargs):
         del d['host_id']
         d['parent'] = obj.parent.id if obj.parent else None
     if 'hosts' in d:
-        #d['hosts'] = [h.name if type(h) == Host else h for h in obj.hosts]
-        del d['hosts']
+        if kwargs.get('with_collections'):
+            d['hosts'] = [h.name if type(h) == Host else h for h in obj.hosts]
+        else:
+            del d['hosts']
     if 'user_id' in d:
         d['user'] = Session.query(User).get(d['user_id']).name
         del d['user_id']
@@ -360,6 +385,25 @@ def tag_filter_(qs, tag, exact_match, model=None):
     return qs
 
 
+def orm_get_refmodels(tag = {}, fltr=None, limit=0, order=None, exact_tag_only=False):
+    from .models import ReferenceModel
+
+    qs = Session.query(ReferenceModel)
+
+    qs = tag_filter_(qs, tag, exact_tag_only, ReferenceModel)
+
+    # if fltr is a lambda function or a string apply it
+    if not (fltr is None):
+        qs = qs.filter(fltr)
+
+    if not (order is None):
+        qs = qs.order_by(order)
+
+    # finally set limits on the number of processes returned
+    if limit:
+        qs = qs.limit(int(limit))
+
+    return qs
 
 ### end API ###
 

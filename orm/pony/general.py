@@ -68,6 +68,26 @@ def orm_delete_jobs(jobs):
             p.delete()
     jobs.delete()
 
+def orm_delete_refmodels(ref_ids):
+    from .models import ReferenceModel
+
+    ref_models = ReferenceModel.select(lambda r: r.id in ref_ids)
+    n = ref_models.count()
+    if n < len(ref_ids):
+        logger.warning("Request for deleting {0} model(s), but only found {1} models from your selection to delete".format(len(ref_ids), n))
+    if n > 0:
+        try:
+            for r in ref_models:
+                for j in r.jobs:
+                    j.ref_models.clear()
+            ref_models.delete()
+            commit()
+        except Exception as e:
+            logger.error(str(e))
+            return 0
+    return n
+
+
 
 def commit_():
     return commit()
@@ -308,4 +328,25 @@ def tag_filter_(qs, tag, exact_match):
         # of the passed tag
         for (k,v) in tag.items():
             qs = qs.filter(lambda p: p.tags[k] == v)
+    return qs
+
+def orm_get_refmodels(tag = {}, fltr=None, limit=0, order='', exact_tag_only=False):
+    from .models import ReferenceModel
+
+    qs = ReferenceModel.select()
+
+    # filter using tag if set
+    qs = tag_filter_(qs, tag, exact_tag_only)
+
+    # if fltr is a lambda function or a string apply it
+    if fltr:
+        qs = qs.filter(fltr)
+
+    if order:
+        qs = qs.order_by(order)
+
+    # finally set limits on the number of processes returned
+    if limit:
+        qs = qs.limit(int(limit))
+
     return qs

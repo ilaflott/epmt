@@ -573,7 +573,7 @@ get_job_proc_tags = job_proc_tags
 
 
 @db_session
-def get_refmodels(tag = {}, fltr=None, limit=0, order='', exact_tag_only=False, merge_nested_fields=True, fmt='dict'):
+def get_refmodels(tag = {}, fltr=None, limit=0, order=None, exact_tag_only=False, merge_nested_fields=True, fmt='dict'):
     """
     This function returns reference models filtered using tag and fltr
 
@@ -590,29 +590,12 @@ def get_refmodels(tag = {}, fltr=None, limit=0, order='', exact_tag_only=False, 
     EXAMPLE:
       get_refmodels(tag = 'exp_name:ESM4;exp_component:ice_1x1', fmt='pandas')
     """
-    qs = ReferenceModel.select()
 
     # filter using tag if set
     if type(tag) == str:
         tag = tag_from_string(tag)
-    if exact_tag_only:
-        qs = qs.filter(lambda r: r.tags == tag)
-    else:
-        # we consider a match if the job tags are a superset
-        # of the passed tags
-        for (k,v) in tag.items():
-            qs = qs.filter(lambda r: r.tags[k] == v)
 
-    # if fltr is a lambda function or a string apply it
-    if fltr:
-        qs = qs.filter(fltr)
-
-    if order:
-        qs = qs.order_by(order)
-
-    # finally set limits on the number of processes returned
-    if limit:
-        qs = qs.limit(int(limit))
+    qs = orm_get_refmodels(tag, fltr, limit, order, exact_tag_only)
 
     if fmt == 'orm':
         return qs
@@ -725,7 +708,7 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
     #    jobs = list(jobs)
     #if type(jobs) == list and isString(jobs[0]):
     #    jobs = Job.select(lambda j: j.jobid in jobs)
-    jobs = jobs_col(jobs)
+    jobs = jobs_col(jobs)[:]
 
     if op_tags:
         if op_tags == '*':
@@ -755,12 +738,12 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
 
     # now save the ref model
     r = ReferenceModel(jobs=jobs, tags=tag, op_tags=op_tags, computed=computed)
-    commit()
+    commit_()
     if fmt=='orm': 
         return r
     elif fmt=='terse': 
         return r.id
-    r_dict = r.to_dict(with_collections=True)
+    r_dict = to_dict(r, with_collections=True)
     return pd.Series(r_dict) if fmt=='pandas' else r_dict
 
 # returns the number of models deleted.
@@ -778,21 +761,8 @@ def delete_refmodels(*ref_ids):
         # user already gave a list of ids
         ref_ids = ref_ids[0]
     ref_ids = [int(r) for r in ref_ids]
-    ref_models = ReferenceModel.select(lambda r: r.id in ref_ids)
-    n = ref_models.count()
-    if n < len(ref_ids):
-        logger.warning("Request for deleting {0} model(s), but only found {1} models from your selection to delete".format(len(ref_ids), n))
-    if n > 0:
-        try:
-            for r in ref_models:
-                for j in r.jobs:
-                    j.ref_models.clear()
-            ref_models.delete()
-            commit()
-        except Exception as e:
-            logger.error(str(e))
-            return 0
-    return n
+    return orm_delete_refmodels(ref_ids)
+
             
 # This is a low-level function that finds the unique process
 # tags for a job (job is either a job id or a Job object). 

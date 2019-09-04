@@ -341,7 +341,7 @@ class QueryAPI(unittest.TestCase):
         pids = [p.pid for p in procs]
         self.assertEqual(pids, [122181, 122182, 122183, 122184, 122185])
 
-    @unittest.skipIf(settings.orm == 'sqlalchemy', "skipped for sqlalchemy")
+    #@unittest.skipIf(settings.orm == 'sqlalchemy', "skipped for sqlalchemy")
     @db_session
     def test_refmodel_crud(self):
         jobs = eq.get_jobs(fmt='terse')
@@ -355,7 +355,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(r1.id, r['id'])
         self.assertEqual(r1.tags, {'model_name': model_name})
         self.assertFalse(r1.op_tags)
-        self.assertEqual(set(r1.jobs.jobid), set(jobs))
+        self.assertEqual(set([j.jobid for j in r1.jobs]), set(jobs))
         n = eq.delete_refmodels(r['id'])
         self.assertEqual(n, 1, 'wrong ref_model delete count')
 
