@@ -532,7 +532,7 @@ def get_thread_metrics(*processes):
     for proc in processes:
         if type(proc) == int:
             # user supplied database id of process
-            p = Process.select(lambda p: p.id == proc).first()
+            p = get_(Process, proc)
         else:
             # user supplied process objects directly
             p = proc

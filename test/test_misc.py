@@ -3,7 +3,6 @@ from __future__ import print_function
 import unittest
 from sys import stderr, exit
 from glob import glob
-from orm import db_session, setup_db, Job
 from os import environ
 
 # put this above all epmt imports
@@ -12,18 +11,21 @@ from epmtlib import set_logging
 set_logging(-1)
 
 # Put EPMT imports only after we have called set_logging()
-import epmt_query as eq
+import epmt_default_settings as settings
+if environ.get('EPMT_USE_SQLALCHEMY'):
+    settings.orm = 'sqlalchemy'
+    settings.db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
+
 from epmtlib import timing, capture
+from orm import db_session, setup_db, Job
+import epmt_query as eq
 from epmt_cmds import epmt_submit
 from epmt_cmd_delete import epmt_delete_jobs
 from epmt_cmd_list import  epmt_list_jobs, epmt_list_procs, epmt_list_job_proc_tags, epmt_list_refmodels, epmt_list_op_metrics, epmt_list_thread_metrics
-import epmt_default_settings as settings
+
 
 @timing
 def setUpModule():
-    if settings.db_params.get('filename') != ':memory:':
-        print('db_params MUST use in-memory sqlite for testing', file=stderr)
-        exit(1)
     setup_db(settings, drop=True)
     print('\n' + str(settings.db_params))
     datafiles='test/data/misc/*.tgz'
