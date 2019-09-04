@@ -23,7 +23,7 @@ class Job(db.Entity):
 # End rollups
     created_at = Required(datetime, default=datetime.utcnow)
     updated_at = Required(datetime, default=datetime.utcnow)
-    info_dict = Optional(Json)
+    info_dict = Optional(Json, default={})
 # End generic template
     env_dict = Optional(Json)
     env_changes_dict = Optional(Json)

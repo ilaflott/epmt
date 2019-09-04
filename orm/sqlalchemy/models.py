@@ -19,7 +19,7 @@ ancestor_descendant_associations_table = Table('ancestor_descendant_associations
 
 class User(Base):
     __tablename__ = 'users'
-    created_at = Column(DateTime, default=func.now())
+    created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, onupdate=datetime.now)
     name = Column(String, unique=True)
     id = Column(Integer, primary_key = True)
@@ -33,7 +33,7 @@ class User(Base):
 
 class Host(Base):
     __tablename__ = 'hosts'
-    created_at = Column(DateTime, default=func.now())
+    created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, onupdate=datetime.now)
     name = Column(String, primary_key=True)
     info_dict = Column(JSON)
@@ -46,7 +46,7 @@ class Host(Base):
 
 class ReferenceModel(Base):
     __tablename__ = 'refmodels'
-    created_at = Column(DateTime, default=func.now())
+    created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, onupdate=datetime.now)
     id = Column(Integer, primary_key = True)
     tags = Column(JSON)
@@ -60,9 +60,9 @@ class ReferenceModel(Base):
 
 class Job(Base):
     __tablename__ = 'jobs'
-    created_at = Column(DateTime, default=func.now())
+    created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, onupdate=datetime.now)
-    info_dict = Column(JSON)
+    info_dict = Column(JSON, default={})
 
     start = Column(DateTime, default=datetime.now)
     end = Column(DateTime, default=datetime.now)
@@ -97,7 +97,7 @@ class Job(Base):
 
 class Process(Base):
     __tablename__ = 'processes'
-    created_at = Column(DateTime, default=func.now())
+    created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, onupdate=datetime.now)
     info_dict = Column(JSON)
     id = Column(Integer, primary_key = True)
