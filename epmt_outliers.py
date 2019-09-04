@@ -5,7 +5,7 @@ import numpy as np
 import operator
 from logging import getLogger
 from json import dumps, loads
-from orm import db_session, Query, QueryResult, ReferenceModel
+from orm import db_session, ReferenceModel, get_
 
 # the first epmt import must be epmt_query as it sets up logging
 import epmt_query as eq
@@ -150,7 +150,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
     if trained_model:
         logger.debug('using a trained model for detecting outliers')
         if type(trained_model) == int:
-            trained_model = ReferenceModel[trained_model]
+            trained_model = get_(ReferenceModel, trained_model)
 
     for m in methods:
         model_params[m] = trained_model.computed[m.__name__] if trained_model else {}
@@ -260,7 +260,7 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
         model_tags_set = set()
         logger.debug('using a trained model for detecting outliers')
         if type(trained_model) == int:
-            trained_model = ReferenceModel[trained_model]
+            trained_model = get_(ReferenceModel, trained_model)
         #logger.debug('Ref. model scores: {0}'.format(trained_model.computed))
         #logger.debug('Ref. model op_tags: {0}'.format(trained_model.op_tags))
         logger.debug('Ref model contains {0} op_tags'.format(len(trained_model.op_tags)))
@@ -437,7 +437,7 @@ def detect_rootcause(jobs, inp, features = FEATURES,  methods = [modified_z_scor
     tuple (feature,<diff_score>)
     """
     if type(jobs) == int:
-        jobs = eq.conv_jobs(ReferenceModel[jobs].jobs, fmt='pandas')
+        jobs = eq.conv_jobs(get_(ReferenceModel, jobs).jobs, fmt='pandas')
     elif type(jobs) != pd.DataFrame:
         jobs = eq.conv_jobs(jobs, fmt='pandas')
     if type(inp) != pd.DataFrame:
@@ -487,7 +487,7 @@ def detect_rootcause_op(jobs, inp, tag, features = FEATURES,  methods = [modifie
         print('You must specify a non-empty tag')
         return (False, None, None)
     if type(jobs) == int:
-        jobs = eq.conv_jobs(ReferenceModel[jobs].jobs, fmt='orm')
+        jobs = eq.conv_jobs(get_(ReferenceModel, jobs).jobs, fmt='orm')
     jobs = eq.conv_jobs(jobs, fmt='orm')
     inp = eq.conv_jobs(inp, fmt='orm')
     if len(inp) > 1:

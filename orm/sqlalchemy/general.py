@@ -318,7 +318,7 @@ def orm_get_jobs_(qs, tags, fltr, order, limit, offset, when, before, after, hos
     from epmtlib import tags_list, isString
     from datetime import datetime
 
-    if fltr:
+    if not fltr is None:
         if isString(fltr):
             # sql query, so use the text function
             qs = qs.filter(text(fltr))

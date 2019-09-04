@@ -4,7 +4,6 @@ import unittest
 from sys import stderr, exit
 from glob import glob
 from os import environ
-from orm import db_session, setup_db
 from json import loads
 
 # put this above all epmt imports so they use defaults
@@ -14,17 +13,21 @@ from epmtlib import set_logging
 set_logging(-1)
 
 # Put EPMT imports only after we have called set_logging()
+import epmt_default_settings as settings
+
+if environ.get('EPMT_USE_SQLALCHEMY'):
+    settings.orm = 'sqlalchemy'
+    settings.db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
+
+from epmtlib import timing, frozen_dict
+from orm import db_session, setup_db, Job
 import epmt_query as eq
 import epmt_outliers as eod
-from epmtlib import timing, frozen_dict
 from epmt_cmds import epmt_submit
-import epmt_default_settings as settings
+
 
 @timing
 def setUpModule():
-    if settings.db_params.get('filename') != ':memory:':
-        print('db_params MUST use in-memory sqlite for testing', file=stderr)
-        exit(1)
     setup_db(settings, drop=True)
     print('\n' + str(settings.db_params))
     datafiles='test/data/outliers/*.tgz'
@@ -68,7 +71,8 @@ class OutliersAPI(unittest.TestCase):
     @db_session
     def test_outlier_jobs_trained(self):
         all_jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm')
-        jobs_ex_outl = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm', fltr='"outlier" not in j.jobid')
+        fltr = (~Job.jobid.like('%outlier%')) if settings.orm == 'sqlalchemy' else '"outlier" not in j.jobid'
+        jobs_ex_outl = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm', fltr=fltr)
         r = eq.create_refmodel(jobs_ex_outl, fmt='terse')
         (df, parts) = eod.detect_outlier_jobs(all_jobs, trained_model=r)
         self.assertEqual(len(df[df.duration > 0]), 1, "incorrect count of duration outliers")
@@ -89,7 +93,8 @@ class OutliersAPI(unittest.TestCase):
     @db_session
     def test_outlier_ops_trained(self):
         all_jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm')
-        jobs_ex_outl = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm', fltr='"outlier" not in j.jobid')
+        fltr = (~Job.jobid.like('%outlier%')) if settings.orm == 'sqlalchemy' else '"outlier" not in j.jobid'
+        jobs_ex_outl = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm', fltr=fltr)
         r = eq.create_refmodel(jobs_ex_outl, fmt='terse', op_tags='*')
         features = ['rssmax', 'cpu_time', 'duration', 'num_procs']
         (df, parts, scores_df, sorted_tags, sorted_features) = eod.detect_outlier_ops(all_jobs, trained_model=r, features=features)
@@ -190,8 +195,10 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_rca_jobs(self):
-        ref_jobs = eq.get_jobs(tags='exp_name:linux_kernel', fltr='"outlier" not in j.jobid', fmt='orm')
-        outlier_job = eq.get_jobs(tags='exp_name:linux_kernel', fltr='"outlier" in j.jobid', fmt='orm')
+        fltr = (~Job.jobid.like('%outlier%')) if settings.orm == 'sqlalchemy' else '"outlier" not in j.jobid'
+        ref_jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm', fltr=fltr)
+        fltr2 = (Job.jobid.like('%outlier%')) if settings.orm == 'sqlalchemy' else '"outlier" in j.jobid'
+        outlier_job = eq.get_jobs(tags='exp_name:linux_kernel', fltr=fltr2, fmt='orm')
         (res, df, sl) = eod.detect_rootcause(ref_jobs, outlier_job)
         self.assertTrue(res, 'detect_rootcause returned False')
         self.assertEqual(list(df.columns.values), ['cpu_time', 'duration', 'num_procs'], 'wrong order of features returned by RCA')
@@ -200,8 +207,10 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_rca_ops(self):
-        ref_jobs = eq.get_jobs(tags='exp_name:linux_kernel', fltr='"outlier" not in j.jobid', fmt='orm')
-        outlier_job = eq.get_jobs(tags='exp_name:linux_kernel', fltr='"outlier" in j.jobid', fmt='orm')
+        fltr = (~Job.jobid.like('%outlier%')) if settings.orm == 'sqlalchemy' else '"outlier" not in j.jobid'
+        ref_jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm', fltr=fltr)
+        fltr2 = (Job.jobid.like('%outlier%')) if settings.orm == 'sqlalchemy' else '"outlier" in j.jobid'
+        outlier_job = eq.get_jobs(tags='exp_name:linux_kernel', fltr=fltr2, fmt='orm')
         (res, df, sl) = eod.detect_rootcause_op(ref_jobs, outlier_job, tag='op_sequence:4')
         self.assertTrue(res, 'detect_rootcause_op returned False')
         self.assertEqual(list(df.columns.values), ['cpu_time', 'duration', 'num_procs'], 'wrong order of features returned by RCA')
@@ -210,7 +219,8 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_trained_model(self):
-        jobs = eq.get_jobs(tags='exp_name:linux_kernel', fltr='"outlier" not in j.jobid', fmt='terse')
+        fltr = (~Job.jobid.like('%outlier%')) if settings.orm == 'sqlalchemy' else '"outlier" not in j.jobid'
+        jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm', fltr=fltr)
         self.assertEqual(len(jobs), 3)
         r = eq.create_refmodel(jobs, tag='exp_name:linux_kernel_test')
         self.assertEqual(r['tags'], {'exp_name': 'linux_kernel_test'})
@@ -227,5 +237,3 @@ class OutliersAPI(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-    #suite = unittest.TestLoader().loadTestsFromTestCase(TestStringMethods)
-    #unittest.TextTestRunner(verbosity=2).run(suite)

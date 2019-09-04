@@ -225,7 +225,7 @@ def op_roots(jobs, tag, fmt='dict'):
 
 
 @db_session
-def get_jobs(jobs = [], tags=None, fltr = '', order = None, limit = None, offset = 0, when=None, before=None, after=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tag_only = False):
+def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offset = 0, when=None, before=None, after=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tag_only = False):
     """
     This function returns a list of jobs based on some filtering and ordering.
     The output format can be set to pandas dataframe, list of dicts or list
@@ -695,7 +695,7 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
     >>> r['op_tags']
     [{u'op_instance': u'4', u'op_sequence': u'4', u'op': u'build'}, {u'op_instance': u'5', u'op_sequence': u'5', u'op': u'clean'}, {u'op_instance': u'3', u'op_sequence': u'3', u'op': u'configure'}, {u'op_instance': u'1', u'op_sequence': u'1', u'op': u'download'}, {u'op_instance': u'2', u'op_sequence': u'2', u'op': u'extract'}]
     """
-    if (not jobs) or len(jobs)==0:
+    if not jobs or (not(is_query(jobs)) and len(jobs)==0) or (is_query(jobs) and (jobs.count == 0)):
         logger.error('You need to specify one or more jobs to create a reference model')
         return None
 
