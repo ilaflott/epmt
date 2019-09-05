@@ -603,7 +603,7 @@ def get_refmodels(tag = {}, fltr=None, limit=0, order=None, exact_tag_only=False
     if fmt == 'terse':
         return [ r.id for r in qs ]
     
-    out_list = [ r.to_dict(with_collections=True) for r in qs ]
+    out_list = [ to_dict(r, with_collections=True) for r in qs ]
 
     # do we need to merge nested fields?
     if merge_nested_fields:
