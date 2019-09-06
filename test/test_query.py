@@ -27,13 +27,14 @@ from orm import db_session, setup_db, Job, Process, get_, desc, is_query
 import epmt_query as eq
 from epmt_cmds import epmt_submit
 
+JOBS_LIST = ['685016', '685003', '685000']
 
 @timing
 def setUpModule():
     if settings.db_params.get('filename') != ':memory:' and settings.db_params.get('url') != 'sqlite:///:memory:':
         print('db_params MUST use in-memory sqlite for testing', file=stderr)
         exit(1)
-    setup_db(settings, drop=True)
+    setup_db(settings)
     print('\n' + str(settings.db_params))
     datafiles='test/data/query/*.tgz'
     print('setUpModdule: importing {0}'.format(datafiles))
@@ -63,11 +64,11 @@ class QueryAPI(unittest.TestCase):
 #         pass
 
     def test_jobs(self):
-        jobs = eq.get_jobs(fmt='terse')
+        jobs = eq.get_jobs(JOBS_LIST, fmt='terse')
         self.assertEqual(type(jobs), list, 'wrong jobs format with terse')
         self.assertEqual(len(jobs), 3, 'job count in db wrong')
-        self.assertEqual(jobs, [u'685016', u'685003', u'685000'], 'job ordering not in reverse order of submission')
-        df = eq.get_jobs(fmt='pandas')
+        self.assertEqual(set(jobs), set(JOBS_LIST))
+        df = eq.get_jobs(JOBS_LIST, fmt='pandas')
         # sqlalchemy has 4 fewer fields, which we eventually want to remove from
         # the job model
         self.assertIn(df.shape, ((3,43), (3,47)))
@@ -82,70 +83,70 @@ class QueryAPI(unittest.TestCase):
 
     @db_session
     def test_jobs_advanced(self):
-        jobs = eq.get_jobs(fmt='terse', limit=2, offset=1)
+        jobs = eq.get_jobs(JOBS_LIST, fmt='terse', order=desc(Job.start), limit=2, offset=1)
         self.assertEqual(jobs, [u'685003', u'685000'], 'job limit/offset not working')
         if settings.orm == 'sqlalchemy':
-            jobs = eq.get_jobs(fltr=(Job.jobid != '685000'), fmt='orm')
+            jobs = eq.get_jobs(JOBS_LIST, fltr=(Job.jobid != '685000'), fmt='orm')
         else:
-            jobs = eq.get_jobs(fltr=lambda j: '685000' not in j.jobid, fmt='orm')
+            jobs = eq.get_jobs(JOBS_LIST, fltr=lambda j: '685000' not in j.jobid, fmt='orm')
         self.assertEqual(jobs.count(), 2, 'jobs orm query with filter option')
-        jobs = eq.get_jobs(tags='exp_component:ocean_month_rho2_1x1deg', fmt='terse')
+        jobs = eq.get_jobs(JOBS_LIST, tags='exp_component:ocean_month_rho2_1x1deg', fmt='terse')
         self.assertEqual(len(jobs), 1)
 
         # empty tag check
         j = get_(Job, '685016')
         j.tags = {}
-        jobs = eq.get_jobs(tags='', fmt='terse')
+        jobs = eq.get_jobs(JOBS_LIST, tags='', fmt='terse')
         self.assertEqual(jobs, ['685016'], 'jobs query with empty tag option')
-        jobs = eq.get_jobs(tags={}, fmt='terse')
+        jobs = eq.get_jobs(JOBS_LIST, tags={}, fmt='terse')
         self.assertEqual(jobs, ['685016'], 'jobs query with {} tag option')
 
-        jobs = eq.get_jobs(tags=['ocn_res:0.5l75;exp_component:ocean_cobalt_fdet_100', 'ocn_res:0.5l75;exp_component:ocean_annual_rho2_1x1deg'], fmt='terse')
-        self.assertEqual(jobs, ['685003', '685000'], 'jobs query with a tags list')
+        jobs = eq.get_jobs(JOBS_LIST, tags=['ocn_res:0.5l75;exp_component:ocean_cobalt_fdet_100', 'ocn_res:0.5l75;exp_component:ocean_annual_rho2_1x1deg'], fmt='terse')
+        self.assertEqual(set(jobs), set(['685003', '685000']))
         #df = eq.get_jobs(order='desc(j.duration)', limit=1, fmt='pandas')
-        df = eq.get_jobs(order=desc(Job.duration), limit=1, fmt='pandas')
+        df = eq.get_jobs(JOBS_LIST, order=desc(Job.duration), limit=1, fmt='pandas')
         self.assertEqual(df.shape[0], 1, 'job query with limit')
         self.assertEqual('685016', df.loc[0,'jobid'], "jobs dataframe query with order")
-        jobs = eq.get_jobs(before=0, fmt='terse')
-        self.assertEqual(jobs, [u'685016', u'685003', u'685000'])
-        jobs = eq.get_jobs(after=0, fmt='terse')
+        jobs = eq.get_jobs(JOBS_LIST, before=0, fmt='terse')
+        self.assertEqual(set(jobs), set(JOBS_LIST))
+        jobs = eq.get_jobs(JOBS_LIST, after=0, fmt='terse')
         self.assertEqual(jobs, [])
-        jobs = eq.get_jobs(before='06/15/2019 00:00', fmt='terse')
+        jobs = eq.get_jobs(JOBS_LIST, before='06/15/2019 00:00', fmt='terse')
         self.assertEqual(jobs, [])
-        jobs = eq.get_jobs(after='06/15/2019 00:00', fmt='terse')
-        self.assertEqual(jobs, [u'685016', u'685003', u'685000'])
-        jobs = eq.get_jobs(before=-30, fmt='terse')
-        self.assertEqual(jobs, [u'685016', u'685003', u'685000'])
-        jobs = eq.get_jobs(after=-30, fmt='terse')
+        jobs = eq.get_jobs(JOBS_LIST, after='06/15/2019 00:00', fmt='terse')
+        self.assertEqual(set(jobs), set(JOBS_LIST))
+        jobs = eq.get_jobs(JOBS_LIST, before=-30, fmt='terse')
+        self.assertEqual(set(jobs), set(JOBS_LIST))
+        jobs = eq.get_jobs(JOBS_LIST, after=-30, fmt='terse')
         self.assertEqual(jobs, [])
         # hosts
-        jobs = eq.get_jobs(hosts=[], fmt='terse')
-        self.assertEqual(jobs, [u'685016', u'685003', u'685000'])
-        jobs = eq.get_jobs(hosts=['pp208', 'pp212'], fmt='terse')
-        self.assertEqual(jobs, [u'685003', u'685000'])
-        jobs = eq.get_jobs(hosts=['pp208', 'pp209', 'pp212'], fmt='terse')
-        self.assertEqual(jobs, [u'685003', u'685000'])
-        jobs = eq.get_jobs(hosts=['pp208', 'pp313', 'pp212'], fmt='terse')
-        self.assertEqual(jobs, [u'685016', u'685003', u'685000'])
+        jobs = eq.get_jobs(JOBS_LIST, hosts=[], fmt='terse')
+        self.assertEqual(set(jobs), set(JOBS_LIST))
+        jobs = eq.get_jobs(JOBS_LIST, hosts=['pp208', 'pp212'], fmt='terse')
+        self.assertEqual(set(jobs), set([u'685003', u'685000']))
+        jobs = eq.get_jobs(set(JOBS_LIST), hosts=['pp208', 'pp209', 'pp212'], fmt='terse')
+        self.assertEqual(set(jobs), set([u'685003', u'685000']))
+        jobs = eq.get_jobs(JOBS_LIST, hosts=['pp208', 'pp313', 'pp212'], fmt='terse')
+        self.assertEqual(set(jobs), set(JOBS_LIST))
         # when
-        jobs = eq.get_jobs(when='06/15/2019 08:00', fmt='terse')
-        self.assertEqual(jobs, [u'685016', u'685003', u'685000'])
-        jobs = eq.get_jobs(when='06/15/2019 07:00', fmt='terse')
+        jobs = eq.get_jobs(JOBS_LIST, when='06/15/2019 08:00', fmt='terse')
+        self.assertEqual(set(jobs), set(JOBS_LIST))
+        jobs = eq.get_jobs(JOBS_LIST, when='06/15/2019 07:00', fmt='terse')
         self.assertEqual(jobs, [])
-        jobs = eq.get_jobs(when='06/15/2019 09:00', fmt='terse')
-        self.assertEqual(jobs, [u'685016', u'685003', u'685000'])
-        jobs = eq.get_jobs(when='06/15/2019 10:00', fmt='terse')
+        jobs = eq.get_jobs(JOBS_LIST, when='06/15/2019 09:00', fmt='terse')
+        self.assertEqual(set(jobs), set(JOBS_LIST))
+        jobs = eq.get_jobs(JOBS_LIST, when='06/15/2019 10:00', fmt='terse')
         self.assertEqual(jobs, [])
-        jobs = eq.get_jobs(when=get_(Job, '685003'), fmt='terse')
-        self.assertEqual(jobs, [u'685016', u'685003', u'685000'])
+        jobs = eq.get_jobs(JOBS_LIST, when=get_(Job, '685003'), fmt='terse')
+        self.assertEqual(set(jobs), set(JOBS_LIST))
         # hosts + when
-        jobs = eq.get_jobs(hosts = 'pp208', when='06/15/2019 08:00', fmt='terse')
+        jobs = eq.get_jobs(JOBS_LIST, hosts = 'pp208', when='06/15/2019 08:00', fmt='terse')
         self.assertEqual(jobs, [u'685000'])
-        jobs = eq.get_jobs(hosts = 'pp208', when='06/15/2019 11:00', fmt='terse')
+        jobs = eq.get_jobs(JOBS_LIST, hosts = 'pp208', when='06/15/2019 11:00', fmt='terse')
         self.assertEqual(jobs, [])
-        jobs = eq.get_jobs(when='06/15/2019 08:00', hosts=['pp208', 'pp212'], fmt='terse')
-        self.assertEqual(jobs, [u'685003', u'685000'])
-        jobs = eq.get_jobs(when='06/16/2019 08:00', hosts=['pp208', 'pp212'], fmt='terse')
+        jobs = eq.get_jobs(JOBS_LIST, when='06/15/2019 08:00', hosts=['pp208', 'pp212'], fmt='terse')
+        self.assertEqual(set(jobs), set([u'685003', u'685000']))
+        jobs = eq.get_jobs(JOBS_LIST, when='06/16/2019 08:00', hosts=['pp208', 'pp212'], fmt='terse')
         self.assertEqual(jobs, [])
 
     @db_session
@@ -155,7 +156,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(len(procs), 3412, 'wrong count of processes in terse')
         procs = eq.get_procs(['685016', '685000'], fmt='orm')
         self.assertEqual(procs.count(), 6892, 'wrong count of processes in ORM format')
-        df = eq.get_procs(fmt='pandas', limit=10)
+        df = eq.get_procs(JOBS_LIST, fmt='pandas', limit=10)
         self.assertEqual(df.shape, (10,50))
 
     @db_session
@@ -175,13 +176,13 @@ class QueryAPI(unittest.TestCase):
     @db_session
     def test_procs_advanced(self):
         if settings.orm == 'sqlalchemy':
-            procs = eq.get_procs(fltr=(Process.duration > 1000000), order=desc(Process.duration), fmt='orm')
+            procs = eq.get_procs(JOBS_LIST, fltr=(Process.duration > 1000000), order=desc(Process.duration), fmt='orm')
         else:
-            procs = eq.get_procs(fltr=lambda p: p.duration > 1000000, order='desc(p.duration)', fmt='orm')
+            procs = eq.get_procs(JOBS_LIST, fltr=lambda p: p.duration > 1000000, order='desc(p.duration)', fmt='orm')
         self.assertEqual(procs.count(), 630, 'wrong count of processes in ORM format using filter')
         self.assertEqual(int(procs.first().duration), 7005558348, 'wrong order when using orm with filter and order')
 
-        df = eq.get_procs(limit=5, order=desc(Process.cpu_time), fmt='pandas')
+        df = eq.get_procs(JOBS_LIST, limit=5, order=desc(Process.cpu_time), fmt='pandas')
         self.assertEqual(df.shape, (5,50), "incorrect dataframe shape")
         self.assertEqual('685016', df.loc[0,'job'], "ordering of processes wrong in dataframe")
 
@@ -197,14 +198,14 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(procs, [1])
 
         if settings.orm == 'sqlalchemy': 
-            procs_with_tag = eq.get_procs(tags='op_sequence:4', fltr=(Process.duration > 10000000), order=desc(Process.duration), fmt='orm')
+            procs_with_tag = eq.get_procs(JOBS_LIST, tags='op_sequence:4', fltr=(Process.duration > 10000000), order=desc(Process.duration), fmt='orm')
         else:
-            procs_with_tag = eq.get_procs(tags='op_sequence:4', fltr='p.duration > 10000000', order='desc(p.duration)', fmt='orm')
+            procs_with_tag = eq.get_procs(JOBS_LIST, tags='op_sequence:4', fltr='p.duration > 10000000', order='desc(p.duration)', fmt='orm')
         self.assertEqual(procs_with_tag.count(), 2, 'incorrect process count when using tag and filter')
         if settings.orm == 'sqlalchemy': 
-            procs_with_tag = eq.get_procs(tags={'op_sequence': 4}, fltr=(Process.duration > 10000000), order=desc(Process.duration), fmt='orm')
+            procs_with_tag = eq.get_procs(JOBS_LIST, tags={'op_sequence': 4}, fltr=(Process.duration > 10000000), order=desc(Process.duration), fmt='orm')
         else:
-            procs_with_tag = eq.get_procs(tags={'op_sequence': 4}, fltr='p.duration > 10000000', order='desc(p.duration)', fmt='orm')
+            procs_with_tag = eq.get_procs(JOBS_LIST, tags={'op_sequence': 4}, fltr='p.duration > 10000000', order='desc(p.duration)', fmt='orm')
         self.assertEqual(procs_with_tag.count(), 2)
         p = procs_with_tag.first()
         self.assertEqual(int(p.duration), 207384313)
@@ -213,12 +214,12 @@ class QueryAPI(unittest.TestCase):
         else:
             self.assertEqual(p.descendants.count(), 85)
 
-        self.assertEqual(eq.get_procs(tags='op_sequence:4', fmt='orm').count(), 270)
-        self.assertEqual(eq.get_procs(tags='op_sequence:5', fmt='orm').count(), 285)
-        self.assertEqual(eq.get_procs(tags=['op_sequence:4', 'op_sequence:5'], fmt='orm').count(), 555)
-        s1 = set(eq.get_procs(tags='op_sequence:5', fmt='terse'))
-        s2 = set(eq.get_procs(tags='op_sequence:4', fmt='terse'))
-        s = set(eq.get_procs(tags=['op_sequence:4', 'op_sequence:5'], fmt='terse'))
+        self.assertEqual(eq.get_procs(JOBS_LIST, tags='op_sequence:4', fmt='orm').count(), 270)
+        self.assertEqual(eq.get_procs(JOBS_LIST, tags='op_sequence:5', fmt='orm').count(), 285)
+        self.assertEqual(eq.get_procs(JOBS_LIST, tags=['op_sequence:4', 'op_sequence:5'], fmt='orm').count(), 555)
+        s1 = set(eq.get_procs(JOBS_LIST, tags='op_sequence:5', fmt='terse'))
+        s2 = set(eq.get_procs(JOBS_LIST, tags='op_sequence:4', fmt='terse'))
+        s = set(eq.get_procs(JOBS_LIST, tags=['op_sequence:4', 'op_sequence:5'], fmt='terse'))
         self.assertEqual(s, s1 | s2)
 
         # hosts, when
@@ -247,9 +248,9 @@ class QueryAPI(unittest.TestCase):
             self.assertEqual(list(eq.conv_jobs(jobs, fmt='pandas')['jobid'].values), [u'685000', u'685003'])
             self.assertEqual([j['jobid'] for j in eq.conv_jobs(jobs, fmt='dict')], ['685000', '685003'])
 
-        ref = eq.get_jobs(fmt='terse')
+        ref = eq.get_jobs(JOBS_LIST, fmt='terse')
         for inp_fmt in ['terse','orm','pandas','dict']:
-            jobs = eq.get_jobs(fmt=inp_fmt)
+            jobs = eq.get_jobs(JOBS_LIST, fmt=inp_fmt)
             for out_fmt in ['pandas', 'terse', 'orm', 'dict']:
                 out = eq.conv_jobs(jobs, fmt=out_fmt)
                 if out_fmt == 'terse':
@@ -332,7 +333,7 @@ class QueryAPI(unittest.TestCase):
 
     @db_session
     def test_timeline(self):
-        jobs = eq.get_jobs(fmt='orm')
+        jobs = eq.get_jobs(JOBS_LIST, fmt='orm')
         procs = eq.timeline(jobs, fmt='orm')
         #p1 = procs.first()
         #self.assertEqual(p1.start, min(min(j.processes.start) for j in jobs))
@@ -344,7 +345,7 @@ class QueryAPI(unittest.TestCase):
     #@unittest.skipIf(settings.orm == 'sqlalchemy', "skipped for sqlalchemy")
     @db_session
     def test_refmodel_crud(self):
-        jobs = eq.get_jobs(fmt='terse')
+        jobs = eq.get_jobs(JOBS_LIST, fmt='terse')
         self.assertEqual(len(jobs), 3)
         model_name = 'test_model'
         r = eq.create_refmodel(jobs, tag='model_name:'+model_name)
@@ -392,20 +393,20 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(n, 0, 'multiple jobs deleted without "force"')
 
         # test before/after
-        j = eq.get_jobs(fmt='orm')[:][-1]
+        j = eq.get_jobs(JOBS_LIST, fmt='orm')[:][-1]
         ndays = (datetime.datetime.now() - j.start).days 
-        n = eq.delete_jobs([], force=True, after=-(ndays-1))
+        n = eq.delete_jobs(JOBS_LIST, force=True, after=-(ndays-1))
         self.assertEqual(n, 0)
-        n = eq.delete_jobs([], force=True, after='06/16/2019 00:00')
+        n = eq.delete_jobs(JOBS_LIST, force=True, after='06/16/2019 00:00')
         self.assertEqual(n, 0)
-        n = eq.delete_jobs([], force=True, before='06/15/2019 00:00')
+        n = eq.delete_jobs(JOBS_LIST, force=True, before='06/15/2019 00:00')
         self.assertEqual(n, 0)
 
         n = eq.delete_jobs(['685000', '685016'], force=True)
         self.assertEqual(n, 2, 'jobs not deleted even with "force"')
 
         n = eq.delete_jobs([], force=True, before=-(ndays-1))
-        self.assertEqual(n, 1)
+        self.assertTrue(n >= 1)
 
 
 if __name__ == '__main__':

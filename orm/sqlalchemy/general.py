@@ -20,6 +20,7 @@ Base = declarative_base()
 thr_data = threading.local()
 thr_data.nestlevel = 0
 Session = None
+engine = None
 
 ### sqlalchemy-specific API implementation ###
 def db_session(func):
@@ -51,16 +52,19 @@ def db_session(func):
 
 def setup_db(settings,drop=False,create=True):
     global Session
+    global engine
+        
     if Session:
         logger.debug('skipping DB setup as it has already been initialized')
         return True
     logger.info("Creating engine with db_params: %s", settings.db_params)
-    try:
-        engine = engine_from_config(settings.db_params, prefix='')
-    except Exception as e:
-        logger.error("create_engine from db_params failed")
-        logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
-        return False
+    if engine is None:
+        try:
+            engine = engine_from_config(settings.db_params, prefix='')
+        except Exception as e:
+            logger.error("create_engine from db_params failed")
+            logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
+            return False
 
     ## print the compile options
     # with engine.connect() as con:
@@ -69,7 +73,19 @@ def setup_db(settings,drop=False,create=True):
 
     if drop:
         logger.warning("DROPPING ALL DATA AND TABLES!")
+        #if Session:
+        #    Session.rollback()
+        #    Session.expire_all()
+        #    Session.remove()
+        #    Session = None
         Base.metadata.drop_all(engine)
+        #meta = MetaData()
+        #import contextlib
+        #with contextlib.closing(engine.connect()) as con:
+        #    trans = con.begin()
+        #    for table in reversed(meta.sorted_tables):
+        #        con.execute(table.delete())
+        #    trans.commit()
 
     logger.info("Generating mapping from schema...")
     try:
@@ -78,11 +94,12 @@ def setup_db(settings,drop=False,create=True):
         #logger.error("Mapping to DB, did the schema change? Perhaps drop and create?")
         logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
         return False
-    logger.info('Creating scoped session..')
-    #Session.configure(bind=engine)
-    session_factory = sessionmaker(bind=engine, expire_on_commit=False)
-    Session = scoped_session(session_factory)
-    thr_data.Session = Session
+
+    if Session is None:
+        logger.info('Creating scoped session..')
+        session_factory = sessionmaker(bind=engine, expire_on_commit=False)
+        Session = scoped_session(session_factory)
+        thr_data.Session = Session
     return True
 
 # get_(Job, '6355501')
