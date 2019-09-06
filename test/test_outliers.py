@@ -217,7 +217,6 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(df.shape, (12,3), "wrong dataframe format")
         self.assertEqual([int(x) for x in list(df.loc['modified_z_score_ratio'])], [379, 56, 0], "wrong madz score ratios")
 
-    @unittest.skipIf(settings.orm == 'sqlalchemy', "skipped for sqlalchemy")
     @db_session
     def test_trained_model(self):
         fltr = (~Job.jobid.like('%outlier%')) if settings.orm == 'sqlalchemy' else '"outlier" not in j.jobid'
@@ -231,8 +230,12 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(r1.id, r['id'])
         self.assertEqual(r1.tags, {'exp_name': 'linux_kernel_test'})
         self.assertFalse(r1.op_tags)
-        self.assertEqual(r1.computed, {'modified_z_score': {'duration': (1.0287, 542680315.0, 14860060.0), 'cpu_time': (1.3207, 449914707.0, 444671.0), 'num_procs': (0.0, 10600.0, 0.0)}})
-        self.assertEqual(set(r1.jobs.jobid), set([u'kern-6656-20190614-194024', u'kern-6656-20190614-191138', u'kern-6656-20190614-190245']))
+        # pony and sqlalchemy have slightly different outputs
+        # in pony each value in modfied_z_score dictionary is a 
+        # a tuple, while in sqlalchemy it's a list. So, we use 
+        # assertIn to check if either match occurs
+        self.assertIn(r1.computed, ({'modified_z_score': {'duration': (1.0287, 542680315.0, 14860060.0), 'cpu_time': (1.3207, 449914707.0, 444671.0), 'num_procs': (0.0, 10600.0, 0.0)}},{'modified_z_score': {'duration': [1.0287, 542680315.0, 14860060.0], 'cpu_time': [1.3207, 449914707.0, 444671.0], 'num_procs': [0.0, 10600.0, 0.0]}}))
+        self.assertEqual(set([j.jobid for j in r1.jobs]), set([u'kern-6656-20190614-194024', u'kern-6656-20190614-191138', u'kern-6656-20190614-190245']))
 
 
 
