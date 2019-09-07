@@ -41,7 +41,7 @@ def setup_db(settings,drop=False,create=True):
         db.create_tables()
     return True
 
-def get_(model, pk=None, **kwargs):
+def orm_get(model, pk=None, **kwargs):
     if pk != None:
         try:
             return model[pk]
@@ -49,11 +49,11 @@ def get_(model, pk=None, **kwargs):
             return None
     return model.get(**kwargs)
 
-def orm_set(o, **kwargs):
-    o.set(**kwargs)
-    return o
+# def orm_set(o, **kwargs):
+#     o.set(**kwargs)
+#     return o
 
-def create_(model, **kwargs):
+def orm_create(model, **kwargs):
     return model(**kwargs)
 
 def orm_delete(o):
@@ -89,19 +89,19 @@ def orm_delete_refmodels(ref_ids):
 
 
 
-def commit_():
+def orm_commit():
     return commit()
 
-def add_to_collection_(collection, item):
+def orm_add_to_collection(collection, item):
     return collection.add(item)
 
-def sum_attribute_(collection, attribute):
+def orm_sum_attribute(collection, attribute):
     return sum(getattr(collection, attribute))
 
-def is_query(obj):
+def orm_is_query(obj):
     return type(obj) in (Query, QueryResult)
 
-def procs_col(procs):
+def orm_procs_col(procs):
     """
     This is an internal function to take a collection of
     procs in a variety of formats and return output in the
@@ -142,7 +142,7 @@ def procs_col(procs):
     return procs
 
 
-def jobs_col(jobs):
+def orm_jobs_col(jobs):
     """
     This is an internal function to take a collection of jobs
     in a variety of formats and return output in the ORM format.
@@ -150,7 +150,7 @@ def jobs_col(jobs):
     from pandas import DataFrame
     from epmtlib import isString
     from .models import Job
-    if is_query(jobs):
+    if orm_is_query(jobs):
         return jobs
     if ((type(jobs) != DataFrame) and not(jobs)):
         return Job.select()
@@ -175,7 +175,7 @@ def jobs_col(jobs):
         jobs = Job.select(lambda j: j in jobs)
     return jobs
 
-def to_dict(obj, **kwargs):
+def orm_to_dict(obj, **kwargs):
     return obj.to_dict(**kwargs)
 
 def orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only):
@@ -183,7 +183,7 @@ def orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only):
     from epmtlib import tags_list, isString
     from datetime import datetime
     if jobs:
-        jobs = jobs_col(jobs)
+        jobs = orm_jobs_col(jobs)
         qs = Process.select(lambda p: p.job in jobs)
     else:
         # no jobs set, so expand the scope to all Process objects
@@ -253,7 +253,7 @@ def orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only):
 
 
 
-def orm_get_jobs_(qs, tags, fltr, order, limit, offset, when, before, after, hosts, exact_tag_only):
+def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, hosts, exact_tag_only):
     from .models import Job, Host
     from epmtlib import tags_list, isString
     from datetime import datetime

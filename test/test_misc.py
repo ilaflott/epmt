@@ -17,7 +17,7 @@ if environ.get('EPMT_USE_SQLALCHEMY'):
     settings.db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
 
 from epmtlib import timing, capture
-from orm import db_session, setup_db, Job, commit_
+from orm import db_session, setup_db, Job
 import epmt_query as eq
 from epmt_cmds import epmt_submit
 from epmt_cmd_delete import epmt_delete_jobs
@@ -33,8 +33,6 @@ def setUpModule():
     epmt_submit(glob(datafiles), dry_run=False)
     
 #def tearDownModule():
-#    eq.delete_jobs([], force=True)
-#    commit_()
 
 class EPMTCmds(unittest.TestCase):
     def test_list_jobs(self):

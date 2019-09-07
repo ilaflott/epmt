@@ -23,7 +23,7 @@ if environ.get('EPMT_USE_SQLALCHEMY'):
     settings.db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
 
 from epmtlib import timing, isString, frozen_dict, str_dict
-from orm import db_session, setup_db, Job, Process, get_, desc, is_query, commit_
+from orm import db_session, setup_db, Job, Process, orm_get, desc, orm_is_query, orm_commit
 import epmt_query as eq
 from epmt_cmds import epmt_submit
 
@@ -94,9 +94,9 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(len(jobs), 1)
 
         # empty tag check
-        j = get_(Job, '685016')
+        j = orm_get(Job, '685016')
         j.tags = {}
-        commit_()
+        orm_commit()
         jobs = eq.get_jobs(JOBS_LIST, tags='', fmt='terse')
         self.assertEqual(jobs, ['685016'], 'jobs query with empty tag option')
         jobs = eq.get_jobs(JOBS_LIST, tags={}, fmt='terse')
@@ -138,7 +138,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(set(jobs), set(JOBS_LIST))
         jobs = eq.get_jobs(JOBS_LIST, when='06/15/2019 10:00', fmt='terse')
         self.assertEqual(jobs, [])
-        jobs = eq.get_jobs(JOBS_LIST, when=get_(Job, '685003'), fmt='terse')
+        jobs = eq.get_jobs(JOBS_LIST, when=orm_get(Job, '685003'), fmt='terse')
         self.assertEqual(set(jobs), set(JOBS_LIST))
         # hosts + when
         jobs = eq.get_jobs(JOBS_LIST, hosts = 'pp208', when='06/15/2019 08:00', fmt='terse')
@@ -193,9 +193,9 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(len(procs), 0)
         procs = eq.get_procs(tags={}, fmt='terse')
         self.assertEqual(len(procs), 0, 'procs query with {} tag option')
-        p = get_(Process, 1)
+        p = orm_get(Process, 1)
         p.tags={}
-        commit_()
+        orm_commit()
         procs = eq.get_procs(tags={}, fmt='terse')
         self.assertEqual(procs, [1])
 
@@ -244,8 +244,8 @@ class QueryAPI(unittest.TestCase):
         for fmt in ['dict', 'terse', 'pandas', 'orm']:
             jobs = eq.get_jobs(['685000', '685003'], fmt=fmt)
             self.assertEqual(eq.conv_jobs(jobs, fmt='terse'), ['685000', '685003'])
-            j1 = get_(Job, '685000')
-            j2 = get_(Job, '685003')
+            j1 = orm_get(Job, '685000')
+            j2 = orm_get(Job, '685003')
             self.assertEqual(eq.conv_jobs(jobs, fmt='orm')[:], [j1, j2])
             self.assertEqual(list(eq.conv_jobs(jobs, fmt='pandas')['jobid'].values), [u'685000', u'685003'])
             self.assertEqual([j['jobid'] for j in eq.conv_jobs(jobs, fmt='dict')], ['685000', '685003'])
@@ -259,7 +259,7 @@ class QueryAPI(unittest.TestCase):
                     self.assertEqual(type(out), list,'output format not terse when input fmt: {0}'.format(inp_fmt))
                     self.assertEqual(sorted(out), sorted(ref), 'error in {0} -> {1}'.format(inp_fmt, out_fmt))
                 elif out_fmt == 'orm':
-                    self.assertTrue(is_query(out), 'output format not ORM when input fmt: {0}'.format(inp_fmt))
+                    self.assertTrue(orm_is_query(out), 'output format not ORM when input fmt: {0}'.format(inp_fmt))
                     self.assertEqual(sorted([j.jobid for j in out]), sorted(ref), 'error in {0} -> {1}'.format(inp_fmt, out_fmt))
                 elif out_fmt == 'dict':
                     self.assertTrue((type(out) == list) and (type(out[0]) == dict),'output format not dictlist when input fmt: {0}'.format(inp_fmt))

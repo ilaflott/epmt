@@ -53,14 +53,14 @@ def conv_jobs(jobs, fmt='dict', merge_sums = True):
 
     """
 
-    jobs = jobs_col(jobs)
+    jobs = orm_jobs_col(jobs)
     if fmt == 'orm':
         return jobs
     if fmt=='terse':
         return [ j.jobid for j in jobs ]
 
     # convert the ORM into a list of dictionaries, excluding blacklisted fields
-    out_list = [ to_dict(j, exclude = 'processes') for j in jobs ]
+    out_list = [ orm_to_dict(j, exclude = 'processes') for j in jobs ]
 
     # do we need to merge process' sum fields into the job?
     if merge_sums:
@@ -87,7 +87,7 @@ def __conv_procs_orm(procs, merge_sums = True, fmt='dict'):
         return [ p.id for p in procs ]
 
     # convert the ORM into a list of dictionaries, excluding blacklisted fields
-    out_list = [ to_dict(p, exclude = ['ancestors', 'descendants', 'children', 'threads_df']) for p in procs ]
+    out_list = [ orm_to_dict(p, exclude = ['ancestors', 'descendants', 'children', 'threads_df']) for p in procs ]
 
     # do we need to merge threads' sum fields into the process?
     if merge_sums:
@@ -110,7 +110,7 @@ def conv_procs(procs, fmt='pandas'):
     (orm, pandas, dict-list or terse) to the format specified
     by 'fmt'
     """
-    procs = procs_col(procs)
+    procs = orm_procs_col(procs)
     return __conv_procs_orm(procs, fmt=fmt)
 
 
@@ -180,7 +180,7 @@ def root(job, fmt='dict'):
     (7266, u'tcsh')
     """
     # if isString(job):
-    #     job = get_(Job, job)
+    #     job = orm_get(Job, job)
     # p = job.processes.order_by(Process.start).limit(1)
     # if fmt == 'orm': return p.to_list().pop()
     # if fmt == 'terse': return p.to_list().pop().id
@@ -206,7 +206,7 @@ def op_roots(jobs, tag, fmt='dict'):
     op_root returns a collection of processes in the format specified.
     The processes are sorted by jobid and within a job by start time
     """
-    jobs = jobs_col(jobs)
+    jobs = orm_jobs_col(jobs)
     if not tag:
         logger.error('You must specify a tag (string or dict)')
         return None
@@ -334,12 +334,12 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
     """
     from datetime import datetime
     # set defaults for limit and ordering only if the user doesn't specify jobs
-    if (not(is_query(jobs))) and (type(jobs) != pd.DataFrame) and (jobs in [[], '', None]):
+    if (not(orm_is_query(jobs))) and (type(jobs) != pd.DataFrame) and (jobs in [[], '', None]):
         if (fmt != 'orm') and (limit == None): 
             limit = 20
         if order is None: order = desc(Job.created_at)
       
-    qs = jobs_col(jobs)
+    qs = orm_jobs_col(jobs)
 
     if when:
         if type(when) == str:
@@ -380,7 +380,7 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
             # user probably forgot to wrap in a list
             hosts = hosts.split(",")
 
-    qs = orm_get_jobs_(qs, tags, fltr, order, limit, offset, when, before, after, hosts, exact_tag_only)
+    qs = orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, hosts, exact_tag_only)
 
     if fmt == 'orm':
         return qs
@@ -532,7 +532,7 @@ def get_thread_metrics(*processes):
     for proc in processes:
         if type(proc) == int:
             # user supplied database id of process
-            p = get_(Process, proc)
+            p = orm_get(Process, proc)
         else:
             # user supplied process objects directly
             p = proc
@@ -558,7 +558,7 @@ def job_proc_tags(jobs = [], exclude=[], fold=False):
 
     exclude: an optional list of keys to exclude from each tag (if present)
     """
-    jobs = jobs_col(jobs)
+    jobs = orm_jobs_col(jobs)
     tags = []
     for j in jobs:
         unique_tags_for_job = __unique_proc_tags_for_job(j, exclude, fold = False)
@@ -603,7 +603,7 @@ def get_refmodels(tag = {}, fltr=None, limit=0, order=None, exact_tag_only=False
     if fmt == 'terse':
         return [ r.id for r in qs ]
     
-    out_list = [ to_dict(r, with_collections=True) for r in qs ]
+    out_list = [ orm_to_dict(r, with_collections=True) for r in qs ]
 
     # do we need to merge nested fields?
     if merge_nested_fields:
@@ -695,7 +695,7 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
     >>> r['op_tags']
     [{u'op_instance': u'4', u'op_sequence': u'4', u'op': u'build'}, {u'op_instance': u'5', u'op_sequence': u'5', u'op': u'clean'}, {u'op_instance': u'3', u'op_sequence': u'3', u'op': u'configure'}, {u'op_instance': u'1', u'op_sequence': u'1', u'op': u'download'}, {u'op_instance': u'2', u'op_sequence': u'2', u'op': u'extract'}]
     """
-    if not jobs or (not(is_query(jobs)) and len(jobs)==0) or (is_query(jobs) and (jobs.count == 0)):
+    if not jobs or (not(orm_is_query(jobs)) and len(jobs)==0) or (orm_is_query(jobs) and (jobs.count == 0)):
         logger.error('You need to specify one or more jobs to create a reference model')
         return None
 
@@ -708,7 +708,7 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
     #    jobs = list(jobs)
     #if type(jobs) == list and isString(jobs[0]):
     #    jobs = Job.select(lambda j: j.jobid in jobs)
-    jobs = jobs_col(jobs)[:]
+    jobs = orm_jobs_col(jobs)[:]
 
     if op_tags:
         if op_tags == '*':
@@ -738,12 +738,12 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
 
     # now save the ref model
     r = ReferenceModel(jobs=jobs, tags=tag, op_tags=op_tags, computed=computed)
-    commit_()
+    orm_commit()
     if fmt=='orm': 
         return r
     elif fmt=='terse': 
         return r.id
-    r_dict = to_dict(r, with_collections=True)
+    r_dict = orm_to_dict(r, with_collections=True)
     return pd.Series(r_dict) if fmt=='pandas' else r_dict
 
 # returns the number of models deleted.
@@ -907,7 +907,7 @@ def delete_jobs(jobs, force = False, before=None, after=None):
 
     """
 
-    jobs = jobs_col(jobs)
+    jobs = orm_jobs_col(jobs)
 
     if ((before != None) or (after != None)):
         jobs = get_jobs(jobs, before=before, after=after, fmt='orm')
@@ -929,7 +929,7 @@ def dm_calc(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op
     use dm_calc_iter instead
     """
     logger.debug('dm ops: {0}'.format(tags))
-    jobs = jobs_col(jobs)
+    jobs = orm_jobs_col(jobs)
     num_jobs = jobs.count()
     logger.debug('number of jobs: {0}'.format(num_jobs))
     if (num_jobs > 100):
@@ -953,7 +953,7 @@ def dm_calc_iter(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv'
     """
     from datetime import datetime
     logger.debug('dm ops: {0}'.format(tags))
-    jobs = jobs_col(jobs)
+    jobs = orm_jobs_col(jobs)
     logger.debug('number of jobs: {0}'.format(jobs.count))
     tags = tags_list(tags)
     jobs_cpu_time = 0.0

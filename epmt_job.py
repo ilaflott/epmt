@@ -1,6 +1,4 @@
 from __future__ import print_function
-import orm
-from orm import db_session, commit_
 from sys import stdout, argv, stderr, exit
 import sys
 from os.path import basename
@@ -12,7 +10,7 @@ from os import getuid
 from json import dumps, loads
 from pwd import getpwnam, getpwuid
 from epmtlib import tag_from_string, sum_dicts, unique_dicts, fold_dicts
-import datetime
+from datetime import datetime, timedelta
 
 logger = getLogger(__name__)  # you can use other name
 
@@ -20,6 +18,8 @@ if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
     import epmt_default_settings as settings
 else:
     import settings
+
+from orm import *
 
 #
 # Spinning cursor sequence
@@ -39,10 +39,10 @@ def sortKeyFunc(s):
     return int(t2[0]+t2[1])
 
 def create_job(jobid,user):
-    job = orm.get_(orm.Job, jobid=jobid)
+    job = orm_get(Job, jobid=jobid)
     if job is None:
         logger.info("Creating job %s",jobid)
-        job = orm.create_(orm.Job, jobid=jobid,user=user)
+        job = orm_create(Job, jobid=jobid,user=user)
     else:
         logger.warning("Job %s (at %s) is already in the database",job.jobid,job.start)
         return None
@@ -67,10 +67,10 @@ def create_job(jobid,user):
                     
 created_hosts = {}
 def lookup_or_create_host(hostname):
-    host = orm.get_(orm.Host, hostname) if (not(hostname in created_hosts)) else created_hosts[hostname]
+    host = orm_get(Host, hostname) if (not(hostname in created_hosts)) else created_hosts[hostname]
     if host is None:
         logger.info("Creating host %s",hostname)
-        host = orm.create_(orm.Host, name=hostname)
+        host = orm_create(Host, name=hostname)
         # for sqlalchemy the created_hosts map is crucial for boosting performance
         # However with Pony we end up caching objects from different db_sessions
         # and so we don't want use our create_hosts map with Pony
@@ -79,10 +79,10 @@ def lookup_or_create_host(hostname):
     return host
 
 def lookup_or_create_user(username):
-    user = orm.get_(orm.User, name=username)
+    user = orm_get(User, name=username)
     if user is None:
         logger.info("Creating user %s",username)
-        user = orm.create_(orm.User, name=username)
+        user = orm_create(User, name=username)
     return user
 
 
@@ -121,7 +121,7 @@ def load_process_from_pandas(df, h, j, u, settings):
         host = lookup_or_create_host(h)
 
     try:
-            p = orm.create_(orm.Process, 
+            p = orm_create(Process, 
                            exename=df['exename'][0],
                            args=df['args'][0],
                            path=df['path'][0],
@@ -269,12 +269,12 @@ def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
 def _proc_ancestors(pid_map, proc, ancestor_pid):
     if ancestor_pid in pid_map:
         ancestor = pid_map[ancestor_pid]
-        orm.add_to_collection_(ancestor.descendants, proc)
+        orm_add_to_collection(ancestor.descendants, proc)
 
         # we don't need to do the reverse mapping (below) as that's
         # implied using the ORM backref. And if we uncomment it,
         # then sqlalchemy tries to add a duplicate record
-        # orm.add_to_collection_(proc.ancestors, ancestor)
+        # orm_add_to_collection(proc.ancestors, ancestor)
 
         # now that we have done this node let's go to its parent
         _proc_ancestors(pid_map, proc, ancestor.ppid)
@@ -292,7 +292,7 @@ def _create_process_tree(pid_map):
             # implied by the proc.parent assignment above.
             # If we uncomment it, then on sqlalchemy, each
             # parent will have duplicate nodes for each child.
-            # orm.add_to_collection_(parent.children, proc)
+            # orm_add_to_collection(parent.children, proc)
     for (pid, proc) in pid_map.items():
         ppid = proc.ppid
         _proc_ancestors(pid_map, proc, ppid)
@@ -436,10 +436,10 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     # standards = [ "exename","path","args","pid","generation","ppid","pgid","sid","numtids","tid","start","end" ]
 
     # Initialize elements used in compute
-    then = datetime.datetime.now()
-    csvt = datetime.timedelta()
-    earliest_process = datetime.datetime.utcnow()
-    latest_process = datetime.datetime.fromtimestamp(0)
+    then = datetime.now()
+    csvt = timedelta()
+    earliest_process = datetime.utcnow()
+    latest_process = datetime.fromtimestamp(0)
 
 #    stdout.write('-')
 # Hostname, job, metricname objects
@@ -478,7 +478,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         cnt = 0
         nrecs = 0
         fileno = 0
-        csv = datetime.datetime.now()
+        csv = datetime.now()
         for f in files:
             fileno += 1
             logger.debug("Processing file %s (%d of %d)",f, fileno, cntmax)
@@ -538,7 +538,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 # Debugging/    progress
                 cnt += 1
                 nrecs += p.numtids
-                csvt = datetime.datetime.now() - csv
+                csvt = datetime.now() - csv
                 if ((nrecs % 1000) == 0) or \
                    ((cntmax==1) and (nrecs == collated_df.shape[0])) or \
                    ((cntmax > 1) and (fileno == cntmax)) :
@@ -590,7 +590,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         logger.info("synthesizing aggregates across job processes..")
         hosts = set()
         for proc in all_procs:
-            proc.inclusive_cpu_time = float(proc.cpu_time + orm.sum_attribute_(proc.descendants, 'cpu_time'))
+            proc.inclusive_cpu_time = float(proc.cpu_time + orm_sum_attribute(proc.descendants, 'cpu_time'))
             nthreads += proc.numtids
             threads_sums_across_procs = sum_dicts(threads_sums_across_procs, proc.threads_sums)
             hosts.add(proc.host)
@@ -605,7 +605,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         # when we created the process. The ORM automatically does the backref.
         # In particular, in sqlalchemy, uncommenting the line below creates 
         # duplicate bindings.
-        # orm.add_to_collection_(j.processes, all_procs)
+        # orm_add_to_collection(j.processes, all_procs)
 
     proc_sums['num_procs'] = len(all_procs)
     proc_sums['num_threads'] = nthreads
@@ -630,7 +630,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     # the cpu time for a job is the sum of the exclusive times
     # of all processes in the job
     # We use list-comprehension and aggregation over slower ORM ops
-    # j.cpu_time = orm.sum_attribute_(j.processes, 'cpu_time')
+    # j.cpu_time = orm_sum_attribute(j.processes, 'cpu_time')
     j.cpu_time = sum([p.cpu_time for p in all_procs])
     #_t5 = time.time()
     #print('job cpu_time: ', _t5 - _t4)
@@ -647,8 +647,8 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     logger.info("Latest process end: %s",j.end)
     logger.info("Computed duration of job: %f us, %.2f m",j.duration,j.duration/60000000)
     logger.info("Committing job to database..")
-    commit_()
-    now = datetime.datetime.now() 
+    orm_commit()
+    now = datetime.now() 
     logger.info("Staged import of %d processes took %s, %f processes/sec",
                 len(all_procs), now - then,len(all_procs)/float((now-then).total_seconds()))
     print("Imported successfully - job:",jobid,"processes:",len(all_procs),"rate:",len(all_procs)/float((now-then).total_seconds()))

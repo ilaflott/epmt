@@ -104,22 +104,22 @@ def setup_db(settings,drop=False,create=True):
         thr_data.Session = Session
     return True
 
-# get_(Job, '6355501')
+# orm_get(Job, '6355501')
 # or
-# get_(User, name='John.Doe')
-def get_(model, pk=None, **kwargs):
+# orm_get(User, name='John.Doe')
+def orm_get(model, pk=None, **kwargs):
     return Session.query(model).get(pk) if (pk != None) else Session.query(model).filter_by(**kwargs).one_or_none()
 
 
-def orm_set(o, **kwargs):
-    for k in kwargs.keys():
-        setattr(o, k, kwargs[k])
-    #print('type Session', type(Session))
-    #print('type object', type(o))
-    #Session.add(o)
-    return o
+# def orm_set(o, **kwargs):
+#     for k in kwargs.keys():
+#         setattr(o, k, kwargs[k])
+#     #print('type Session', type(Session))
+#     #print('type object', type(o))
+#     #Session.add(o)
+#     return o
 
-def create_(model, **kwargs):
+def orm_create(model, **kwargs):
     o = model(**kwargs)
     Session.add(o)
     return o
@@ -149,10 +149,10 @@ def orm_delete_refmodels(ref_ids):
     return n
 
 
-def commit_():
+def orm_commit():
     return Session.commit()
 
-def add_to_collection_(collection, item):
+def orm_add_to_collection(collection, item):
     if type(item) == list:
         for o in item:
             collection.append(o)
@@ -160,13 +160,13 @@ def add_to_collection_(collection, item):
     else:
         return collection.append(item)
 
-def sum_attribute_(collection, attribute):
+def orm_sum_attribute(collection, attribute):
     return sum([getattr(c, attribute) for c in collection])
 
-def is_query(obj):
+def orm_is_query(obj):
     return (type(obj) == Query)
 
-def procs_col(procs):
+def orm_procs_col(procs):
     """
     This is an internal function to take a collection of
     procs in a variety of formats and return output in the
@@ -175,7 +175,7 @@ def procs_col(procs):
     from pandas import DataFrame
     from .models import Process
     from epmtlib import isString
-    if is_query(procs):
+    if orm_is_query(procs):
         return procs
     if ((type(procs) != DataFrame) and not(procs)):
         # empty list => select all processes
@@ -207,7 +207,7 @@ def procs_col(procs):
     return procs
 
 
-def jobs_col(jobs):
+def orm_jobs_col(jobs):
     """
     This is an internal function that returns a Job Query object.
     The input can be collection of jobs spcified as a string, a list
@@ -216,7 +216,7 @@ def jobs_col(jobs):
     from pandas import DataFrame
     from epmtlib import isString
     from .models import Job
-    if is_query(jobs):
+    if orm_is_query(jobs):
         return jobs
     if ((type(jobs) != DataFrame) and not(jobs)):
         return Session.query(Job)
@@ -242,7 +242,7 @@ def jobs_col(jobs):
     return jobs
 
 
-def to_dict(obj, **kwargs):
+def orm_to_dict(obj, **kwargs):
     from .models import Job, Process, User, Host, ReferenceModel
     from epmtlib import isString
     d = obj.__dict__.copy()
@@ -286,7 +286,7 @@ def orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only, c
     if columns is None:
         columns = [Process]
     if jobs:
-        jobs = jobs_col(jobs)
+        jobs = orm_jobs_col(jobs)
         jobs = [j.jobid for j in jobs]
         qs = Session.query(*columns).filter(Process.jobid.in_(jobs))
     else:
@@ -320,7 +320,7 @@ def orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only, c
         if type(when) == datetime:
             qs = qs.filter(Process.start <= when, Process.end >= when)
         else:
-            when_process = get_(Process, when) if isString(when) else when
+            when_process = orm_get(Process, when) if isString(when) else when
             qs = qs.filter(Process.start <= when_process.end, Process.end >= when_process.start)
 
     if hosts:
@@ -335,7 +335,7 @@ def orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only, c
 
     return qs
 
-def orm_get_jobs_(qs, tags, fltr, order, limit, offset, when, before, after, hosts, exact_tag_only):
+def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, hosts, exact_tag_only):
     from .models import Job, Host
     from epmtlib import tags_list, isString
     from datetime import datetime
@@ -366,7 +366,7 @@ def orm_get_jobs_(qs, tags, fltr, order, limit, offset, when, before, after, hos
         if type(when) == datetime:
             qs = qs.filter(Job.start <= when, Job.end >= when)
         else:
-            when_job = get_(Job, when) if isString(when) else when
+            when_job = orm_get(Job, when) if isString(when) else when
             qs = qs.filter(Job.start <= when_job.end, Job.end >= when_job.start)
 
     if before != None:
