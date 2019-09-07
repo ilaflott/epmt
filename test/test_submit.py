@@ -45,10 +45,11 @@ class EPMTSubmit(unittest.TestCase):
 
         # the keys below are only in the Pony model, and are slated for removal
         # so we skip checking for their presence
-        ign_key_presence = ['jobscriptname', 'account', 'queue', 'sessionid']
+        # updated_at key is only present if the record has been updated
+        ign_key_presence = ['jobscriptname', 'account', 'queue', 'sessionid', 'updated_at']
 
         self.assertEqual(set(job_dict.keys()) - set(ign_key_presence), set(ref_dict.keys()) - set(ign_key_presence))
-        ign_key_values = set(ign_key_presence + ['created_at', 'updated_at'])
+        ign_key_values = set(ign_key_presence + ['created_at'])
         for (k,v) in ref_dict.items():
              if k in ign_key_values: continue
              self.assertEqual(job_dict[k], ref_dict[k], 'expected for key({0}): {1}; got {2}'.format(k, ref_dict[k], job_dict[k]))

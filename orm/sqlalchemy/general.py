@@ -99,7 +99,7 @@ def setup_db(settings,drop=False,create=True):
 
     if Session is None:
         logger.info('Creating scoped session..')
-        session_factory = sessionmaker(bind=engine, expire_on_commit=False, autoflush=True)
+        session_factory = sessionmaker(bind=engine, expire_on_commit=False, autoflush=False)
         Session = scoped_session(session_factory)
         thr_data.Session = Session
     return True
@@ -259,6 +259,9 @@ def to_dict(obj, **kwargs):
             d['jobs'] = [j.jobid if type(j) == Job else j for j in obj.jobs ]
         else:
             del d['jobs']
+    if type(obj) == Job:
+        if 'processes' in d:
+            del d['processes']
     if type(obj) == Process:
         d['job'] = obj.jobid
         d['jobid'] = obj.jobid
