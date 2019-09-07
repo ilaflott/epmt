@@ -19,6 +19,7 @@ Base = declarative_base()
 # want to commit and remove the session when the top of the stack is popped
 thr_data = threading.local()
 thr_data.nestlevel = 0
+thr_data.session = None
 Session = None
 engine = None
 
@@ -26,8 +27,9 @@ engine = None
 def db_session(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        session = Session()  # (this is now a scoped session)
-        thr_data.session = session
+        if thr_data.session is None:
+            thr_data.session = Session()  # (this is now a scoped session)
+        session = thr_data.session
         thr_data.nestlevel += 1
         completed = False
         try:
@@ -35,7 +37,7 @@ def db_session(func):
             completed = True
         except Exception as e:
             import traceback, sys
-            logger.error('\nException occurred: {0}\nWill rollback session..'.format(e))
+            logger.error('\nAn exception occurred: {0}\nWill rollback session..'.format(e))
             print('-'*60)
             traceback.print_exc(file=sys.stdout)
             print('-'*60)
@@ -97,7 +99,7 @@ def setup_db(settings,drop=False,create=True):
 
     if Session is None:
         logger.info('Creating scoped session..')
-        session_factory = sessionmaker(bind=engine, expire_on_commit=False, autoflush=False)
+        session_factory = sessionmaker(bind=engine, expire_on_commit=False, autoflush=True)
         Session = scoped_session(session_factory)
         thr_data.Session = Session
     return True
