@@ -23,7 +23,7 @@ if environ.get('EPMT_USE_SQLALCHEMY'):
     settings.db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
 
 from epmtlib import timing, isString, frozen_dict, str_dict
-from orm import db_session, setup_db, Job, Process, get_, desc, is_query
+from orm import db_session, setup_db, Job, Process, get_, desc, is_query, commit_
 import epmt_query as eq
 from epmt_cmds import epmt_submit
 
@@ -96,6 +96,7 @@ class QueryAPI(unittest.TestCase):
         # empty tag check
         j = get_(Job, '685016')
         j.tags = {}
+        commit_()
         jobs = eq.get_jobs(JOBS_LIST, tags='', fmt='terse')
         self.assertEqual(jobs, ['685016'], 'jobs query with empty tag option')
         jobs = eq.get_jobs(JOBS_LIST, tags={}, fmt='terse')
@@ -194,6 +195,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(len(procs), 0, 'procs query with {} tag option')
         p = get_(Process, 1)
         p.tags={}
+        commit_()
         procs = eq.get_procs(tags={}, fmt='terse')
         self.assertEqual(procs, [1])
 

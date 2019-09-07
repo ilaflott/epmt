@@ -97,7 +97,7 @@ def setup_db(settings,drop=False,create=True):
 
     if Session is None:
         logger.info('Creating scoped session..')
-        session_factory = sessionmaker(bind=engine, expire_on_commit=False)
+        session_factory = sessionmaker(bind=engine, expire_on_commit=False, autoflush=False)
         Session = scoped_session(session_factory)
         thr_data.Session = Session
     return True

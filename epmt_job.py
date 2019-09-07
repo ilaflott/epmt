@@ -563,8 +563,12 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     else:
         logger.warning("Submitting job with no CSV data, tags %s",str(job_tags))
 
+    # post-processing of process data
     proc_sums = {}
+   
 
+    #import time
+    #_t0 = time.time()
     # Add sum of tags to job
     if all_tags:
         logger.info("found %d distinct sets of process tags",len(all_tags))
@@ -573,6 +577,8 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     else:
         logger.debug('no process tags found')
         proc_sums[settings.all_tags_field] = []
+    #_t1 = time.time()
+    #print('tag processing took: ', _t1 - _t0, ' sec')
         
     # Add all processes to job and compute process totals to add to
     # job.proc_sums field
@@ -588,8 +594,12 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             nthreads += proc.numtids
             threads_sums_across_procs = sum_dicts(threads_sums_across_procs, proc.threads_sums)
             hosts.add(proc.host)
-        logger.info("Adding %d processes (%d threads) to job",len(all_procs), nthreads)
+        logger.info("job contains %d processes (%d threads)",len(all_procs), nthreads)
+        #_t2 = time.time()
+        #print('thread sums took: ', _t2 - _t1, ' sec')
         j.hosts = list(hosts)
+        #_t3 = time.time()
+        #print('job hosts relation took: ', _t3 - _t2, ' sec')
         # we MUST NOT add all_procs to j.processes below
         # as we already associated the process with the job
         # when we created the process. The ORM automatically does the backref.
@@ -603,6 +613,8 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     for (k, v) in threads_sums_across_procs.items():
         proc_sums[k] = v
     j.proc_sums = proc_sums
+    #_t4 = time.time()
+    #print('proc_sums took: ', _t4 - _t3, ' sec')
 
 # Update start/end/duration of job
 #       j.start = earliest_process
@@ -620,6 +632,8 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     # We use list-comprehension and aggregation over slower ORM ops
     # j.cpu_time = orm.sum_attribute_(j.processes, 'cpu_time')
     j.cpu_time = sum([p.cpu_time for p in all_procs])
+    #_t5 = time.time()
+    #print('job cpu_time: ', _t5 - _t4)
     if root_proc:
         if root_proc.exitcode != j.exitcode:
             logger.warning('metadata shows the job exit code is {0}, but root process exit code is {1}'.format(j.exitcode, root_proc.exitcode))
@@ -632,13 +646,12 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     logger.info("Earliest process start: %s",j.start)
     logger.info("Latest process end: %s",j.end)
     logger.info("Computed duration of job: %f us, %.2f m",j.duration,j.duration/60000000)
-    now = datetime.datetime.now() 
-    logger.info("Staged import of %d processes", len(all_procs))
-    logger.info("Staged import took %s, %f processes per second",
-                now - then,len(all_procs)/float((now-then).total_seconds()))
-    print("Imported successfully - job:",jobid,"processes:",len(all_procs),"rate:",len(all_procs)/float((now-then).total_seconds()))
     logger.info("Committing job to database..")
     commit_()
+    now = datetime.datetime.now() 
+    logger.info("Staged import of %d processes took %s, %f processes/sec",
+                len(all_procs), now - then,len(all_procs)/float((now-then).total_seconds()))
+    print("Imported successfully - job:",jobid,"processes:",len(all_procs),"rate:",len(all_procs)/float((now-then).total_seconds()))
     return j
 
 #
