@@ -832,13 +832,16 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=F
     all_procs = []
     # we iterate over tags, where each tag is dictionary
     for t in tags:
+
         # group the Query response we got by jobid
         # we use group_concat to join the thread_sums json into a giant string
         if settings.orm == 'sqlalchemy':
             procs_grp_by_job = orm_get_procs(jobs, t, None, None, 0, None, [], exact_tags_only, [Process.jobid, func.count(Process.id), func.sum(Process.duration), func.sum(Process.cpu_time), func.sum(Process.numtids), func.group_concat(Process.threads_sums, '@@@')]).group_by(Process.jobid)
         else:
+            # Pony ORM
             procs = get_procs(jobs, tags = t, exact_tag_only = exact_tags_only, fmt='orm')
             procs_grp_by_job = select((p.job, count(p.id), sum(p.duration), sum(p.cpu_time), sum(p.numtids), group_concat(p.threads_sums, sep='@@@')) for p in procs)
+
         for row in procs_grp_by_job:
             (j, nprocs, duration, excl_cpu, ntids, threads_sums_str) = row
             # convert from giant string to array of strings where each list
