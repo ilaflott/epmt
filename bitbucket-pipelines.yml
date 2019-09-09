@@ -28,4 +28,5 @@ pipelines:
           - apt-get update && apt-get install -y csh tcsh
           - rm -f settings.py; ln -s settings/settings_sqlite_inmem.py settings.py  # Setup in mem sqlite
           - python3 -m py_compile epmt *.py orm/*/*.py		# Compile everything
-          - env -i PATH=${PWD}:${PATH} python3 -m unittest discover -s test -v
+          - env -i PATH=${PWD}:${PATH} python3 -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers
+

@@ -244,8 +244,8 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(len(p.children), 735)
         self.assertEqual(len(p.descendants), 3448)
         from hashlib import md5
-        self.assertEqual(md5(", ".join(sorted([str(proc.pid) for proc in p.children]))).hexdigest(), '32c538b6313427ebd7a634ca1ea36de0')
-        self.assertEqual(md5(", ".join(sorted([str(proc.pid) for proc in p.descendants]))).hexdigest(), 'f0dfe011c0df53e3329324a2ca8f9b3e')
+        self.assertEqual(md5(", ".join(sorted([str(proc.pid) for proc in p.children])).encode('utf-8')).hexdigest(), '32c538b6313427ebd7a634ca1ea36de0')
+        self.assertEqual(md5(", ".join(sorted([str(proc.pid) for proc in p.descendants])).encode('utf-8')).hexdigest(), 'f0dfe011c0df53e3329324a2ca8f9b3e')
         p = eq.get_procs(fltr = (Process.pid == 26860) if settings.orm == 'sqlalchemy' else (lambda p: p.pid == 26860), fmt='orm').first()
         self.assertEqual(p.parent.pid, 26859)
         self.assertEqual(set([proc.pid for proc in p.ancestors]), set([6098, 26859]))
