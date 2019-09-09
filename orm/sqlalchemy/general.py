@@ -20,8 +20,9 @@ Base = declarative_base()
 thr_data = threading.local()
 thr_data.nestlevel = 0
 thr_data.session = None
-Session = None
+Session = scoped_session(sessionmaker())
 engine = None
+db_setup_complete = False
 
 ### sqlalchemy-specific API implementation ###
 def db_session(func):
@@ -53,10 +54,10 @@ def db_session(func):
     return wrapper
 
 def setup_db(settings,drop=False,create=True):
-    global Session
+    global db_setup_complete
     global engine
         
-    if Session:
+    if db_setup_complete:
         logger.debug('skipping DB setup as it has already been initialized')
         return True
     logger.info("Creating engine with db_params: %s", settings.db_params)
@@ -97,11 +98,9 @@ def setup_db(settings,drop=False,create=True):
         logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
         return False
 
-    if Session is None:
-        logger.info('Creating scoped session..')
-        session_factory = sessionmaker(bind=engine, expire_on_commit=False, autoflush=False)
-        Session = scoped_session(session_factory)
-        thr_data.Session = Session
+    logger.info('Configuring scoped session..')
+    Session.configure(bind=engine, expire_on_commit=False, autoflush=False)
+    db_setup_complete = True
     return True
 
 # orm_get(Job, '6355501')
