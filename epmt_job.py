@@ -9,7 +9,7 @@ from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
 from os import getuid
 from json import dumps, loads
 from pwd import getpwnam, getpwuid
-from epmtlib import tag_from_string, sum_dicts, unique_dicts, fold_dicts, timing
+from epmtlib import tag_from_string, sum_dicts, unique_dicts, fold_dicts, timing, dotdict
 from datetime import datetime, timedelta
 import time
 
@@ -126,6 +126,13 @@ def load_process_from_pandas(df, h, j, u, settings):
         host = lookup_or_create_host(h)
 
     try:
+        if settings.bulk_insert:
+            p = dotdict({'host_id': host.name, 'jobid': j.jobid, 'user_id': u.id})
+            for key in ('exename', 'args', 'path'):
+                p[key] = df[key][0]
+            for key in ('pid', 'ppid', 'pgid', 'sid', 'generation'):
+                p[key] = int(df[key][0])
+        else:
             p = orm_create(Process, 
                            exename=df['exename'][0],
                            args=df['args'][0],
@@ -138,6 +145,7 @@ def load_process_from_pandas(df, h, j, u, settings):
                            host=host,
                            job=j,
                            user=u)
+
     except Exception as e:
         logger.error("%s",e)
         logger.error("Corrupted CSV or invalid input type");
@@ -663,7 +671,14 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     if job_tags:
         j.tags = job_tags
 
-    post_process_job(j, all_tags, all_procs, pid_map)
+    if settings.bulk_insert and all_procs:
+        logger.info('doing a bulk insert of {0} processes'.format(len(all_procs)))
+        _b0 = time.time()
+        #thr_data.engine.execute(Process.__table__.insert(), all_procs)
+        Session.bulk_insert_mappings(Process, all_procs)
+        logger.info('bulk insert time: %2.5f sec', time.time() - _b0)
+    else:
+        post_process_job(j, all_tags, all_procs, pid_map)
 
     logger.info("Committing job to database..")
     _c0 = time.time()

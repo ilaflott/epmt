@@ -34,3 +34,4 @@ outlier_features = ['duration', 'cpu_time', 'num_procs']
 # depending on the template of your choice
 orm = 'pony'
 db_params = {'provider': 'sqlite', 'filename': ':memory:'}
+bulk_insert = False

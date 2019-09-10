@@ -74,6 +74,9 @@ def init_settings(settings):
     if not hasattr(settings, 'outlier_features'):
         logger.warning("missing settings.outlier_features")
         settings.outlier_features = ['duration', 'cpu_time', 'num_procs']
+    if not hasattr(settings, 'bulk_insert'):
+        logger.warning("missing settings.bulk_insert")
+        settings.bulk_insert = False
     if not hasattr(settings, 'db_params'):
         logger.error("missing settings.db_params")
         sys.exit(1)
@@ -345,3 +348,8 @@ def stringify_dicts(dicts):
     return [ str_dict(d) for d in dicts ]
 
 
+class dotdict(dict):
+    """dot.notation access to dictionary attributes"""
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__

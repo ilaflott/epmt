@@ -1,4 +1,4 @@
-# general.py
+from __future__ import print_function
 from sqlalchemy import *
 #from sqlalchemy.event import listens_for
 #from sqlalchemy.pool import Pool
@@ -64,6 +64,7 @@ def setup_db(settings,drop=False,create=True):
     if engine is None:
         try:
             engine = engine_from_config(settings.db_params, prefix='')
+            thr_data.engine = engine
         except Exception as e:
             logger.error("create_engine from db_params failed")
             logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
@@ -99,7 +100,7 @@ def setup_db(settings,drop=False,create=True):
         return False
 
     logger.info('Configuring scoped session..')
-    Session.configure(bind=engine, expire_on_commit=False, autoflush=False)
+    Session.configure(bind=engine, expire_on_commit=False, autoflush=True)
     db_setup_complete = True
     return True
 
@@ -426,12 +427,18 @@ def orm_get_refmodels(tag = {}, fltr=None, limit=0, order=None, exact_tag_only=F
 
     return qs
 
+def orm_dump_schema():
+    for t in Base.metadata.sorted_tables: 
+        print('\nTable', t.name)
+        for c in t.columns:
+            try:
+                print(' - ', c.name, str(c.type))
+            except:
+                print(' - ', c.name, str(c.type.__class__))
+
+
 ### end API ###
 
-# def get_session():
-#     if hasattr(get_session, 'session'): return get_session.session
-#     get_session.session = Session()
-#     return get_session.session
 
 #@listens_for(Pool, "connect")
 #def connect(dbapi_connection, connection_rec):
