@@ -9,8 +9,9 @@ from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
 from os import getuid
 from json import dumps, loads
 from pwd import getpwnam, getpwuid
-from epmtlib import tag_from_string, sum_dicts, unique_dicts, fold_dicts
+from epmtlib import tag_from_string, sum_dicts, unique_dicts, fold_dicts, timing
 from datetime import datetime, timedelta
+import time
 
 logger = getLogger(__name__)  # you can use other name
 
@@ -39,6 +40,7 @@ def sortKeyFunc(s):
     return int(t2[0]+t2[1])
 
 def create_job(jobid,user):
+    logger = getLogger(__name__)  # you can use other name
     job = orm_get(Job, jobid=jobid)
     if job is None:
         logger.info("Creating job %s",jobid)
@@ -67,6 +69,7 @@ def create_job(jobid,user):
                     
 created_hosts = {}
 def lookup_or_create_host(hostname):
+    logger = getLogger(__name__)  # you can use other name
     host = orm_get(Host, hostname) if (not(hostname in created_hosts)) else created_hosts[hostname]
     if host is None:
         logger.info("Creating host %s",hostname)
@@ -79,6 +82,7 @@ def lookup_or_create_host(hostname):
     return host
 
 def lookup_or_create_user(username):
+    logger = getLogger(__name__)  # you can use other name
     user = orm_get(User, name=username)
     if user is None:
         logger.info("Creating user %s",username)
@@ -113,6 +117,7 @@ def load_process_from_pandas(df, h, j, u, settings):
 # Assumes all processes are from same host
 #	dprint("Creating process",str(df['pid'][0]),"gen",str(df['generation'][0]),"exename",df['exename'][0])
     from pandas import Timestamp
+    logger = getLogger(__name__)  # you can use other name
 
     if 'hostname' in df.columns:
         host = lookup_or_create_host(df['hostname'][0])
@@ -281,6 +286,7 @@ def _proc_ancestors(pid_map, proc, ancestor_pid):
 
 
 def _create_process_tree(pid_map):
+    logger = getLogger(__name__)  # you can use other name
     logger.info("creating process tree..")
     parent_map = {}
     for (pid, proc) in pid_map.items():
@@ -296,6 +302,80 @@ def _create_process_tree(pid_map):
     for (pid, proc) in pid_map.items():
         ppid = proc.ppid
         _proc_ancestors(pid_map, proc, ppid)
+
+
+# This method will compute sums across processes/threads of a job,
+# and do post-processing on tags. It will also call _create_process_tree
+# to create process tree
+@timing
+def post_process_job(j, all_tags, all_procs, pid_map):
+    logger = getLogger(__name__)  # you can use other name
+    logger.info("Starting post-process of job..")
+    proc_sums = {}
+
+    _t0 = time.time()
+
+    # Add sum of tags to job
+    if all_tags:
+        logger.info("found %d distinct sets of process tags",len(all_tags))
+        # convert each of the pickled tags back into a dict
+        proc_sums[settings.all_tags_field] = [ loads(t) for t in sorted(all_tags) ]
+    else:
+        logger.debug('no process tags found')
+        proc_sums[settings.all_tags_field] = []
+
+    _t1 = time.time()
+    logger.debug('tag processing took: %2.5f sec', _t1 - _t0)
+        
+    # Add all processes to job and compute process totals to add to
+    # job.proc_sums field
+    nthreads = 0
+    threads_sums_across_procs = {}
+    if all_procs:
+        _create_process_tree(pid_map)
+        _t2 = time.time()
+        logger.debug('process tree took: %2.5f sec', _t2 - _t1)
+        # computing process inclusive times
+        logger.info("synthesizing aggregates across job processes..")
+        hosts = set()
+        for proc in all_procs:
+            proc.inclusive_cpu_time = float(proc.cpu_time + orm_sum_attribute(proc.descendants, 'cpu_time'))
+            nthreads += proc.numtids
+            threads_sums_across_procs = sum_dicts(threads_sums_across_procs, proc.threads_sums)
+            hosts.add(proc.host)
+        logger.info("job contains %d processes (%d threads)",len(all_procs), nthreads)
+        _t3 = time.time()
+        logger.debug('thread sums calculation took: %2.5f sec', _t3 - _t2)
+        j.hosts = list(hosts)
+        _t4 = time.time()
+        logger.debug('adding hosts to job took: %2.5f sec', _t4 - _t3)
+
+        # we MUST NOT add all_procs to j.processes below
+        # as we already associated the process with the job
+        # when we created the process. The ORM automatically does the backref.
+        # In particular, in sqlalchemy, uncommenting the line below creates 
+        # duplicate bindings.
+        # orm_add_to_collection(j.processes, all_procs)
+
+    proc_sums['num_procs'] = len(all_procs)
+    proc_sums['num_threads'] = nthreads
+    # merge the threads sums across all processes in the job.proc_sums dict
+    for (k, v) in threads_sums_across_procs.items():
+        proc_sums[k] = v
+    j.proc_sums = proc_sums
+    _t5 = time.time()
+    logger.debug('proc_sums calculation took: %2.5f sec', _t5 - _t4)
+
+    # the cpu time for a job is the sum of the exclusive times
+    # of all processes in the job
+    # We use list-comprehension and aggregation over slower ORM ops
+    # j.cpu_time = orm_sum_attribute(j.processes, 'cpu_time')
+    j.cpu_time = sum([p.cpu_time for p in all_procs])
+    _t6 = time.time()
+    logger.debug('job cpu_time calculation took: %2.5f sec', _t6 - _t5)
+#
+    return
+
 
 # This function takes as input raw metadata from the start/stop and produces
 # extended dictionary of additional fields used in the ETL. This created
@@ -314,6 +394,7 @@ def _create_process_tree(pid_map):
 #    metadata['job_el_reason'] = reason
 
 def get_batch_envvar(var,where):
+    logger = getLogger(__name__)  # you can use other name
 # Torque
 # http://docs.adaptivecomputing.com/torque/4-1-7/Content/topics/2-jobs/exportedBatchEnvVar.htm
     key2pbs = {
@@ -341,6 +422,7 @@ def get_batch_envvar(var,where):
     return a
 
 def _check_and_create_metadata(raw_metadata):
+    logger = getLogger(__name__)  # you can use other name
 # First check what should be here
     for n in [ 'job_pl_id', 'job_pl_submit_ts', 'job_pl_start_ts', 'job_pl_env', 
                'job_el_stop_ts', 'job_el_exitcode', 'job_el_reason', 'job_el_env' ]:
@@ -393,6 +475,7 @@ def _check_and_create_metadata(raw_metadata):
 
 @db_session
 def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
+    logger = getLogger(__name__)  # you can use other name
 # Synthesize what we need
     metadata = _check_and_create_metadata(raw_metadata)
     if metadata is False:
@@ -563,77 +646,15 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     else:
         logger.warning("Submitting job with no CSV data, tags %s",str(job_tags))
 
-    # post-processing of process data
-    proc_sums = {}
-   
-
-    #import time
-    #_t0 = time.time()
-    # Add sum of tags to job
-    if all_tags:
-        logger.info("found %d distinct sets of process tags",len(all_tags))
-        # convert each of the pickled tags back into a dict
-        proc_sums[settings.all_tags_field] = [ loads(t) for t in sorted(all_tags) ]
-    else:
-        logger.debug('no process tags found')
-        proc_sums[settings.all_tags_field] = []
-    #_t1 = time.time()
-    #print('tag processing took: ', _t1 - _t0, ' sec')
-        
-    # Add all processes to job and compute process totals to add to
-    # job.proc_sums field
-    nthreads = 0
-    threads_sums_across_procs = {}
-    if all_procs:
-        _create_process_tree(pid_map)
-        # computing process inclusive times
-        logger.info("synthesizing aggregates across job processes..")
-        hosts = set()
-        for proc in all_procs:
-            proc.inclusive_cpu_time = float(proc.cpu_time + orm_sum_attribute(proc.descendants, 'cpu_time'))
-            nthreads += proc.numtids
-            threads_sums_across_procs = sum_dicts(threads_sums_across_procs, proc.threads_sums)
-            hosts.add(proc.host)
-        logger.info("job contains %d processes (%d threads)",len(all_procs), nthreads)
-        #_t2 = time.time()
-        #print('thread sums took: ', _t2 - _t1, ' sec')
-        j.hosts = list(hosts)
-        #_t3 = time.time()
-        #print('job hosts relation took: ', _t3 - _t2, ' sec')
-        # we MUST NOT add all_procs to j.processes below
-        # as we already associated the process with the job
-        # when we created the process. The ORM automatically does the backref.
-        # In particular, in sqlalchemy, uncommenting the line below creates 
-        # duplicate bindings.
-        # orm_add_to_collection(j.processes, all_procs)
-
-    proc_sums['num_procs'] = len(all_procs)
-    proc_sums['num_threads'] = nthreads
-    # merge the threads sums across all processes in the job.proc_sums dict
-    for (k, v) in threads_sums_across_procs.items():
-        proc_sums[k] = v
-    j.proc_sums = proc_sums
-    #_t4 = time.time()
-    #print('proc_sums took: ', _t4 - _t3, ' sec')
-
-# Update start/end/duration of job
-#       j.start = earliest_process
-#        j.end = latest_process
-#
-#
-#
     j.start = start_ts
     j.end = stop_ts
     j.submit = submit_ts # Wait time is start - submit and should probably be stored
     d = j.end - j.start
     j.duration = int(d.total_seconds()*1000000)
-    # the cpu time for a job is the sum of the exclusive times
-    # of all processes in the job
-    # We use list-comprehension and aggregation over slower ORM ops
-    # j.cpu_time = orm_sum_attribute(j.processes, 'cpu_time')
-    j.cpu_time = sum([p.cpu_time for p in all_procs])
-    #_t5 = time.time()
-    #print('job cpu_time: ', _t5 - _t4)
+    logger.info("Earliest process start: %s",j.start)
+    logger.info("Latest process end: %s",j.end)
+    logger.info("Computed duration of job: %f us, %.2f m",j.duration,j.duration/60000000)
+
     if root_proc:
         if root_proc.exitcode != j.exitcode:
             logger.warning('metadata shows the job exit code is {0}, but root process exit code is {1}'.format(j.exitcode, root_proc.exitcode))
@@ -641,13 +662,13 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         logger.info('job exit code (using exit code of root process): {0}'.format(j.exitcode))
     if job_tags:
         j.tags = job_tags
-#
-#
-    logger.info("Earliest process start: %s",j.start)
-    logger.info("Latest process end: %s",j.end)
-    logger.info("Computed duration of job: %f us, %.2f m",j.duration,j.duration/60000000)
+
+    post_process_job(j, all_tags, all_procs, pid_map)
+
     logger.info("Committing job to database..")
+    _c0 = time.time()
     orm_commit()
+    logger.debug("commit time: %2.5f sec", time.time() - _c0)
     now = datetime.now() 
     logger.info("Staged import of %d processes took %s, %f processes/sec",
                 len(all_procs), now - then,len(all_procs)/float((now-then).total_seconds()))

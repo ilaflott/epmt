@@ -22,7 +22,7 @@ if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
 else:
     import settings
 
-from epmtlib import set_logging, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm
+from epmtlib import set_logging, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm, timing
 
 def find_diffs_in_envs(start_env,stop_env):
     env = {}
@@ -662,6 +662,7 @@ def compressed_tar(input):
 # Check for Experiment related variables
 #    metadata = check_and_add_workflowdb_envvars(metadata,total_env)
 
+@timing
 def submit_to_db(input, pattern, dry_run=True, drop=False):
 #    if not jobid:
 #        logger.error("Job ID is empty!");

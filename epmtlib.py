@@ -98,12 +98,13 @@ def safe_rm(f):
     return False
 
 def timing(f):
+    logger = getLogger(__name__)
     @wraps(f)
     def wrap(*args, **kw):
         ts = time()
         result = f(*args, **kw)
         te = time()
-        sys.stdout.write('%r took: %2.4f sec\n' % (f.__name__, te-ts))
+        logger.debug('%r function took: %2.4f sec\n' % (f.__name__, te-ts))
         return result
     return wrap
 
