@@ -839,7 +839,7 @@ def epmt_dbsize(findwhat):
             sizes = sql_raw(cmd)
             for (name,size) in sizes:
                 print("{0:40}:{1}".format(name,size))
-            print(str(size))
+
         if every or arg.lower() == 'table':
             print("\n ------------------------Table Size------------------------")
             print("{0:40}: {1:20} {2}".format("table","size","count"))
