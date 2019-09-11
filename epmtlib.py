@@ -77,6 +77,15 @@ def init_settings(settings):
     if not hasattr(settings, 'bulk_insert'):
         logger.warning("missing settings.bulk_insert")
         settings.bulk_insert = False
+    if (settings.orm != 'sqlalchemy' and settings.bulk_insert):
+        logger.error('bulk_insert is only supported by sqlalchemy')
+        sys.exit(1)
+    if not hasattr(settings, 'post_process_job_on_ingest'):
+        logger.warning("missing settings.post_process_job_on_ingest")
+        settings.post_process_job_on_ingest = True
+    if ((settings.orm != 'sqlalchemy') and (not(settings.post_process_job_on_ingest))):
+        logger.error('post_process_job_on_ingest must be set to True unless the ORM is sqlalchemy')
+        sys.exit(1)
     if not hasattr(settings, 'db_params'):
         logger.error("missing settings.db_params")
         sys.exit(1)

@@ -296,7 +296,6 @@ def _proc_ancestors(pid_map, proc, ancestor_pid):
 def _create_process_tree(pid_map):
     logger = getLogger(__name__)  # you can use other name
     logger.info("creating process tree..")
-    parent_map = {}
     for (pid, proc) in pid_map.items():
         ppid = proc.ppid
         if ppid in pid_map:
@@ -314,27 +313,52 @@ def _create_process_tree(pid_map):
 
 # This method will compute sums across processes/threads of a job,
 # and do post-processing on tags. It will also call _create_process_tree
-# to create process tree
+# to create process tree.
+#
+# The function is tolerant to missing datastructures for all_tags
+# all_procs and pid_map. If any of them are missing, it will 
+# build them by using the data in the database/ORM.
 @timing
-def post_process_job(j, all_tags, all_procs, pid_map):
+def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
     logger = getLogger(__name__)  # you can use other name
     logger.info("Starting post-process of job..")
     proc_sums = {}
 
     _t0 = time.time()
 
+    if all_tags == None:
+        logger.info("post-process: recreating all_tags..")
+        all_tags = set()
+        # we need to read the tags from the processes
+        for p in j.processes:
+            if p.tags:
+                all_tags.add(dumps(p.tags, sort_keys=True))
+
     # Add sum of tags to job
     if all_tags:
-        logger.info("found %d distinct sets of process tags",len(all_tags))
+        logger.info("post-process: found %d distinct sets of process tags",len(all_tags))
         # convert each of the pickled tags back into a dict
         proc_sums[settings.all_tags_field] = [ loads(t) for t in sorted(all_tags) ]
     else:
-        logger.debug('no process tags found')
+        logger.debug('post-process: no process tags found in th entire job')
         proc_sums[settings.all_tags_field] = []
 
     _t1 = time.time()
     logger.debug('tag processing took: %2.5f sec', _t1 - _t0)
-        
+
+    if all_procs is None:
+        logger.info("post-process: populating all_procs..")
+        all_procs = []
+        for p in j.processes:
+            all_procs.append(p)
+
+    if (pid_map is None):
+        _populate_all_procs = False
+        pid_map = {}
+        logger.info("post-process: recreating pid_map..")
+        for p in all_procs:
+            pid_map[p.pid] = p
+
     # Add all processes to job and compute process totals to add to
     # job.proc_sums field
     nthreads = 0
@@ -678,8 +702,19 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         #thr_data.engine.execute(Process.__table__.insert(), all_procs)
         Session.bulk_insert_mappings(Process, all_procs)
         logger.info('bulk insert time: %2.5f sec', time.time() - _b0)
-    else:
-        post_process_job(j, all_tags, all_procs, pid_map)
+
+    
+    if settings.post_process_job_on_ingest:
+        if settings.bulk_insert:
+            # when doing bulk inserts we don't pass in all_procs
+            # and pid_map as they have to be recreated using
+            # ORM objects and not the dotdicts we used for bulk
+            # inserts. Otherwise the calls to create_process_tree
+            # will fail as they rely on relationships between the
+            # orm objects
+            post_process_job(j, all_tags)
+        else:
+            post_process_job(j, all_tags, all_procs, pid_map)
 
     logger.info("Committing job to database..")
     _c0 = time.time()
