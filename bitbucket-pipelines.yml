@@ -29,4 +29,5 @@ pipelines:
           - rm -f settings.py; ln -s settings/settings_sqlite_inmem.py settings.py  # Setup in mem sqlite
           - python3 -m py_compile epmt *.py orm/*/*.py		# Compile everything
           - env -i PATH=${PWD}:${PATH} python3 -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers
+          - env -i PATH=${PWD}:${PATH} EPMT_USE_SQLALCHEMY=1 python3 -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers
 
