@@ -466,7 +466,7 @@ def epmt_dump_metadata(forced_jobid, forced_user, filelist=[]):
                 logger.error('ERROR: Did not find %s in tar archive' % "job_metadata")
                 exit(1)
             else:
-                logger.info('%s is %d bytes in archive' % (info.name, info.size))
+                logger.info('%s is %dsql_raw in archive' % (info.name, info.size))
                 f = tar.extractfile(info)
                 metadata = read_job_metadata_direct(f)
         else:
@@ -689,7 +689,7 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
             logger.error('ERROR: Did not find %s in tar archive' % "job_metadata")
             return False
         else:
-            logger.info('%s is %d bytes in archive' % (info.name, info.size))
+            logger.info('%s is %dsql_raw in archive' % (info.name, info.size))
             f = tar.extractfile(info)
             metadata = read_job_metadata_direct(f)
             filedict = get_filedict(None,settings.input_pattern,tar)
@@ -822,48 +822,103 @@ def epmt_stage(forced_jobid, forced_user, other_dirs):
         jobid,dir,file = setup_vars(forced_jobid, forced_user)
         return(stage_job(jobid,dir,file))
 
-def epmt_dbsize(findwhat):
+def epmt_dbsize(findwhat, other):
+
+    #Sanitizing
+    options = ['tablespace', 'table', 'index', 'database']
+    cleanList = []
+    for test in findwhat:
+        cleaner = ''.join(e for e in test if e.isalnum())
+        if cleaner.lower() not in options:
+            logger.warn((cleaner,"Not a valid option"))
+        else:
+            if cleaner not in cleanList:
+                cleanList.append(cleaner)
     logger.info("epmt dbsize: %s",str(findwhat))
     every = False
-    from orm import setup_db, sql_raw, orm_dump_schema
+    print(settings.db_params)
+    #if settings.db_params['provider'] is not 'postgres':
+    #    logger.error("ORM must be SQL")
+    #    return False
+    if settings.db_params['url'].startswith('postgresql://') is False:
+        logger.error((settings.db_params['url']," Not supported"))
+        return False
+    # sql_raw importing
+    try:
+        from orm import setup_db, sql_raw, orm_dump_schema
+    except (ImportError, Exception) as e:
+        PrintFail()
+        return False
     if setup_db(settings) == False:
         PrintFail()
         return False
-    if len(findwhat) < 1:
+    if len(cleanList) < 1:
+        logger.info("Displaying all options")
         every = True
-        findwhat = range(1)
-    for arg in findwhat:
+        cleanList = range(1)
+    for arg in cleanList:
         if every or arg.lower() == 'database':
             cmd = 'SELECT pg_database.datname, pg_size_pretty(pg_database_size(pg_database.datname)) AS size FROM pg_database'
-            print("\n ------------------------Database Size------------------------")
+            if other.bytes:
+                cmd = 'SELECT pg_database.datname, pg_database_size(pg_database.datname) AS size FROM pg_database'
+            print("\n ------------------------Database------------------------")
+            units = "DB Size"
+            if other.bytes:
+                units = units + "(bytes)"
             sizes = sql_raw(cmd)
+            if not sizes:
+                break
+            print("{0:40}{1:<20}\n".format("DB Name",units))
             for (name,size) in sizes:
-                print("{0:40}:{1}".format(name,size))
+                print("{0:40}{1:<20}".format(name,size))
 
         if every or arg.lower() == 'table':
-            print("\n ------------------------Table Size------------------------")
-            print("{0:40}: {1:20} {2}".format("table","size","count"))
+            print("\n ------------------------Table------------------------")
+            units = "Table Size"
+            if other.bytes:
+                units = units + "(bytes)"
+            print("{:40}{:<15}{:>15}\n".format("Table",units,"COUNT(*)"))
             for table in orm_dump_schema('name'):
                 cmd = "SELECT pg_size_pretty( pg_total_relation_size(\'"+table+"\') )"
+                if other.bytes:
+                    cmd = "SELECT pg_total_relation_size(\'"+table+"\')"
                 size = sql_raw(cmd)[0][0]
                 cmd = "SELECT count(*) from \""+table+"\""
                 #print (cmd)
                 count = sql_raw(cmd)[0][0]
+                if not any([count, size]):
+                    break
                 #print(count)
-                print("{0:40}: {1:20} {2}".format(table,size,count))
+                print("{:40}{:<15}{:>15}".format(table,size,count))
         if every or arg.lower() == 'index':
-            print("\n ------------------------Index Sizes------------------------")
+            print("\n ------------------------Index------------------------")
+            units = "Index Size"
+            if other.bytes:
+                units = units + "(bytes)"
+            print("{0:40}{1:<20}\n".format("Table",units))
             for table in orm_dump_schema('name'):
                 cmd = "SELECT pg_size_pretty( pg_indexes_size(\'"+table+"\') )"
+                if other.bytes:
+                    cmd = "SELECT pg_indexes_size(\'"+table+"\')"
                 size = sql_raw(cmd)[0][0]
-                print("{0:40}:{1}".format(table,size))
+                if not size:
+                    break
+                print("{0:40}{1:<20}".format(table,size))
         if every or arg.lower() == 'tablespace':
-            print("\n ------------------------Tablespace(disk) Size------------------------")
+            print("\n ------------------------Tablespace------------------------")
+            units = "Size"
+            if other.bytes:
+                units = units + "(bytes)"
+            print("{0:40}{1:<20}\n".format("Tablespace",units))
             for tablespace in sql_raw("SELECT spcname FROM pg_tablespace"):
                 tablespace = tablespace[0]
                 cmd = "SELECT pg_size_pretty( pg_tablespace_size(\'"+str(tablespace)+"\') )"
+                if other.bytes:
+                    cmd = "SELECT pg_tablespace_size(\'"+str(tablespace)+"\')"
                 size = sql_raw(cmd)[0][0]
-                print("{0:40}:{1}".format(tablespace,size))
+                if not size:
+                    break
+                print("{0:40}{1:<20}".format(tablespace,size))
 
     return()
 
@@ -883,7 +938,7 @@ def epmt_entrypoint(args, help):
         dump_config(stdout)
         exit(0)
     if args.epmt_cmd == 'dbsize':
-        return(epmt_dbsize(findwhat=args.epmt_cmd_args) == False)
+        return(epmt_dbsize(findwhat=args.epmt_cmd_args, other=args) == False)
     if args.epmt_cmd == 'start':
         return(epmt_start_job(args.jobid,None,other=args.epmt_cmd_args) == False)
     if args.epmt_cmd == 'stop':

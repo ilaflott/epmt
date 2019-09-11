@@ -106,6 +106,18 @@ def setup_db(settings,drop=False,create=True):
 
 # Execute raw sql on db
 def sql_raw(cmd2run, pk=None, **kwargs):
+    # Sanitizing
+    nonos = ['drop', 'insert', 'begin']
+    goodcmds = ['select']
+    # Check for bad keywords
+    if any(nono.lower() in cmd2run.lower() for nono in nonos):
+        logger.error(("Illegal raw sql command", cmd2run))
+        return False
+    # Verify at least one whitelist word ment
+    if not any(word.upper() in cmd2run.upper() for word in goodcmds):
+        logger.error("Whitelist filter triggered")
+        return False
+    # Executing
     try:
         retval = Session.execute(cmd2run).fetchall()
     except (ProgrammingError, Exception) as e:
