@@ -279,10 +279,20 @@ def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
 # walk up the process tree starting from the supplied ancestor
 # and ensure  that every ancestor of the supplied process(proc) includes
 # proc in its descendants, and proc.ancestors includes all ancestors
-def _proc_ancestors(pid_map, proc, ancestor_pid):
+# We only use relations for bulk mapping as orm_add_to_collection is
+# really slow if the processes are to be re-read from the DB
+def _proc_ancestors(pid_map, proc, ancestor_pid, relations = None, descendant_map = {}):
+    
     if ancestor_pid in pid_map:
         ancestor = pid_map[ancestor_pid]
-        orm_add_to_collection(ancestor.descendants, proc)
+        if ancestor.id in descendant_map:
+            descendant_map[ancestor.id].add(proc)
+        else:
+            descendant_map[ancestor.id] = set([proc])
+        if not(relations is None):
+            relations.append({'ancestor': ancestor.id, 'descendant': proc.id})
+        else:
+            orm_add_to_collection(ancestor.descendants, proc)
 
         # we don't need to do the reverse mapping (below) as that's
         # implied using the ORM backref. And if we uncomment it,
@@ -290,7 +300,8 @@ def _proc_ancestors(pid_map, proc, ancestor_pid):
         # orm_add_to_collection(proc.ancestors, ancestor)
 
         # now that we have done this node let's go to its parent
-        _proc_ancestors(pid_map, proc, ancestor.ppid)
+        _proc_ancestors(pid_map, proc, ancestor.ppid, relations, descendant_map)
+    return (relations, descendant_map)
 
 
 def _create_process_tree(pid_map):
@@ -306,9 +317,22 @@ def _create_process_tree(pid_map):
             # If we uncomment it, then on sqlalchemy, each
             # parent will have duplicate nodes for each child.
             # orm_add_to_collection(parent.children, proc)
+    logger.debug('process tree: creating ancestor/descendant relations..')
+
+    r = [] if settings.bulk_insert else None
+    # descendants map
+    desc_map = {}
     for (pid, proc) in pid_map.items():
         ppid = proc.ppid
-        _proc_ancestors(pid_map, proc, ppid)
+        (r, desc_map) = _proc_ancestors(pid_map, proc, ppid, r, desc_map)
+
+    # r will only be non-empty if we are doing bulk-inserts
+    if r:
+        logger.debug("doing bulk insert of ancestor/descendant relations")
+        t = Base.metadata.tables['ancestor_descendant_associations']
+        #Session.bulk_insert_mappings(get_mapper(t), r)
+        thr_data.engine.execute(t.insert(), r)
+    return desc_map
 
 
 # This method will compute sums across processes/threads of a job,
@@ -364,14 +388,18 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
     nthreads = 0
     threads_sums_across_procs = {}
     if all_procs:
-        _create_process_tree(pid_map)
+        desc_map = _create_process_tree(pid_map)
         _t2 = time.time()
         logger.debug('process tree took: %2.5f sec', _t2 - _t1)
         # computing process inclusive times
         logger.info("synthesizing aggregates across job processes..")
         hosts = set()
         for proc in all_procs:
-            proc.inclusive_cpu_time = float(proc.cpu_time + orm_sum_attribute(proc.descendants, 'cpu_time'))
+            if settings.bulk_insert:
+                proc_descendants = desc_map.get(proc.id, set())
+                proc.inclusive_cpu_time = float(proc.cpu_time + sum([p.cpu_time for p in proc_descendants]))
+            else:
+                proc.inclusive_cpu_time = float(proc.cpu_time + orm_sum_attribute(proc.descendants, 'cpu_time'))
             nthreads += proc.numtids
             threads_sums_across_procs = sum_dicts(threads_sums_across_procs, proc.threads_sums)
             hosts.add(proc.host)
@@ -711,7 +739,8 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             # ORM objects and not the dotdicts we used for bulk
             # inserts. Otherwise the calls to create_process_tree
             # will fail as they rely on relationships between the
-            # orm objects
+            # orm objects, and in particular the primary IDs of the
+            # processes will be NULL
             post_process_job(j, all_tags)
         else:
             post_process_job(j, all_tags, all_procs, pid_map)

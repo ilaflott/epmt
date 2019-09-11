@@ -2,7 +2,7 @@ from __future__ import print_function
 from sqlalchemy import *
 #from sqlalchemy.event import listens_for
 #from sqlalchemy.pool import Pool
-from sqlalchemy.orm import backref, relationship, sessionmaker, scoped_session
+from sqlalchemy.orm import backref, relationship, sessionmaker, scoped_session, mapperlib
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.query import Query
 import threading
@@ -266,7 +266,9 @@ def orm_to_dict(obj, **kwargs):
         d['job'] = obj.jobid
         d['jobid'] = obj.jobid
         del d['parent_id']
-        del d['host_id']
+        if 'host_id' in d:
+            d['host'] = d['host_id']
+            del d['host_id']
         d['parent'] = obj.parent.id if obj.parent else None
     if 'hosts' in d:
         if kwargs.get('with_collections'):
@@ -439,6 +441,23 @@ def orm_dump_schema():
 
 ### end API ###
 
+
+# utility function to get Mapper from table
+def get_mapper(tbl):
+    mappers = [
+        mapper for mapper in mapperlib._mapper_registry
+        if tbl in mapper.tables
+    ]
+    if len(mappers) > 1:
+        raise ValueError(
+            "Multiple mappers found for table '%s'." % tbl.name
+        )
+    elif not mappers:
+        raise ValueError(
+            "Could not get mapper for table '%s'." % tbl.name
+        )
+    else:
+        return mappers[0]
 
 #@listens_for(Pool, "connect")
 #def connect(dbapi_connection, connection_rec):
