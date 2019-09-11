@@ -368,6 +368,7 @@ def post_process_job(j, all_tags, all_procs, pid_map):
     proc_sums['num_procs'] = len(all_procs)
     proc_sums['num_threads'] = nthreads
     # merge the threads sums across all processes in the job.proc_sums dict
+    _t4 = time.time()
     for (k, v) in threads_sums_across_procs.items():
         proc_sums[k] = v
     j.proc_sums = proc_sums
