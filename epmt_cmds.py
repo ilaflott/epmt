@@ -822,6 +822,51 @@ def epmt_stage(forced_jobid, forced_user, other_dirs):
         jobid,dir,file = setup_vars(forced_jobid, forced_user)
         return(stage_job(jobid,dir,file))
 
+def epmt_dbsize(findwhat):
+    logger.info("epmt dbsize: %s",str(findwhat))
+    every = False
+    from orm import setup_db, sql_raw, orm_dump_schema
+    if setup_db(settings) == False:
+        PrintFail()
+        return False
+    if len(findwhat) < 1:
+        every = True
+        findwhat = range(1)
+    for arg in findwhat:
+        if every or arg.lower() == 'database':
+            cmd = 'SELECT pg_database.datname, pg_size_pretty(pg_database_size(pg_database.datname)) AS size FROM pg_database'
+            print("\n ------------------------Database Size------------------------")
+            sizes = sql_raw(cmd)
+            for (name,size) in sizes:
+                print("{0:40}:{1}".format(name,size))
+            print(str(size))
+        if every or arg.lower() == 'table':
+            print("\n ------------------------Table Size------------------------")
+            print("{0:40}: {1:20} {2}".format("table","size","count"))
+            for table in orm_dump_schema('name'):
+                cmd = "SELECT pg_size_pretty( pg_total_relation_size(\'"+table+"\') )"
+                size = sql_raw(cmd)[0][0]
+                cmd = "SELECT count(*) from \""+table+"\""
+                #print (cmd)
+                count = sql_raw(cmd)[0][0]
+                #print(count)
+                print("{0:40}: {1:20} {2}".format(table,size,count))
+        if every or arg.lower() == 'index':
+            print("\n ------------------------Index Sizes------------------------")
+            for table in orm_dump_schema('name'):
+                cmd = "SELECT pg_size_pretty( pg_indexes_size(\'"+table+"\') )"
+                size = sql_raw(cmd)[0][0]
+                print("{0:40}:{1}".format(table,size))
+        if every or arg.lower() == 'tablespace':
+            print("\n ------------------------Tablespace(disk) Size------------------------")
+            for tablespace in sql_raw("SELECT spcname FROM pg_tablespace"):
+                tablespace = tablespace[0]
+                cmd = "SELECT pg_size_pretty( pg_tablespace_size(\'"+str(tablespace)+"\') )"
+                size = sql_raw(cmd)[0][0]
+                print("{0:40}:{1}".format(tablespace,size))
+
+    return()
+
 #
 # depends on args being global
 #
@@ -837,7 +882,8 @@ def epmt_entrypoint(args, help):
         help(stdout)
         dump_config(stdout)
         exit(0)
-
+    if args.epmt_cmd == 'dbsize':
+        return(epmt_dbsize(findwhat=args.epmt_cmd_args) == False)
     if args.epmt_cmd == 'start':
         return(epmt_start_job(args.jobid,None,other=args.epmt_cmd_args) == False)
     if args.epmt_cmd == 'stop':

@@ -4,6 +4,7 @@ from sqlalchemy import *
 #from sqlalchemy.pool import Pool
 from sqlalchemy.orm import backref, relationship, sessionmaker, scoped_session
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.orm.query import Query
 import threading
 from functools import wraps
@@ -102,6 +103,15 @@ def setup_db(settings,drop=False,create=True):
     Session.configure(bind=engine, expire_on_commit=False, autoflush=False)
     db_setup_complete = True
     return True
+
+# Execute raw sql on db
+def sql_raw(cmd2run, pk=None, **kwargs):
+    try:
+        retval = Session.execute(cmd2run).fetchall()
+    except (ProgrammingError, Exception) as e:
+        logger.error("Bad Raw SQL: %s", cmd2run)
+        return False
+    return retval
 
 # orm_get(Job, '6355501')
 # or
@@ -425,6 +435,22 @@ def orm_get_refmodels(tag = {}, fltr=None, limit=0, order=None, exact_tag_only=F
         qs = qs.limit(int(limit))
 
     return qs
+# returns schema, arg format name will return table names
+def orm_dump_schema(format):
+    if format =='name':
+        m = MetaData()
+        m.reflect(engine)
+        return [table.name for table in m.tables.values()]
+        #return [t.name for t in Base.metadata.sorted_tables]
+    for t in Base.metadata.sorted_tables: 
+        print('\nTable', t.name)
+        for c in t.columns:
+            try:
+                print(' - ', c.name, str(c.type))
+            except:
+                print(' - ', c.name, str(c.type.__class__))
+    return Base.metadata.sorted_tables
+
 
 ### end API ###
 
