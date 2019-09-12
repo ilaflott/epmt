@@ -84,8 +84,11 @@ def read_job_metadata_direct(file):
 
 def read_job_metadata(jobdatafile):
     logger.info("Unpickling from "+jobdatafile)
-    with open(jobdatafile,'rb') as file:
-        return read_job_metadata_direct(file)
+    try:
+        with open(jobdatafile,'rb') as file:
+            return read_job_metadata_direct(file)
+    except IOError as i:
+        logger.error("Job metadata missing, possibly didn't start? "+str(i))
     return False
 
 def write_job_epilog(jobdatafile,metadata):
@@ -550,6 +553,34 @@ def epmt_source(forced_jobid, forced_user, papiex_debug=False, monitor_debug=Fal
         cmd += settings.install_prefix+"lib/"+l
     return cmd
 
+def epmt_unsource(dry_run=False):
+    unexport="unset "
+    equals="="
+    cmd_sep="\n"
+    cmd=""
+
+    # For CSH, for unsource:
+    # unsetenv FOO;
+    # For CSH, for run:
+    # env FOO=bar
+    
+    shell_name = environ.get("_")
+    shell_name2 = environ.get("SHELL")
+    if ( shell_name2 and shell_name2.endswith("csh")) or (shell_name and shell_name.endswith("csh")):
+        logger.debug("Detected CSH - please read CSH considered harmful")
+        unexport="unsetenv "
+        cmd_sep=";\n"
+    cmd = unexport + "PAPIEX_OPTIONS" + cmd_sep
+    cmd += unexport + "PAPIEX_OUTPUT" + cmd_sep
+    cmd += unexport + "PAPIEX_DEBUG" + cmd_sep
+    cmd += unexport + "LD_PRELOAD" + cmd_sep
+    logger.info("Executing(%s)",cmd)
+    if not dry_run:
+        return_code = forkexecwait(cmd, shell=True)
+    else:
+        print(cmd)
+        return_code = 0
+    return return_code
 def epmt_run(forced_jobid, forced_user, cmdline, wrapit=False, dry_run=False, debug=False):
     logger.debug("epmt_run(%s, %s, %s, %s, %s)",forced_jobid, cmdline, str(wrapit), str(dry_run), str(debug))
     if wrapit:
@@ -851,6 +882,8 @@ def epmt_entrypoint(args, help):
             print(s)
             return 0
         return 1
+    if args.epmt_cmd == "unsource":
+        return(epmt_unsource())
     if args.epmt_cmd == "stage":
         return(epmt_stage(args.jobid,None,args.epmt_cmd_args) == False)
     if args.epmt_cmd == 'run':
