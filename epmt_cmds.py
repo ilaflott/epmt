@@ -823,7 +823,7 @@ def epmt_stage(forced_jobid, forced_user, other_dirs):
         return(stage_job(jobid,dir,file))
 
 def epmt_dbsize(findwhat, other):
-
+    other.json = True
     #Sanitizing
     options = ['tablespace', 'table', 'index', 'database']
     cleanList = []
@@ -845,6 +845,7 @@ def epmt_dbsize(findwhat, other):
         return False
     # sql_raw importing
     try:
+        import json
         from orm import setup_db, sql_raw, orm_dump_schema
     except (ImportError, Exception) as e:
         PrintFail()
@@ -858,9 +859,15 @@ def epmt_dbsize(findwhat, other):
         cleanList = range(1)
     for arg in cleanList:
         if every or arg.lower() == 'database':
+            databased = {}
             cmd = 'SELECT pg_database.datname, pg_size_pretty(pg_database_size(pg_database.datname)) AS size FROM pg_database'
             if other.bytes:
                 cmd = 'SELECT pg_database.datname, pg_database_size(pg_database.datname) AS size FROM pg_database'
+            if other.json:
+                cmdd = 'SELECT pg_database.datname, pg_database_size(pg_database.datname) AS size FROM pg_database'
+                sizes = sql_raw(cmdd)
+                for name, size in sizes:
+                    databased.setdefault(str(name),[]).append(int(size))
             print("\n ------------------------Database------------------------")
             units = "DB Size"
             if other.bytes:
@@ -877,11 +884,18 @@ def epmt_dbsize(findwhat, other):
             units = "Table Size"
             if other.bytes:
                 units = units + "(bytes)"
+            tabled = {}
             print("{:40}{:<15}{:>15}\n".format("Table",units,"COUNT(*)"))
             for table in orm_dump_schema('name'):
                 cmd = "SELECT pg_size_pretty( pg_total_relation_size(\'"+table+"\') )"
                 if other.bytes:
                     cmd = "SELECT pg_total_relation_size(\'"+table+"\')"
+                if other.json:
+                    cmda = "SELECT pg_total_relation_size(\'"+table+"\')"
+                    size = sql_raw(cmda)[0][0]
+                    cmda = "SELECT count(*) from \""+table+"\""
+                    count = sql_raw(cmda)[0][0]
+                    tabled[table] = (int(size),int(count))
                 size = sql_raw(cmd)[0][0]
                 cmd = "SELECT count(*) from \""+table+"\""
                 #print (cmd)
@@ -896,10 +910,15 @@ def epmt_dbsize(findwhat, other):
             if other.bytes:
                 units = units + "(bytes)"
             print("{0:40}{1:<20}\n".format("Table",units))
+            indexd = {}
             for table in orm_dump_schema('name'):
                 cmd = "SELECT pg_size_pretty( pg_indexes_size(\'"+table+"\') )"
+                cmdb = "SELECT pg_indexes_size(\'"+table+"\')"
+                storeit = sql_raw(cmdb)[0][0]
+                indexd[table] = int(storeit)
                 if other.bytes:
-                    cmd = "SELECT pg_indexes_size(\'"+table+"\')"
+                    #cmd = "SELECT pg_indexes_size(\'"+table+"\')"
+                    cmd = cmdb
                 size = sql_raw(cmd)[0][0]
                 if not size:
                     break
@@ -907,6 +926,7 @@ def epmt_dbsize(findwhat, other):
         if every or arg.lower() == 'tablespace':
             print("\n ------------------------Tablespace------------------------")
             units = "Size"
+            tablespaced = {}
             if other.bytes:
                 units = units + "(bytes)"
             print("{0:40}{1:<20}\n".format("Tablespace",units))
@@ -915,11 +935,16 @@ def epmt_dbsize(findwhat, other):
                 cmd = "SELECT pg_size_pretty( pg_tablespace_size(\'"+str(tablespace)+"\') )"
                 if other.bytes:
                     cmd = "SELECT pg_tablespace_size(\'"+str(tablespace)+"\')"
+                if other.json:
+                    cmdd = "SELECT pg_tablespace_size(\'"+str(tablespace)+"\')"
+                    size = sql_raw(cmdd)[0][0]
+                    tablespaced[tablespace] = int(size)
                 size = sql_raw(cmd)[0][0]
                 if not size:
                     break
                 print("{0:40}{1:<20}".format(tablespace,size))
-
+                
+    print("Index Dict:",indexd, "\nTable Dict(table:size,count):",tabled, "\ntablespace:", tablespaced, "\nDatabase:", databased)
     return()
 
 #
