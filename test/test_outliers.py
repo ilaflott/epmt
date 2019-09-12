@@ -18,6 +18,8 @@ import epmt_default_settings as settings
 if environ.get('EPMT_USE_SQLALCHEMY'):
     settings.orm = 'sqlalchemy'
     settings.db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
+    #if environ.get('EPMT_BULK_INSERT'):
+    #    settings.bulk_insert = True
 
 from epmtlib import timing, frozen_dict
 from orm import db_session, setup_db, Job
@@ -60,9 +62,9 @@ class OutliersAPI(unittest.TestCase):
     def test_outlier_jobs(self):
         jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm')
         (df, parts) = eod.detect_outlier_jobs(jobs)
-        self.assertEqual(len(df[df.duration > 0]), 1, "incorrect count of duration outliers")
-        self.assertEqual(len(df[df.cpu_time > 0]), 1, "incorrect count of cpu_time outliers")
-        self.assertEqual(len(df[df.num_procs > 0]), 0, "incorrect count of num_procs outliers")
+        self.assertEqual(len(df[df.duration > 0]), 1)
+        self.assertEqual(len(df[df.cpu_time > 0]), 1)
+        self.assertEqual(len(df[df.num_procs > 0]), 0)
         self.assertTrue('outlier' in df[df.duration > 0]['jobid'].values[0], "wrong duration outlier")
         self.assertTrue('outlier' in df[df.cpu_time > 0]['jobid'].values[0], "wrong cpu_time outlier")
         self.assertEqual(len(parts), 3, "wrong number of items in partition dictionary")

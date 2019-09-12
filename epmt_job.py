@@ -371,10 +371,10 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
     logger.debug('tag processing took: %2.5f sec', _t1 - _t0)
 
     if all_procs is None:
-        logger.info("post-process: populating all_procs..")
         all_procs = []
         for p in j.processes:
             all_procs.append(p)
+        logger.info("post-process: populated all_procs: {0} processes".format(len(all_procs)))
 
     if (pid_map is None):
         _populate_all_procs = False
@@ -739,7 +739,9 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             # inserts. Otherwise the calls to create_process_tree
             # will fail as they rely on relationships between the
             # orm objects, and in particular the primary IDs of the
-            # processes will be NULL
+            # processes will be NULL. We will need to commit()
+            # prior to calling post_process_job iff autoflush is disabled.
+            # orm_commit()
             post_process_job(j, all_tags)
         else:
             post_process_job(j, all_tags, all_procs, pid_map)
