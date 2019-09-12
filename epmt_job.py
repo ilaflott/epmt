@@ -127,7 +127,7 @@ def load_process_from_pandas(df, h, j, u, settings):
 
     try:
         if settings.bulk_insert:
-            p = dotdict({'host_id': host.name, 'jobid': j.jobid, 'user_id': u.id})
+            p = dotdict({'host_id': host.name, 'jobid': j.jobid, 'user_id': u.name})
             for key in ('exename', 'args', 'path'):
                 p[key] = df[key][0]
             for key in ('pid', 'ppid', 'pgid', 'sid', 'generation'):

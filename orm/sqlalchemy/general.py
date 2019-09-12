@@ -276,7 +276,8 @@ def orm_to_dict(obj, **kwargs):
         else:
             del d['hosts']
     if 'user_id' in d:
-        d['user'] = Session.query(User).get(d['user_id']).name
+        #d['user'] = Session.query(User).get(d['user_id']).name
+        d['user'] = d['user_id']
         del d['user_id']
     return d
 
