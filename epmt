@@ -24,6 +24,7 @@ if (__name__ == "__main__"):
     parser.add_argument('--drop',action='store_true',help="Drop all tables/data and recreate before importing")
     parser.add_argument('dbsize',action='store_true', help="database, table, index, tablespace")
     parser.add_argument('--bytes',action='store_true',help="dbsize --bytes")
+    parser.add_argument('--json',action='store_true',help="Output JSON dbsizes")
     args = parser.parse_args()
     from epmt_cmds import epmt_entrypoint
     exit(epmt_entrypoint(args,parser.print_help))

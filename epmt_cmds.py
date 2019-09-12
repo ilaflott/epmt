@@ -823,7 +823,7 @@ def epmt_stage(forced_jobid, forced_user, other_dirs):
         return(stage_job(jobid,dir,file))
 
 def epmt_dbsize(findwhat, other):
-    other.json = True
+   #other.json = True
     #Sanitizing
     options = ['tablespace', 'table', 'index', 'database']
     cleanList = []
@@ -845,7 +845,6 @@ def epmt_dbsize(findwhat, other):
         return False
     # sql_raw importing
     try:
-        import json
         from orm import setup_db, sql_raw, orm_dump_schema
     except (ImportError, Exception) as e:
         PrintFail()
@@ -864,6 +863,7 @@ def epmt_dbsize(findwhat, other):
             if other.bytes:
                 cmd = 'SELECT pg_database.datname, pg_database_size(pg_database.datname) AS size FROM pg_database'
             if other.json:
+                import json
                 cmdd = 'SELECT pg_database.datname, pg_database_size(pg_database.datname) AS size FROM pg_database'
                 sizes = sql_raw(cmdd)
                 for name, size in sizes:
@@ -913,9 +913,10 @@ def epmt_dbsize(findwhat, other):
             indexd = {}
             for table in orm_dump_schema('name'):
                 cmd = "SELECT pg_size_pretty( pg_indexes_size(\'"+table+"\') )"
-                cmdb = "SELECT pg_indexes_size(\'"+table+"\')"
-                storeit = sql_raw(cmdb)[0][0]
-                indexd[table] = int(storeit)
+                if other.json:
+                    cmdb = "SELECT pg_indexes_size(\'"+table+"\')"
+                    storeit = sql_raw(cmdb)[0][0]
+                    indexd[table] = int(storeit)
                 if other.bytes:
                     #cmd = "SELECT pg_indexes_size(\'"+table+"\')"
                     cmd = cmdb
@@ -943,8 +944,8 @@ def epmt_dbsize(findwhat, other):
                 if not size:
                     break
                 print("{0:40}{1:<20}".format(tablespace,size))
-                
-    print("Index Dict:",indexd, "\nTable Dict(table:size,count):",tabled, "\ntablespace:", tablespaced, "\nDatabase:", databased)
+    print (json.dumps([{"IndexSize":indexd},{"TableSize":tabled},{"IndexSize":indexd},{"TablespaceSize":tablespaced}], indent=4))
+    #print("Index Dict:",indexd, "\nTable Dict(table:size,count):",tabled, "\ntablespace:", tablespaced, "\nDatabase:", databased)
     return()
 
 #
