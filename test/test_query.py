@@ -190,15 +190,14 @@ class QueryAPI(unittest.TestCase):
 
         ## Tags
         # empty tag query
-        procs = eq.get_procs(tags='', fmt='terse')
-        self.assertEqual(len(procs), 0)
-        procs = eq.get_procs(tags={}, fmt='terse')
-        self.assertEqual(len(procs), 0, 'procs query with {} tag option')
+        procs1 = eq.get_procs(tags='', fmt='terse')
+        procs2 = eq.get_procs(tags={}, fmt='terse')
+        self.assertEqual(len(procs2), len(procs1))
         p = orm_get(Process, 1)
         p.tags={}
         orm_commit()
         procs = eq.get_procs(tags={}, fmt='terse')
-        self.assertEqual(procs, [1])
+        self.assertEqual(len(procs), len(procs1)+1)
 
         if settings.orm == 'sqlalchemy': 
             procs_with_tag = eq.get_procs(JOBS_LIST, tags='op_sequence:4', fltr=(Process.duration > 10000000), order=desc(Process.duration), fmt='orm')

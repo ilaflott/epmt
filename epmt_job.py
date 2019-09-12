@@ -603,7 +603,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 # fix below
     j.env_dict = env_dict
     j.env_changes_dict = env_changes_dict
-#    j.info_dict = info_dict
+    j.info_dict = {}
 
     didsomething = False
     all_tags = set()
@@ -663,8 +663,8 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                     logger.error("Failed loading from pandas, file %s!",f);
                     continue
 # If using old version of papiex, process tags are in the comment field
-                if not p.tags and oldproctag:
-                    p.tags = tag_from_string(oldproctag)
+                if not p.tags:
+                    p.tags = tag_from_string(oldproctag) if oldproctag else {}
 
                 if p.tags:
                     # pickle and add tag dictionaries to a set
@@ -721,8 +721,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             logger.warning('metadata shows the job exit code is {0}, but root process exit code is {1}'.format(j.exitcode, root_proc.exitcode))
         j.exitcode = root_proc.exitcode
         logger.info('job exit code (using exit code of root process): {0}'.format(j.exitcode))
-    if job_tags:
-        j.tags = job_tags
+    j.tags = job_tags if job_tags else {}
 
     if settings.bulk_insert and all_procs:
         logger.info('doing a bulk insert of {0} processes'.format(len(all_procs)))
