@@ -883,7 +883,7 @@ def epmt_entrypoint(args, help):
             return 0
         return 1
     if args.epmt_cmd == "unsource":
-        return(epmt_unsource(dry_run=args.dry_run))
+        return(epmt_unsource(dry_run=args.dry_run) == False)
     if args.epmt_cmd == "stage":
         return(epmt_stage(args.jobid,None,args.epmt_cmd_args) == False)
     if args.epmt_cmd == 'run':
