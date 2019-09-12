@@ -740,8 +740,10 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             # will fail as they rely on relationships between the
             # orm objects, and in particular the primary IDs of the
             # processes will be NULL. We will need to commit()
-            # prior to calling post_process_job iff autoflush is disabled.
-            # orm_commit()
+            # prior to calling post_process_job so that relationships
+            # such as j.processes work after the processes were
+            # bulk-inserted.
+            orm_commit()
             post_process_job(j, all_tags)
         else:
             post_process_job(j, all_tags, all_procs, pid_map)
