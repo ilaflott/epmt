@@ -194,7 +194,7 @@ class QueryAPI(unittest.TestCase):
         procs1 = eq.get_procs(tags='', fmt='terse')
         procs2 = eq.get_procs(tags={}, fmt='terse')
         self.assertEqual(len(procs2), len(procs1))
-        p = eq.get_procs(tags = 'op_sequence:1', limit=1, fmt='orm').first()
+        p = eq.get_procs(tags = 'op_sequence:1', limit=1, fmt='orm')[0]
         p.tags={}
         orm_commit()
         procs = eq.get_procs(tags={}, fmt='terse')
