@@ -824,7 +824,9 @@ def epmt_stage(forced_jobid, forced_user, other_dirs):
         return(stage_job(jobid,dir,file))
 
 def epmt_dbsize(findwhat, other):
-   #other.json = True
+    if other.json:
+        import json
+        jsonlist = []
     #Sanitizing
     options = ['tablespace', 'table', 'index', 'database']
     cleanList = []
@@ -865,11 +867,11 @@ def epmt_dbsize(findwhat, other):
             if other.bytes:
                 cmd = 'SELECT pg_database.datname, pg_database_size(pg_database.datname) AS size FROM pg_database'
             if other.json:
-                import json
                 cmdd = 'SELECT pg_database.datname, pg_database_size(pg_database.datname) AS size FROM pg_database'
                 sizes = sql_raw(cmdd)
                 for name, size in sizes:
                     databased.setdefault(str(name),[]).append(int(size))
+                jsonlist.append({"DatabaseSize":databased})
             print("\n ------------------------Database------------------------")
             units = "DB Size"
             if other.bytes:
@@ -906,6 +908,8 @@ def epmt_dbsize(findwhat, other):
                     break
                 #print(count)
                 print("{:40}{:<15}{:>15}".format(table,size,count))
+            if other.json:
+                jsonlist.append({"TableSize":tabled})
         if every or arg.lower() == 'index':
             print("\n ------------------------Index------------------------")
             units = "Index Size"
@@ -926,6 +930,8 @@ def epmt_dbsize(findwhat, other):
                 if not size:
                     break
                 print("{0:40}{1:<20}".format(table,size))
+            if other.json:
+                jsonlist.append({"IndexSize":indexd})
         if every or arg.lower() == 'tablespace':
             print("\n ------------------------Tablespace------------------------")
             units = "Size"
@@ -946,8 +952,10 @@ def epmt_dbsize(findwhat, other):
                 if not size:
                     break
                 print("{0:40}{1:<20}".format(tablespace,size))
+            if other.json:
+                jsonlist.append({"TablespaceSize":tablespaced})
     if other.json:
-        print (json.dumps([{"IndexSize":indexd},{"TableSize":tabled},{"IndexSize":indexd},{"TablespaceSize":tablespaced}], indent=4))
+        print (json.dumps(jsonlist, indent=4))
     #print("Index Dict:",indexd, "\nTable Dict(table:size,count):",tabled, "\ntablespace:", tablespaced, "\nDatabase:", databased)
     return()
 
