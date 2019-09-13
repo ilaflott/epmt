@@ -852,6 +852,7 @@ def epmt_dbsize(findwhat, other):
         return False
     if setup_db(settings) == False:
         PrintFail()
+        logger.error("Could Not connect to db")
         return False
     if len(cleanList) < 1:
         logger.info("Displaying all options")
@@ -945,7 +946,8 @@ def epmt_dbsize(findwhat, other):
                 if not size:
                     break
                 print("{0:40}{1:<20}".format(tablespace,size))
-    print (json.dumps([{"IndexSize":indexd},{"TableSize":tabled},{"IndexSize":indexd},{"TablespaceSize":tablespaced}], indent=4))
+    if other.json:
+        print (json.dumps([{"IndexSize":indexd},{"TableSize":tabled},{"IndexSize":indexd},{"TablespaceSize":tablespaced}], indent=4))
     #print("Index Dict:",indexd, "\nTable Dict(table:size,count):",tabled, "\ntablespace:", tablespaced, "\nDatabase:", databased)
     return()
 
