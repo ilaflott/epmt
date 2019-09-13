@@ -194,7 +194,7 @@ class QueryAPI(unittest.TestCase):
         procs1 = eq.get_procs(tags='', fmt='terse')
         procs2 = eq.get_procs(tags={}, fmt='terse')
         self.assertEqual(len(procs2), len(procs1))
-        p = eq.get_procs(tags = 'op_sequence:1', limit=1, fmt='orm').first()
+        p = eq.get_procs(tags = 'op_sequence:1', limit=1, fmt='orm')[0]
         p.tags={}
         orm_commit()
         procs = eq.get_procs(tags={}, fmt='terse')
@@ -397,7 +397,6 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(list(agg_df['jobid'].values), ['685000', '685003', '685016'])
         self.assertEqual(list(agg_df['job_cpu_time'].values), [113135329.0, 93538033.0, 427082965.0])
 
-    @unittest.skipIf(settings.orm == 'sqlalchemy', "skipped for sqlalchemy")
     @db_session
     def test_zz_delete_jobs(self):
         #with self.assertRaises(EnvironmentError):

@@ -72,8 +72,8 @@ def lookup_or_create_host(hostname):
     logger = getLogger(__name__)  # you can use other name
     host = orm_get(Host, hostname) if (not(hostname in created_hosts)) else created_hosts[hostname]
     if host is None:
-        logger.info("Creating host %s",hostname)
         host = orm_create(Host, name=hostname)
+        logger.info("Created host %s",hostname)
         # for sqlalchemy the created_hosts map is crucial for boosting performance
         # However with Pony we end up caching objects from different db_sessions
         # and so we don't want use our create_hosts map with Pony
@@ -119,11 +119,8 @@ def load_process_from_pandas(df, h, j, u, settings):
     from pandas import Timestamp
     logger = getLogger(__name__)  # you can use other name
 
-    if 'hostname' in df.columns:
-        host = lookup_or_create_host(df['hostname'][0])
-    else:
-        # fallback to the host read from the filename
-        host = lookup_or_create_host(h)
+    # fallback to the host read from the filename if we don't have a hostname column
+    host = lookup_or_create_host(df['hostname'][0] if 'hostname' in df.columns else h)
 
     try:
         if settings.bulk_insert:
@@ -210,9 +207,6 @@ def load_process_from_pandas(df, h, j, u, settings):
     except Exception as e:
         logger.error("%s",e)
         logger.error("missing or invalid value for thread start/end time");
-
-    #logger.debug("Earliest thread start: %s, Latest thread end: %s",str(earliest_thread_start),str(latest_thread_finish))
-    #logger.debug("Process wallclock: %s, Computed process wallclock: %s s.",str(p.duration),str((p.end-p.start).total_seconds()))
     return p
     
 #
@@ -281,6 +275,7 @@ def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
 # proc in its descendants, and proc.ancestors includes all ancestors
 # We only use relations for bulk mapping as orm_add_to_collection is
 # really slow if the processes are to be re-read from the DB
+# relations and descendant maps are used if we do bulk inserts
 def _proc_ancestors(pid_map, proc, ancestor_pid, relations = None, descendant_map = {}):
     
     if ancestor_pid in pid_map:
@@ -330,7 +325,6 @@ def _create_process_tree(pid_map):
     if r:
         logger.debug("doing bulk insert of ancestor/descendant relations")
         t = Base.metadata.tables['ancestor_descendant_associations']
-        #Session.bulk_insert_mappings(get_mapper(t), r)
         thr_data.engine.execute(t.insert(), r)
     return desc_map
 
@@ -368,18 +362,18 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
         proc_sums[settings.all_tags_field] = []
 
     _t1 = time.time()
-    logger.debug('tag processing took: %2.5f sec', _t1 - _t0)
+    logger.debug('post-process: tag processing took: %2.5f sec', _t1 - _t0)
 
     if all_procs is None:
         all_procs = []
         for p in j.processes:
             all_procs.append(p)
-        logger.info("post-process: populated all_procs: {0} processes".format(len(all_procs)))
+        logger.debug("post-process: populated all_procs: {0} processes".format(len(all_procs)))
 
     if (pid_map is None):
         _populate_all_procs = False
         pid_map = {}
-        logger.info("post-process: recreating pid_map..")
+        logger.debug("post-process: recreating pid_map..")
         for p in all_procs:
             pid_map[p.pid] = p
 
@@ -388,6 +382,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
     nthreads = 0
     threads_sums_across_procs = {}
     if all_procs:
+        _t1 = time.time()
         desc_map = _create_process_tree(pid_map)
         _t2 = time.time()
         logger.debug('process tree took: %2.5f sec', _t2 - _t1)
@@ -396,6 +391,9 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
         hosts = set()
         for proc in all_procs:
             if settings.bulk_insert:
+                # in bulk inserts, we cannnot rely on process.dependants to be
+                # available, so we use a descendants map created during the
+                # process tree creation step
                 proc_descendants = desc_map.get(proc.id, set())
                 proc.inclusive_cpu_time = float(proc.cpu_time + sum([p.cpu_time for p in proc_descendants]))
             else:
@@ -406,7 +404,11 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
         logger.info("job contains %d processes (%d threads)",len(all_procs), nthreads)
         _t3 = time.time()
         logger.debug('thread sums calculation took: %2.5f sec', _t3 - _t2)
-        j.hosts = list(hosts)
+        if settings.bulk_insert:
+            t = Base.metadata.tables['host_job_associations']
+            thr_data.engine.execute(t.insert(), [ { 'jobid': j.jobid, 'hostname': h.name } for h in hosts])
+        else:
+            j.hosts = list(hosts)
         _t4 = time.time()
         logger.debug('adding hosts to job took: %2.5f sec', _t4 - _t3)
 
@@ -613,6 +615,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     # a pid_map is used to create the process graph
     pid_map = {}  # maps pids to process objects
 
+    start_read_csv_time = time.time()
     for hostname, files in filedict.items():
         logger.debug("Processing host %s",hostname)
         # we only need to a lookup_or_create_host if papiex doesn't
@@ -699,7 +702,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             didsomething = True
 
 #    stdout.write('\b')            # erase the last written char
-
+    logger.debug('read-in CSVs + populating thread DFs, took: %2.5f sec', time.time() - start_read_csv_time)
     if filedict:
         if not didsomething:
             logger.warning("Something went wrong in parsing CSV files")

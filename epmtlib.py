@@ -34,6 +34,7 @@ def set_logging(intlvl = 0, check = False):
         handler.setLevel(level)
 
 def init_settings(settings):
+    logger = getLogger(__name__)
     for k in [ "provider", "user", "password", "host", "dbname", "filename" ]:
         name = "EPMT_DB_"+ k.upper()
         t = environ.get(name)
