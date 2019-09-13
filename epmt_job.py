@@ -9,8 +9,9 @@ from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
 from os import getuid
 from json import dumps, loads
 from pwd import getpwnam, getpwuid
-from epmtlib import tag_from_string, sum_dicts, unique_dicts, fold_dicts
+from epmtlib import tag_from_string, sum_dicts, unique_dicts, fold_dicts, timing, dotdict
 from datetime import datetime, timedelta
+import time
 
 logger = getLogger(__name__)  # you can use other name
 
@@ -39,6 +40,7 @@ def sortKeyFunc(s):
     return int(t2[0]+t2[1])
 
 def create_job(jobid,user):
+    logger = getLogger(__name__)  # you can use other name
     job = orm_get(Job, jobid=jobid)
     if job is None:
         logger.info("Creating job %s",jobid)
@@ -67,6 +69,7 @@ def create_job(jobid,user):
                     
 created_hosts = {}
 def lookup_or_create_host(hostname):
+    logger = getLogger(__name__)  # you can use other name
     host = orm_get(Host, hostname) if (not(hostname in created_hosts)) else created_hosts[hostname]
     if host is None:
         logger.info("Creating host %s",hostname)
@@ -79,6 +82,7 @@ def lookup_or_create_host(hostname):
     return host
 
 def lookup_or_create_user(username):
+    logger = getLogger(__name__)  # you can use other name
     user = orm_get(User, name=username)
     if user is None:
         logger.info("Creating user %s",username)
@@ -113,6 +117,7 @@ def load_process_from_pandas(df, h, j, u, settings):
 # Assumes all processes are from same host
 #	dprint("Creating process",str(df['pid'][0]),"gen",str(df['generation'][0]),"exename",df['exename'][0])
     from pandas import Timestamp
+    logger = getLogger(__name__)  # you can use other name
 
     if 'hostname' in df.columns:
         host = lookup_or_create_host(df['hostname'][0])
@@ -121,6 +126,13 @@ def load_process_from_pandas(df, h, j, u, settings):
         host = lookup_or_create_host(h)
 
     try:
+        if settings.bulk_insert:
+            p = dotdict({'host_id': host.name, 'jobid': j.jobid, 'user_id': u.name})
+            for key in ('exename', 'args', 'path'):
+                p[key] = df[key][0]
+            for key in ('pid', 'ppid', 'pgid', 'sid', 'generation'):
+                p[key] = int(df[key][0])
+        else:
             p = orm_create(Process, 
                            exename=df['exename'][0],
                            args=df['args'][0],
@@ -133,6 +145,7 @@ def load_process_from_pandas(df, h, j, u, settings):
                            host=host,
                            job=j,
                            user=u)
+
     except Exception as e:
         logger.error("%s",e)
         logger.error("Corrupted CSV or invalid input type");
@@ -266,10 +279,20 @@ def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
 # walk up the process tree starting from the supplied ancestor
 # and ensure  that every ancestor of the supplied process(proc) includes
 # proc in its descendants, and proc.ancestors includes all ancestors
-def _proc_ancestors(pid_map, proc, ancestor_pid):
+# We only use relations for bulk mapping as orm_add_to_collection is
+# really slow if the processes are to be re-read from the DB
+def _proc_ancestors(pid_map, proc, ancestor_pid, relations = None, descendant_map = {}):
+    
     if ancestor_pid in pid_map:
         ancestor = pid_map[ancestor_pid]
-        orm_add_to_collection(ancestor.descendants, proc)
+        if ancestor.id in descendant_map:
+            descendant_map[ancestor.id].add(proc)
+        else:
+            descendant_map[ancestor.id] = set([proc])
+        if not(relations is None):
+            relations.append({'ancestor': ancestor.id, 'descendant': proc.id})
+        else:
+            orm_add_to_collection(ancestor.descendants, proc)
 
         # we don't need to do the reverse mapping (below) as that's
         # implied using the ORM backref. And if we uncomment it,
@@ -277,12 +300,13 @@ def _proc_ancestors(pid_map, proc, ancestor_pid):
         # orm_add_to_collection(proc.ancestors, ancestor)
 
         # now that we have done this node let's go to its parent
-        _proc_ancestors(pid_map, proc, ancestor.ppid)
+        _proc_ancestors(pid_map, proc, ancestor.ppid, relations, descendant_map)
+    return (relations, descendant_map)
 
 
 def _create_process_tree(pid_map):
+    logger = getLogger(__name__)  # you can use other name
     logger.info("creating process tree..")
-    parent_map = {}
     for (pid, proc) in pid_map.items():
         ppid = proc.ppid
         if ppid in pid_map:
@@ -293,9 +317,126 @@ def _create_process_tree(pid_map):
             # If we uncomment it, then on sqlalchemy, each
             # parent will have duplicate nodes for each child.
             # orm_add_to_collection(parent.children, proc)
+    logger.debug('process tree: creating ancestor/descendant relations..')
+
+    r = [] if settings.bulk_insert else None
+    # descendants map
+    desc_map = {}
     for (pid, proc) in pid_map.items():
         ppid = proc.ppid
-        _proc_ancestors(pid_map, proc, ppid)
+        (r, desc_map) = _proc_ancestors(pid_map, proc, ppid, r, desc_map)
+
+    # r will only be non-empty if we are doing bulk-inserts
+    if r:
+        logger.debug("doing bulk insert of ancestor/descendant relations")
+        t = Base.metadata.tables['ancestor_descendant_associations']
+        #Session.bulk_insert_mappings(get_mapper(t), r)
+        thr_data.engine.execute(t.insert(), r)
+    return desc_map
+
+
+# This method will compute sums across processes/threads of a job,
+# and do post-processing on tags. It will also call _create_process_tree
+# to create process tree.
+#
+# The function is tolerant to missing datastructures for all_tags
+# all_procs and pid_map. If any of them are missing, it will 
+# build them by using the data in the database/ORM.
+@timing
+def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
+    logger = getLogger(__name__)  # you can use other name
+    logger.info("Starting post-process of job..")
+    proc_sums = {}
+
+    _t0 = time.time()
+
+    if all_tags == None:
+        logger.info("post-process: recreating all_tags..")
+        all_tags = set()
+        # we need to read the tags from the processes
+        for p in j.processes:
+            if p.tags:
+                all_tags.add(dumps(p.tags, sort_keys=True))
+
+    # Add sum of tags to job
+    if all_tags:
+        logger.info("post-process: found %d distinct sets of process tags",len(all_tags))
+        # convert each of the pickled tags back into a dict
+        proc_sums[settings.all_tags_field] = [ loads(t) for t in sorted(all_tags) ]
+    else:
+        logger.debug('post-process: no process tags found in th entire job')
+        proc_sums[settings.all_tags_field] = []
+
+    _t1 = time.time()
+    logger.debug('tag processing took: %2.5f sec', _t1 - _t0)
+
+    if all_procs is None:
+        all_procs = []
+        for p in j.processes:
+            all_procs.append(p)
+        logger.info("post-process: populated all_procs: {0} processes".format(len(all_procs)))
+
+    if (pid_map is None):
+        _populate_all_procs = False
+        pid_map = {}
+        logger.info("post-process: recreating pid_map..")
+        for p in all_procs:
+            pid_map[p.pid] = p
+
+    # Add all processes to job and compute process totals to add to
+    # job.proc_sums field
+    nthreads = 0
+    threads_sums_across_procs = {}
+    if all_procs:
+        desc_map = _create_process_tree(pid_map)
+        _t2 = time.time()
+        logger.debug('process tree took: %2.5f sec', _t2 - _t1)
+        # computing process inclusive times
+        logger.info("synthesizing aggregates across job processes..")
+        hosts = set()
+        for proc in all_procs:
+            if settings.bulk_insert:
+                proc_descendants = desc_map.get(proc.id, set())
+                proc.inclusive_cpu_time = float(proc.cpu_time + sum([p.cpu_time for p in proc_descendants]))
+            else:
+                proc.inclusive_cpu_time = float(proc.cpu_time + orm_sum_attribute(proc.descendants, 'cpu_time'))
+            nthreads += proc.numtids
+            threads_sums_across_procs = sum_dicts(threads_sums_across_procs, proc.threads_sums)
+            hosts.add(proc.host)
+        logger.info("job contains %d processes (%d threads)",len(all_procs), nthreads)
+        _t3 = time.time()
+        logger.debug('thread sums calculation took: %2.5f sec', _t3 - _t2)
+        j.hosts = list(hosts)
+        _t4 = time.time()
+        logger.debug('adding hosts to job took: %2.5f sec', _t4 - _t3)
+
+        # we MUST NOT add all_procs to j.processes below
+        # as we already associated the process with the job
+        # when we created the process. The ORM automatically does the backref.
+        # In particular, in sqlalchemy, uncommenting the line below creates 
+        # duplicate bindings.
+        # orm_add_to_collection(j.processes, all_procs)
+
+    proc_sums['num_procs'] = len(all_procs)
+    proc_sums['num_threads'] = nthreads
+    # merge the threads sums across all processes in the job.proc_sums dict
+    _t4 = time.time()
+    for (k, v) in threads_sums_across_procs.items():
+        proc_sums[k] = v
+    j.proc_sums = proc_sums
+    _t5 = time.time()
+    logger.debug('proc_sums calculation took: %2.5f sec', _t5 - _t4)
+
+    # the cpu time for a job is the sum of the exclusive times
+    # of all processes in the job
+    # We use list-comprehension and aggregation over slower ORM ops
+    # j.cpu_time = orm_sum_attribute(j.processes, 'cpu_time')
+    j.cpu_time = sum([p.cpu_time for p in all_procs])
+    _t6 = time.time()
+    logger.debug('job cpu_time calculation took: %2.5f sec', _t6 - _t5)
+#
+    return
+
 
 # This function takes as input raw metadata from the start/stop and produces
 # extended dictionary of additional fields used in the ETL. This created
@@ -314,6 +455,7 @@ def _create_process_tree(pid_map):
 #    metadata['job_el_reason'] = reason
 
 def get_batch_envvar(var,where):
+    logger = getLogger(__name__)  # you can use other name
 # Torque
 # http://docs.adaptivecomputing.com/torque/4-1-7/Content/topics/2-jobs/exportedBatchEnvVar.htm
     key2pbs = {
@@ -341,6 +483,7 @@ def get_batch_envvar(var,where):
     return a
 
 def _check_and_create_metadata(raw_metadata):
+    logger = getLogger(__name__)  # you can use other name
 # First check what should be here
     for n in [ 'job_pl_id', 'job_pl_submit_ts', 'job_pl_start_ts', 'job_pl_env', 
                'job_el_stop_ts', 'job_el_exitcode', 'job_el_reason', 'job_el_env' ]:
@@ -393,6 +536,7 @@ def _check_and_create_metadata(raw_metadata):
 
 @db_session
 def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
+    logger = getLogger(__name__)  # you can use other name
 # Synthesize what we need
     metadata = _check_and_create_metadata(raw_metadata)
     if metadata is False:
@@ -459,7 +603,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 # fix below
     j.env_dict = env_dict
     j.env_changes_dict = env_changes_dict
-#    j.info_dict = info_dict
+    j.info_dict = {}
 
     didsomething = False
     all_tags = set()
@@ -519,8 +663,8 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                     logger.error("Failed loading from pandas, file %s!",f);
                     continue
 # If using old version of papiex, process tags are in the comment field
-                if not p.tags and oldproctag:
-                    p.tags = tag_from_string(oldproctag)
+                if not p.tags:
+                    p.tags = tag_from_string(oldproctag) if oldproctag else {}
 
                 if p.tags:
                     # pickle and add tag dictionaries to a set
@@ -563,91 +707,51 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     else:
         logger.warning("Submitting job with no CSV data, tags %s",str(job_tags))
 
-    # post-processing of process data
-    proc_sums = {}
-   
-
-    #import time
-    #_t0 = time.time()
-    # Add sum of tags to job
-    if all_tags:
-        logger.info("found %d distinct sets of process tags",len(all_tags))
-        # convert each of the pickled tags back into a dict
-        proc_sums[settings.all_tags_field] = [ loads(t) for t in sorted(all_tags) ]
-    else:
-        logger.debug('no process tags found')
-        proc_sums[settings.all_tags_field] = []
-    #_t1 = time.time()
-    #print('tag processing took: ', _t1 - _t0, ' sec')
-        
-    # Add all processes to job and compute process totals to add to
-    # job.proc_sums field
-    nthreads = 0
-    threads_sums_across_procs = {}
-    if all_procs:
-        _create_process_tree(pid_map)
-        # computing process inclusive times
-        logger.info("synthesizing aggregates across job processes..")
-        hosts = set()
-        for proc in all_procs:
-            proc.inclusive_cpu_time = float(proc.cpu_time + orm_sum_attribute(proc.descendants, 'cpu_time'))
-            nthreads += proc.numtids
-            threads_sums_across_procs = sum_dicts(threads_sums_across_procs, proc.threads_sums)
-            hosts.add(proc.host)
-        logger.info("job contains %d processes (%d threads)",len(all_procs), nthreads)
-        #_t2 = time.time()
-        #print('thread sums took: ', _t2 - _t1, ' sec')
-        j.hosts = list(hosts)
-        #_t3 = time.time()
-        #print('job hosts relation took: ', _t3 - _t2, ' sec')
-        # we MUST NOT add all_procs to j.processes below
-        # as we already associated the process with the job
-        # when we created the process. The ORM automatically does the backref.
-        # In particular, in sqlalchemy, uncommenting the line below creates 
-        # duplicate bindings.
-        # orm_add_to_collection(j.processes, all_procs)
-
-    proc_sums['num_procs'] = len(all_procs)
-    proc_sums['num_threads'] = nthreads
-    # merge the threads sums across all processes in the job.proc_sums dict
-    for (k, v) in threads_sums_across_procs.items():
-        proc_sums[k] = v
-    j.proc_sums = proc_sums
-    #_t4 = time.time()
-    #print('proc_sums took: ', _t4 - _t3, ' sec')
-
-# Update start/end/duration of job
-#       j.start = earliest_process
-#        j.end = latest_process
-#
-#
-#
     j.start = start_ts
     j.end = stop_ts
     j.submit = submit_ts # Wait time is start - submit and should probably be stored
     d = j.end - j.start
     j.duration = int(d.total_seconds()*1000000)
-    # the cpu time for a job is the sum of the exclusive times
-    # of all processes in the job
-    # We use list-comprehension and aggregation over slower ORM ops
-    # j.cpu_time = orm_sum_attribute(j.processes, 'cpu_time')
-    j.cpu_time = sum([p.cpu_time for p in all_procs])
-    #_t5 = time.time()
-    #print('job cpu_time: ', _t5 - _t4)
+    logger.info("Earliest process start: %s",j.start)
+    logger.info("Latest process end: %s",j.end)
+    logger.info("Computed duration of job: %f us, %.2f m",j.duration,j.duration/60000000)
+
     if root_proc:
         if root_proc.exitcode != j.exitcode:
             logger.warning('metadata shows the job exit code is {0}, but root process exit code is {1}'.format(j.exitcode, root_proc.exitcode))
         j.exitcode = root_proc.exitcode
         logger.info('job exit code (using exit code of root process): {0}'.format(j.exitcode))
-    if job_tags:
-        j.tags = job_tags
-#
-#
-    logger.info("Earliest process start: %s",j.start)
-    logger.info("Latest process end: %s",j.end)
-    logger.info("Computed duration of job: %f us, %.2f m",j.duration,j.duration/60000000)
+    j.tags = job_tags if job_tags else {}
+
+    if settings.bulk_insert and all_procs:
+        logger.info('doing a bulk insert of {0} processes'.format(len(all_procs)))
+        _b0 = time.time()
+        #thr_data.engine.execute(Process.__table__.insert(), all_procs)
+        Session.bulk_insert_mappings(Process, all_procs)
+        logger.info('bulk insert time: %2.5f sec', time.time() - _b0)
+
+    
+    if settings.post_process_job_on_ingest:
+        if settings.bulk_insert:
+            # when doing bulk inserts we don't pass in all_procs
+            # and pid_map as they have to be recreated using
+            # ORM objects and not the dotdicts we used for bulk
+            # inserts. Otherwise the calls to create_process_tree
+            # will fail as they rely on relationships between the
+            # orm objects, and in particular the primary IDs of the
+            # processes will be NULL. We will need to commit()
+            # prior to calling post_process_job so that relationships
+            # such as j.processes work after the processes were
+            # bulk-inserted.
+            orm_commit()
+            post_process_job(j, all_tags)
+        else:
+            post_process_job(j, all_tags, all_procs, pid_map)
+
     logger.info("Committing job to database..")
+    _c0 = time.time()
     orm_commit()
+    logger.debug("commit time: %2.5f sec", time.time() - _c0)
     now = datetime.now() 
     logger.info("Staged import of %d processes took %s, %f processes/sec",
                 len(all_procs), now - then,len(all_procs)/float((now-then).total_seconds()))

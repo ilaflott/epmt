@@ -1,8 +1,8 @@
-# general.py
+from __future__ import print_function
 from sqlalchemy import *
 #from sqlalchemy.event import listens_for
 #from sqlalchemy.pool import Pool
-from sqlalchemy.orm import backref, relationship, sessionmaker, scoped_session
+from sqlalchemy.orm import backref, relationship, sessionmaker, scoped_session, mapperlib
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.orm.query import Query
@@ -65,6 +65,7 @@ def setup_db(settings,drop=False,create=True):
     if engine is None:
         try:
             engine = engine_from_config(settings.db_params, prefix='')
+            thr_data.engine = engine
         except Exception as e:
             logger.error("create_engine from db_params failed")
             logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
@@ -100,7 +101,7 @@ def setup_db(settings,drop=False,create=True):
         return False
 
     logger.info('Configuring scoped session..')
-    Session.configure(bind=engine, expire_on_commit=False, autoflush=False)
+    Session.configure(bind=engine, expire_on_commit=False, autoflush=True)
     db_setup_complete = True
     return True
 
@@ -287,7 +288,9 @@ def orm_to_dict(obj, **kwargs):
         d['job'] = obj.jobid
         d['jobid'] = obj.jobid
         del d['parent_id']
-        del d['host_id']
+        if 'host_id' in d:
+            d['host'] = d['host_id']
+            del d['host_id']
         d['parent'] = obj.parent.id if obj.parent else None
     if 'hosts' in d:
         if kwargs.get('with_collections'):
@@ -295,7 +298,8 @@ def orm_to_dict(obj, **kwargs):
         else:
             del d['hosts']
     if 'user_id' in d:
-        d['user'] = Session.query(User).get(d['user_id']).name
+        #d['user'] = Session.query(User).get(d['user_id']).name
+        d['user'] = d['user_id']
         del d['user_id']
     return d
 
@@ -464,12 +468,35 @@ def orm_dump_schema(format):
     return Base.metadata.sorted_tables
 
 
+def orm_dump_schema():
+    for t in Base.metadata.sorted_tables: 
+        print('\nTable', t.name)
+        for c in t.columns:
+            try:
+                print(' - ', c.name, str(c.type))
+            except:
+                print(' - ', c.name, str(c.type.__class__))
+
+
 ### end API ###
 
-# def get_session():
-#     if hasattr(get_session, 'session'): return get_session.session
-#     get_session.session = Session()
-#     return get_session.session
+
+# utility function to get Mapper from table
+def get_mapper(tbl):
+    mappers = [
+        mapper for mapper in mapperlib._mapper_registry
+        if tbl in mapper.tables
+    ]
+    if len(mappers) > 1:
+        raise ValueError(
+            "Multiple mappers found for table '%s'." % tbl.name
+        )
+    elif not mappers:
+        raise ValueError(
+            "Could not get mapper for table '%s'." % tbl.name
+        )
+    else:
+        return mappers[0]
 
 #@listens_for(Pool, "connect")
 #def connect(dbapi_connection, connection_rec):

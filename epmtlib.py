@@ -74,6 +74,18 @@ def init_settings(settings):
     if not hasattr(settings, 'outlier_features'):
         logger.warning("missing settings.outlier_features")
         settings.outlier_features = ['duration', 'cpu_time', 'num_procs']
+    if not hasattr(settings, 'bulk_insert'):
+        logger.warning("missing settings.bulk_insert")
+        settings.bulk_insert = False
+    if (settings.orm != 'sqlalchemy' and settings.bulk_insert):
+        logger.error('bulk_insert is only supported by sqlalchemy')
+        sys.exit(1)
+    if not hasattr(settings, 'post_process_job_on_ingest'):
+        logger.warning("missing settings.post_process_job_on_ingest")
+        settings.post_process_job_on_ingest = True
+    if ((settings.orm != 'sqlalchemy') and (not(settings.post_process_job_on_ingest))):
+        logger.error('post_process_job_on_ingest must be set to True unless the ORM is sqlalchemy')
+        sys.exit(1)
     if not hasattr(settings, 'db_params'):
         logger.error("missing settings.db_params")
         sys.exit(1)
@@ -98,12 +110,13 @@ def safe_rm(f):
     return False
 
 def timing(f):
+    logger = getLogger(__name__)
     @wraps(f)
     def wrap(*args, **kw):
         ts = time()
         result = f(*args, **kw)
         te = time()
-        sys.stdout.write('%r took: %2.4f sec\n' % (f.__name__, te-ts))
+        logger.debug('%r function took: %2.4f sec\n' % (f.__name__, te-ts))
         return result
     return wrap
 
@@ -344,3 +357,8 @@ def stringify_dicts(dicts):
     return [ str_dict(d) for d in dicts ]
 
 
+class dotdict(dict):
+    """dot.notation access to dictionary attributes"""
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
