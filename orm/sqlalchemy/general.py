@@ -118,9 +118,13 @@ def sql_raw(cmd2run, pk=None, **kwargs):
         logger.error("Whitelist filter triggered")
         return False
     # Executing
+    connection = engine.connect()
+    trans = connection.begin()
     try:
-        retval = Session.execute(cmd2run).fetchall()
+        retval = connection.execute(cmd2run).fetchall()
+        trans.commit()
     except (ProgrammingError, Exception) as e:
+        trans.rollback()
         logger.error("Bad Raw SQL: %s", cmd2run)
         return False
     return retval
