@@ -127,10 +127,28 @@ def orm_create(model, **kwargs):
 def orm_delete(o):
     Session.delete(o)
 
-def orm_delete_jobs(jobs):
+def orm_delete_jobs(jobs, use_orm = False):
+    if not use_orm:
+        stmts = []
+        for j in jobs:
+            jobid = j.jobid
+            stmts.append('DELETE FROM ancestor_descendant_associations WHERE EXISTS (SELECT ad.* from ancestor_descendant_associations ad INNER JOIN processes p ON (ad.ancestor = p.id OR ad.descendant = p.id) WHERE p.jobid = "{0}")'.format(jobid))
+            stmts.append('DELETE FROM host_job_associations WHERE host_job_associations.jobid = "{0}"'.format(jobid))
+            stmts.append('DELETE FROM refmodel_job_associations WHERE refmodel_job_associations.jobid = "{0}"'.format(jobid))
+            stmts.append('DELETE FROM processes WHERE processes.jobid = "{0}"'.format(jobid))
+            stmts.append('DELETE FROM jobs WHERE jobs.jobid = "{0}"'.format(jobid))
+        try:
+            _execute_raw_sql(stmts, commit = True)
+            return
+        except Exception as e:
+            logger.warning("Could not execute delete SQL: {0}".format(str(e)))
+
+    # do a slow delete using ORM
+    logger.info("Doing a slow delete using ORM..")
     for j in jobs:
         Session.delete(j)
     Session.commit()
+    return
 
 def orm_delete_refmodels(ref_ids):
     from .models import ReferenceModel
@@ -459,6 +477,27 @@ def get_mapper(tbl):
         )
     else:
         return mappers[0]
+
+
+# This function is vulnerable to injection attacks. It's expected that
+# the orm API will define a higher-level function to use this
+# function after guarding against injection and dangerous sql commands
+def _execute_raw_sql(sql, commit = False):
+    connection = engine.connect()
+    logger.debug('Executing: {0}'.format(sql))
+    trans = connection.begin()
+    if type(sql) != list:
+        sql = [sql]
+    try:
+        for s in sql:
+            res = connection.execute(s)
+        if commit:
+            trans.commit()
+            return True
+    except:
+        trans.rollback()
+        raise
+    return res
 
 #@listens_for(Pool, "connect")
 #def connect(dbapi_connection, connection_rec):
