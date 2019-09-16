@@ -466,7 +466,7 @@ def epmt_dump_metadata(forced_jobid, forced_user, filelist=[]):
                 logger.error('ERROR: Did not find %s in tar archive' % "job_metadata")
                 exit(1)
             else:
-                logger.info('%s is %dsql_raw in archive' % (info.name, info.size))
+                logger.info('%s is %d bytes in archive' % (info.name, info.size))
                 f = tar.extractfile(info)
                 metadata = read_job_metadata_direct(f)
         else:
@@ -690,7 +690,7 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
             logger.error('ERROR: Did not find %s in tar archive' % "job_metadata")
             return False
         else:
-            logger.info('%s is %dsql_raw in archive' % (info.name, info.size))
+            logger.info('%s is %d bytes in archive' % (info.name, info.size))
             f = tar.extractfile(info)
             metadata = read_job_metadata_direct(f)
             filedict = get_filedict(None,settings.input_pattern,tar)
@@ -843,7 +843,7 @@ def epmt_entrypoint(args, help):
         dump_config(stdout)
         exit(0)
     if args.epmt_cmd == 'dbsize':
-        return(epmt_dbsize(findwhat=args.epmt_cmd_args, other=args) == False)
+        return(epmt_dbsize(findwhat=args.epmt_cmd_args, other=args))
     if args.epmt_cmd == 'start':
         return(epmt_start_job(args.jobid,None,other=args.epmt_cmd_args) == False)
     if args.epmt_cmd == 'stop':

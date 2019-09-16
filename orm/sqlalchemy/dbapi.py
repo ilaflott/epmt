@@ -8,6 +8,27 @@
 # rely on the ORM being sqlalchemy
 
 def get_db_size(findwhat, other):
+    """
+    Used in finding size of database,tables,index,tablespace storage usage and row count
+    
+    Can return both bytes and autosized units determined by database.  JSON will return if requested.
+    get_db_size('tablespace index database',[other.json=True, other.bytes=True])
+    
+    Parameters:
+    findwhat string: Options include database, table, index, tablespace or epmty string
+    
+    other args: arg parser arguments from epmt command
+        bytes & json are utilized from this list
+        Namespace(auto=False, bytes=False, dbsize=True, drop=False, 
+            dry_run=False, epmt_cmd='dbsize', epmt_cmd_args=[], error=False, 
+            help=False, jobid=None, json=False, verbose=0)
+
+    Returns:
+    if json=True
+        return json
+    else 
+        return 0
+    """
     import settings
     from general import _execute_raw_sql
     from logging import getLogger
@@ -98,7 +119,6 @@ def get_db_size(findwhat, other):
                     break
                 #print(count)
                 print("{:40}{:<15}{:>15}".format(table,size,count))
-                print("Done")
             if other.json:
                 jsonlist.append({"TableSize":tabled})
         if every or arg.lower() == 'index':
@@ -145,7 +165,7 @@ def get_db_size(findwhat, other):
             if other.json:
                 jsonlist.append({"TablespaceSize":tablespaced})
     if other.json:
-        print (json.dumps(jsonlist, indent=4))
+        return(json.dumps(jsonlist, indent=4))
     #print("Index Dict:",indexd, "\nTable Dict(table:size,count):",tabled, "\ntablespace:", tablespaced, "\nDatabase:", databased)
-    pass
+    return 0
 
