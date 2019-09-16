@@ -112,18 +112,23 @@ def _get_process_df(df):
         # advance row pointer
         row += thr_count
             
-
-def load_process_from_pandas(df, h, j, u, settings):
+def load_process_from_pandas(df, h, j, u, settings, profile):
 # Assumes all processes are from same host
 #	dprint("Creating process",str(df['pid'][0]),"gen",str(df['generation'][0]),"exename",df['exename'][0])
     from pandas import Timestamp
     logger = getLogger(__name__)  # you can use other name
 
-    # fallback to the host read from the filename if we don't have a hostname column
-    host = lookup_or_create_host(df['hostname'][0] if 'hostname' in df.columns else h)
 
+    # fallback to the host read from the filename if we don't have a hostname column
+    _t = time.time()
+    host = lookup_or_create_host(df['hostname'][0] if 'hostname' in df.columns else h)
+    profile.load_process.host_lookup += time.time() - _t
+
+    _t = time.time()
     try:
         if settings.bulk_insert:
+            # we use dotdict as thin-wrapper around dict so we can use the dot syntax
+            # of objects
             p = dotdict({'host_id': host.name, 'jobid': j.jobid, 'user_id': u.name})
             for key in ('exename', 'args', 'path'):
                 p[key] = df[key][0]
@@ -147,38 +152,46 @@ def load_process_from_pandas(df, h, j, u, settings):
         logger.error("%s",e)
         logger.error("Corrupted CSV or invalid input type");
         return None
+    profile.load_process.init += time.time() - _t
 
 
     if 'exitcode' in df.columns:
         p.exitcode = int(df['exitcode'][0])
 
+    t = time.time()
     if 'tags' in df.columns:
         tags = df['tags'][0]
         if tags:
             p.tags = tag_from_string(tags)
+    profile.load_process.proc_tags += time.time() - _t
 
     # remove per-process fields from the threads dataframe
-    df = df.drop(labels=settings.per_process_fields, axis=1, errors = 'ignore')
+    #_t = time.time()
+    #df = df.drop(labels=settings.per_process_fields, axis=1, errors = 'ignore')
+    #profile.load_process.df_drop += time.time() - _t
 
     # compute sums for each column, but skip ones that we know should not be summed
     # we then convert the pandas series of sums to a Python dict
     # df.drop(labels=settings.skip_for_thread_sums, axis=1).sum(axis=0).to_dict()
-    # for some reason, the to_dict() call creates a dict that raises an exception when
     # saving the json to the database:
     # exception:    raise TypeError(repr(o) + " is not JSON serializable")
     # So, instead we use this workaround:
+    _t = time.time()
+    df_summed = df.drop(labels=settings.skip_for_thread_sums+settings.per_process_fields, axis=1).sum(axis=0)
     if sys.version_info > (3,0):
-        json_ms = df.drop(labels=settings.skip_for_thread_sums, axis=1).sum(axis=0).to_json()
+        json_ms = df_summed.to_json()
         thread_metric_sums = loads(json_ms)
     else:
-        thread_metric_sums = df.drop(labels=settings.skip_for_thread_sums, axis=1).sum(axis=0).to_dict()
+        thread_metric_sums = df_summed.to_dict()
 
     # we add a composite metric comprising of user+system time as this
     # is needed in queries, and Pony doesn't allow operations on json fields
     # in a Query
     # TODO: can this be removed?
     thread_metric_sums['user+system'] = thread_metric_sums.get('usertime', 0) + thread_metric_sums.get('systemtime', 0)
+    p.threads_sums = thread_metric_sums
     p.cpu_time = float(thread_metric_sums['user+system'])
+    profile.load_process.thread_sums += time.time() - _t
 
     # convert the threads dataframe to a json
     # using the 'split' argument creates a json of the form:
@@ -194,8 +207,10 @@ def load_process_from_pandas(df, h, j, u, settings):
     # complex queries in Pony using metrics in the 'metric_sums' dict.
     #
 
+    _t = time.time()
     p.threads_df = df.to_json(orient='split')
-    p.threads_sums = thread_metric_sums
+    profile.load_process.to_json += time.time() - _t
+
     p.numtids = df.shape[0]
 
     try:
@@ -539,6 +554,7 @@ def _check_and_create_metadata(raw_metadata):
 @db_session
 def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     logger = getLogger(__name__)  # you can use other name
+    job_init_start_time = time.time()
 # Synthesize what we need
     metadata = _check_and_create_metadata(raw_metadata)
     if metadata is False:
@@ -606,6 +622,8 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     j.env_dict = env_dict
     j.env_changes_dict = env_changes_dict
     j.info_dict = {}
+    job_init_fini_time = time.time()
+    logger.debug('job init took: %2.5f sec', job_init_fini_time - job_init_start_time)
 
     didsomething = False
     all_tags = set()
@@ -615,7 +633,13 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     # a pid_map is used to create the process graph
     pid_map = {}  # maps pids to process objects
 
-    start_read_csv_time = time.time()
+    file_io_time = 0
+    df_process_time = 0
+    proc_tag_process_time = 0
+    load_process_from_df_time = 0
+    profile = dotdict()
+    profile.load_process = dotdict({'init': 0, 'host_lookup': 0, 'df_drop': 0, 'proc_tags': 0, 'thread_sums': 0, 'to_json': 0})
+
     for hostname, files in filedict.items():
         logger.debug("Processing host %s",hostname)
         # we only need to a lookup_or_create_host if papiex doesn't
@@ -628,6 +652,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         csv = datetime.now()
         for f in files:
             fileno += 1
+            _file_io_start_ts = time.time()
             logger.debug("Processing file %s (%d of %d)",f, fileno, cntmax)
 #
 #            stdout.write('\b')            # erase the last written char
@@ -651,6 +676,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                                    #dtype=dtype_dic, 
                                    converters=conv_dic,
                                    skiprows=rows, escapechar='\\')
+            file_io_time += time.time() - _file_io_start_ts
             if collated_df.empty:
                 logger.error("Something wrong with file %s, readcsv returned empty, skipping...",f)
                 continue
@@ -658,14 +684,18 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 # Make Process/Thread/Metrics objects in DB
             # there are 1 or more process dataframes in the collated df
             # let's iterate over them
+            _df_process_start_ts = time.time()
             for df in _get_process_df(collated_df):
                 # we provide the hostname argument as a fallback in case
                 # the papiex data doesn't have a hostname column
-                p = load_process_from_pandas(df, hostname, j, u, settings)
+                _load_process_from_df_start_ts = time.time()
+                p = load_process_from_pandas(df, hostname, j, u, settings, profile)
+                load_process_from_df_time += time.time() - _load_process_from_df_start_ts
                 if not p:
                     logger.error("Failed loading from pandas, file %s!",f);
                     continue
 # If using old version of papiex, process tags are in the comment field
+                _proc_tag_start_ts = time.time()
                 if not p.tags:
                     p.tags = tag_from_string(oldproctag) if oldproctag else {}
 
@@ -673,6 +703,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                     # pickle and add tag dictionaries to a set
                     # remember to sort_keys during the pickle!
                     all_tags.add(dumps(p.tags, sort_keys=True))
+                proc_tag_process_time += time.time() - _proc_tag_start_ts
 
                 pid_map[p.pid] = p
                 all_procs.append(p)
@@ -696,13 +727,19 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                         # collated file
                         logger.info("Did %d (%d in file)...%.2f/sec",nrecs,collated_df.shape[0],nrecs/csvt.total_seconds())
                     # break
+            df_process_time += time.time() - _df_process_start_ts
 
 #
         if cnt:
             didsomething = True
 
 #    stdout.write('\b')            # erase the last written char
-    logger.debug('read-in CSVs + populating thread DFs, took: %2.5f sec', time.time() - start_read_csv_time)
+    logger.debug('file I/O time took: %2.5f sec', file_io_time)
+    logger.debug('process df ops took: %2.5f sec', df_process_time)
+    logger.debug('  - load process from df took: %2.5f sec', load_process_from_df_time)
+    logger.debug('    - {0}'.format(profile.load_process))
+    logger.debug('  - tag processing took: %2.5f sec', proc_tag_process_time)
+
     if filedict:
         if not didsomething:
             logger.warning("Something went wrong in parsing CSV files")
