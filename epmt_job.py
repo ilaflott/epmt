@@ -200,8 +200,7 @@ def load_process_from_pandas(df, h, j, u, settings):
     # exception:    raise TypeError(repr(o) + " is not JSON serializable")
     # So, instead we use this workaround:
     # _t = time.time()
-    df.drop(labels=settings.skip_for_thread_sums+settings.per_process_fields, axis=1, inplace=True)
-    df_summed = df.sum(axis=0)
+    df_summed = df.drop(labels=settings.skip_for_thread_sums+settings.per_process_fields, axis=1).sum(axis=0)
     if sys.version_info > (3,0):
         json_ms = df_summed.to_json()
         thread_metric_sums = loads(json_ms)
