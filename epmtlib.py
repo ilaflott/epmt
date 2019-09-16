@@ -148,8 +148,7 @@ def capture():
 # Note, both key and values will be strings and no attempt will be made to
 # guess the type for integer/floats
 def tag_from_string(s, delim = ';', sep = ':', tag_default_value = '1'):
-    if s == None: return None
-    if not s: return {}
+    if not s: return (None if s == None else {})
 
     tag = {}
     for t in s.split(delim):
