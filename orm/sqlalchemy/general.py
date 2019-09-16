@@ -509,6 +509,7 @@ def _execute_raw_sql(sql, commit = False):
         if commit:
             trans.commit()
             return True
+        connection.close()
     except:
         trans.rollback()
         raise

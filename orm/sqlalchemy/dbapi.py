@@ -7,9 +7,145 @@
 # to DB-specific information. All the functions below
 # rely on the ORM being sqlalchemy
 
-def get_db_size():
+def get_db_size(findwhat, other):
+    import settings
     from general import _execute_raw_sql
+    from logging import getLogger
+    logger = getLogger(__name__)  # you can use other name
+    import init_logging
     # If db is 'pg'
     # elif db is sqlite3
+    if other.json:
+        import json
+        jsonlist = []
+    #Sanitizing
+    options = ['tablespace', 'table', 'index', 'database']
+    cleanList = []
+    for test in findwhat:
+        cleaner = ''.join(e for e in test if e.isalnum())
+        if cleaner.lower() not in options:
+            logger.warn((cleaner,"Not a valid option"))
+        else:
+            if cleaner not in cleanList:
+                cleanList.append(cleaner)
+    logger.info("epmt dbsize: %s",str(findwhat))
+    every = False
+    print(settings.db_params)
+    #if settings.db_params['provider'] is not 'postgres':
+    #    logger.error("ORM must be SQL")
+    #    return False
+    if settings.db_params['url'].startswith('postgresql://') is False:
+        logger.error((settings.db_params['url']," Not supported"))
+        return False
+    try:
+        from orm import orm_dump_schema, setup_db
+    except (ImportError, Exception) as e:
+        PrintFail()
+        return False
+    if setup_db(settings) == False:
+        PrintFail()
+        logger.error("Could Not connect to db")
+        return False
+    if len(cleanList) < 1:
+        logger.info("Displaying all options")
+        every = True
+        cleanList = range(1)
+    for arg in cleanList:
+        if every or arg.lower() == 'database':
+            databased = {}
+            cmd = 'SELECT pg_database.datname, pg_size_pretty(pg_database_size(pg_database.datname)) AS size FROM pg_database'
+            if other.bytes:
+                cmd = 'SELECT pg_database.datname, pg_database_size(pg_database.datname) AS size FROM pg_database'
+            if other.json:
+                cmdd = 'SELECT pg_database.datname, pg_database_size(pg_database.datname) AS size FROM pg_database'
+                sizes = _execute_raw_sql(cmdd)
+                for name, size in sizes:
+                    databased.setdefault(str(name),[]).append(int(size))
+                jsonlist.append({"DatabaseSize":databased})
+            print("\n ------------------------Database------------------------")
+            units = "DB Size"
+            if other.bytes:
+                units = units + "(bytes)"
+            sizes = _execute_raw_sql(cmd)
+            if not sizes:
+                break
+            print("{0:40}{1:<20}\n".format("DB Name",units))
+            for (name,size) in sizes:
+                print("{0:40}{1:<20}".format(name,size))
+
+        if every or arg.lower() == 'table':
+            print("\n ------------------------Table------------------------")
+            units = "Table Size"
+            if other.bytes:
+                units = units + "(bytes)"
+            tabled = {}
+            print("{:40}{:<15}{:>15}\n".format("Table",units,"COUNT(*)"))
+            for table in orm_dump_schema('name'):
+                cmd = "SELECT pg_size_pretty( pg_total_relation_size(\'"+table+"\') )"
+                if other.bytes:
+                    cmd = "SELECT pg_total_relation_size(\'"+table+"\')"
+                if other.json:
+                    cmda = "SELECT pg_total_relation_size(\'"+table+"\')"
+                    size = _execute_raw_sql(cmda).fetchall()[0][0]
+                    cmda = "SELECT count(*) from \""+table+"\""
+                    count = _execute_raw_sql(cmda).fetchall()[0][0]
+                    tabled[table] = (int(size),int(count))
+                size = _execute_raw_sql(cmd).fetchall()[0][0]
+                cmd = "SELECT count(*) from \""+table+"\""
+                #print (cmd)
+                count = _execute_raw_sql(cmd).fetchall()[0][0]
+                if not any([count, size]):
+                    break
+                #print(count)
+                print("{:40}{:<15}{:>15}".format(table,size,count))
+                print("Done")
+            if other.json:
+                jsonlist.append({"TableSize":tabled})
+        if every or arg.lower() == 'index':
+            print("\n ------------------------Index------------------------")
+            units = "Index Size"
+            if other.bytes:
+                units = units + "(bytes)"
+            print("{0:40}{1:<20}\n".format("Table",units))
+            indexd = {}
+            for table in orm_dump_schema('name'):
+                cmd = "SELECT pg_size_pretty( pg_indexes_size(\'"+table+"\') )"
+                if other.json:
+                    cmdb = "SELECT pg_indexes_size(\'"+table+"\')"
+                    storeit = _execute_raw_sql(cmdb).fetchone()[0]
+                    indexd[table] = int(storeit)
+                if other.bytes:
+                    cmd = "SELECT pg_indexes_size(\'"+table+"\')"
+                size = _execute_raw_sql(cmd).fetchone()[0]
+                if not size:
+                    break
+                print("{0:40}{1:<20}".format(table,size))
+            if other.json:
+                jsonlist.append({"IndexSize":indexd})
+        if every or arg.lower() == 'tablespace':
+            print("\n ------------------------Tablespace------------------------")
+            units = "Size"
+            tablespaced = {}
+            if other.bytes:
+                units = units + "(bytes)"
+            print("{0:40}{1:<20}\n".format("Tablespace",units))
+            for tablespace in _execute_raw_sql("SELECT spcname FROM pg_tablespace"):
+                tablespace = tablespace[0]
+                cmd = "SELECT pg_size_pretty( pg_tablespace_size(\'"+str(tablespace)+"\') )"
+                if other.bytes:
+                    cmd = "SELECT pg_tablespace_size(\'"+str(tablespace)+"\')"
+                if other.json:
+                    cmdd = "SELECT pg_tablespace_size(\'"+str(tablespace)+"\')"
+                    size = _execute_raw_sql(cmdd).fetchall()[0][0]
+                    tablespaced[tablespace] = int(size)
+                size = _execute_raw_sql(cmd).fetchall()[0][0]
+                if not size:
+                    break
+                print("{0:40}{1:<20}".format(tablespace,size))
+            if other.json:
+                jsonlist.append({"TablespaceSize":tablespaced})
+    if other.json:
+        print (json.dumps(jsonlist, indent=4))
+    #print("Index Dict:",indexd, "\nTable Dict(table:size,count):",tabled, "\ntablespace:", tablespaced, "\nDatabase:", databased)
     pass
 
