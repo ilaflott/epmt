@@ -73,15 +73,14 @@ class EPMTCmds(unittest.TestCase):
         self.assertEqual(retval, True, 'wrong list jobs return value')
 
     def test_dbsize(self):
-        set_logging(3)
-        #with capture() as (out,err):
-        import argparse
-        argns = argparse.Namespace(auto=False, bytes=False, dbsize=True, drop=False, dry_run=False, epmt_cmd='dbsize', epmt_cmd_args=['database', 'table'], error=False, help=False, jobid=None, json=False, verbose=0)
-        from epmt_cmds import epmt_dbsize
-        retval = epmt_dbsize('',argns)
-        isNotSqlite = (settings.db_params['provider'] == "postgres")
-        #print("conditional equals:",isNotSqlite)
-        #print("response:",retval)
+        with capture() as (out,err):
+            import argparse
+            argns = argparse.Namespace(auto=False, bytes=False, dbsize=True, drop=False, dry_run=False, epmt_cmd='dbsize', epmt_cmd_args=['database', 'table'], error=False, help=False, jobid=None, json=False, verbose=0)
+            from epmt_cmds import epmt_dbsize
+            retval = epmt_dbsize('',argns)
+            isNotSqlite = (settings.db_params['provider'] == "postgres")
+            #print("conditional equals:",isNotSqlite)
+            #print("response:",retval)
         self.assertEqual(retval, isNotSqlite, 'wrong database return value')
 
 if __name__ == '__main__':
