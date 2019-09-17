@@ -1,4 +1,8 @@
-import settings
+from os import environ
+if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
+    import epmt_default_settings as settings
+else:   
+    import settings
 
 
 if settings.orm == 'sqlalchemy':

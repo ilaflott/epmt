@@ -15,6 +15,8 @@ import epmt_default_settings as settings
 if environ.get('EPMT_USE_SQLALCHEMY'):
     settings.orm = 'sqlalchemy'
     settings.db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
+    if environ.get('EPMT_BULK_INSERT'):
+        settings.bulk_insert = True
 
 from epmtlib import timing, capture
 from orm import db_session, setup_db, Job

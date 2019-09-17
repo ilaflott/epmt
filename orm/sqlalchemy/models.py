@@ -21,8 +21,8 @@ class User(Base):
     __tablename__ = 'users'
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, onupdate=datetime.now)
-    name = Column(String, unique=True)
-    id = Column(Integer, primary_key = True)
+    name = Column(String, primary_key=True)
+    id = Column(Integer, unique = True)
     info_dict = Column(JSON)
     jobs = relationship('Job', back_populates='user')
     processes = relationship('Process', back_populates='user')
@@ -75,7 +75,7 @@ class Job(Base):
     jobname = Column(String)
     exitcode = Column(Integer)
 
-    user_id = Column(Integer, ForeignKey('users.id'))
+    user_id = Column(String, ForeignKey('users.name'))
     user = relationship('User', back_populates = "jobs")
 
     processes = relationship('Process', cascade="all", back_populates="job")
@@ -102,7 +102,7 @@ class Process(Base):
     info_dict = Column(JSON)
     id = Column(Integer, primary_key = True)
 
-    user_id = Column(Integer, ForeignKey('users.id'))
+    user_id = Column(String, ForeignKey('users.name'))
     user = relationship('User', back_populates = "processes")
 
     jobid = Column(String, ForeignKey('jobs.jobid'))

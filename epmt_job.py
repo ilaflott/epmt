@@ -72,8 +72,8 @@ def lookup_or_create_host(hostname):
     logger = getLogger(__name__)  # you can use other name
     host = orm_get(Host, hostname) if (not(hostname in created_hosts)) else created_hosts[hostname]
     if host is None:
-        logger.info("Creating host %s",hostname)
         host = orm_create(Host, name=hostname)
+        logger.info("Created host %s",hostname)
         # for sqlalchemy the created_hosts map is crucial for boosting performance
         # However with Pony we end up caching objects from different db_sessions
         # and so we don't want use our create_hosts map with Pony
@@ -112,22 +112,21 @@ def _get_process_df(df):
         # advance row pointer
         row += thr_count
             
-
 def load_process_from_pandas(df, h, j, u, settings):
-# Assumes all processes are from same host
-#	dprint("Creating process",str(df['pid'][0]),"gen",str(df['generation'][0]),"exename",df['exename'][0])
     from pandas import Timestamp
     logger = getLogger(__name__)  # you can use other name
 
-    if 'hostname' in df.columns:
-        host = lookup_or_create_host(df['hostname'][0])
-    else:
-        # fallback to the host read from the filename
-        host = lookup_or_create_host(h)
+    # fallback to the host read from the filename if we don't have a hostname column
+    # _t = time.time()
+    host = lookup_or_create_host(df['hostname'][0] if 'hostname' in df.columns else h)
+    # profile.load_process.host_lookup += time.time() - _t
 
+    # _t = time.time()
     try:
         if settings.bulk_insert:
-            p = dotdict({'host_id': host.name, 'jobid': j.jobid, 'user_id': u.id})
+            # we use dotdict as thin-wrapper around dict so we can use the dot syntax
+            # of objects
+            p = dotdict({'host_id': host.name, 'jobid': j.jobid, 'user_id': u.name})
             for key in ('exename', 'args', 'path'):
                 p[key] = df[key][0]
             for key in ('pid', 'ppid', 'pgid', 'sid', 'generation'):
@@ -150,38 +149,26 @@ def load_process_from_pandas(df, h, j, u, settings):
         logger.error("%s",e)
         logger.error("Corrupted CSV or invalid input type");
         return None
+    # profile.load_process.init += time.time() - _t
 
-
+    # _t = time.time()
     if 'exitcode' in df.columns:
         p.exitcode = int(df['exitcode'][0])
+    p.numtids = df.shape[0]
+    try:
+        earliest_thread_start = Timestamp(df['start'].min(), unit='us')
+        latest_thread_finish = Timestamp(df['end'].max(), unit='us')
+        p.start = earliest_thread_start.to_pydatetime()
+        p.end = latest_thread_finish.to_pydatetime()
+        p.duration = float((latest_thread_finish - earliest_thread_start).total_seconds())*float(1000000)
+    except Exception as e:
+        logger.error("%s",e)
+        logger.error("missing or invalid value for thread start/end time");
+    # profile.load_process.misc += time.time() - _t
 
-    if 'tags' in df.columns:
-        tags = df['tags'][0]
-        if tags:
-            p.tags = tag_from_string(tags)
-
+    # We have coupled the operation below with a later df.drop to save time.
     # remove per-process fields from the threads dataframe
-    df = df.drop(labels=settings.per_process_fields, axis=1, errors = 'ignore')
-
-    # compute sums for each column, but skip ones that we know should not be summed
-    # we then convert the pandas series of sums to a Python dict
-    # df.drop(labels=settings.skip_for_thread_sums, axis=1).sum(axis=0).to_dict()
-    # for some reason, the to_dict() call creates a dict that raises an exception when
-    # saving the json to the database:
-    # exception:    raise TypeError(repr(o) + " is not JSON serializable")
-    # So, instead we use this workaround:
-    if sys.version_info > (3,0):
-        json_ms = df.drop(labels=settings.skip_for_thread_sums, axis=1).sum(axis=0).to_json()
-        thread_metric_sums = loads(json_ms)
-    else:
-        thread_metric_sums = df.drop(labels=settings.skip_for_thread_sums, axis=1).sum(axis=0).to_dict()
-
-    # we add a composite metric comprising of user+system time as this
-    # is needed in queries, and Pony doesn't allow operations on json fields
-    # in a Query
-    # TODO: can this be removed?
-    thread_metric_sums['user+system'] = thread_metric_sums.get('usertime', 0) + thread_metric_sums.get('systemtime', 0)
-    p.cpu_time = float(thread_metric_sums['user+system'])
+    # df.drop(labels=settings.per_process_fields, axis=1, inplace=True, errors = 'ignore')
 
     # convert the threads dataframe to a json
     # using the 'split' argument creates a json of the form:
@@ -195,24 +182,40 @@ def load_process_from_pandas(df, h, j, u, settings):
     #
     # We pass metric_sums as a python dictionary to Pony so we can do
     # complex queries in Pony using metrics in the 'metric_sums' dict.
-    #
-
+    # _t = time.time()
     p.threads_df = df.to_json(orient='split')
+    # profile.load_process.to_json += time.time() - _t
+
+
+    # t = time.time()
+    tags = df['tags'][0] if 'tags' in df.columns else None
+    if tags:
+        p.tags = tag_from_string(tags)
+    # profile.load_process.proc_tags += time.time() - _t
+
+    # compute sums for each column, but skip ones that we know should not be summed
+    # we then convert the pandas series of sums to a Python dict
+    # df.drop(labels=settings.skip_for_thread_sums, axis=1).sum(axis=0).to_dict()
+    # saving the json to the database:
+    # exception:    raise TypeError(repr(o) + " is not JSON serializable")
+    # So, instead we use this workaround:
+    # _t = time.time()
+    df_summed = df.drop(labels=settings.skip_for_thread_sums+settings.per_process_fields, axis=1).sum(axis=0)
+    if sys.version_info > (3,0):
+        json_ms = df_summed.to_json()
+        thread_metric_sums = loads(json_ms)
+    else:
+        thread_metric_sums = df_summed.to_dict()
+
+    # we add a composite metric comprising of user+system time as this
+    # is needed in queries, and Pony doesn't allow operations on json fields
+    # in a Query
+    # TODO: can this be removed?
+    thread_metric_sums['user+system'] = thread_metric_sums.get('usertime', 0) + thread_metric_sums.get('systemtime', 0)
     p.threads_sums = thread_metric_sums
-    p.numtids = df.shape[0]
+    p.cpu_time = float(thread_metric_sums['user+system'])
+    # profile.load_process.thread_sums += time.time() - _t
 
-    try:
-        earliest_thread_start = Timestamp(df['start'].min(), unit='us')
-        latest_thread_finish = Timestamp(df['end'].max(), unit='us')
-        p.start = earliest_thread_start.to_pydatetime()
-        p.end = latest_thread_finish.to_pydatetime()
-        p.duration = float((latest_thread_finish - earliest_thread_start).total_seconds())*float(1000000)
-    except Exception as e:
-        logger.error("%s",e)
-        logger.error("missing or invalid value for thread start/end time");
-
-    #logger.debug("Earliest thread start: %s, Latest thread end: %s",str(earliest_thread_start),str(latest_thread_finish))
-    #logger.debug("Process wallclock: %s, Computed process wallclock: %s s.",str(p.duration),str((p.end-p.start).total_seconds()))
     return p
     
 #
@@ -281,6 +284,7 @@ def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
 # proc in its descendants, and proc.ancestors includes all ancestors
 # We only use relations for bulk mapping as orm_add_to_collection is
 # really slow if the processes are to be re-read from the DB
+# relations and descendant maps are used if we do bulk inserts
 def _proc_ancestors(pid_map, proc, ancestor_pid, relations = None, descendant_map = {}):
     
     if ancestor_pid in pid_map:
@@ -330,7 +334,6 @@ def _create_process_tree(pid_map):
     if r:
         logger.debug("doing bulk insert of ancestor/descendant relations")
         t = Base.metadata.tables['ancestor_descendant_associations']
-        #Session.bulk_insert_mappings(get_mapper(t), r)
         thr_data.engine.execute(t.insert(), r)
     return desc_map
 
@@ -368,18 +371,18 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
         proc_sums[settings.all_tags_field] = []
 
     _t1 = time.time()
-    logger.debug('tag processing took: %2.5f sec', _t1 - _t0)
+    logger.debug('post-process: tag processing took: %2.5f sec', _t1 - _t0)
 
     if all_procs is None:
-        logger.info("post-process: populating all_procs..")
         all_procs = []
         for p in j.processes:
             all_procs.append(p)
+        logger.debug("post-process: populated all_procs: {0} processes".format(len(all_procs)))
 
     if (pid_map is None):
         _populate_all_procs = False
         pid_map = {}
-        logger.info("post-process: recreating pid_map..")
+        logger.debug("post-process: recreating pid_map..")
         for p in all_procs:
             pid_map[p.pid] = p
 
@@ -388,6 +391,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
     nthreads = 0
     threads_sums_across_procs = {}
     if all_procs:
+        _t1 = time.time()
         desc_map = _create_process_tree(pid_map)
         _t2 = time.time()
         logger.debug('process tree took: %2.5f sec', _t2 - _t1)
@@ -396,6 +400,9 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
         hosts = set()
         for proc in all_procs:
             if settings.bulk_insert:
+                # in bulk inserts, we cannnot rely on process.dependants to be
+                # available, so we use a descendants map created during the
+                # process tree creation step
                 proc_descendants = desc_map.get(proc.id, set())
                 proc.inclusive_cpu_time = float(proc.cpu_time + sum([p.cpu_time for p in proc_descendants]))
             else:
@@ -406,7 +413,11 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
         logger.info("job contains %d processes (%d threads)",len(all_procs), nthreads)
         _t3 = time.time()
         logger.debug('thread sums calculation took: %2.5f sec', _t3 - _t2)
-        j.hosts = list(hosts)
+        if settings.bulk_insert:
+            t = Base.metadata.tables['host_job_associations']
+            thr_data.engine.execute(t.insert(), [ { 'jobid': j.jobid, 'hostname': h.name } for h in hosts])
+        else:
+            j.hosts = list(hosts)
         _t4 = time.time()
         logger.debug('adding hosts to job took: %2.5f sec', _t4 - _t3)
 
@@ -537,6 +548,7 @@ def _check_and_create_metadata(raw_metadata):
 @db_session
 def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     logger = getLogger(__name__)  # you can use other name
+    job_init_start_time = time.time()
 # Synthesize what we need
     metadata = _check_and_create_metadata(raw_metadata)
     if metadata is False:
@@ -603,7 +615,9 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 # fix below
     j.env_dict = env_dict
     j.env_changes_dict = env_changes_dict
-#    j.info_dict = info_dict
+    j.info_dict = {}
+    job_init_fini_time = time.time()
+    logger.debug('job init took: %2.5f sec', job_init_fini_time - job_init_start_time)
 
     didsomething = False
     all_tags = set()
@@ -612,6 +626,13 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 
     # a pid_map is used to create the process graph
     pid_map = {}  # maps pids to process objects
+
+    file_io_time = 0
+    df_process_time = 0
+    proc_tag_process_time = 0
+    load_process_from_df_time = 0
+    # profile = dotdict()
+    # profile.load_process = dotdict({'init': 0, 'host_lookup': 0, 'misc': 0, 'proc_tags': 0, 'thread_sums': 0, 'to_json': 0})
 
     for hostname, files in filedict.items():
         logger.debug("Processing host %s",hostname)
@@ -625,6 +646,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         csv = datetime.now()
         for f in files:
             fileno += 1
+            _file_io_start_ts = time.time()
             logger.debug("Processing file %s (%d of %d)",f, fileno, cntmax)
 #
 #            stdout.write('\b')            # erase the last written char
@@ -648,6 +670,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                                    #dtype=dtype_dic, 
                                    converters=conv_dic,
                                    skiprows=rows, escapechar='\\')
+            file_io_time += time.time() - _file_io_start_ts
             if collated_df.empty:
                 logger.error("Something wrong with file %s, readcsv returned empty, skipping...",f)
                 continue
@@ -655,21 +678,26 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 # Make Process/Thread/Metrics objects in DB
             # there are 1 or more process dataframes in the collated df
             # let's iterate over them
+            _df_process_start_ts = time.time()
             for df in _get_process_df(collated_df):
                 # we provide the hostname argument as a fallback in case
                 # the papiex data doesn't have a hostname column
+                _load_process_from_df_start_ts = time.time()
                 p = load_process_from_pandas(df, hostname, j, u, settings)
+                load_process_from_df_time += time.time() - _load_process_from_df_start_ts
                 if not p:
                     logger.error("Failed loading from pandas, file %s!",f);
                     continue
 # If using old version of papiex, process tags are in the comment field
-                if not p.tags and oldproctag:
-                    p.tags = tag_from_string(oldproctag)
+                _proc_tag_start_ts = time.time()
+                if not p.tags:
+                    p.tags = tag_from_string(oldproctag) if oldproctag else {}
 
                 if p.tags:
                     # pickle and add tag dictionaries to a set
                     # remember to sort_keys during the pickle!
                     all_tags.add(dumps(p.tags, sort_keys=True))
+                proc_tag_process_time += time.time() - _proc_tag_start_ts
 
                 pid_map[p.pid] = p
                 all_procs.append(p)
@@ -693,12 +721,18 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                         # collated file
                         logger.info("Did %d (%d in file)...%.2f/sec",nrecs,collated_df.shape[0],nrecs/csvt.total_seconds())
                     # break
+            df_process_time += time.time() - _df_process_start_ts
 
 #
         if cnt:
             didsomething = True
 
 #    stdout.write('\b')            # erase the last written char
+    logger.debug('file I/O time took: %2.5f sec', file_io_time)
+    logger.debug('process df ops took: %2.5f sec', df_process_time)
+    logger.debug('  - load process from df took: %2.5f sec', load_process_from_df_time)
+    # logger.debug('    - {0}'.format(profile.load_process))
+    logger.debug('  - tag processing took: %2.5f sec', proc_tag_process_time)
 
     if filedict:
         if not didsomething:
@@ -721,8 +755,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             logger.warning('metadata shows the job exit code is {0}, but root process exit code is {1}'.format(j.exitcode, root_proc.exitcode))
         j.exitcode = root_proc.exitcode
         logger.info('job exit code (using exit code of root process): {0}'.format(j.exitcode))
-    if job_tags:
-        j.tags = job_tags
+    j.tags = job_tags if job_tags else {}
 
     if settings.bulk_insert and all_procs:
         logger.info('doing a bulk insert of {0} processes'.format(len(all_procs)))
@@ -740,7 +773,11 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             # inserts. Otherwise the calls to create_process_tree
             # will fail as they rely on relationships between the
             # orm objects, and in particular the primary IDs of the
-            # processes will be NULL
+            # processes will be NULL. We will need to commit()
+            # prior to calling post_process_job so that relationships
+            # such as j.processes work after the processes were
+            # bulk-inserted.
+            orm_commit()
             post_process_job(j, all_tags)
         else:
             post_process_job(j, all_tags, all_procs, pid_map)
