@@ -88,7 +88,7 @@ def read_job_metadata(jobdatafile):
         with open(jobdatafile,'rb') as file:
             return read_job_metadata_direct(file)
     except IOError as i:
-        logger.error("Job metadata missing, possibly didn't start? "+str(i))
+        logger.error("Job metadata missing, possibly didn't start? %s", str(i))
     return False
 
 def write_job_epilog(jobdatafile,metadata):
@@ -581,6 +581,7 @@ def epmt_unsource(dry_run=False):
         print(cmd)
         return_code = 0
     return return_code
+
 def epmt_run(forced_jobid, forced_user, cmdline, wrapit=False, dry_run=False, debug=False):
     logger.debug("epmt_run(%s, %s, %s, %s, %s)",forced_jobid, cmdline, str(wrapit), str(dry_run), str(debug))
     if wrapit:
