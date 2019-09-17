@@ -81,10 +81,11 @@ def get_db_size(findwhat, other):
                 try:
                     sizes = _execute_raw_sql(cmdd)
                     for name, size in sizes:
-                        databased.setdefault(str(name),[]).append(int(size))
+                        databased[name]=size
                     jsonlist.append({"DatabaseSize":databased})
                 except exc.SQLAlchemyError:
                     logger.warn("Db size query failed")
+
             print("\n ------------------------Database------------------------")
             units = "DB Size"
             if other.bytes:
@@ -116,7 +117,7 @@ def get_db_size(findwhat, other):
                         size = _execute_raw_sql(cmda).fetchall()[0][0]
                         cmda = "SELECT count(*) from \""+table+"\""
                         count = _execute_raw_sql(cmda).fetchall()[0][0]
-                        tabled[table] = (int(size),int(count))
+                        tabled[table] = {"Size":int(size),"Count":int(count)}
                     size = _execute_raw_sql(cmd).fetchall()[0][0]
                     cmd = "SELECT count(*) from \""+table+"\""
                     #print (cmd)
@@ -129,6 +130,7 @@ def get_db_size(findwhat, other):
                     jsonlist.append({"TableSize":tabled})
             except exc.SQLAlchemyError:
                 logger.warn("Table query failed")
+
         if every or arg.lower() == 'index':
             print("\n ------------------------Index------------------------")
             units = "Index Size"
@@ -153,6 +155,7 @@ def get_db_size(findwhat, other):
                     jsonlist.append({"IndexSize":indexd})
             except exc.SQLAlchemyError:
                 logger.warn("Index query failed")
+
         if every or arg.lower() == 'tablespace':
             print("\n ------------------------Tablespace------------------------")
             units = "Size"
@@ -179,8 +182,18 @@ def get_db_size(findwhat, other):
                     jsonlist.append({"TablespaceSize":tablespaced})
             except exc.SQLAlchemyError:
                 logger.warn("Tablespace query failed")
-    if other.json:
-        return(json.dumps(jsonlist, indent=4))
-    #print("Index Dict:",indexd, "\nTable Dict(table:size,count):",tabled, "\ntablespace:", tablespaced, "\nDatabase:", databased)
-    return 0
 
+    if other.json:
+        if jsonlist:
+            import datetime
+            current_time = datetime.datetime.utcnow().isoformat()+"Z"
+            from sqlalchemy import __version__ as sa_version
+            metadata = {"Generated at:":current_time,
+                        "ORM":"SQLAlchemy "+sa_version,
+                        "DB Params":settings.db_params}
+            jsonlist.append({"Metadata":metadata})
+            return(json.dumps(jsonlist,indent=4))
+        else:
+            logger.warn("No valid Json")
+            return(json.dumps(False))
+    return True
