@@ -60,8 +60,8 @@ def get_db_size(findwhat, other):
     every = False
     print(settings.db_params)
     
-    if (settings.db_params['provider'] == "postgres") is False:
-        logger.warn("%s Not supported",str(settings.db_params['provider']))
+    if (settings.db_params.get('provider','') == "postgres") is False:
+        logger.warn("%s Not supported",str(settings.db_params.get('provider','Provider settings key missing')))
         return False
 
     if setup_db(settings) == False:
