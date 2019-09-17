@@ -36,9 +36,11 @@ def get_db_size(findwhat, other):
     logger = getLogger(__name__)  # you can use other name
     #logger.warning("Pony not yet implemented for db sizing, use sqlalchemy in settings.py")
     import settings
+    logger.info("Findwhat %s\nother: %s", findwhat, other)
+    # ignore settings
     if setup_db(settings) == False:
         PrintFail()
-        logger.error("Could Not connect to db")
+        logger.warn("Could Not connect to db")
         return False
     logger.info("Connected to db with pony")
     if other.json:
@@ -50,38 +52,31 @@ def get_db_size(findwhat, other):
     for test in findwhat:
         cleaner = ''.join(e for e in test if e.isalnum())
         if cleaner.lower() not in options:
-            logger.warn((cleaner,"Not a valid option"))
+            logger.warn("Ignoring %s Not a valid option",cleaner)
         else:
             if cleaner not in cleanList:
                 cleanList.append(cleaner)
     logger.info("epmt dbsize: %s",str(findwhat))
     every = False
     print(settings.db_params)
-    #if settings.db_params['provider'] is not 'postgres':
-    #    logger.error("ORM must be SQL")
-    #    return False
-    if settings.db_params['provider'] == "postgres" is False:
-        logger.error((settings.db_params['provider']," Not supported"))
+    
+    if (settings.db_params['provider'] == "postgres") is False:
+        logger.warn("%s Not supported",str(settings.db_params['provider']))
         return False
 
     if setup_db(settings) == False:
         PrintFail()
-        logger.error("Could Not connect to db")
+        logger.warn("Could Not connect to db")
         return False
     if len(cleanList) < 1:
         logger.info("Displaying all options")
         every = True
         cleanList = range(1)
     for arg in cleanList:
-        selectables = """
-            SELECT table_name
-            FROM
-                information_schema.tables
-            WHERE
-                table_type = 'BASE TABLE'
-            AND
-                table_schema NOT IN ('pg_catalog', 'information_schema')"""
-        tablelist = [item[0] for item in _execute_raw_sql(selectables)]
+        selectables = """SELECT table_name FROM information_schema.tables WHERE table_type = 'BASE TABLE' AND table_schema NOT IN ('pg_catalog', 'information_schema')"""
+        results = _execute_raw_sql(selectables)
+        print(results)
+        tablelist = [item[0] for item in results]
         if every or arg.lower() == 'database':
             databased = {}
             cmd = 'SELECT pg_database.datname, pg_size_pretty(pg_database_size(pg_database.datname)) AS size FROM pg_database'
@@ -112,6 +107,7 @@ def get_db_size(findwhat, other):
             tabled = {}
             print("{:40}{:<15}{:>15}\n".format("Table",units,"COUNT(*)"))
             try:
+                print(tablelist)
                 for table in tablelist:
                     cmd = "SELECT pg_size_pretty( pg_total_relation_size(\'"+table+"\') )"
                     if other.bytes:
@@ -131,6 +127,7 @@ def get_db_size(findwhat, other):
                     #print(count)
                     print("{:40}{:<15}{:>15}".format(table,size,count))
             except:
+                raise
                 PrintFail()
                 return 1
             if other.json:
@@ -189,4 +186,4 @@ def get_db_size(findwhat, other):
     if other.json:
         return(json.dumps(jsonlist, indent=4))
     #print("Index Dict:",indexd, "\nTable Dict(table:size,count):",tabled, "\ntablespace:", tablespaced, "\nDatabase:", databased)
-    return 0
+    return True

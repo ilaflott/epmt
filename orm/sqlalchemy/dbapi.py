@@ -45,27 +45,28 @@ def get_db_size(findwhat, other):
     for test in findwhat:
         cleaner = ''.join(e for e in test if e.isalnum())
         if cleaner.lower() not in options:
-            logger.warn((cleaner,"Not a valid option"))
+            logger.warn("Ignoring %s Not a valid option",cleaner)
         else:
             if cleaner not in cleanList:
                 cleanList.append(cleaner)
     logger.info("epmt dbsize: %s",str(findwhat))
     every = False
-    print(settings.db_params)
+
     #if settings.db_params['provider'] is not 'postgres':
     #    logger.error("ORM must be SQL")
     #    return False
     if settings.db_params['url'].startswith('postgresql://') is False:
-        logger.error((settings.db_params['url']," Not supported"))
+        logger.warn((settings.db_params['url']," Not supported"))
         return False
     try:
         from orm import orm_dump_schema, setup_db
     except (ImportError, Exception) as e:
-        PrintFail()
+        raise
+        logger.warn("Could Not connect to orm")
         return False
     if setup_db(settings) == False:
         PrintFail()
-        logger.error("Could Not connect to db")
+        logger.warn("Could Not connect to db")
         return False
     if len(cleanList) < 1:
         logger.info("Displaying all options")

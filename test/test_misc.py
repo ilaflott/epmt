@@ -21,7 +21,7 @@ if environ.get('EPMT_USE_SQLALCHEMY'):
 from epmtlib import timing, capture
 from orm import db_session, setup_db, Job
 import epmt_query as eq
-from epmt_cmds import epmt_submit
+from epmt_cmds import epmt_submit, epmt_dbsize
 from epmt_cmd_delete import epmt_delete_jobs
 from epmt_cmd_list import  epmt_list_jobs, epmt_list_procs, epmt_list_job_proc_tags, epmt_list_refmodels, epmt_list_op_metrics, epmt_list_thread_metrics
 
@@ -72,6 +72,17 @@ class EPMTCmds(unittest.TestCase):
         self.assertEqual(type(retval), bool, 'wrong list jobs return type')
         self.assertEqual(retval, True, 'wrong list jobs return value')
 
+    def test_dbsize(self):
+        set_logging(3)
+        #with capture() as (out,err):
+        import argparse
+        argns = argparse.Namespace(auto=False, bytes=False, dbsize=True, drop=False, dry_run=False, epmt_cmd='dbsize', epmt_cmd_args=['database', 'table'], error=False, help=False, jobid=None, json=False, verbose=0)
+        from epmt_cmds import epmt_dbsize
+        retval = epmt_dbsize('',argns)
+        isNotSqlite = (settings.db_params['provider'] == "postgres")
+        #print("conditional equals:",isNotSqlite)
+        #print("response:",retval)
+        self.assertEqual(retval, isNotSqlite, 'wrong database return value')
 
 if __name__ == '__main__':
     unittest.main()
