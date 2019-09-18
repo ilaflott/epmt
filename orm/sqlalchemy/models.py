@@ -1,7 +1,6 @@
 from .general import *
 from datetime import datetime
 
-
 refmodel_job_associations_table = Table('refmodel_job_associations', Base.metadata,
     Column('jobid', String, ForeignKey('jobs.jobid'), primary_key=True),
     Column('refmodel_id', Integer, ForeignKey('refmodels.id'), primary_key=True)
@@ -97,6 +96,7 @@ class Job(Base):
 
 class Process(Base):
     __tablename__ = 'processes'
+    __mapper_args__ = {'column_prefix':''}
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, onupdate=datetime.now)
     info_dict = Column(JSON)
@@ -144,3 +144,9 @@ class Process(Base):
     @db_session
     def __repr__(self):
         return "Process[%d]" % (self.id)
+
+# from sqlalchemy import event
+# @event.listens_for(Table, "column_reflect")
+# def column_reflect(inspector, table, column_info):
+#     # set column.key = "attr_<lower_case_name>"
+#     column_info['key'] = column_info['name']
