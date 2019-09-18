@@ -29,20 +29,22 @@ def get_db_size(findwhat, other):
     else 
         return 0
     """
-    import settings
-    from general import setup_db,_execute_raw_sql
-    from epmt_cmds import PrintFail
+    from os import environ
+    if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
+        import epmt_default_settings as settings
+    else:
+        import settings
+    from orm.pony.general import setup_db, _execute_raw_sql
     from logging import getLogger
     logger = getLogger(__name__)
-    logger.info("Findwhat %s\nother: %s", findwhat, other)
+    logger.info("Size of %s\nother args: %s", findwhat, other)
     # Test if provider is supported
-    if (settings.db_params.get('provider','') == "postgres") is False:
-        logger.warn("%s Not supported",str(settings.db_params.get('provider','Provider settings key missing')))
+    if (settings.db_params.get('provider','') == 'postgres') is False:
+        logger.warning("%s Not supported",str(settings.db_params.get('provider','Provider settings key missing')))
         return False
     # Connect to db for querying
     if setup_db(settings) == False:
-        PrintFail()
-        logger.warn("Could Not connect to db")
+        logger.warning("Could Not connect to db")
         return False
     else:
         logger.info("Connected to db with pony")
@@ -56,7 +58,7 @@ def get_db_size(findwhat, other):
     for test in findwhat:
         cleaner = ''.join(e for e in test if e.isalnum())
         if cleaner.lower() not in options:
-            logger.warn("Ignoring %s Not a valid option",cleaner)
+            logger.warning("Ignoring %s Not a valid option",cleaner)
         else:
             if cleaner not in cleanList:
                 cleanList.append(cleaner)
@@ -92,7 +94,7 @@ def get_db_size(findwhat, other):
                 for (name,size) in sizes:
                     print("{0:40}{1:<20}".format(name,size))
         except:
-            logger.warn("Db size query failed")
+            logger.warning("Db size query failed")
 
         if every or arg.lower() == 'table':
             print("\n ------------------------Table------------------------")
@@ -102,7 +104,6 @@ def get_db_size(findwhat, other):
             tabled = {}
             print("{:40}{:<15}{:>15}\n".format("Table",units,"COUNT(*)"))
             try:
-                print(tablelist)
                 for table in tablelist:
                     cmd = "SELECT pg_size_pretty( pg_total_relation_size(\'"+table+"\') )"
                     if other.bytes:
@@ -124,7 +125,7 @@ def get_db_size(findwhat, other):
                 if other.json:
                     jsonlist.append({"TableSize":tabled})
             except:
-                logger.warn("Table size query failed")
+                logger.warning("Table size query failed")
 
         if every or arg.lower() == 'index':
             print("\n ------------------------Index------------------------")
@@ -149,7 +150,7 @@ def get_db_size(findwhat, other):
                 if other.json:
                     jsonlist.append({"IndexSize":indexd})
             except:
-                logger.warn("Index size query failed")
+                logger.warning("Index size query failed")
 
         if every or arg.lower() == 'tablespace':
             print("\n ------------------------Tablespace------------------------")
@@ -175,7 +176,7 @@ def get_db_size(findwhat, other):
                 if other.json:
                     jsonlist.append({"TablespaceSize":tablespaced})
             except:
-                logger.warn("Tablespace query failed")
+                logger.warning("Tablespace query failed")
     if other.json:
         if jsonlist:
             import datetime
@@ -185,9 +186,9 @@ def get_db_size(findwhat, other):
                         "ORM":"Pony "+p_version,
                         "DB Params":settings.db_params}
             jsonlist.append({"Metadata":metadata})
-            return(json.dumps(jsonlist,indent=4))
+            return("\n\nJSON: \n"+str(json.dumps(jsonlist,indent=4)))
         else:
-            logger.warn("No valid Json")
+            logger.warning("No valid Json")
             return(json.dumps(False))
     #print("Index Dict:",indexd, "\nTable Dict(table:size,count):",tabled, "\ntablespace:", tablespaced, "\nDatabase:", databased)
     return True

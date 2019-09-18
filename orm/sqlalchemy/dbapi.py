@@ -29,8 +29,12 @@ def get_db_size(findwhat, other):
     else 
         return 0
     """
-    import settings
-    from general import _execute_raw_sql
+    from os import environ
+    if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
+        import epmt_default_settings as settings
+    else:
+        import settings
+    from orm.sqlalchemy.general import _execute_raw_sql
     from sqlalchemy import exc
     from logging import getLogger
     logger = getLogger(__name__)  # you can use other name
@@ -46,25 +50,23 @@ def get_db_size(findwhat, other):
     for test in findwhat:
         cleaner = ''.join(e for e in test if e.isalnum())
         if cleaner.lower() not in options:
-            logger.warn("Ignoring %s Not a valid option",cleaner)
+            logger.warning("Ignoring %s Not a valid option",cleaner)
         else:
             if cleaner not in cleanList:
                 cleanList.append(cleaner)
     logger.info("epmt dbsize: %s",str(findwhat))
     every = False
-
     if settings.db_params.get('url', '').startswith('postgresql://') is False:
-        logger.warn("%s Not supported", settings.db_params.get('url', ''))
+        logger.warning("%s Not supported", settings.db_params.get('url', ''))
         return False
     try:
         from orm import orm_dump_schema, setup_db
     except (ImportError, Exception) as e:
         raise
-        logger.warn("Could Not connect to orm")
+        logger.warning("Could Not connect to orm")
         return False
     if setup_db(settings) == False:
-        PrintFail()
-        logger.warn("Could Not connect to db")
+        logger.warning("Could Not connect to db")
         return False
     if len(cleanList) < 1:
         logger.info("Displaying all options")
@@ -84,7 +86,7 @@ def get_db_size(findwhat, other):
                         databased[name]=size
                     jsonlist.append({"DatabaseSize":databased})
                 except exc.SQLAlchemyError:
-                    logger.warn("Db size query failed")
+                    logger.warning("Db size query failed")
 
             print("\n ------------------------Database------------------------")
             units = "DB Size"
@@ -98,7 +100,7 @@ def get_db_size(findwhat, other):
                 for (name,size) in sizes:
                     print("{0:40}{1:<20}".format(name,size))
             except exc.SQLAlchemyError:
-                logger.warn("Db size query failed")
+                logger.warning("Db size query failed")
 
         if every or arg.lower() == 'table':
             print("\n ------------------------Table------------------------")
@@ -129,7 +131,7 @@ def get_db_size(findwhat, other):
                 if other.json:
                     jsonlist.append({"TableSize":tabled})
             except exc.SQLAlchemyError:
-                logger.warn("Table query failed")
+                logger.warning("Table query failed")
 
         if every or arg.lower() == 'index':
             print("\n ------------------------Index------------------------")
@@ -154,7 +156,7 @@ def get_db_size(findwhat, other):
                 if other.json:
                     jsonlist.append({"IndexSize":indexd})
             except exc.SQLAlchemyError:
-                logger.warn("Index query failed")
+                logger.warning("Index query failed")
 
         if every or arg.lower() == 'tablespace':
             print("\n ------------------------Tablespace------------------------")
@@ -181,7 +183,7 @@ def get_db_size(findwhat, other):
                 if other.json:
                     jsonlist.append({"TablespaceSize":tablespaced})
             except exc.SQLAlchemyError:
-                logger.warn("Tablespace query failed")
+                logger.warning("Tablespace query failed")
 
     if other.json:
         if jsonlist:
@@ -192,8 +194,8 @@ def get_db_size(findwhat, other):
                         "ORM":"SQLAlchemy "+sa_version,
                         "DB Params":settings.db_params}
             jsonlist.append({"Metadata":metadata})
-            return(json.dumps(jsonlist,indent=4))
+            return("\n\nJSON: \n"+str(json.dumps(jsonlist,indent=4)))
         else:
-            logger.warn("No valid Json")
+            logger.warning("No valid Json")
             return(json.dumps(False))
     return True
