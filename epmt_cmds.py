@@ -553,37 +553,12 @@ def epmt_source(forced_jobid, forced_user, papiex_debug=False, monitor_debug=Fal
     for l in [ "libpapiex.so:","libpapi.so:","libpfm.so:","libmonitor.so" ]:
         cmd += settings.install_prefix+"lib/"+l
     if undercsh:
-        cmd += ";" + cmd_sep  + "echo alias unsource created: unsource 'eval \"./epmt unsource\"';"
-        cmd += cmd_sep + "alias unsource 'eval `./epmt unsource`'"
+        cmd += cmd_sep  + "echo \'alias unsource created via \*csh: eval unsetenv PAPIEX_OPTIONS; unsetenv PAPIEX_OUTPUT; unsetenv PAPIEX_DEBUG; unsetenv LD_PRELOAD; unalias unsource'"
+        cmd += cmd_sep  +"alias unsource 'eval unsetenv PAPIEX_OPTIONS; unsetenv PAPIEX_OUTPUT; unsetenv PAPIEX_DEBUG; unsetenv LD_PRELOAD; unalias unsource'"
     else:
-        cmd += ";" + cmd_sep  + "echo alias unsource created: unsource='eval \"$(./epmt unsource)\"';"
-        cmd += cmd_sep + "alias unsource='eval \"$(./epmt unsource)\"';"
+        cmd += cmd_sep  + ";echo \"alias unsource created: unsource=eval unset PAPIEX_OPTIONS; unset PAPIEX_OUTPUT; unset PAPIEX_DEBUG; unset LD_PRELOAD; unalias unsource;\""
+        cmd += cmd_sep + ";alias unsource='eval unset PAPIEX_OPTIONS; unset PAPIEX_OUTPUT; unset PAPIEX_DEBUG; unset LD_PRELOAD; unalias unsource;'"
     cmd += cmd_sep
-    return cmd
-
-def epmt_unsource(dry_run=False):
-    unexport="unset "
-    equals="="
-    cmd_sep="\n"
-    cmd=""
-
-    # For CSH, for unsource:
-    # unsetenv FOO;
-    # For CSH, for run:
-    # env FOO=bar
-    
-    shell_name = environ.get("_")
-    shell_name2 = environ.get("SHELL")
-    if ( shell_name2 and shell_name2.endswith("csh")) or (shell_name and shell_name.endswith("csh")):
-        logger.debug("Detected CSH - please read CSH considered harmful")
-        unexport="unsetenv "
-        cmd_sep=";\n"
-    cmd = unexport + "PAPIEX_OPTIONS" + cmd_sep
-    cmd += unexport + "PAPIEX_OUTPUT" + cmd_sep
-    cmd += unexport + "PAPIEX_DEBUG" + cmd_sep
-    cmd += unexport + "LD_PRELOAD" + cmd_sep
-    cmd += "echo unaliasing unsource" + cmd_sep
-    cmd += "unalias unsource" + cmd_sep
     return cmd
 
 def epmt_run(forced_jobid, forced_user, cmdline, wrapit=False, dry_run=False, debug=False):
@@ -883,12 +858,6 @@ def epmt_entrypoint(args, help):
         return(epmt_dump_metadata(args.jobid,None,filelist=args.epmt_cmd_args) == False)
     if args.epmt_cmd == 'source':
         s = epmt_source(args.jobid,None,(args.verbose > 2),monitor_debug=(args.verbose > 2),add_export=True)
-        if s:
-            print(s)
-            return 0
-        return 1
-    if args.epmt_cmd == "unsource":
-        s = epmt_unsource(dry_run=args.dry_run)
         if s:
             print(s)
             return 0
