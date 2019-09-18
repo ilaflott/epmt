@@ -1,3 +1,4 @@
+shopt -s expand_aliases
 export USER=testuser
 rm -rf ./1 ./1.tgz
 rm -rf /tmp/epmt 
@@ -7,10 +8,6 @@ eval `epmt -j1 source`   # Setup environment
 sleep 1
 # End Workload
 unsource
-echo PAPIEX_OPTIONS: $PAPIEX_OPTIONS
-echo PAPIEX_OUTPUT: $PAPIEX_OUTPUT
-echo LD_PRELOAD: $LD_PRELOAD
-alias unsource
 epmt -j1 stop            # Generate epilog and append
 epmt -j1 stage           # Move to medium term storage
 epmt submit ./1.tgz      # Submit from staged storage
