@@ -90,11 +90,6 @@ class Job(Base):
         return "Job['%s']" % (self.jobid)
 
 
-#class ProcessAssociation(Base):
-#    __tablename__ = 'process_associations'
-#    fk_ancestor = Column(Integer, ForeignKey('processes.id'), primary_key=True)
-#    fk_descendant = Column(Integer, ForeignKey('processes.id'), primary_key=True)
-
 class Process(Base):
     __tablename__ = 'processes'
     created_at = Column(DateTime, default=datetime.now)
@@ -144,3 +139,9 @@ class Process(Base):
     @db_session
     def __repr__(self):
         return "Process[%d]" % (self.id)
+
+# from sqlalchemy import event
+# @event.listens_for(Table, "column_reflect")
+# def column_reflect(inspector, table, column_info):
+#     # set column.key = "attr_<lower_case_name>"
+#     column_info['key'] = column_info['name']
