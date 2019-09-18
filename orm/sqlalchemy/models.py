@@ -1,6 +1,7 @@
 from .general import *
 from datetime import datetime
 
+
 refmodel_job_associations_table = Table('refmodel_job_associations', Base.metadata,
     Column('jobid', String, ForeignKey('jobs.jobid'), primary_key=True),
     Column('refmodel_id', Integer, ForeignKey('refmodels.id'), primary_key=True)
@@ -89,14 +90,8 @@ class Job(Base):
         return "Job['%s']" % (self.jobid)
 
 
-#class ProcessAssociation(Base):
-#    __tablename__ = 'process_associations'
-#    fk_ancestor = Column(Integer, ForeignKey('processes.id'), primary_key=True)
-#    fk_descendant = Column(Integer, ForeignKey('processes.id'), primary_key=True)
-
 class Process(Base):
     __tablename__ = 'processes'
-    __mapper_args__ = {'column_prefix':''}
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, onupdate=datetime.now)
     info_dict = Column(JSON)

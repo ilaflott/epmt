@@ -108,3 +108,6 @@ To remove all migrations, do:
 $ alembic downgrade base
 ```
 
+### References
+ - https://medium.com/the-andela-way/alembic-how-to-add-a-non-nullable-field-to-a-populated-table-998554003134
+ - https://alembic.sqlalchemy.org/en/latest/batch.html
