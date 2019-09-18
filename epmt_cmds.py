@@ -553,11 +553,11 @@ def epmt_source(forced_jobid, forced_user, papiex_debug=False, monitor_debug=Fal
     for l in [ "libpapiex.so:","libpapi.so:","libpfm.so:","libmonitor.so" ]:
         cmd += settings.install_prefix+"lib/"+l
     if undercsh:
-        cmd += cmd_sep  + ";echo alias unsource created: unsource 'eval \"./epmt unsource\"'"
-        cmd += cmd_sep + ";alias unsource 'eval `./epmt unsource`'"
+        cmd += ";" + cmd_sep  + "echo alias unsource created: unsource 'eval \"./epmt unsource\"';"
+        cmd += cmd_sep + "alias unsource 'eval `./epmt unsource`'"
     else:
-        cmd += cmd_sep  + ";echo alias unsource created: unsource='eval \"$(./epmt unsource)\"'"
-        cmd += cmd_sep + ";alias unsource='eval \"$(./epmt unsource)\"'"
+        cmd += ";" + cmd_sep  + "echo alias unsource created: unsource='eval \"$(./epmt unsource)\"';"
+        cmd += cmd_sep + "alias unsource='eval \"$(./epmt unsource)\"';"
     cmd += cmd_sep
     return cmd
 
