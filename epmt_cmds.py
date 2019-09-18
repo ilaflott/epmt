@@ -492,11 +492,12 @@ def epmt_source(forced_jobid, forced_user, papiex_debug=False, monitor_debug=Fal
     # setenv FOO bar;
     # For CSH, for run:
     # env FOO=bar
-
+    undercsh=False
     shell_name = environ.get("_")
     shell_name2 = environ.get("SHELL")
     if ( shell_name2 and shell_name2.endswith("csh")) or (shell_name and shell_name.endswith("csh")):
         logger.debug("Detected CSH - please read CSH considered harmful")
+        undercsh=True
         if run_cmd:
             cmd = "env "
             export = ""
@@ -551,6 +552,13 @@ def epmt_source(forced_jobid, forced_user, papiex_debug=False, monitor_debug=Fal
     cmd += "LD_PRELOAD"+equals
     for l in [ "libpapiex.so:","libpapi.so:","libpfm.so:","libmonitor.so" ]:
         cmd += settings.install_prefix+"lib/"+l
+    if undercsh:
+        cmd += cmd_sep  + ";echo alias unsource created: unsource 'eval \"./epmt unsource\"'"
+        cmd += cmd_sep + ";alias unsource 'eval `./epmt unsource`'"
+    else:
+        cmd += cmd_sep  + ";echo alias unsource created: unsource='eval \"$(./epmt unsource)\"'"
+        cmd += cmd_sep + ";alias unsource='eval \"$(./epmt unsource)\"'"
+    cmd += cmd_sep
     return cmd
 
 def epmt_unsource(dry_run=False):
@@ -574,13 +582,9 @@ def epmt_unsource(dry_run=False):
     cmd += unexport + "PAPIEX_OUTPUT" + cmd_sep
     cmd += unexport + "PAPIEX_DEBUG" + cmd_sep
     cmd += unexport + "LD_PRELOAD" + cmd_sep
-    logger.info("Executing(%s)",cmd)
-    if not dry_run:
-        return_code = forkexecwait(cmd, shell=True)
-    else:
-        print(cmd)
-        return_code = 0
-    return return_code
+    cmd += "echo unaliasing unsource" + cmd_sep
+    cmd += "unalias unsource" + cmd_sep
+    return cmd
 
 def epmt_run(forced_jobid, forced_user, cmdline, wrapit=False, dry_run=False, debug=False):
     logger.debug("epmt_run(%s, %s, %s, %s, %s)",forced_jobid, cmdline, str(wrapit), str(dry_run), str(debug))
@@ -884,7 +888,11 @@ def epmt_entrypoint(args, help):
             return 0
         return 1
     if args.epmt_cmd == "unsource":
-        return(epmt_unsource(dry_run=args.dry_run) == False)
+        s = epmt_unsource(dry_run=args.dry_run)
+        if s:
+            print(s)
+            return 0
+        return 1
     if args.epmt_cmd == "stage":
         return(epmt_stage(args.jobid,None,args.epmt_cmd_args) == False)
     if args.epmt_cmd == 'run':
