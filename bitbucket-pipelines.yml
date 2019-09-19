@@ -19,7 +19,7 @@ pipelines:
           - env -i PATH=${PWD}:${PATH} python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers
           - env -i PATH=${PWD}:${PATH} EPMT_USE_SQLALCHEMY=1 python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema
     - step:
-        image: python:3.5.2
+        image: python:3.5.7
         caches:
           - pip
         script: # Modify the commands below to build your repository.
