@@ -8,7 +8,7 @@ import datetime
 
 # put this above all epmt imports
 environ['EPMT_USE_DEFAULT_SETTINGS'] = "1"
-from epmtlib import set_logging
+from epmtlib import set_logging, capture
 set_logging(-1)
 
 # Put EPMT imports only after we have called set_logging()
@@ -61,7 +61,29 @@ class EPMTSubmit(unittest.TestCase):
         j = orm_get(Job, '685000')
         self.assertEqual(len(j.processes[:]) if settings.orm == 'sqlalchemy' else j.processes.count(), 3480, 'wrong proc count in job')
         self.assertEqual(sum([p.duration for p in j.processes]), 24717624686.0, 'wrong proc duration aggregate')
-             
+
+    @unittest.skipUnless(settings.orm == 'sqlalchemy', "requires sqlalchemy")
+    @db_session
+    def test_unprocessed_jobs(self):
+        from orm import UnprocessedJob
+        from epmt_job import post_process_job
+        self.assertFalse(orm_get(UnprocessedJob, '685003'))
+        settings.post_process_job_on_ingest = False
+        with capture() as (out,err):
+            epmt_submit(glob('test/data/query/685003.tgz'), dry_run=False)
+        j = orm_get(Job, '685003')
+        # cpu time for job is calculated during post-process
+        self.assertFalse(j.cpu_time)
+        settings.post_process_job_on_ingest = True
+        u = orm_get(UnprocessedJob, '685003')
+        self.assertTrue(u)
+        self.assertEqual(u.jobid, '685003')
+        # now let's post-process the job
+        post_process_job(j)
+        self.assertFalse(orm_get(UnprocessedJob, '685003'))
+        self.assertTrue(j.cpu_time)
+
+        
 
 if __name__ == '__main__':
     unittest.main()

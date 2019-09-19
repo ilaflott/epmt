@@ -89,6 +89,16 @@ class Job(Base):
     def __repr__(self):
         return "Job['%s']" % (self.jobid)
 
+class UnprocessedJob(Base):
+    __tablename__ = 'unprocessed_jobs'
+    created_at = Column(DateTime, default=datetime.now)
+    info_dict = Column(JSON, default={})
+    jobid = Column(String, ForeignKey('jobs.jobid'), primary_key=True)
+    job = relationship('Job')
+
+    def __repr__(self):
+        return "UnprocessedJob['%s']" % (self.jobid)
+
 
 class Process(Base):
     __tablename__ = 'processes'

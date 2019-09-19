@@ -445,7 +445,15 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
     j.cpu_time = sum([p.cpu_time for p in all_procs])
     _t6 = time.time()
     logger.debug('job cpu_time calculation took: %2.5f sec', _t6 - _t5)
-#
+
+    # now mark the job as processed if it was previously marked otherwise
+    # for now, only sqlalchemy supports post-processing in a separate phase
+    if settings.orm == 'sqlalchemy':
+        u = orm_get(UnprocessedJob, j.jobid)
+        if u:
+            orm_delete(u)
+            logger.info('marking job as processed in database')
+            orm_commit()
     return
 
 
@@ -781,6 +789,9 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             post_process_job(j, all_tags)
         else:
             post_process_job(j, all_tags, all_procs, pid_map)
+    else:
+        orm_create(UnprocessedJob, jobid=j.jobid)
+        logger.info('Skipped post-processing and marked job as unprocessed')
 
     logger.info("Committing job to database..")
     _c0 = time.time()
