@@ -72,8 +72,8 @@ class EPMTSubmit(unittest.TestCase):
         with capture() as (out,err):
             epmt_submit(glob('test/data/query/685003.tgz'), dry_run=False)
         j = orm_get(Job, '685003')
-        # cpu time for job is calculated during post-process
-        self.assertFalse(j.cpu_time)
+        # proc_sums for job is calculated during post-process
+        self.assertFalse(j.proc_sums)
         settings.post_process_job_on_ingest = True
         u = orm_get(UnprocessedJob, '685003')
         self.assertTrue(u)
@@ -81,7 +81,7 @@ class EPMTSubmit(unittest.TestCase):
         # now let's post-process the job
         post_process_job(j)
         self.assertFalse(orm_get(UnprocessedJob, '685003'))
-        self.assertTrue(j.cpu_time)
+        self.assertTrue(j.proc_sums)
 
         
 
