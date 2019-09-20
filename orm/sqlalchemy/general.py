@@ -126,6 +126,9 @@ def orm_get(model, pk=None, **kwargs):
     return Session.query(model).get(pk) if (pk != None) else Session.query(model).filter_by(**kwargs).one_or_none()
 
 
+def orm_findall(model, **kwargs):
+    return Session.query(model).filter_by(**kwargs)
+
 # def orm_set(o, **kwargs):
 #     for k in kwargs.keys():
 #         setattr(o, k, kwargs[k])

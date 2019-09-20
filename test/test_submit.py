@@ -66,7 +66,7 @@ class EPMTSubmit(unittest.TestCase):
     @db_session
     def test_unprocessed_jobs(self):
         from orm import UnprocessedJob
-        from epmt_job import post_process_job
+        from epmt_job import post_process_outstanding_jobs
         self.assertFalse(orm_get(UnprocessedJob, '685003'))
         settings.post_process_job_on_ingest = False
         with capture() as (out,err):
@@ -78,8 +78,9 @@ class EPMTSubmit(unittest.TestCase):
         u = orm_get(UnprocessedJob, '685003')
         self.assertTrue(u)
         self.assertEqual(u.jobid, '685003')
-        # now let's post-process the job
-        post_process_job(j)
+        # now let's post-process all outstanding jobs
+        u_jobs = post_process_outstanding_jobs()
+        self.assertIn('685003', u_jobs)
         self.assertFalse(orm_get(UnprocessedJob, '685003'))
         self.assertTrue(j.proc_sums)
 

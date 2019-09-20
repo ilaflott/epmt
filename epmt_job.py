@@ -877,3 +877,17 @@ if (__name__ == "__main__"):
             exit(1)
     exit(0)
 
+def post_process_outstanding_jobs():
+    '''
+       This function will post-process all remaining outstanding jobs.
+       It returns the list of jobids that were post-processed.
+    '''
+    unproc_jobs = orm_findall(UnprocessedJob)
+    did_process = []
+    for u in unproc_jobs:
+        jobid = u.jobid
+        j = u.job
+        logger.info('post-processing {0}'.format(jobid))
+        post_process_job(j)
+        did_process.append(jobid)
+    return did_process
