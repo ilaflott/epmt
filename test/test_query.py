@@ -73,10 +73,10 @@ class QueryAPI(unittest.TestCase):
         df = eq.get_jobs(JOBS_LIST, fmt='pandas')
         # sqlalchemy has 4 fewer fields, which we eventually want to remove from
         # the job model
-        self.assertIn(df.shape, ((3,43), (3,47)))
+        self.assertIn(df.shape, ((3,44), (3,48)))
         # pony has some extra fields we don't care about and will probably remove:
         # 'account', 'jobscriptname', 'sessionid', 'queue'
-        self.assertEqual(set(df.columns.values) - set(['account', 'jobscriptname', 'sessionid', 'queue']), set(['PERF_COUNT_SW_CPU_CLOCK', 'all_proc_tags', 'cancelled_write_bytes', 'cpu_time', 'created_at', 'delayacct_blkio_time', 'duration', 'end', 'env_changes_dict', 'env_dict', 'exitcode', 'guest_time', 'inblock', 'info_dict', 'invol_ctxsw', 'jobid', 'jobname', 'majflt', 'minflt', 'num_procs', 'num_threads', 'outblock', 'processor', 'rchar', 'rdtsc_duration', 'read_bytes', 'rssmax', 'start', 'submit', 'syscr', 'syscw', 'systemtime', 'tags', 'time_oncpu', 'time_waiting', 'timeslices', 'updated_at', 'user', 'user+system', 'usertime', 'vol_ctxsw', 'wchar', 'write_bytes']))
+        self.assertEqual(set(df.columns.values) - set(['account', 'jobscriptname', 'sessionid', 'queue']), set(['PERF_COUNT_SW_CPU_CLOCK', 'all_proc_tags', 'annotations', 'cancelled_write_bytes', 'cpu_time', 'created_at', 'delayacct_blkio_time', 'duration', 'end', 'env_changes_dict', 'env_dict', 'exitcode', 'guest_time', 'inblock', 'info_dict', 'invol_ctxsw', 'jobid', 'jobname', 'majflt', 'minflt', 'num_procs', 'num_threads', 'outblock', 'processor', 'rchar', 'rdtsc_duration', 'read_bytes', 'rssmax', 'start', 'submit', 'syscr', 'syscw', 'systemtime', 'tags', 'time_oncpu', 'time_waiting', 'timeslices', 'updated_at', 'user', 'user+system', 'usertime', 'vol_ctxsw', 'wchar', 'write_bytes']))
         df = eq.get_jobs('685016', fmt='pandas')
         self.assertEqual(df['jobid'][0], '685016', "cannot specify job as a single job id string")
         self.assertEqual(df.shape[0],1, "wrong selection of jobs when specified as a string")
@@ -333,6 +333,29 @@ class QueryAPI(unittest.TestCase):
     def test_job_roots(self):
         pids = [p.pid for p in eq.get_roots(['685000', '685003'], fmt='orm')]
         self.assertEqual(pids, [6098, 29001, 31171, 31291, 10015, 10168, 32139, 11002, 32315, 11172, 1311, 1490, 12990, 13118, 13220, 1652, 1941, 13597, 14403, 14547, 2321, 2655, 26466, 26469, 26500, 26726, 26729, 26760, 26986, 26989, 27020, 27246, 27249, 27280, 27506, 27509, 27540, 27775, 27833, 27836, 27867, 28093, 28129, 8082, 8179, 8231, 8283, 8335, 8387, 8439, 8491, 8543, 8603, 8655, 8707, 8863, 8997, 9044, 9090, 9126, 9162, 9198, 9237, 9881, 9930, 9979, 10028, 10077, 10126, 10175])
+
+    @db_session
+    def test_job_annotations(self):
+        self.assertEqual(eq.get_job_annotations('685000'), {})
+        r = eq.annotate_job('685000', {'abc': 100})
+        self.assertEqual(r, {'abc': 100})
+        self.assertEqual(eq.get_job_annotations('685000'), {'abc': 100})
+        r = eq.annotate_job('685000', {'def': 'hello'})
+        self.assertEqual(r, {'abc': 100, 'def': 'hello'})
+        self.assertEqual(eq.get_job_annotations('685000'), {'abc': 100, 'def': 'hello'})
+        self.assertEqual(eq.get_jobs(annotations = {'abc': 100}, fmt='terse'), [u'685000'])
+        r = eq.annotate_job('685000', {'def': 'hello'}, True)
+        self.assertEqual(r, {'def': 'hello'})
+        self.assertEqual(eq.get_job_annotations('685000'), {'def': 'hello'})
+        r = eq.remove_job_annotations('685000')
+        self.assertEqual(r, {})
+        self.assertEqual(eq.get_job_annotations('685000'), {})
+        r = eq.annotate_job('685016', 'abc:100;def:hello')
+        self.assertEqual(r, {'abc': '100', 'def': 'hello'})
+        self.assertEqual(eq.get_job_annotations('685016'), {'abc': '100', 'def': 'hello'})
+        self.assertEqual(eq.get_jobs(annotations = {'abc': '100'}, fmt='terse'), [u'685016'])
+
+
 
     @db_session
     def test_op_roots(self):

@@ -256,7 +256,7 @@ def orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only):
 
 
 
-def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, hosts, exact_tag_only):
+def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, hosts, annotations, exact_tag_only):
     from .models import Job, Host
     from epmtlib import tags_list, isString
     from datetime import datetime
@@ -279,6 +279,12 @@ def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, host
             idx += 1
         logger.debug('tag filter: {0}'.format(tag_query))
         qs = qs.filter(tag_query)
+
+    # Remember, annotations = {} demands an exact match with an empty dict!
+    if annotations != None:
+        if type(annotations) == str:
+            annotations = tag_from_string(annotations)
+        qs = annotation_filter_(qs, annotations)
 
     if when:
         if type(when) == datetime:
@@ -331,6 +337,16 @@ def tag_filter_(qs, tag, exact_match):
         # of the passed tag
         for (k,v) in tag.items():
             qs = qs.filter(lambda p: p.tags[k] == v)
+    return qs
+
+def annotation_filter_(qs, annotation):
+    if (annotation == {}):
+        qs = qs.filter(lambda j: j.annotations == annotation)
+    else:
+        # we consider a match if the job annotation is a superset
+        # of the passed tag
+        for (k,v) in annotation.items():
+            qs = qs.filter(lambda j: j.annotations[k] == v)
     return qs
 
 def orm_get_refmodels(tag = {}, fltr=None, limit=0, order='', exact_tag_only=False):

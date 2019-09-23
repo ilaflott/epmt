@@ -343,7 +343,6 @@ def orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only, c
     # Remember, tag = {} demands an exact match with an empty dict!
     if tags != None:
         tags = tags_list(tags)
-        qs_tags = []
         idx = 0
         org_qs = qs
         for t in tags:
@@ -374,9 +373,9 @@ def orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only, c
 
     return qs
 
-def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, hosts, exact_tag_only):
+def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, hosts, annotations, exact_tag_only):
     from .models import Job, Host
-    from epmtlib import tags_list, isString
+    from epmtlib import tags_list, isString, tag_from_string
     from datetime import datetime
 
     if not fltr is None:
@@ -386,11 +385,10 @@ def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, host
         else:
             qs = qs.filter(fltr)
 
-    # filter using tag if set
-    # Remember, tag = {} demands an exact match with an empty dict!
+    # filter using tags if set
+    # Remember, tags = {} demands an exact match with an empty dict!
     if tags != None:
         tags = tags_list(tags)
-        qs_tags = []
         idx = 0
         org_qs = qs
         for t in tags:
@@ -400,6 +398,12 @@ def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, host
             qst = tag_filter_(org_qs, t, exact_tag_only)
             qs = qst if (idx == 0) else qs.union(qst)
             idx += 1
+
+    # Remember, annotations = {} demands an exact match with an empty dict!
+    if annotations != None:
+        if type(annotations) == str:
+            annotations = tag_from_string(annotations)
+        qs = annotation_filter_(qs, annotations)
 
     if when:
         if type(when) == datetime:
@@ -443,6 +447,21 @@ def tag_filter_(qs, tag, exact_match, model=None):
             #qs = qs.filter(cast(model.tags[k], String) == type_coerce(v, JSON))
             #qs = qs.filter(model.tags[k] == str(v))
             qs = qs.filter(text("json_extract({0}.tags, '$.{1}') = '{2}'".format(model.__tablename__, k, v)))
+    return qs
+
+
+def annotation_filter_(qs, annotations):
+    from .models import Job
+    if (annotations == {}):
+        qs = qs.filter(Job.annotations == {})
+    else:
+        # we consider a match if the job annotation is a superset
+        # of the passed annotation
+        for (k,v) in annotations.items():
+            if type(v) == str:
+                qs = qs.filter(text("json_extract({0}.annotations, '$.{1}') = '{2}'".format(Job.__tablename__, k, v)))
+            else:
+                qs = qs.filter(text("json_extract({0}.annotations, '$.{1}') = {2}".format(Job.__tablename__, k, v)))
     return qs
 
 

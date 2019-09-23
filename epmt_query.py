@@ -225,7 +225,7 @@ def op_roots(jobs, tag, fmt='dict'):
 
 
 @db_session
-def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offset = 0, when=None, before=None, after=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tag_only = False):
+def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offset = 0, when=None, before=None, after=None, hosts=[], fmt='dict', annotations=None, merge_proc_sums=True, exact_tag_only = False):
     """
     This function returns a list of jobs based on some filtering and ordering.
     The output format can be set to pandas dataframe, list of dicts or list
@@ -320,6 +320,9 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
              'orm':  returns a Pony Query object (ADVANCED)
              'terse': In this format only the primary key ID is printed for each job
     
+   annotations: Dictionary of key/value pairs that must ALL match. The matching
+             job may have additional key/values.
+
     merge_proc_sums: By default True, which means the fields inside job.proc_sums
              will be hoisted up one level to become first-class members of the job.
              This will make aggregates across processes appear as part of the job
@@ -380,7 +383,7 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
             # user probably forgot to wrap in a list
             hosts = hosts.split(",")
 
-    qs = orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, hosts, exact_tag_only)
+    qs = orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, hosts, annotations, exact_tag_only)
 
     if fmt == 'orm':
         return qs
@@ -1018,13 +1021,11 @@ def annotate_job(jobid, annotation, replace=False):
     '''
     j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
     info_dict = dict(j.info_dict)
-    if replace:
-        ann = annotation
-    else:
-        ann = j.info_dict.get('annotations', {})
-        ann.update(annotation)
-    info_dict['annotations'] = ann
-    j.info_dict = info_dict
+    if type(annotation) == str:
+        annotation = tag_from_string(annotation)
+    ann = {} if replace else dict(j.annotations)
+    ann.update(annotation)
+    j.annotations = ann
     orm_commit()
     return ann
 
@@ -1034,4 +1035,7 @@ def get_job_annotations(jobid):
     Returns the annotations (if any) for a job
     '''
     j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
-    return j.info_dict.get('annotations', {})
+    return j.annotations
+
+def remove_job_annotations(jobid):
+    return annotate_job(jobid, {}, True)
