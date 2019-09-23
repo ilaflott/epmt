@@ -62,7 +62,8 @@ class Job(Base):
     __tablename__ = 'jobs'
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, onupdate=datetime.now)
-    info_dict = Column(JSON, default={}, index=True)
+    info_dict = Column(JSON, default={})
+    annotations = Column(JSON, default={}, index=True)
     start = Column(DateTime, default=datetime.now, index=True)
     end = Column(DateTime, default=datetime.now)
     duration = Column(Float, default=0)
