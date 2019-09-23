@@ -335,6 +335,23 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(pids, [6098, 29001, 31171, 31291, 10015, 10168, 32139, 11002, 32315, 11172, 1311, 1490, 12990, 13118, 13220, 1652, 1941, 13597, 14403, 14547, 2321, 2655, 26466, 26469, 26500, 26726, 26729, 26760, 26986, 26989, 27020, 27246, 27249, 27280, 27506, 27509, 27540, 27775, 27833, 27836, 27867, 28093, 28129, 8082, 8179, 8231, 8283, 8335, 8387, 8439, 8491, 8543, 8603, 8655, 8707, 8863, 8997, 9044, 9090, 9126, 9162, 9198, 9237, 9881, 9930, 9979, 10028, 10077, 10126, 10175])
 
     @db_session
+    def test_job_annotations(self):
+        self.assertEqual(eq.get_job_annotations('685000'), {})
+        r = eq.annotate_job('685000', {'abc': 100})
+        self.assertEqual(r, {'abc': 100})
+        self.assertEqual(eq.get_job_annotations('685000'), {'abc': 100})
+        r = eq.annotate_job('685000', {'def': 200})
+        self.assertEqual(r, {'abc': 100, 'def': 200})
+        self.assertEqual(eq.get_job_annotations('685000'), {'abc': 100, 'def': 200})
+        r = eq.annotate_job('685000', {'def': 200}, True)
+        self.assertEqual(r, {'def': 200})
+        self.assertEqual(eq.get_job_annotations('685000'), {'def': 200})
+        r = eq.remove_job_annotations('685000')
+        self.assertEqual(r, {})
+        self.assertEqual(eq.get_job_annotations('685000'), {})
+
+
+    @db_session
     def test_op_roots(self):
         op_root_procs = eq.op_roots(['685000', '685003'], 'op_sequence:4', fmt='orm')
         self.assertEqual([p.pid for p in op_root_procs], [11023, 11185, 11187, 32160, 32328, 32330])

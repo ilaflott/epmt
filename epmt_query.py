@@ -1018,11 +1018,8 @@ def annotate_job(jobid, annotation, replace=False):
     '''
     j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
     info_dict = dict(j.info_dict)
-    if replace:
-        ann = annotation
-    else:
-        ann = j.info_dict.get('annotations', {})
-        ann.update(annotation)
+    ann = {} if replace else dict(info_dict.get('annotations', {}))
+    ann.update(annotation)
     info_dict['annotations'] = ann
     j.info_dict = info_dict
     orm_commit()
@@ -1035,3 +1032,6 @@ def get_job_annotations(jobid):
     '''
     j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
     return j.info_dict.get('annotations', {})
+
+def remove_job_annotations(jobid):
+    return annotate_job(jobid, {}, True)
