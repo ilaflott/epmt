@@ -554,11 +554,11 @@ def epmt_source(forced_jobid, forced_user, papiex_debug=False, monitor_debug=Fal
     for l in [ "libpapiex.so:","libpapi.so:","libpfm.so:","libmonitor.so" ]:
         cmd += settings.install_prefix+"lib/"+l
     if undercsh:
-        cmd += cmd_sep  + "echo \'alias unsource created via \*csh: eval unsetenv PAPIEX_OPTIONS; unsetenv PAPIEX_OUTPUT; unsetenv PAPIEX_DEBUG; unsetenv LD_PRELOAD; unalias unsource'"
-        cmd += cmd_sep  +"alias unsource 'eval unsetenv PAPIEX_OPTIONS; unsetenv PAPIEX_OUTPUT; unsetenv PAPIEX_DEBUG; unsetenv LD_PRELOAD; unalias unsource'"
+        logger.debug("alias epmt_unsource created via *csh: alias epmt_unsource 'unsetenv PAPIEX_OPTIONS; unsetenv PAPIEX_OUTPUT; unsetenv PAPIEX_DEBUG; unsetenv LD_PRELOAD; unalias epmt_unsource'")
+        cmd += cmd_sep  +"alias epmt_unsource 'unsetenv PAPIEX_OPTIONS; unsetenv PAPIEX_OUTPUT; unsetenv PAPIEX_DEBUG; unsetenv LD_PRELOAD; unalias epmt_unsource'"
     else:
-        cmd += cmd_sep  + ";echo \"alias unsource created: unsource=eval unset PAPIEX_OPTIONS; unset PAPIEX_OUTPUT; unset PAPIEX_DEBUG; unset LD_PRELOAD; unalias unsource;\""
-        cmd += cmd_sep + ";alias unsource='eval unset PAPIEX_OPTIONS; unset PAPIEX_OUTPUT; unset PAPIEX_DEBUG; unset LD_PRELOAD; unalias unsource;'"
+        logger.debug("alias epmt_unsource created: epmt_unsource='unset PAPIEX_OPTIONS; unset PAPIEX_OUTPUT; unset PAPIEX_DEBUG; unset LD_PRELOAD; unalias epmt_unsource'")
+        cmd += cmd_sep + ";shopt -s expand_aliases;alias epmt_unsource='unset PAPIEX_OPTIONS; unset PAPIEX_OUTPUT; unset PAPIEX_DEBUG; unset LD_PRELOAD; unalias epmt_unsource'"
     cmd += cmd_sep
     return cmd
 
