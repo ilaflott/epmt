@@ -85,7 +85,7 @@ def init_settings(settings):
         logger.warning("missing settings.post_process_job_on_ingest")
         settings.post_process_job_on_ingest = True
     if ((settings.orm != 'sqlalchemy') and (not(settings.post_process_job_on_ingest))):
-        logger.error('post_process_job_on_ingest must be set to True unless the ORM is sqlalchemy')
+        logger.error('post_process_job_on_ingest set as False is only permitted with sqlalchemy')
         sys.exit(1)
     if not hasattr(settings, 'db_params'):
         logger.error("missing settings.db_params")

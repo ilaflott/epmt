@@ -62,9 +62,8 @@ class Job(Base):
     __tablename__ = 'jobs'
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, onupdate=datetime.now)
-    info_dict = Column(JSON, default={})
-
-    start = Column(DateTime, default=datetime.now)
+    info_dict = Column(JSON, default={}, index=True)
+    start = Column(DateTime, default=datetime.now, index=True)
     end = Column(DateTime, default=datetime.now)
     duration = Column(Float, default=0)
     proc_sums = Column(JSON) # aggregates across processes of job
@@ -80,7 +79,7 @@ class Job(Base):
 
     processes = relationship('Process', cascade="all", back_populates="job")
     hosts = relationship('Host', back_populates='jobs', secondary=host_job_associations_table)
-    tags = Column(JSON)
+    tags = Column(JSON, index=True)
     # exclusive cpu time
     cpu_time = Column(Float)
     ref_models = relationship('ReferenceModel', back_populates="jobs", secondary=refmodel_job_associations_table)
@@ -89,11 +88,16 @@ class Job(Base):
     def __repr__(self):
         return "Job['%s']" % (self.jobid)
 
+class UnprocessedJob(Base):
+    __tablename__ = 'unprocessed_jobs'
+    created_at = Column(DateTime, default=datetime.now)
+    info_dict = Column(JSON, default={})
+    jobid = Column(String, ForeignKey('jobs.jobid'), primary_key=True)
+    job = relationship('Job')
 
-#class ProcessAssociation(Base):
-#    __tablename__ = 'process_associations'
-#    fk_ancestor = Column(Integer, ForeignKey('processes.id'), primary_key=True)
-#    fk_descendant = Column(Integer, ForeignKey('processes.id'), primary_key=True)
+    def __repr__(self):
+        return "UnprocessedJob['%s']" % (self.jobid)
+
 
 class Process(Base):
     __tablename__ = 'processes'
@@ -144,3 +148,9 @@ class Process(Base):
     @db_session
     def __repr__(self):
         return "Process[%d]" % (self.id)
+
+# from sqlalchemy import event
+# @event.listens_for(Table, "column_reflect")
+# def column_reflect(inspector, table, column_info):
+#     # set column.key = "attr_<lower_case_name>"
+#     column_info['key'] = column_info['name']

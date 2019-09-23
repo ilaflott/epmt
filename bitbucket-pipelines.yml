@@ -17,17 +17,17 @@ pipelines:
           - env -i PATH=${PWD}:${PATH} /bin/bash -Eeux epmt-example.anysh
           - env -i PATH=${PWD}:${PATH} /bin/bash epmt-check-stage-submit.sh
           - env -i PATH=${PWD}:${PATH} python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers
-          - env -i PATH=${PWD}:${PATH} EPMT_USE_SQLALCHEMY=1 EPMT_BULK_INSERT=1 python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers
+          - env -i PATH=${PWD}:${PATH} EPMT_USE_SQLALCHEMY=1 python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema
     - step:
-        image: python:3.5
+        image: python:3.7.4
         caches:
           - pip
         script: # Modify the commands below to build your repository.
           - python3 -V
-          - pip3 install -r requirements.txt
+          - pip3 install -r requirements.txt.py3
           - apt-get update && apt-get install -y csh tcsh
           - rm -f settings.py; ln -s settings/settings_sqlite_inmem.py settings.py  # Setup in mem sqlite
           - python3 -m py_compile epmt *.py orm/*/*.py		# Compile everything
           - env -i PATH=${PWD}:${PATH} python3 -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers
-          - env -i PATH=${PWD}:${PATH} EPMT_USE_SQLALCHEMY=1 python3 -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers
+          - env -i PATH=${PWD}:${PATH} EPMT_USE_SQLALCHEMY=1 EPMT_BULK_INSERT=1 python3 -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema
 

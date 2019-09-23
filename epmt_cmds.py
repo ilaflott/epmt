@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 from __future__ import print_function
 from datetime import datetime
-from os import environ, makedirs, mkdir, errno, path, getpid, getuid, getsid, getcwd, chdir, unlink
+from os import environ, makedirs, mkdir, path, getpid, getuid, getsid, getcwd, chdir, unlink
+import errno
 from socket import gethostname
 #from json import dumps as dict_to_json
 from subprocess import call as forkexecwait

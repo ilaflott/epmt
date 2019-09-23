@@ -986,3 +986,52 @@ def dm_calc_iter(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv'
     dm_cpu_time = dm_ops_df['cpu_time'].sum()
     dm_percent = round((100 * dm_cpu_time / jobs_cpu_time), 3)
     return (dm_percent, dm_ops_df, jobs_cpu_time, dm_agg_df_by_job)
+
+@db_session
+def get_job_status(jobid):
+    '''
+    Returns the job status dictionary, which consists of the following job fields:
+      - script_path
+      - script
+      - stdout
+      - stderr
+      - exit_reason
+      - exit_status
+
+    If the job status has not been populated, the function will return an
+    empty dictionary.
+    '''
+    j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
+    return j.info_dict.get('status', {})
+
+@db_session
+def annotate_job(jobid, annotation, replace=False):
+    '''
+    Annotates a job
+      - annotation is a dictionary of key/value pairs
+        If replace is True, then *all* existing annotations
+        will be overritten. Normally, this is set to False,
+        in which case, the supplied annotations are merged into
+        the existing annotations.
+
+    Returns the new annotations for the job.
+    '''
+    j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
+    info_dict = dict(j.info_dict)
+    if replace:
+        ann = annotation
+    else:
+        ann = j.info_dict.get('annotations', {})
+        ann.update(annotation)
+    info_dict['annotations'] = ann
+    j.info_dict = info_dict
+    orm_commit()
+    return ann
+
+@db_session
+def get_job_annotations(jobid):
+    '''
+    Returns the annotations (if any) for a job
+    '''
+    j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
+    return j.info_dict.get('annotations', {})

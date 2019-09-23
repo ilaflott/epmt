@@ -56,7 +56,7 @@ def db_session(func):
 def setup_db(settings,drop=False,create=True):
     global db_setup_complete
     global engine
-        
+
     if db_setup_complete:
         logger.debug('skipping DB setup as it has already been initialized')
         return True
@@ -90,14 +90,29 @@ def setup_db(settings,drop=False,create=True):
         #    for table in reversed(meta.sorted_tables):
         #        con.execute(table.delete())
         #    trans.commit()
-
-    logger.info("Generating mapping from schema...")
-    try:
-        Base.metadata.create_all(engine)
-    except Exception as e:
-        #logger.error("Mapping to DB, did the schema change? Perhaps drop and create?")
-        logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
-        return False
+    ins = inspect(engine)
+    if len(ins.get_table_names()) >= 8:
+        logger.info("Reflecting existing schema..")
+        try:
+            Base.metadata.reflect(bind=engine)
+            #meta = MetaData()
+            #meta.reflect(engine)
+            # we can then produce a set of mappings from this MetaData
+            #Base = automap_base(metadata=meta)
+            #thr_data.Base = Base
+            # calling prepare() just sets up mapped classes and relationships.
+            #Base.prepare()
+            #User, Process, Job = Base.classes.users, Base.classes.processes, Base.classes.jobs
+        except:
+            pass
+    else:
+        logger.info("Generating mapping from schema..")
+        try:
+            Base.metadata.create_all(engine)
+        except Exception as e:
+            #logger.error("Mapping to DB, did the schema change? Perhaps drop and create?")
+            logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
+            return False
 
     logger.info('Configuring scoped session..')
     Session.configure(bind=engine, expire_on_commit=False, autoflush=True)
@@ -110,6 +125,9 @@ def setup_db(settings,drop=False,create=True):
 def orm_get(model, pk=None, **kwargs):
     return Session.query(model).get(pk) if (pk != None) else Session.query(model).filter_by(**kwargs).one_or_none()
 
+
+def orm_findall(model, **kwargs):
+    return Session.query(model).filter_by(**kwargs)
 
 # def orm_set(o, **kwargs):
 #     for k in kwargs.keys():
@@ -453,9 +471,9 @@ def orm_dump_schema():
         print('\nTable', t.name)
         for c in t.columns:
             try:
-                print(' - ', c.name, str(c.type))
+                print('%20s\t%10s' % (c.name, str(c.type)))
             except:
-                print(' - ', c.name, str(c.type.__class__))
+                print('%20s\t%10s' % (c.name, str(c.type.__class__.__name__.split('.')[-1])))
 
 
 ### end API ###
