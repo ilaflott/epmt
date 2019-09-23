@@ -49,6 +49,9 @@ def orm_get(model, pk=None, **kwargs):
             return None
     return model.get(**kwargs)
 
+def orm_findall(model, **kwargs):
+    return model.select().filter(**kwargs)
+
 # def orm_set(o, **kwargs):
 #     o.set(**kwargs)
 #     return o

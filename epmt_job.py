@@ -11,6 +11,7 @@ from json import dumps, loads
 from pwd import getpwnam, getpwuid
 from epmtlib import tag_from_string, sum_dicts, unique_dicts, fold_dicts, timing, dotdict
 from datetime import datetime, timedelta
+from functools import reduce
 import time
 
 logger = getLogger(__name__)  # you can use other name
@@ -370,21 +371,22 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
         logger.debug('post-process: no process tags found in th entire job')
         proc_sums[settings.all_tags_field] = []
 
-    _t1 = time.time()
-    logger.debug('post-process: tag processing took: %2.5f sec', _t1 - _t0)
+    logger.debug('post-process: tag processing took: %2.5f sec', time.time() - _t0)
 
     if all_procs is None:
+        _all_procs_t0 = time.time()
         all_procs = []
         for p in j.processes:
             all_procs.append(p)
-        logger.debug("post-process: populated all_procs: {0} processes".format(len(all_procs)))
+        logger.debug('post-process: re-populating %d processes took: %2.5f sec', len(all_procs), time.time() - _all_procs_t0)
 
     if (pid_map is None):
+        _pid_t0 = time.time()
         _populate_all_procs = False
         pid_map = {}
-        logger.debug("post-process: recreating pid_map..")
         for p in all_procs:
             pid_map[p.pid] = p
+        logger.debug("post-process: recreating pid_map took: %2.5f sec", time.time() - _pid_t0)
 
     # Add all processes to job and compute process totals to add to
     # job.proc_sums field
@@ -438,14 +440,25 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
     _t5 = time.time()
     logger.debug('proc_sums calculation took: %2.5f sec', _t5 - _t4)
 
+
+    # The calculation below has been moved to before post-processing
+    #
     # the cpu time for a job is the sum of the exclusive times
     # of all processes in the job
     # We use list-comprehension and aggregation over slower ORM ops
-    # j.cpu_time = orm_sum_attribute(j.processes, 'cpu_time')
-    j.cpu_time = sum([p.cpu_time for p in all_procs])
-    _t6 = time.time()
-    logger.debug('job cpu_time calculation took: %2.5f sec', _t6 - _t5)
-#
+    ### j.cpu_time = orm_sum_attribute(j.processes, 'cpu_time')
+    # j.cpu_time = sum([p.cpu_time for p in all_procs])
+    # _t6 = time.time()
+    # logger.debug('job cpu_time calculation took: %2.5f sec', _t6 - _t5)
+
+    # now mark the job as processed if it was previously marked otherwise
+    # for now, only sqlalchemy supports post-processing in a separate phase
+    if settings.orm == 'sqlalchemy':
+        u = orm_get(UnprocessedJob, j.jobid)
+        if u:
+            orm_delete(u)
+            logger.info('marking job as processed in database')
+            orm_commit()
     return
 
 
@@ -746,6 +759,8 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     j.submit = submit_ts # Wait time is start - submit and should probably be stored
     d = j.end - j.start
     j.duration = int(d.total_seconds()*1000000)
+    j.cpu_time = reduce(lambda c, p: c + p.cpu_time, all_procs, 0)
+    # j.cpu_time = sum([p.cpu_time for p in all_procs])
     logger.info("Earliest process start: %s",j.start)
     logger.info("Latest process end: %s",j.end)
     logger.info("Computed duration of job: %f us, %.2f m",j.duration,j.duration/60000000)
@@ -781,6 +796,9 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             post_process_job(j, all_tags)
         else:
             post_process_job(j, all_tags, all_procs, pid_map)
+    else:
+        orm_create(UnprocessedJob, jobid=j.jobid)
+        logger.info('Skipped post-processing and marked job as **UNPROCESSED**')
 
     logger.info("Committing job to database..")
     _c0 = time.time()
@@ -859,3 +877,17 @@ if (__name__ == "__main__"):
             exit(1)
     exit(0)
 
+def post_process_outstanding_jobs():
+    '''
+       This function will post-process all remaining outstanding jobs.
+       It returns the list of jobids that were post-processed.
+    '''
+    unproc_jobs = orm_findall(UnprocessedJob)
+    did_process = []
+    for u in unproc_jobs:
+        jobid = u.jobid
+        j = u.job
+        logger.info('post-processing {0}'.format(jobid))
+        post_process_job(j)
+        did_process.append(jobid)
+    return did_process

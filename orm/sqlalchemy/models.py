@@ -62,9 +62,8 @@ class Job(Base):
     __tablename__ = 'jobs'
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, onupdate=datetime.now)
-    info_dict = Column(JSON, default={})
-
-    start = Column(DateTime, default=datetime.now)
+    info_dict = Column(JSON, default={}, index=True)
+    start = Column(DateTime, default=datetime.now, index=True)
     end = Column(DateTime, default=datetime.now)
     duration = Column(Float, default=0)
     proc_sums = Column(JSON) # aggregates across processes of job
@@ -80,7 +79,7 @@ class Job(Base):
 
     processes = relationship('Process', cascade="all", back_populates="job")
     hosts = relationship('Host', back_populates='jobs', secondary=host_job_associations_table)
-    tags = Column(JSON)
+    tags = Column(JSON, index=True)
     # exclusive cpu time
     cpu_time = Column(Float)
     ref_models = relationship('ReferenceModel', back_populates="jobs", secondary=refmodel_job_associations_table)
@@ -88,6 +87,16 @@ class Job(Base):
     @db_session
     def __repr__(self):
         return "Job['%s']" % (self.jobid)
+
+class UnprocessedJob(Base):
+    __tablename__ = 'unprocessed_jobs'
+    created_at = Column(DateTime, default=datetime.now)
+    info_dict = Column(JSON, default={})
+    jobid = Column(String, ForeignKey('jobs.jobid'), primary_key=True)
+    job = relationship('Job')
+
+    def __repr__(self):
+        return "UnprocessedJob['%s']" % (self.jobid)
 
 
 class Process(Base):
