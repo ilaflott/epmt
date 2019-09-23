@@ -24,10 +24,12 @@ def get_db_size(findwhat, other):
             help=False, jobid=None, json=False, verbose=0)
 
     Returns:
+    if settings provider is not postgres
+        return(False,)
     if json=True
-        return json
+        return(True,json)
     else 
-        return 0
+        return(True,)
     """
     from os import environ
     if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
@@ -39,8 +41,10 @@ def get_db_size(findwhat, other):
     from logging import getLogger
     logger = getLogger(__name__)  # you can use other name
     import init_logging
-    # If db is 'pg'
-    # elif db is sqlite3
+    # Test if provider is supported
+    if settings.db_params.get('url', '').startswith('postgresql://') is False:
+        logger.warning("%s Not supported", settings.db_params.get('url', ''))
+        return(False,"Not supported")
     if other.json:
         import json
         jsonlist = []
@@ -56,18 +60,16 @@ def get_db_size(findwhat, other):
                 cleanList.append(cleaner)
     logger.info("epmt dbsize: %s",str(findwhat))
     every = False
-    if settings.db_params.get('url', '').startswith('postgresql://') is False:
-        logger.warning("%s Not supported", settings.db_params.get('url', ''))
-        return False
+    # Load ORM and Connect to DB for query
     try:
         from orm import orm_dump_schema, setup_db
     except (ImportError, Exception) as e:
         raise
         logger.warning("Could Not connect to orm")
-        return False
+        return(False,"Not connected")
     if setup_db(settings) == False:
         logger.warning("Could Not connect to db")
-        return False
+        return(False,"Not connected")
     if len(cleanList) < 1:
         logger.info("Displaying all options")
         every = True
@@ -194,8 +196,8 @@ def get_db_size(findwhat, other):
                         "ORM":"SQLAlchemy "+sa_version,
                         "DB Params":settings.db_params}
             jsonlist.append({"Metadata":metadata})
-            return("\n\nJSON: \n"+str(json.dumps(jsonlist,indent=4)))
+            return(True, json.dumps(jsonlist,indent=4))
         else:
             logger.warning("No valid Json")
-            return(json.dumps(False))
-    return True
+            return(False, json.dumps(False))
+

@@ -18,6 +18,10 @@ if environ.get('EPMT_USE_SQLALCHEMY'):
     if environ.get('EPMT_BULK_INSERT'):
         settings.bulk_insert = True
 
+if environ.get('EPMT_USE_PG'):
+    settings.db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'localhost', 'dbname': 'EPMT'}
+
+
 from epmtlib import timing, capture
 from orm import db_session, setup_db, Job
 import epmt_query as eq
@@ -71,15 +75,26 @@ class EPMTCmds(unittest.TestCase):
             retval = epmt_list_job_proc_tags(["685000"])
         self.assertEqual(type(retval), bool, 'wrong list jobs return type')
         self.assertEqual(retval, True, 'wrong list jobs return value')
-
-    def test_dbsize(self):
+    def test_dbsize_provider(self):
         with capture() as (out,err):
             import argparse
             argns = argparse.Namespace(auto=False, bytes=False, dbsize=True, drop=False, dry_run=False, epmt_cmd='dbsize', epmt_cmd_args=['database', 'table'], error=False, help=False, jobid=None, json=False, verbose=0)
             from epmt_cmds import epmt_dbsize
-            retval = epmt_dbsize('',argns)
+            retval,val = epmt_dbsize('',argns)
         isNotSqlite = (settings.db_params.get('provider', '') == 'postgres')
         self.assertEqual(retval, isNotSqlite, 'wrong database return value')
+    @unittest.skipUnless(settings.db_params.get('provider','') == 'postgres', "requires postgres")
+    def test_dbsize_json(self):
+        with capture() as (out,err):
+            import argparse,json
+            argns = argparse.Namespace(auto=False, bytes=False, dbsize=True, drop=False, dry_run=False, epmt_cmd='dbsize', epmt_cmd_args=['database', 'table'], error=False, help=False, jobid=None, json=True, verbose=0)
+            from epmt_cmds import epmt_dbsize
+            retval,out = epmt_dbsize('', argns)
+            throws = True
+            json.loads(out)
+            if len(out) > 1:
+                throws = False
+        self.assertEqual(throws, False, 'JSON not loaded successfully')
 
 if __name__ == '__main__':
     unittest.main()

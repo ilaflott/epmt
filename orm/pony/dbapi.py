@@ -41,11 +41,11 @@ def get_db_size(findwhat, other):
     # Test if provider is supported
     if (settings.db_params.get('provider','') == 'postgres') is False:
         logger.warning("%s Not supported",str(settings.db_params.get('provider','Provider settings key missing')))
-        return False
+        return(False,"")
     # Connect to db for querying
     if setup_db(settings) == False:
         logger.warning("Could Not connect to db")
-        return False
+        return(False,"")
     else:
         logger.info("Connected to db with pony")
     # Json requested 
@@ -186,9 +186,9 @@ def get_db_size(findwhat, other):
                         "ORM":"Pony "+p_version,
                         "DB Params":settings.db_params}
             jsonlist.append({"Metadata":metadata})
-            return("\n\nJSON: \n"+str(json.dumps(jsonlist,indent=4)))
+            return(True, json.dumps(jsonlist,indent=4))
         else:
             logger.warning("No valid Json")
-            return(json.dumps(False))
+            return(False, json.dumps(False))
     #print("Index Dict:",indexd, "\nTable Dict(table:size,count):",tabled, "\ntablespace:", tablespaced, "\nDatabase:", databased)
-    return True
+    return(True,"Done")

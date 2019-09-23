@@ -844,7 +844,7 @@ def epmt_entrypoint(args, help):
         dump_config(stdout)
         exit(0)
     if args.epmt_cmd == 'dbsize':
-        return(epmt_dbsize(findwhat=args.epmt_cmd_args, other=args))
+        return(epmt_dbsize(findwhat=args.epmt_cmd_args, other=args) == False)
     if args.epmt_cmd == 'start':
         return(epmt_start_job(args.jobid,None,other=args.epmt_cmd_args) == False)
     if args.epmt_cmd == 'stop':
