@@ -491,6 +491,7 @@ def orm_dump_schema(format=None):
         m = MetaData()
         m.reflect(engine) # Read what exists on db so we can have full picture
         return [table.name for table in m.tables.values()]
+    else:
         # alteratively return [t.name for t in Base.metadata.sorted_tables]
         for t in Base.metadata.sorted_tables: 
             print('\nTable', t.name)
@@ -499,7 +500,7 @@ def orm_dump_schema(format=None):
                     print(' - ', c.name, str(c.type))
                 except:
                     print(' - ', c.name, str(c.type.__class__))
-    return Base.metadata.sorted_tables
+
 
 ### end API ###
 

@@ -81,8 +81,8 @@ class EPMTCmds(unittest.TestCase):
             argns = argparse.Namespace(auto=False, bytes=False, dbsize=True, drop=False, dry_run=False, epmt_cmd='dbsize', epmt_cmd_args=['database', 'table'], error=False, help=False, jobid=None, json=False, verbose=0)
             from epmt_cmds import epmt_dbsize
             retval,val = epmt_dbsize('',argns)
-        isNotSqlite = (settings.db_params.get('provider', '') == 'postgres')
-        self.assertEqual(retval, isNotSqlite, 'wrong database return value')
+        isPG = (settings.db_params.get('provider', '') == 'postgres')
+        self.assertEqual(retval, isPG, 'wrong database return value')
     @unittest.skipUnless(settings.db_params.get('provider','') == 'postgres', "requires postgres")
     def test_dbsize_json(self):
         with capture() as (out,err):
