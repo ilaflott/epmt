@@ -485,7 +485,7 @@ def orm_get_refmodels(tag = {}, fltr=None, limit=0, order=None, exact_tag_only=F
 
     return qs
 
-def orm_dump_schema(format):
+def orm_dump_schema(format=None):
 # returns schema, arg format name will return table names
     if format =='name':
         m = MetaData()

@@ -67,8 +67,12 @@ def get_db_size(findwhat, other):
         raise
         logger.warning("Could Not connect to orm")
         return(False,"Not connected")
-    if setup_db(settings) == False:
-        logger.warning("Could Not connect to db")
+    try:
+        if setup_db(settings) == False:
+            logger.warning("Could Not connect to db")
+            return(False,"Not connected")
+    except exc.SQLAlchemyError as e:
+        logger.warning("Could Not connect to db"+str(e))
         return(False,"Not connected")
     if len(cleanList) < 1:
         logger.info("Displaying all options")
