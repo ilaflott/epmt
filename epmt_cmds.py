@@ -499,6 +499,7 @@ def epmt_source(forced_jobid, forced_user, papiex_debug=False, monitor_debug=Fal
     if ( shell_name2 and shell_name2.endswith("csh")) or (shell_name and shell_name.endswith("csh")):
         logger.debug("Detected CSH - please read CSH considered harmful")
         undercsh=True
+        cmd="alias epmt_source" + equals + "'"
         if run_cmd:
             cmd = "env "
             export = ""
@@ -507,13 +508,15 @@ def epmt_source(forced_jobid, forced_user, papiex_debug=False, monitor_debug=Fal
             export="setenv "
             equals= " "
             cmd_sep=";\n"
-    
+            cmd="alias epmt_source" + equals + "'"
+    else:
+        cmd="alias epmt_source" + equals + "'"
     jobid,output_dir,file = setup_vars(forced_jobid, forced_user)
     if jobid == False:
         return None;
 
     if add_export:
-        cmd = export
+        cmd += export
     cmd += "PAPIEX_OPTIONS"+equals+settings.papiex_options
     if add_export:
         cmd += cmd_sep
@@ -553,12 +556,19 @@ def epmt_source(forced_jobid, forced_user, papiex_debug=False, monitor_debug=Fal
     cmd += "LD_PRELOAD"+equals
     for l in [ "libpapiex.so:","libpapi.so:","libpfm.so:","libmonitor.so" ]:
         cmd += settings.install_prefix+"lib/"+l
+    
+    # End Alias
+    if cmd.startswith('alias'):
+        cmd += "';"
     if undercsh:
-        logger.debug("alias epmt_unsource created via *csh: alias epmt_unsource 'unsetenv PAPIEX_OPTIONS; unsetenv PAPIEX_OUTPUT; unsetenv PAPIEX_DEBUG; unsetenv LD_PRELOAD; unalias epmt_unsource'")
-        cmd += cmd_sep  +"alias epmt_unsource 'unsetenv PAPIEX_OPTIONS; unsetenv PAPIEX_OUTPUT; unsetenv PAPIEX_DEBUG; unsetenv LD_PRELOAD; unalias epmt_unsource'"
+        logger.debug("alias epmt_unsource created via *csh: alias epmt_unsource 'unsetenv PAPIEX_OPTIONS; unsetenv PAPIEX_OUTPUT; unsetenv PAPIEX_DEBUG; unsetenv LD_PRELOAD; unalias epmt_source; unalias epmt_unsource'")
+        cmd += cmd_sep  +"alias epmt_unsource 'unsetenv PAPIEX_OPTIONS; unsetenv PAPIEX_OUTPUT; unsetenv PAPIEX_DEBUG; unsetenv LD_PRELOAD; unalias epmt_source; unalias epmt_unsource'"
     else:
-        logger.debug("alias epmt_unsource created: epmt_unsource='unset PAPIEX_OPTIONS; unset PAPIEX_OUTPUT; unset PAPIEX_DEBUG; unset LD_PRELOAD; unalias epmt_unsource'")
-        cmd += cmd_sep + ";shopt -s expand_aliases;alias epmt_unsource='unset PAPIEX_OPTIONS; unset PAPIEX_OUTPUT; unset PAPIEX_DEBUG; unset LD_PRELOAD; unalias epmt_unsource'"
+        logger.debug("alias epmt_unsource created: epmt_unsource='unset PAPIEX_OPTIONS; unset PAPIEX_OUTPUT; unset PAPIEX_DEBUG; unset LD_PRELOAD; unalias epmt_source; unalias epmt_unsource'")
+        cmd += cmd_sep
+        if not run_cmd:
+            cmd += "shopt -s expand_aliases;"
+        cmd += "alias epmt_unsource='unset PAPIEX_OPTIONS; unset PAPIEX_OUTPUT; unset PAPIEX_DEBUG; unset LD_PRELOAD; unalias epmt_source; unalias epmt_unsource'"
     cmd += cmd_sep
     return cmd
 
