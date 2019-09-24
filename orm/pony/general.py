@@ -201,7 +201,7 @@ def orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only):
         tag_query = ''
         for t in tags:
             qst = qs
-            qst = tag_filter_(qst, t, exact_tag_only)
+            qst = _tag_filter(qst, t, exact_tag_only)
             # Important!
             # we are forced to have the modal code below as we want
             # to significantly speed up the common case of a single
@@ -256,7 +256,7 @@ def orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only):
 
 
 
-def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, hosts, annotations, exact_tag_only):
+def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, hosts, annotations, analyses, exact_tag_only):
     from .models import Job, Host
     from epmtlib import tags_list, isString
     from datetime import datetime
@@ -273,7 +273,7 @@ def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, host
         tag_query = ''
         for t in tags:
             qst = qs
-            qst = tag_filter_(qst, t, exact_tag_only)
+            qst = _tag_filter(qst, t, exact_tag_only)
             qs_tags.append(qst[:])
             tag_query = tag_query + ' or (j in qs_tags[{0}])'.format(idx) if tag_query else '(j in qs_tags[0])'
             idx += 1
@@ -284,7 +284,13 @@ def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, host
     if annotations != None:
         if type(annotations) == str:
             annotations = tag_from_string(annotations)
-        qs = annotation_filter_(qs, annotations)
+        qs = _annotation_filter(qs, annotations)
+
+    # Remember, analyses = {} demands an exact match with an empty dict!
+    if analyses != None:
+        if type(analyses) == str:
+            analyses = tag_from_string(analyses)
+        qs = _analyses_filter(qs, analyses)
 
     if when:
         if type(when) == datetime:
@@ -329,24 +335,24 @@ def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, host
 
     return qs
 
-def tag_filter_(qs, tag, exact_match):
-    if exact_match or (tag == {}):
-        qs = qs.filter(lambda p: p.tags == tag)
-    else:
-        # we consider a match if the job tag is a superset
-        # of the passed tag
-        for (k,v) in tag.items():
-            qs = qs.filter(lambda p: p.tags[k] == v)
-    return qs
+def _tag_filter(qs, tag, exact_match):
+    return _attribute_filter(qs, 'tags', tag, exact_match)
 
-def annotation_filter_(qs, annotation):
-    if (annotation == {}):
-        qs = qs.filter(lambda j: j.annotations == annotation)
+def _annotation_filter(qs, annotation):
+    return _attribute_filter(qs, 'annotations', annotation)
+
+def _analyses_filter(qs, analyses):
+    return _attribute_filter(qs, 'analyses', analyses)
+
+# common low-level function to handle dict attribute filters
+def _attribute_filter(qs, attr, target, exact_match = False):
+    if exact_match or (target == {}):
+        qs = qs.filter(lambda j: getattr(j, attr) == target)
     else:
-        # we consider a match if the job annotation is a superset
+        # we consider a match if the model attribute is a superset
         # of the passed tag
-        for (k,v) in annotation.items():
-            qs = qs.filter(lambda j: j.annotations[k] == v)
+        for (k,v) in target.items():
+            qs = qs.filter(lambda j: getattr(j, attr)[k] == v)
     return qs
 
 def orm_get_refmodels(tag = {}, fltr=None, limit=0, order='', exact_tag_only=False):
@@ -355,7 +361,7 @@ def orm_get_refmodels(tag = {}, fltr=None, limit=0, order='', exact_tag_only=Fal
     qs = ReferenceModel.select()
 
     # filter using tag if set
-    qs = tag_filter_(qs, tag, exact_tag_only)
+    qs = _tag_filter(qs, tag, exact_tag_only)
 
     # if fltr is a lambda function or a string apply it
     if fltr:

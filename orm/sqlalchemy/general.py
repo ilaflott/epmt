@@ -346,10 +346,10 @@ def orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only, c
         idx = 0
         org_qs = qs
         for t in tags:
-            # tag_filter_ reqturs a query object corresponding to
+            # _tag_filter reqturs a query object corresponding to
             # the jobs that match a particular tag. We, then, do
             # do a UNION (OR operation) across these query sets.
-            qst = tag_filter_(org_qs, t, exact_tag_only, Process)
+            qst = _tag_filter(org_qs, t, exact_tag_only, Process)
             qs = qst if (idx == 0) else qs.union(qst)
             idx += 1
 
@@ -373,7 +373,7 @@ def orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only, c
 
     return qs
 
-def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, hosts, annotations, exact_tag_only):
+def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, hosts, annotations, analyses, exact_tag_only):
     from .models import Job, Host
     from epmtlib import tags_list, isString, tag_from_string
     from datetime import datetime
@@ -392,10 +392,10 @@ def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, host
         idx = 0
         org_qs = qs
         for t in tags:
-            # tag_filter_ reqturs a query object corresponding to
+            # _tag_filter reqturs a query object corresponding to
             # the jobs that match a particular tag. We, then, do
             # do a UNION (OR operation) across these query sets.
-            qst = tag_filter_(org_qs, t, exact_tag_only)
+            qst = _tag_filter(org_qs, t, exact_tag_only)
             qs = qst if (idx == 0) else qs.union(qst)
             idx += 1
 
@@ -403,7 +403,13 @@ def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, host
     if annotations != None:
         if type(annotations) == str:
             annotations = tag_from_string(annotations)
-        qs = annotation_filter_(qs, annotations)
+        qs = _annotation_filter(qs, annotations)
+
+    # Remember, annotations = {} demands an exact match with an empty dict!
+    if analyses != None:
+        if type(analyses) == str:
+            analyses = tag_from_string(analyses)
+        qs = _analyses_filter(qs, analyses)
 
     if when:
         if type(when) == datetime:
@@ -434,43 +440,40 @@ def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, host
     return qs
 
 
-def tag_filter_(qs, tag, exact_match, model=None):
-    from .models import Job, Process
-    if (model == None): model = Job
-    if exact_match or (tag == {}):
-        qs = qs.filter(model.tags == tag)
-    else:
-        # we consider a match if the job tag is a superset
-        # of the passed tag
-        for (k,v) in tag.items():
-            #qs = qs.filter(model.tags[k] == cast(v, JSON))
-            #qs = qs.filter(cast(model.tags[k], String) == type_coerce(v, JSON))
-            #qs = qs.filter(model.tags[k] == str(v))
-            qs = qs.filter(text("json_extract({0}.tags, '$.{1}') = '{2}'".format(model.__tablename__, k, v)))
-    return qs
+def _tag_filter(qs, tag, exact_match, model=None):
+    return _attribute_filter(qs, 'tags', tag, exact_match, model)
 
-
-def annotation_filter_(qs, annotations):
+# common low-level function to handle dict attribute filters
+def _attribute_filter(qs, attr, target, exact_match = False, model = None, conv_to_str = True):
     from .models import Job
-    if (annotations == {}):
-        qs = qs.filter(Job.annotations == {})
+    if (model == None): model = Job
+    if exact_match or (target == {}):
+        qs = qs.filter(getattr(model, attr) == target)
     else:
-        # we consider a match if the job annotation is a superset
-        # of the passed annotation
-        for (k,v) in annotations.items():
-            if type(v) == str:
-                qs = qs.filter(text("json_extract({0}.annotations, '$.{1}') = '{2}'".format(Job.__tablename__, k, v)))
+        # we consider a match if the model attribute is a superset
+        # of the passed tag
+        for (k,v) in target.items():
+            if conv_to_str or (type(v) == str):
+                qs = qs.filter(text("json_extract({0}.{1}, '$.{2}') = '{3}'".format(model.__tablename__, attr, k, v)))
             else:
-                qs = qs.filter(text("json_extract({0}.annotations, '$.{1}') = {2}".format(Job.__tablename__, k, v)))
+                qs = qs.filter(text("json_extract({0}.{1}, '$.{2}') = {3}".format(model.__tablename__, attr, k, v)))
     return qs
 
+
+def _annotation_filter(qs, annotations):
+    from .models import Job
+    return _attribute_filter(qs, 'annotations', annotations, model = Job, conv_to_str = False)
+
+def _analyses_filter(qs, analyses):
+    from .models import Job
+    return _attribute_filter(qs, 'analyses', analyses, model = Job, conv_to_str = False)
 
 def orm_get_refmodels(tag = {}, fltr=None, limit=0, order=None, exact_tag_only=False):
     from .models import ReferenceModel
 
     qs = Session.query(ReferenceModel)
 
-    qs = tag_filter_(qs, tag, exact_tag_only, ReferenceModel)
+    qs = _tag_filter(qs, tag, exact_tag_only, ReferenceModel)
 
     # if fltr is a lambda function or a string apply it
     if not (fltr is None):

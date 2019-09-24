@@ -364,6 +364,7 @@ class QueryAPI(unittest.TestCase):
         r = eq.set_job_analyses('685000', {'rca': 1})
         self.assertEqual(r, {'outlier_detection': 1, 'rca': 1})
         self.assertEqual(eq.get_job_analyses('685000'), {'outlier_detection': 1, 'rca': 1})
+        self.assertEqual(eq.get_jobs(analyses={'rca': 1}, fmt='terse'), [u'685000'])
         r = eq.set_job_analyses('685000', {'rca': 1}, True)
         self.assertEqual(r, {'rca': 1})
         self.assertEqual(eq.get_job_analyses('685000'), {'rca': 1})
