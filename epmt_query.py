@@ -1069,5 +1069,13 @@ def get_job_analyses(jobid):
     j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
     return j.analyses
 
+def get_unanalyzed_jobs(jobs = [], fmt='terse'):
+    '''
+    Returns the subset of jobs that have not had any analysis pipeline
+    run on them.
+    '''
+    return get_jobs(jobs, analyses = {}, fmt=fmt)
+
+
 def remove_job_analyses(jobid):
     return set_job_analyses(jobid, {}, True)

@@ -357,10 +357,14 @@ class QueryAPI(unittest.TestCase):
 
     @db_session
     def test_job_analyses(self):
+        uj = eq.get_unanalyzed_jobs(['685000', '685003', '685016'])
+        self.assertEqual(set(uj), set(['685000', '685003', '685016']))
         self.assertEqual(eq.get_job_analyses('685000'), {})
         r = eq.set_job_analyses('685000', {'outlier_detection': 1})
         self.assertEqual(r, {'outlier_detection': 1})
         self.assertEqual(eq.get_job_analyses('685000'), {'outlier_detection': 1})
+        uj = eq.get_unanalyzed_jobs(['685000', '685003', '685016'])
+        self.assertEqual(set(uj), set(['685003', '685016']))
         r = eq.set_job_analyses('685000', {'rca': 1})
         self.assertEqual(r, {'outlier_detection': 1, 'rca': 1})
         self.assertEqual(eq.get_job_analyses('685000'), {'outlier_detection': 1, 'rca': 1})
