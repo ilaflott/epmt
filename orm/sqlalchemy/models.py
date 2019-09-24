@@ -64,6 +64,7 @@ class Job(Base):
     updated_at = Column(DateTime, onupdate=datetime.now)
     info_dict = Column(JSON, default={})
     annotations = Column(JSON, default={}, index=True)
+    analyses = Column(JSON, default={}, index=True)
     start = Column(DateTime, default=datetime.now, index=True)
     end = Column(DateTime, default=datetime.now)
     duration = Column(Float, default=0)

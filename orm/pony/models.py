@@ -25,6 +25,7 @@ class Job(db.Entity):
     updated_at = Required(datetime, default=datetime.utcnow)
     info_dict = Optional(Json, default={})
     annotations = Optional(Json, default={})
+    analyses = Optional(Json, default={})
 # End generic template
     env_dict = Optional(Json)
     env_changes_dict = Optional(Json)

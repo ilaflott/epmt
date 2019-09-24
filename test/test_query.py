@@ -73,10 +73,10 @@ class QueryAPI(unittest.TestCase):
         df = eq.get_jobs(JOBS_LIST, fmt='pandas')
         # sqlalchemy has 4 fewer fields, which we eventually want to remove from
         # the job model
-        self.assertIn(df.shape, ((3,44), (3,48)))
+        self.assertIn(df.shape, ((3,45), (3,49)))
         # pony has some extra fields we don't care about and will probably remove:
         # 'account', 'jobscriptname', 'sessionid', 'queue'
-        self.assertEqual(set(df.columns.values) - set(['account', 'jobscriptname', 'sessionid', 'queue']), set(['PERF_COUNT_SW_CPU_CLOCK', 'all_proc_tags', 'annotations', 'cancelled_write_bytes', 'cpu_time', 'created_at', 'delayacct_blkio_time', 'duration', 'end', 'env_changes_dict', 'env_dict', 'exitcode', 'guest_time', 'inblock', 'info_dict', 'invol_ctxsw', 'jobid', 'jobname', 'majflt', 'minflt', 'num_procs', 'num_threads', 'outblock', 'processor', 'rchar', 'rdtsc_duration', 'read_bytes', 'rssmax', 'start', 'submit', 'syscr', 'syscw', 'systemtime', 'tags', 'time_oncpu', 'time_waiting', 'timeslices', 'updated_at', 'user', 'user+system', 'usertime', 'vol_ctxsw', 'wchar', 'write_bytes']))
+        self.assertEqual(set(df.columns.values) - set(['account', 'jobscriptname', 'sessionid', 'queue']), set(['PERF_COUNT_SW_CPU_CLOCK', 'all_proc_tags', 'analyses', 'annotations', 'cancelled_write_bytes', 'cpu_time', 'created_at', 'delayacct_blkio_time', 'duration', 'end', 'env_changes_dict', 'env_dict', 'exitcode', 'guest_time', 'inblock', 'info_dict', 'invol_ctxsw', 'jobid', 'jobname', 'majflt', 'minflt', 'num_procs', 'num_threads', 'outblock', 'processor', 'rchar', 'rdtsc_duration', 'read_bytes', 'rssmax', 'start', 'submit', 'syscr', 'syscw', 'systemtime', 'tags', 'time_oncpu', 'time_waiting', 'timeslices', 'updated_at', 'user', 'user+system', 'usertime', 'vol_ctxsw', 'wchar', 'write_bytes']))
         df = eq.get_jobs('685016', fmt='pandas')
         self.assertEqual(df['jobid'][0], '685016', "cannot specify job as a single job id string")
         self.assertEqual(df.shape[0],1, "wrong selection of jobs when specified as a string")
@@ -355,6 +355,21 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(eq.get_job_annotations('685016'), {'abc': '100', 'def': 'hello'})
         self.assertEqual(eq.get_jobs(annotations = {'abc': '100'}, fmt='terse'), [u'685016'])
 
+    @db_session
+    def test_job_analyses(self):
+        self.assertEqual(eq.get_job_analyses('685000'), {})
+        r = eq.set_job_analyses('685000', {'outlier_detection': 1})
+        self.assertEqual(r, {'outlier_detection': 1})
+        self.assertEqual(eq.get_job_analyses('685000'), {'outlier_detection': 1})
+        r = eq.set_job_analyses('685000', {'rca': 1})
+        self.assertEqual(r, {'outlier_detection': 1, 'rca': 1})
+        self.assertEqual(eq.get_job_analyses('685000'), {'outlier_detection': 1, 'rca': 1})
+        r = eq.set_job_analyses('685000', {'rca': 1}, True)
+        self.assertEqual(r, {'rca': 1})
+        self.assertEqual(eq.get_job_analyses('685000'), {'rca': 1})
+        r = eq.remove_job_analyses('685000')
+        self.assertEqual(r, {})
+        self.assertEqual(eq.get_job_analyses('685000'), {})
 
 
     @db_session

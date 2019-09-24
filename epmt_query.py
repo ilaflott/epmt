@@ -1020,7 +1020,6 @@ def annotate_job(jobid, annotation, replace=False):
     Returns the new annotations for the job.
     '''
     j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
-    info_dict = dict(j.info_dict)
     if type(annotation) == str:
         annotation = tag_from_string(annotation)
     ann = {} if replace else dict(j.annotations)
@@ -1039,3 +1038,33 @@ def get_job_annotations(jobid):
 
 def remove_job_annotations(jobid):
     return annotate_job(jobid, {}, True)
+
+@db_session
+def set_job_analyses(jobid, analyses, replace=False):
+    '''
+    Saves analyses data/metadata for a job
+      - analyses is a dictionary of key/value pairs
+        If replace is True, then *all* existing analyses
+        will be overritten. Normally, this is set to False,
+        in which case, the supplied analyses are merged into
+        the existing analyses.
+
+    Returns the updated analyses for the job.
+    '''
+    j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
+    full_analyses = {} if replace else dict(j.analyses)
+    full_analyses.update(analyses)
+    j.analyses = full_analyses
+    orm_commit()
+    return full_analyses
+
+@db_session
+def get_job_analyses(jobid):
+    '''  
+    Returns the analyses for a job
+    '''
+    j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
+    return j.analyses
+
+def remove_job_analyses(jobid):
+    return set_job_analyses(jobid, {}, True)
