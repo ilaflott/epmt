@@ -4,9 +4,3 @@ eval `epmt -j1 source`   # Setup environment
 sleep 1
 # End Workload
 epmt_unsource
-VALUE=${LD_PRELOAD:-}
-if [ ! -z ${VALUE} ];
- then echo "LD Preload not Removed"
- echo "Error!" 1>&2
- exit 64
-fi
