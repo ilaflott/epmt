@@ -65,6 +65,7 @@ class QueryAPI(unittest.TestCase):
 #     def tearDown(self):
 #         pass
 
+    @db_session
     def test_jobs(self):
         j = Job['685000']
         self.assertEqual(j.jobid, '685000')
