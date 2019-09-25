@@ -66,6 +66,8 @@ class QueryAPI(unittest.TestCase):
 #         pass
 
     def test_jobs(self):
+        j = Job['685000']
+        self.assertEqual(j.jobid, '685000')
         jobs = eq.get_jobs(JOBS_LIST, fmt='terse')
         self.assertEqual(type(jobs), list, 'wrong jobs format with terse')
         self.assertEqual(len(jobs), 3, 'job count in db wrong')

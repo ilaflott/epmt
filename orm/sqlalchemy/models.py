@@ -1,6 +1,15 @@
 from .general import *
 from datetime import datetime
+from sqlalchemy.ext.declarative import DeclarativeMeta
+from six import with_metaclass
 
+class CommonMeta(DeclarativeMeta):
+   def __getitem__(cls, index):
+       obj = orm_get(cls, index)
+       if obj is None:
+           raise KeyError('{0}[{1}] could not be found'.format(cls.__name__, index))
+       else:
+           return obj
 
 refmodel_job_associations_table = Table('refmodel_job_associations', Base.metadata,
     Column('jobid', String, ForeignKey('jobs.jobid'), primary_key=True),
@@ -17,7 +26,7 @@ ancestor_descendant_associations_table = Table('ancestor_descendant_associations
     Column('descendant', Integer, ForeignKey('processes.id'), primary_key=True)
 )
 
-class User(Base):
+class User(with_metaclass(CommonMeta, Base)):
     __tablename__ = 'users'
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, onupdate=datetime.now)
@@ -31,7 +40,7 @@ class User(Base):
     def __repr__(self):
         return "User['%s']" % (self.name)
 
-class Host(Base):
+class Host(with_metaclass(CommonMeta, Base)):
     __tablename__ = 'hosts'
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, onupdate=datetime.now)
@@ -44,7 +53,7 @@ class Host(Base):
     def __repr__(self):
         return "Host['%s']" % (self.name)
 
-class ReferenceModel(Base):
+class ReferenceModel(with_metaclass(CommonMeta, Base)):
     __tablename__ = 'refmodels'
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, onupdate=datetime.now)
@@ -58,7 +67,7 @@ class ReferenceModel(Base):
     def __repr__(self):
         return "ReferenceModel[%d]" % (self.id)
 
-class Job(Base):
+class Job(with_metaclass(CommonMeta, Base)):
     __tablename__ = 'jobs'
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, onupdate=datetime.now)
@@ -90,7 +99,7 @@ class Job(Base):
     def __repr__(self):
         return "Job['%s']" % (self.jobid)
 
-class UnprocessedJob(Base):
+class UnprocessedJob(with_metaclass(CommonMeta, Base)):
     __tablename__ = 'unprocessed_jobs'
     created_at = Column(DateTime, default=datetime.now)
     info_dict = Column(JSON, default={})
@@ -101,7 +110,7 @@ class UnprocessedJob(Base):
         return "UnprocessedJob['%s']" % (self.jobid)
 
 
-class Process(Base):
+class Process(with_metaclass(CommonMeta, Base)):
     __tablename__ = 'processes'
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, onupdate=datetime.now)
