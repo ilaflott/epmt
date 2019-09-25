@@ -196,11 +196,14 @@ def get_db_size(findwhat, other):
             import datetime
             current_time = datetime.datetime.utcnow().isoformat()+"Z"
             from sqlalchemy import __version__ as sa_version
+            printsettings = settings.db_params.copy()
+            printsettings['password'] = "****"
             metadata = {"Generated at:":current_time,
-                        "ORM":"SQLAlchemy "+sa_version,
-                        "DB Params":settings.db_params}
+                        "ORM":"Pony "+p_version,
+                        "DB Params":printsettings}
             jsonlist.append({"Metadata":metadata})
-            return(True, json.dumps(jsonlist,indent=4))
+            print(json.dumps(jsonlist,indent=4))
+            return(True, json.dumps(jsonlist))
         else:
             logger.warning("No valid Json")
             return(False, json.dumps(False))

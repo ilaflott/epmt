@@ -182,11 +182,14 @@ def get_db_size(findwhat, other):
             import datetime
             current_time = datetime.datetime.utcnow().isoformat()+"Z"
             from pony import __version__ as p_version
+            printsettings = settings.db_params.copy()
+            printsettings['password'] = "****"
             metadata = {"Generated at:":current_time,
                         "ORM":"Pony "+p_version,
-                        "DB Params":settings.db_params}
+                        "DB Params":printsettings}
             jsonlist.append({"Metadata":metadata})
-            return(True, json.dumps(jsonlist,indent=4))
+            print(json.dumps(jsonlist,indent=4))
+            return(True, json.dumps(jsonlist))
         else:
             logger.warning("No valid Json")
             return(False, json.dumps(False))

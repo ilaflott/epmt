@@ -8,7 +8,7 @@ from os import environ
 # put this above all epmt imports
 environ['EPMT_USE_DEFAULT_SETTINGS'] = "1"
 from epmtlib import set_logging
-set_logging(-1)
+set_logging(3)
 
 # Put EPMT imports only after we have called set_logging()
 import epmt_default_settings as settings
