@@ -1079,3 +1079,12 @@ def get_unanalyzed_jobs(jobs = [], fmt='terse'):
 
 def remove_job_analyses(jobid):
     return set_job_analyses(jobid, {}, True)
+
+@db_session
+def get_unprocessed_jobs():
+    '''
+    Returns the list of jobids that have not been subjected to
+    post-processing during ingestion
+    '''
+    uj = orm_findall(UnprocessedJob)
+    return [ u.jobid for u in uj ]

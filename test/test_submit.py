@@ -78,6 +78,7 @@ class EPMTSubmit(unittest.TestCase):
         u = orm_get(UnprocessedJob, '685003')
         self.assertTrue(u)
         self.assertEqual(u.jobid, '685003')
+        self.assertEqual(eq.get_unprocessed_jobs(), [u'685003'])
         # now let's post-process all outstanding jobs
         u_jobs = post_process_outstanding_jobs()
         self.assertIn('685003', u_jobs)
