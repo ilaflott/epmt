@@ -349,6 +349,11 @@ def _create_process_tree(pid_map):
 @timing
 def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
     logger = getLogger(__name__)  # you can use other name
+    if type(j) == str:
+        j = Job[j]
+    if j.proc_sums:
+        logger.warning('skipped processing jobid {0} as it is not unprocessed'.format(j.jobid))
+        return False
     logger.info("Starting post-process of job..")
     proc_sums = {}
 
@@ -459,7 +464,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
             orm_delete(u)
             logger.info('marking job as processed in database')
             orm_commit()
-    return
+    return True
 
 
 # This function takes as input raw metadata from the start/stop and produces
@@ -888,6 +893,6 @@ def post_process_outstanding_jobs():
         jobid = u.jobid
         j = u.job
         logger.info('post-processing {0}'.format(jobid))
-        post_process_job(j)
-        did_process.append(jobid)
+        if post_process_job(j):
+            did_process.append(jobid)
     return did_process

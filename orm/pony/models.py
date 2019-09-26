@@ -47,6 +47,7 @@ class Job(db.Entity):
     cpu_time = Optional(float)
     ref_models = Set('ReferenceModel')
 
+
 class Process(db.Entity):
 # Rollup entries, computed at insert time
     start = Required(datetime, default=datetime.utcnow)
@@ -168,4 +169,7 @@ class ReferenceModel(db.Entity):
     op_tags = Optional(Json)
     computed = Optional(Json)
     jobs = Set('Job')
+
+class UnprocessedJob(db.Entity):
+    pass
 
