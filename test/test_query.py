@@ -290,6 +290,8 @@ class QueryAPI(unittest.TestCase):
         tags = [ str_dict(d) for d in tags ]
         from hashlib import md5
         self.assertEqual(md5(str(tags).encode('utf-8')).hexdigest(), 'bd7eabf266aa5b179bbe4d65b35bd47f', 'wrong hash for job_proc_tags')
+        sk = eq.rank_proc_tags_keys(['685000'])
+        self.assertEqual(sk[0], ('op', {'ncatted', 'ncrcat', 'dmput', 'fregrid', 'rm', 'timavg', 'hsmget', 'mv', 'cp', 'splitvars', 'untar'}))
 
     @db_session
     def test_op_metrics(self):

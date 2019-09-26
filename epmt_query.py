@@ -577,6 +577,44 @@ def job_proc_tags(jobs = [], exclude=[], fold=False):
 get_job_proc_tags = job_proc_tags
 
 
+def rank_proc_tags_keys(jobs, order = 'cardinality', exclude = []):
+    '''
+    Returns a sorted list of tag keys across processes of one or more jobs.
+    The sort order by default is in increasing order of cardinality of the key.
+    So a key that has a smaller number of unique values would be earlier in
+    the returned list. One can also sort by decreasing frequency, so a key that
+    occurred in the most tags would be at before a key that occurred in more
+    tags.
+      jobs: Collection of one or more jobs or jobids
+      order: One of either -- 'cardinality' or 'frequency'. Often they
+             will yield the same result as that's the way the tags
+             are set in the scripts.
+      exclude: List of keys to exclude
+
+    e.g.,
+      >>> eq.rank_proc_tags_keys(['685000'])
+          [('op', {'ncatted', 'ncrcat', 'dmput', 'fregrid', 'rm', 'timavg', 'hsmget', 'mv', 'cp', 'splitvars', 'untar'}), ('op_instance', {'9', '19', '6', '4', '20', '12', '8', '16', '2', '15', '5', '13', '10', '3', '11', '7', '14', '1', '18'}), ('op_sequence', {'83', '9', '67', '82', '60', '89', '85', '79', '20', '72', '8', '12', '27', '2', '51', '55', '87', '17', '48', '61', '40', '14', '7', '53', '26', '56', '37', '35', '4', '18', '36', '54', '62', '84', '70', '24', '50', '63', '58', '5', '13', '64', '57', '76', '44', '34', '1', '39', '21', '29', '81', '78', '42', '46', '19', '66', '43', '16', '28', '49', '30', '15', '10', '22', '73', '86', '77', '33', '47', '68', '31', '75', '6', '45', '32', '71', '41', '65', '80', '25', '74', '3', '11', '69', '52', '23', '59', '88', '38'})]
+      >>> eq.rank_proc_tags_keys(['685000'], order = 'frequency')
+      [('op', {'ncatted', 'ncrcat', 'dmput', 'fregrid', 'rm', 'timavg', 'hsmget', 'mv', 'cp', 'splitvars', 'untar'}), ('op_instance', {'9', '19', '6', '4', '20', '12', '8', '16', '2', '15', '5', '13', '10', '3', '11', '7', '14', '1', '18'}), ('op_sequence', {'83', '9', '67', '82', '60', '89', '85', '79', '20', '72', '8', '12', '27', '2', '51', '55', '87', '17', '48', '61', '40', '14', '7', '53', '26', '56', '37', '35', '4', '18', '36', '54', '62', '84', '70', '24', '50', '63', '58', '5', '13', '64', '57', '76', '44', '34', '1', '39', '21', '29', '81', '78', '42', '46', '19', '66', '43', '16', '28', '49', '30', '15', '10', '22', '73', '86', '77', '33', '47', '68', '31', '75', '6', '45', '32', '71', '41', '65', '80', '25', '74', '3', '11', '69', '52', '23', '59', '88', '38'})]
+    '''
+    if order.lower() not in ('cardinality', 'frequency'):
+        logger.warning('order needs to be one or "cardinality" or "frequency"')
+        return []
+    tags = get_job_proc_tags(jobs, exclude=exclude, fold=False)
+    folded_tags = fold_dicts(tags)
+    all_keys = list(folded_tags.keys())
+    if order.lower() == 'cardinality':
+        all_keys.sort(key = lambda k: len(folded_tags[k]))
+    elif order.lower() == 'frequency': 
+        hist = {}
+        for k in all_keys:
+            hist[k] = 0
+            for t in tags:
+                if k in t:
+                    hist[k] += 1
+        all_keys.sort(key = lambda k: -hist[k])
+    return [ (k, set(folded_tags[k])) for k in all_keys ]
+
 
 @db_session
 def get_refmodels(tag = {}, fltr=None, limit=0, order=None, exact_tag_only=False, merge_nested_fields=True, fmt='dict'):
