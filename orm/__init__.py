@@ -10,6 +10,8 @@ if settings.orm == 'sqlalchemy':
 else:
     from .pony import *
 
+from .op import *
+
 #
 # Below are API calls that have the same implementation on all ORMs
 #
