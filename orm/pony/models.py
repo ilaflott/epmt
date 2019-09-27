@@ -24,6 +24,8 @@ class Job(db.Entity):
     created_at = Required(datetime, default=datetime.utcnow)
     updated_at = Required(datetime, default=datetime.utcnow)
     info_dict = Optional(Json, default={})
+    annotations = Optional(Json, default={})
+    analyses = Optional(Json, default={})
 # End generic template
     env_dict = Optional(Json)
     env_changes_dict = Optional(Json)
@@ -44,6 +46,7 @@ class Job(db.Entity):
     # exclusive cpu time
     cpu_time = Optional(float)
     ref_models = Set('ReferenceModel')
+
 
 class Process(db.Entity):
 # Rollup entries, computed at insert time
@@ -166,4 +169,7 @@ class ReferenceModel(db.Entity):
     op_tags = Optional(Json)
     computed = Optional(Json)
     jobs = Set('Job')
+
+class UnprocessedJob(db.Entity):
+    pass
 

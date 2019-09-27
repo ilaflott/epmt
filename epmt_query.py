@@ -225,7 +225,7 @@ def op_roots(jobs, tag, fmt='dict'):
 
 
 @db_session
-def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offset = 0, when=None, before=None, after=None, hosts=[], fmt='dict', merge_proc_sums=True, exact_tag_only = False):
+def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offset = 0, when=None, before=None, after=None, hosts=[], fmt='dict', annotations=None, analyses=None, merge_proc_sums=True, exact_tag_only = False):
     """
     This function returns a list of jobs based on some filtering and ordering.
     The output format can be set to pandas dataframe, list of dicts or list
@@ -320,6 +320,12 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
              'orm':  returns a Pony Query object (ADVANCED)
              'terse': In this format only the primary key ID is printed for each job
     
+   annotations: Dictionary of key/value pairs that must ALL match the job 
+             annotations. The matching job may have additional key/values.
+
+   analyses: Dictionary of key/value pairs that must ALL match the job
+             analyses. The matching job may have additional key/values.
+
     merge_proc_sums: By default True, which means the fields inside job.proc_sums
              will be hoisted up one level to become first-class members of the job.
              This will make aggregates across processes appear as part of the job
@@ -380,7 +386,7 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
             # user probably forgot to wrap in a list
             hosts = hosts.split(",")
 
-    qs = orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, hosts, exact_tag_only)
+    qs = orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, hosts, annotations, analyses, exact_tag_only)
 
     if fmt == 'orm':
         return qs
@@ -570,6 +576,44 @@ def job_proc_tags(jobs = [], exclude=[], fold=False):
 # alias job_proc_tags for compat
 get_job_proc_tags = job_proc_tags
 
+
+def rank_proc_tags_keys(jobs, order = 'cardinality', exclude = []):
+    '''
+    Returns a sorted list of tag keys across processes of one or more jobs.
+    The sort order by default is in increasing order of cardinality of the key.
+    So a key that has a smaller number of unique values would be earlier in
+    the returned list. One can also sort by decreasing frequency, so a key that
+    occurred in the most tags would be at before a key that occurred in more
+    tags.
+      jobs: Collection of one or more jobs or jobids
+      order: One of either -- 'cardinality' or 'frequency'. Often they
+             will yield the same result as that's the way the tags
+             are set in the scripts.
+      exclude: List of keys to exclude
+
+    e.g.,
+      >>> eq.rank_proc_tags_keys(['685000'])
+          [('op', {'ncatted', 'ncrcat', 'dmput', 'fregrid', 'rm', 'timavg', 'hsmget', 'mv', 'cp', 'splitvars', 'untar'}), ('op_instance', {'9', '19', '6', '4', '20', '12', '8', '16', '2', '15', '5', '13', '10', '3', '11', '7', '14', '1', '18'}), ('op_sequence', {'83', '9', '67', '82', '60', '89', '85', '79', '20', '72', '8', '12', '27', '2', '51', '55', '87', '17', '48', '61', '40', '14', '7', '53', '26', '56', '37', '35', '4', '18', '36', '54', '62', '84', '70', '24', '50', '63', '58', '5', '13', '64', '57', '76', '44', '34', '1', '39', '21', '29', '81', '78', '42', '46', '19', '66', '43', '16', '28', '49', '30', '15', '10', '22', '73', '86', '77', '33', '47', '68', '31', '75', '6', '45', '32', '71', '41', '65', '80', '25', '74', '3', '11', '69', '52', '23', '59', '88', '38'})]
+      >>> eq.rank_proc_tags_keys(['685000'], order = 'frequency')
+      [('op', {'ncatted', 'ncrcat', 'dmput', 'fregrid', 'rm', 'timavg', 'hsmget', 'mv', 'cp', 'splitvars', 'untar'}), ('op_instance', {'9', '19', '6', '4', '20', '12', '8', '16', '2', '15', '5', '13', '10', '3', '11', '7', '14', '1', '18'}), ('op_sequence', {'83', '9', '67', '82', '60', '89', '85', '79', '20', '72', '8', '12', '27', '2', '51', '55', '87', '17', '48', '61', '40', '14', '7', '53', '26', '56', '37', '35', '4', '18', '36', '54', '62', '84', '70', '24', '50', '63', '58', '5', '13', '64', '57', '76', '44', '34', '1', '39', '21', '29', '81', '78', '42', '46', '19', '66', '43', '16', '28', '49', '30', '15', '10', '22', '73', '86', '77', '33', '47', '68', '31', '75', '6', '45', '32', '71', '41', '65', '80', '25', '74', '3', '11', '69', '52', '23', '59', '88', '38'})]
+    '''
+    if order.lower() not in ('cardinality', 'frequency'):
+        logger.warning('order needs to be one or "cardinality" or "frequency"')
+        return []
+    tags = get_job_proc_tags(jobs, exclude=exclude, fold=False)
+    folded_tags = fold_dicts(tags)
+    all_keys = list(folded_tags.keys())
+    if order.lower() == 'cardinality':
+        all_keys.sort(key = lambda k: len(folded_tags[k]))
+    elif order.lower() == 'frequency': 
+        hist = {}
+        for k in all_keys:
+            hist[k] = 0
+            for t in tags:
+                if k in t:
+                    hist[k] += 1
+        all_keys.sort(key = lambda k: -hist[k])
+    return [ (k, set(folded_tags[k])) for k in all_keys ]
 
 
 @db_session
@@ -1017,14 +1061,11 @@ def annotate_job(jobid, annotation, replace=False):
     Returns the new annotations for the job.
     '''
     j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
-    info_dict = dict(j.info_dict)
-    if replace:
-        ann = annotation
-    else:
-        ann = j.info_dict.get('annotations', {})
-        ann.update(annotation)
-    info_dict['annotations'] = ann
-    j.info_dict = info_dict
+    if type(annotation) == str:
+        annotation = tag_from_string(annotation)
+    ann = {} if replace else dict(j.annotations)
+    ann.update(annotation)
+    j.annotations = ann
     orm_commit()
     return ann
 
@@ -1034,4 +1075,54 @@ def get_job_annotations(jobid):
     Returns the annotations (if any) for a job
     '''
     j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
-    return j.info_dict.get('annotations', {})
+    return j.annotations
+
+def remove_job_annotations(jobid):
+    return annotate_job(jobid, {}, True)
+
+@db_session
+def set_job_analyses(jobid, analyses, replace=False):
+    '''
+    Saves analyses data/metadata for a job
+      - analyses is a dictionary of key/value pairs
+        If replace is True, then *all* existing analyses
+        will be overritten. Normally, this is set to False,
+        in which case, the supplied analyses are merged into
+        the existing analyses.
+
+    Returns the updated analyses for the job.
+    '''
+    j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
+    full_analyses = {} if replace else dict(j.analyses)
+    full_analyses.update(analyses)
+    j.analyses = full_analyses
+    orm_commit()
+    return full_analyses
+
+@db_session
+def get_job_analyses(jobid):
+    '''  
+    Returns the analyses for a job
+    '''
+    j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
+    return j.analyses
+
+def get_unanalyzed_jobs(jobs = [], fmt='terse'):
+    '''
+    Returns the subset of jobs that have not had any analysis pipeline
+    run on them.
+    '''
+    return get_jobs(jobs, analyses = {}, fmt=fmt)
+
+
+def remove_job_analyses(jobid):
+    return set_job_analyses(jobid, {}, True)
+
+@db_session
+def get_unprocessed_jobs():
+    '''
+    Returns the list of jobids that have not been subjected to
+    post-processing during ingestion
+    '''
+    uj = orm_findall(UnprocessedJob)
+    return [ u.jobid for u in uj ]
