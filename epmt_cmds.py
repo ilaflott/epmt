@@ -484,34 +484,40 @@ def epmt_dump_metadata(forced_jobid, forced_user, filelist=[]):
     return True
 
 def epmt_source(forced_jobid, forced_user, papiex_debug=False, monitor_debug=False, add_export=True, run_cmd=False):
+    # Bash Operators
     export="export "
     equals="="
-    cmd_sep="\n"
+    cmd_sep=";\n"
     cmd=""
-
     # For CSH, for source:
     # setenv FOO bar;
     # For CSH, for run:
     # env FOO=bar
     undercsh=False
+    aliasing=False
     shell_name = environ.get("_")
     shell_name2 = environ.get("SHELL")
     if ( shell_name2 and shell_name2.endswith("csh")) or (shell_name and shell_name.endswith("csh")):
         logger.debug("Detected CSH - please read CSH considered harmful")
         undercsh=True
 
+        # *csh operators
         if run_cmd:
             cmd = "env "
             export = ""
             equals = "="
         else:
+            # Source condition
             export="setenv "
             equals= " "
             cmd_sep=";\n"
+            aliasing = True
             cmd="alias epmt_source" + equals + "'"
     else:
         if not run_cmd:
-            cmd="alias epmt_source" + equals + "'"
+            cmd = "shopt -s expand_aliases;"
+            aliasing = True
+            cmd += "alias epmt_source" + equals + "'"
     jobid,output_dir,file = setup_vars(forced_jobid, forced_user)
     if jobid == False:
         return None;
@@ -558,21 +564,20 @@ def epmt_source(forced_jobid, forced_user, papiex_debug=False, monitor_debug=Fal
     for l in [ "libpapiex.so:","libpapi.so:","libpfm.so:","libmonitor.so" ]:
         cmd += settings.install_prefix+"lib/"+l
     
-    # End Alias
-    if cmd.startswith('alias'):
-        cmd += "';"
+    # Close Alias
+    if aliasing:
+        cmd += "'"
+
     if undercsh:
         if not run_cmd:
+            cmd += cmd_sep
             logger.debug("alias epmt_unsource created via *csh: alias epmt_unsource 'unsetenv PAPIEX_OPTIONS; unsetenv PAPIEX_OUTPUT; unsetenv PAPIEX_DEBUG; unsetenv LD_PRELOAD; unalias epmt_source; unalias epmt_unsource'")
-            cmd += cmd_sep  +"alias epmt_unsource 'unsetenv PAPIEX_OPTIONS; unsetenv PAPIEX_OUTPUT; unsetenv PAPIEX_DEBUG; unsetenv LD_PRELOAD; unalias epmt_source; unalias epmt_unsource'"
+            cmd += "alias epmt_unsource 'unsetenv PAPIEX_OPTIONS; unsetenv PAPIEX_OUTPUT; unsetenv PAPIEX_DEBUG; unsetenv LD_PRELOAD; unalias epmt_source; unalias epmt_unsource'"
     else:
         if not run_cmd:
             logger.debug("alias epmt_unsource created: epmt_unsource='unset PAPIEX_OPTIONS; unset PAPIEX_OUTPUT; unset PAPIEX_DEBUG; unset LD_PRELOAD; unalias epmt_source; unalias epmt_unsource'")
             cmd += cmd_sep
-        if not run_cmd:
-            cmd += "shopt -s expand_aliases;"
             cmd += "alias epmt_unsource='unset PAPIEX_OPTIONS; unset PAPIEX_OUTPUT; unset PAPIEX_DEBUG; unset LD_PRELOAD; unalias epmt_source; unalias epmt_unsource'"
-    #cmd += cmd_sep
     return cmd
 
 def epmt_run(forced_jobid, forced_user, cmdline, wrapit=False, dry_run=False, debug=False):
