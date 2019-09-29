@@ -22,12 +22,6 @@ def get_db_size(findwhat, other):
         Namespace(auto=False, bytes=False, dbsize=True, drop=False, 
             dry_run=False, epmt_cmd='dbsize', epmt_cmd_args=[], error=False, 
             help=False, jobid=None, json=False, verbose=0)
-
-    Returns:
-    if json=True
-        return json
-    else 
-        return 0
     """
     from os import environ
     if environ.get('EPMT_USE_DEFAULT_SETTINGS'):

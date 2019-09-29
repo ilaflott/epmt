@@ -488,22 +488,24 @@ def orm_get_refmodels(tag = {}, fltr=None, limit=0, order=None, exact_tag_only=F
 
     return qs
 
-def orm_dump_schema(format=None):
-# returns schema, arg format name will return table names
-    if format =='name':
-        m = MetaData()
-        m.reflect(engine) # Read what exists on db so we can have full picture
-        return [table.name for table in m.tables.values()]
-    else:
+def orm_dump_schema(show_attributes=True):
+    '''
+    Prints the schema to stdout. If show_attributes is
+    disabled then the list of tables is returned instead.
+    '''
+    if show_attributes:
         # alteratively return [t.name for t in Base.metadata.sorted_tables]
         for t in Base.metadata.sorted_tables: 
             print('\nTable', t.name)
             for c in t.columns:
                 try:
-                    print(' - ', c.name, str(c.type))
+                    print('%20s\t%10s' % (c.name, str(c.type)))
                 except:
-                    print(' - ', c.name, str(c.type.__class__))
-
+                    print('%20s\t%10s' % (c.name, str(c.type.__class__.__name__.split('.')[-1])))
+    else:
+        m = MetaData()
+        m.reflect(engine) # Read what exists on db so we can have full picture
+        return [table.name for table in m.tables.values()]
 
 ### end API ###
 

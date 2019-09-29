@@ -385,7 +385,8 @@ def _execute_raw_sql(sql, commit = False):
     try:
         out = db.execute(sql).fetchall()
     except:
-        logger.warn((sql," Failed raw sql"))
+        logger.warn(("Failed raw sql: ", sql))
         rollback()
         return 1
     return out
+

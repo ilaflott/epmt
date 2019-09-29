@@ -8,7 +8,7 @@ from os import environ
 # put this above all epmt imports
 environ['EPMT_USE_DEFAULT_SETTINGS'] = "1"
 from epmtlib import set_logging
-set_logging(3)
+set_logging(-1)
 
 # Put EPMT imports only after we have called set_logging()
 import epmt_default_settings as settings
@@ -19,7 +19,7 @@ if environ.get('EPMT_USE_SQLALCHEMY'):
         settings.bulk_insert = True
 
 if environ.get('EPMT_USE_PG'):
-    settings.db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'localhost', 'dbname': 'EPMT'}
+    settings.db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'localhost', 'dbname': 'EPMT-TEST'}
 
 
 from epmtlib import timing, capture
@@ -83,6 +83,7 @@ class EPMTCmds(unittest.TestCase):
             retval,val = epmt_dbsize('',argns)
         isPG = (settings.db_params.get('provider', '') == 'postgres')
         self.assertEqual(retval, isPG, 'wrong database return value')
+
     @unittest.skipUnless(settings.db_params.get('provider','') == 'postgres', "requires postgres")
     def test_dbsize_json(self):
         with capture() as (out,err):

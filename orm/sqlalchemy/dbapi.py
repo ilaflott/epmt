@@ -116,7 +116,7 @@ def get_db_size(findwhat, other):
             tabled = {}
             print("{:40}{:<15}{:>15}\n".format("Table",units,"COUNT(*)"))
             try:
-                for table in orm_dump_schema('name'):
+                for table in orm_dump_schema(show_attributes = False):
                     cmd = "SELECT pg_size_pretty( pg_total_relation_size(\'"+table+"\') )"
                     if other.bytes:
                         cmd = "SELECT pg_total_relation_size(\'"+table+"\')"
@@ -147,7 +147,7 @@ def get_db_size(findwhat, other):
             print("{0:40}{1:<20}\n".format("Table",units))
             indexd = {}
             try:
-                for table in orm_dump_schema('name'):
+                for table in orm_dump_schema(show_attributes = False):
                     cmd = "SELECT pg_size_pretty( pg_indexes_size(\'"+table+"\') )"
                     if other.json:
                         cmdb = "SELECT pg_indexes_size(\'"+table+"\')"
