@@ -488,14 +488,21 @@ def orm_get_refmodels(tag = {}, fltr=None, limit=0, order=None, exact_tag_only=F
 
     return qs
 
-def orm_dump_schema():
-    for t in Base.metadata.sorted_tables: 
-        print('\nTable', t.name)
-        for c in t.columns:
-            try:
-                print('%20s\t%10s' % (c.name, str(c.type)))
-            except:
-                print('%20s\t%10s' % (c.name, str(c.type.__class__.__name__.split('.')[-1])))
+def orm_dump_schema(format=None):
+# returns schema, arg format name will return table names
+    if format =='name':
+        m = MetaData()
+        m.reflect(engine) # Read what exists on db so we can have full picture
+        return [table.name for table in m.tables.values()]
+    else:
+        # alteratively return [t.name for t in Base.metadata.sorted_tables]
+        for t in Base.metadata.sorted_tables: 
+            print('\nTable', t.name)
+            for c in t.columns:
+                try:
+                    print(' - ', c.name, str(c.type))
+                except:
+                    print(' - ', c.name, str(c.type.__class__))
 
 
 ### end API ###
@@ -537,6 +544,7 @@ def _execute_raw_sql(sql, commit = False):
     except:
         trans.rollback()
         raise
+    connection.close()
     return res
 
 #@listens_for(Pool, "connect")

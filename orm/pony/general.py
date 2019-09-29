@@ -375,3 +375,17 @@ def orm_get_refmodels(tag = {}, fltr=None, limit=0, order='', exact_tag_only=Fal
         qs = qs.limit(int(limit))
 
     return qs
+
+# This function is vulnerable to injection attacks. It's expected that
+# the orm API will define a higher-level function to use this
+# function after guarding against injection and dangerous sql commands
+@db_session
+def _execute_raw_sql(sql, commit = False):
+    logger.debug('Executing: {0}'.format(sql))
+    try:
+        out = db.execute(sql).fetchall()
+    except:
+        logger.warn((sql," Failed raw sql"))
+        rollback()
+        return 1
+    return out

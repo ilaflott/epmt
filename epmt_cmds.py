@@ -824,6 +824,10 @@ def epmt_stage(forced_jobid, forced_user, other_dirs):
         jobid,dir,file = setup_vars(forced_jobid, forced_user)
         return(stage_job(jobid,dir,file))
 
+def epmt_dbsize(findwhat, other):
+    from orm import get_db_size
+    return(get_db_size(findwhat,other))
+
 #
 # depends on args being global
 #
@@ -839,7 +843,8 @@ def epmt_entrypoint(args, help):
         help(stdout)
         dump_config(stdout)
         exit(0)
-
+    if args.epmt_cmd == 'dbsize':
+        return(epmt_dbsize(findwhat=args.epmt_cmd_args, other=args) == False)
     if args.epmt_cmd == 'start':
         return(epmt_start_job(args.jobid,None,other=args.epmt_cmd_args) == False)
     if args.epmt_cmd == 'stop':
