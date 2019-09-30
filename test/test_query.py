@@ -25,7 +25,7 @@ if environ.get('EPMT_USE_SQLALCHEMY'):
         settings.bulk_insert = True
 
 from epmtlib import timing, isString, frozen_dict, str_dict
-from orm import db_session, setup_db, Job, Process, orm_get, desc, orm_is_query, orm_commit
+from orm import db_session, setup_db, Job, Process, Operation, orm_get, desc, orm_is_query, orm_commit
 import epmt_query as eq
 from epmt_cmds import epmt_submit
 
@@ -292,6 +292,15 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(md5(str(tags).encode('utf-8')).hexdigest(), 'bd7eabf266aa5b179bbe4d65b35bd47f', 'wrong hash for job_proc_tags')
         sk = eq.rank_proc_tags_keys(['685000'])
         self.assertEqual(sk[0], ('op', {'ncatted', 'ncrcat', 'dmput', 'fregrid', 'rm', 'timavg', 'hsmget', 'mv', 'cp', 'splitvars', 'untar'}))
+
+    @db_session
+    def test_op(self):
+        op = Operation(['685000'], {'op': 'timavg'})
+        self.assertEqual((op.tag, op.duration, op.num_runs()), ({'op': 'timavg'},21033390.000000004, 11))
+        self.assertEqual(op.proc_sums, {'syscr': 127808, 'guest_time': 0, 'inblock': 0, 'processor': 0, 'rchar': 5356358342, 'cancelled_write_bytes': 45056, 'outblock': 5139208, 'timeslices': 2661, 'PERF_COUNT_SW_CPU_CLOCK': 17547070414, 'wchar': 5262916589, 'rssmax': 7854752, 'numtids': 62, 'duration': 41388496.0, 'read_bytes': 0, 'time_waiting': 35814116, 'delayacct_blkio_time': 0, 'invol_ctxsw': 1884, 'majflt': 0, 'syscw': 80433, 'minflt': 92584, 'cpu_time': 17951212.0, 'vol_ctxsw': 714, 'time_oncpu': 17984466575, 'rdtsc_duration': 153196621348, 'user+system': 17951212, 'systemtime': 4074354, 'num_procs': 57, 'write_bytes': 2631274496, 'usertime': 13876858, 'tags': {'op': 'timavg'}})
+        self.assertEqual(set(op.to_dict().keys()), {'jobs', 'start', 'proc_sums', 'num_runs', 'duration', 'tag', 'contiguous', 'processes', 'end', 'intervals'})
+        op = Operation(['685000', '685003'], {'op': 'timavg'})
+        self.assertEqual(op.proc_sums, {'syscw': 89297, 'PERF_COUNT_SW_CPU_CLOCK': 29297709455, 'time_oncpu': 32531383700, 'usertime': 25906808, 'time_waiting': 81086345, 'timeslices': 8001, 'cancelled_write_bytes': 262144, 'outblock': 5665088, 'guest_time': 0, 'minflt': 647328, 'invol_ctxsw': 3996, 'processor': 0, 'rssmax': 10901764, 'read_bytes': 7303168, 'rdtsc_duration': 244679507379, 'inblock': 14264, 'majflt': 18, 'num_procs': 428, 'write_bytes': 2900525056, 'delayacct_blkio_time': 0, 'duration': 67847274.0, 'syscr': 206204, 'rchar': 8118076508, 'cpu_time': 32325636.0, 'systemtime': 6418828, 'wchar': 5805294586, 'vol_ctxsw': 3571, 'user+system': 32325636, 'numtids': 433, 'tags': {'op': 'timavg'}})
 
     @db_session
     def test_op_metrics(self):

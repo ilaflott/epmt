@@ -21,15 +21,20 @@ class Operation(dict):
         self.processes = get_procs(jobs = jobs, tags = tag, fmt='orm')
         if self.processes.count() == 0:
             logger.warning("operation contains no processes!")
-            (self.first_run_start, self.last_run_end) = (None, None)
+            (self.start, self.end) = (None, None)
         else:
-            self.first_run_start = min(p.start for p in self.processes)
-            self.last_run_end = max(p.end for p in self.processes)
+            self.start = min(p.start for p in self.processes)
+            self.end = max(p.end for p in self.processes)
         # this will be initialized on first reference
         self._proc_sums = None
         self._intervals = None
         self._duration = None
 
+    def contiguous(self):
+        return (len(self.intervals) == 1)
+
+    def num_runs(self):
+        return len(self.intervals)
 
     @property
     def intervals(self):
@@ -58,3 +63,15 @@ class Operation(dict):
             assert(len(op_metrics) == 1)
             self._proc_sums = op_metrics[0]
         return self._proc_sums
+
+    def to_dict(self):
+        (duration, intervals, proc_sums) = (self.duration, self.intervals, self.proc_sums)
+        d = dict(self)
+        d['duration'] = duration
+        d['intervals'] = intervals
+        d['proc_sums'] = proc_sums
+        d['processes'] = [p.id for p in self.processes]
+        d['contiguous'] = (len(intervals) == 1)
+        d['num_runs'] = len(intervals) 
+        for attr in ('_duration', '_intervals', '_proc_sums'): del d[attr]
+        return d
