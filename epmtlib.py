@@ -148,6 +148,7 @@ def capture():
 # Note, both key and values will be strings and no attempt will be made to
 # guess the type for integer/floats
 def tag_from_string(s, delim = ';', sep = ':', tag_default_value = '1'):
+    if type(s) == dict: return s
     if not s: return (None if s == None else {})
 
     tag = {}
@@ -197,6 +198,13 @@ def dict_in_list(d, L):
                 flag = False
         if (flag): return True
     return False
+
+
+def sum_chk_overflow(x, y):
+    z = x + y
+    if (abs(z) > (2 ** 31 - 1)):
+       z = float(x) + float(y)
+    return z 
 
 # return the sum of keys across two dictionaries
 # x = {'both1':1, 'both2':2, 'only_x': 100 }

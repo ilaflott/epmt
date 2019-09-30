@@ -7,24 +7,30 @@ class Operation(dict):
     spanning one or more jobs where each processes' tag is
     a superset of the operation tag.
     '''
+
+
     __getattr__ = dict.get
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
 
-    def __init__(self, jobs, tag):
+    def __init__(self, jobs, tag, exact_tag_only = False):
         from epmt_query import get_procs
         from orm import orm_is_query
+        from epmtlib import tag_from_string, tags_list
         if (orm_is_query(jobs) and jobs.count() == 0) or (len(jobs) == 0):
             raise ValueError("jobs count should be greater than zero")
         self.jobs = jobs
-        self.tag = tag
-        self.processes = get_procs(jobs = jobs, tags = tag, fmt='orm')
-        if self.processes.count() == 0:
-            logger.warning("operation contains no processes!")
-            (self.start, self.end) = (None, None)
+        self.tag = tags_list(tag) if (type(tag) == list) else tag_from_string(tag)
+        self.processes = get_procs(jobs = jobs, tags = tag, exact_tag_only = exact_tag_only, fmt='orm')
+        if len(self.processes[:]) == 0:
+            from logging import getLogger
+            logger = getLogger(__name__)
+            logger.warning("No processes found for operation -- {0}".format(tag))
+            return None
         else:
             self.start = min(p.start for p in self.processes)
             self.end = max(p.end for p in self.processes)
+
         # this will be initialized on first reference
         self._proc_sums = None
         self._intervals = None
@@ -57,11 +63,15 @@ class Operation(dict):
 
     @property
     def proc_sums(self):
-        from epmt_query import get_op_metrics
         if self._proc_sums is None: 
+            from epmt_query import get_op_metrics
+            from epmtlib import sum_dicts_list
             op_metrics = get_op_metrics(jobs = self.jobs, tags = self.tag, exact_tags_only = False, group_by_tag=True, fmt='dict')
-            assert(len(op_metrics) == 1)
-            self._proc_sums = op_metrics[0]
+            if type(self.tag) == list:
+                assert(len(op_metrics) == len(self.tag))
+            else:
+                assert(len(op_metrics) == 1)
+            self._proc_sums = sum_dicts_list(op_metrics, exclude = ['tags'])
         return self._proc_sums
 
     def to_dict(self):
@@ -70,7 +80,7 @@ class Operation(dict):
         d['duration'] = duration
         d['intervals'] = intervals
         d['proc_sums'] = proc_sums
-        d['processes'] = [p.id for p in self.processes]
+        d['processes'] = self.processes[:]
         d['contiguous'] = (len(intervals) == 1)
         d['num_runs'] = len(intervals) 
         for attr in ('_duration', '_intervals', '_proc_sums'): del d[attr]

@@ -36,7 +36,6 @@ THREAD_SUMS_FIELD_IN_PROC='threads_sums'
 
 def conv_jobs(jobs, fmt='dict', merge_sums = True):
     """
-
     conv_jobs will convert 'jobs' from one format to another. 
     The input format need not be specified (it will be auto-detected).
     The output format is specified using 'fmt'.
@@ -831,6 +830,79 @@ def __unique_proc_tags_for_job(job, exclude=[], fold=True):
 
     return fold_dicts(tags) if fold else tags
 
+
+@db_session
+def get_ops(jobs, tags, exact_tag_only = False, combine=False, fmt='dict'):
+    '''
+    Returns a list of "Operations", where each Operation is either
+    an object or a dict, depending on 'fmt'. An operation represents a collection
+    of processes that share a tag. 
+
+    jobs: Collection of jobs. For e.g., a list of jobids, etc.
+
+    tags: List of tags, where each tag is a dictionary of key/value pairs.
+          As in `get_procs`, a tag may also be specified as a string. Hence,
+          tags can be a list of strings.
+          You may also specify a single key, such as 'op' for tags. In this
+          case the expansion assumes a wildcard for the key to cover all
+          possible values for that key over the jobs set.
+
+    exact_tag_only: Advanced option, that requires each tag to be exactly
+          matched. By default (exact_tag_only = False), a process tag is
+          considered to be a match for a tag, t, if the process tag is a superset
+          of t.
+
+    fmt: Output format for each operation in the list. By default, a dict,
+          but it can also be set to 'orm', in which case each operation is
+          an object.
+
+    combine: If combine is set to True, then the returned list of operations
+          will be combined into a single high-level operation. In this case
+          the returned value will a list with a single operation.
+          The main use of this is to merge the execution intervals and proc_sums.
+
+    EXAMPLES:
+          get_ops(['685000', '685003'], tags = ['op:timavg', 'op:ncks'])
+
+          get_ops(['685000', '685003'], tags = [{ 'op':'timavg'}, {'op':'ncks'}], fmt='orm)
+
+          get_ops(['685000', '685003'], tags = ['op:timavg', 'op:ncks'], combine=True)
+
+          get_ops(['685000', '685003'], tags = 'op', combine=True)
+    '''
+    if type(tags) != list:
+        tags = [tags]
+
+    # expand compressed tags, if any
+    _tags = []
+    job_proc_tags = get_job_proc_tags(jobs, fold=True)
+    for t in tags:
+        if type(t) == str and not(':' in t):
+            # this means we have specified a label such as 'op'
+            # and we want to expand that into a list of tags such as
+            # [{'op': 'timavg'}, {'op': 'dmget'},...]
+            tag_values = job_proc_tags.get(t, [])
+            logger.debug('expanding {0} for values {1}'.format(t, tag_values))
+            for v in tag_values:
+                _tags.append({ t: v })
+        else:
+            _tags.append(t)
+    logger.debug('tags: {0}'.format(_tags))
+
+    if combine:
+        # Operation will pass the list of tags to get_procs
+        # and the entire set of processes will be considered
+        # as one operation
+        ops = [Operation(jobs, _tags, exact_tag_only)]
+    else:
+        ops = []
+        for t in _tags:
+            op = Operation(jobs, t, exact_tag_only)
+            if op: ops.append(op)
+
+    if fmt == 'dict':
+        ops = [ op.to_dict() for op in ops ]
+    return ops
 
 @db_session
 def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=False, fmt='pandas'):
