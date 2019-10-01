@@ -42,7 +42,7 @@ def sortKeyFunc(s):
 
 def create_job(jobid,user):
     logger = getLogger(__name__)  # you can use other name
-    job = orm_get(Job, jobid=jobid)
+    job = orm_get(Job, jobid)
     if job is None:
         logger.info("Creating job %s",jobid)
         job = orm_create(Job, jobid=jobid,user=user)
@@ -71,7 +71,7 @@ def create_job(jobid,user):
 created_hosts = {}
 def lookup_or_create_host(hostname):
     logger = getLogger(__name__)  # you can use other name
-    host = orm_get(Host, hostname) if (not(hostname in created_hosts)) else created_hosts[hostname]
+    host = created_hosts.get(hostname, orm_get(Host, hostname))
     if host is None:
         host = orm_create(Host, name=hostname)
         logger.info("Created host %s",hostname)
@@ -84,7 +84,7 @@ def lookup_or_create_host(hostname):
 
 def lookup_or_create_user(username):
     logger = getLogger(__name__)  # you can use other name
-    user = orm_get(User, name=username)
+    user = orm_get(User, username)
     if user is None:
         logger.info("Creating user %s",username)
         user = orm_create(User, name=username)
