@@ -334,6 +334,26 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(list(df['cpu_time'].values), [208577324.0, 30292583.0])
 
     @db_session
+    def test_ops(self):
+        ops = eq.get_ops(['685000', '685003'], tags = ['op:timavg', 'op:ncks'])
+        self.assertEqual([type(op) for op in ops], [dict, dict])
+        self.assertEqual((ops[0]['duration'], ops[1]['duration']), (36053215.00000002, 4773814.999999999))
+        self.assertEqual((ops[0]['proc_sums']['num_procs'], ops[1]['proc_sums']['num_procs']), (428, 190))
+
+        ops = eq.get_ops(['685000', '685003'], tags = ['op:timavg', 'op:ncks'], combine = True, fmt='orm')
+        self.assertEqual(len(ops), 1)
+        self.assertEqual(ops[0].proc_sums['num_procs'], 618)
+
+        ops = eq.get_ops(['685000', '685003'], tags = 'op', combine=True)
+        self.assertEqual(len(ops), 1)
+        op = ops[0]
+        self.assertEqual((op['num_runs'], op['start'], op['end'], op['duration']), (1, datetime.datetime(2019, 6, 15, 11, 52, 4, 126892), datetime.datetime(2019, 6, 15, 13, 42, 25, 694628), 6621567736.0))
+        self.assertEqual((op['proc_sums']['num_procs'], op['proc_sums']['numtids']), (7111, 7544))
+        ops2 = eq.get_ops(['685000', '685003'], tags = '', combine=True)
+        self.assertEqual(ops2, ops)
+
+
+    @db_session
     def test_root(self):
         p = eq.root('685016')
         self.assertEqual((p['pid'], p['exename']), (122181, u'tcsh'))

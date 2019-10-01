@@ -832,7 +832,7 @@ def __unique_proc_tags_for_job(job, exclude=[], fold=True):
 
 
 @db_session
-def get_ops(jobs, tags, exact_tag_only = False, combine=False, fmt='dict'):
+def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict'):
     '''
     Returns a list of "Operations", where each Operation is either
     an object or a dict, depending on 'fmt'. An operation represents a collection
@@ -845,7 +845,9 @@ def get_ops(jobs, tags, exact_tag_only = False, combine=False, fmt='dict'):
           tags can be a list of strings.
           You may also specify a single key, such as 'op' for tags. In this
           case the expansion assumes a wildcard for the key to cover all
-          possible values for that key over the jobs set.
+          possible values for that key over the jobs set. If not specified,
+          the jobs will be queried for the tag key with the lowest cardinality
+          and that key will be used.
 
     exact_tag_only: Advanced option, that requires each tag to be exactly
           matched. By default (exact_tag_only = False), a process tag is
@@ -862,14 +864,51 @@ def get_ops(jobs, tags, exact_tag_only = False, combine=False, fmt='dict'):
           The main use of this is to merge the execution intervals and proc_sums.
 
     EXAMPLES:
-          get_ops(['685000', '685003'], tags = ['op:timavg', 'op:ncks'])
+          To get the ops as a list of dicts for two distinct tags, do:
 
-          get_ops(['685000', '685003'], tags = [{ 'op':'timavg'}, {'op':'ncks'}], fmt='orm)
+          >>> ops = get_ops(['685000', '685003'], tags = ['op:timavg', 'op:ncks'])
+          >>> len(ops)
+          2
+          >>> ops[0]['duration'], ops[1]['duration']
+          (36053215.00000002, 4773814.999999999)
 
-          get_ops(['685000', '685003'], tags = ['op:timavg', 'op:ncks'], combine=True)
 
-          get_ops(['685000', '685003'], tags = 'op', combine=True)
+          Below we do the same but this time we get a list of ORM objects:
+
+          >>> ops_orm = get_ops(['685000', '685003'], tags = [{ 'op':'timavg'}, {'op':'ncks'}], fmt='orm')
+          >>> [o.duration for o in ops_orm]
+          [36053215.00000002, 4773814.999999999]
+           
+          Now suppose we want to combine the returned operations into a single operation:
+
+          >>> ops = get_ops(['685000', '685003'],tags =['op:timavg', 'op:ncks'],combine=True, fmt='orm')
+          >>> hl_op = ops[0]   # ops only has one element when combine is True
+          >>> hl_op.start, hl_op.end, hl_op.duration, hl_op.num_runs()
+          (datetime.datetime(2019, 6, 15, 13, 38, 25, 618279), datetime.datetime(2019, 6, 15, 13, 42, 18, 345456), 40827030.00000001, 159)
+
+
+          Rather than specifying the tags, we can just mention the key
+          we care about. This will be auto-expanded:
+
+          >>> op = get_ops(['685000', '685003'], tags = 'op', combine=True)[0]
+          DEBUG:epmt_query:expanding op for values ['splitvars', 'untar', 'dmput', 'ncatted', 'ncks', 'cp', 'timavg', 'hsmget', 'ncrcat', 'rm', 'fregrid', 'mv']
+          DEBUG:epmt_query:tags: [{'op': 'splitvars'}, {'op': 'untar'}, {'op': 'dmput'}, {'op': 'ncatted'}, {'op': 'ncks'}, {'op': 'cp'}, {'op': 'timavg'}, {'op': 'hsmget'}, {'op': 'ncrcat'}, {'op': 'rm'}, {'op': 'fregrid'}, {'op': 'mv'}]
+
+
+          If we are lazy and only want the top-level ops (based on the tag of most importance):
+
+          >>> ops = eq.get_ops(['685000', '685003'], tags = '')
+          DEBUG:epmt_query:no tag specified, using tags: op
+          DEBUG:epmt_query:expanding op for values ['splitvars', 'untar', 'dmput', 'ncatted', 'ncks', 'cp', 'timavg', 'hsmget', 'ncrcat', 'rm', 'fregrid', 'mv']
+          DEBUG:epmt_query:tags: [{'op': 'splitvars'}, {'op': 'untar'}, {'op': 'dmput'}, {'op': 'ncatted'}, {'op': 'ncks'}, {'op': 'cp'}, {'op': 'timavg'}, {'op': 'hsmget'}, {'op': 'ncrcat'}, {'op': 'rm'}, {'op': 'fregrid'}, {'op': 'mv'}]
+          >>> len(ops)
+          12
     '''
+
+    if not tags:
+        tags = rank_proc_tags_keys(jobs)[0][0]
+        logger.debug('no tag specified, using tags: {0}'.format(tags))
+
     if type(tags) != list:
         tags = [tags]
 
