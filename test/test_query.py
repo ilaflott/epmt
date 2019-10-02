@@ -24,6 +24,9 @@ if environ.get('EPMT_USE_SQLALCHEMY'):
     if environ.get('EPMT_BULK_INSERT'):
         settings.bulk_insert = True
 
+if environ.get('EPMT_USE_PG'):
+    settings.db_params = { 'url': 'postgresql://postgres:example@localhost:5432/EPMT-TEST', 'echo': False }
+
 from epmtlib import timing, isString, frozen_dict, str_dict
 from orm import db_session, setup_db, Job, Process, Operation, orm_get, desc, orm_is_query, orm_commit
 import epmt_query as eq
@@ -33,9 +36,9 @@ JOBS_LIST = ['685016', '685003', '685000']
 
 @timing
 def setUpModule():
-    if settings.db_params.get('filename') != ':memory:' and settings.db_params.get('url') != 'sqlite:///:memory:':
-        print('db_params MUST use in-memory sqlite for testing', file=stderr)
-        exit(1)
+    # if settings.db_params.get('filename') != ':memory:' and settings.db_params.get('url') != 'sqlite:///:memory:':
+    #     print('db_params MUST use in-memory sqlite for testing', file=stderr)
+    #     exit(1)
     setup_db(settings)
     print('\n' + str(settings.db_params))
     datafiles='test/data/query/*.tgz'

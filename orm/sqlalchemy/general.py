@@ -8,6 +8,12 @@ from sqlalchemy.orm.query import Query
 import threading
 from functools import wraps
 
+from os import environ
+if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
+    import epmt_default_settings as settings
+else:
+    import settings
+
 from logging import getLogger
 logger = getLogger(__name__)  # you can use other name
 import init_logging
@@ -446,6 +452,10 @@ def _tag_filter(qs, tag, exact_match, model=None):
 # common low-level function to handle dict attribute filters
 def _attribute_filter(qs, attr, target, exact_match = False, model = None, conv_to_str = True):
     from .models import Job
+    using_sqlite = 'sqlite' in settings.db_params.get('url', '')
+    using_postgres = 'postgres' in settings.db_params.get('url', '')
+    if not (using_sqlite or using_postgres):
+        raise NotImplementedError("sqlalchemy JSON attribute filtering only works for SQLite and Postgresql at present")
     if (model == None): model = Job
     if exact_match or (target == {}):
         qs = qs.filter(getattr(model, attr) == target)
@@ -454,9 +464,9 @@ def _attribute_filter(qs, attr, target, exact_match = False, model = None, conv_
         # of the passed tag
         for (k,v) in target.items():
             if conv_to_str or (type(v) == str):
-                qs = qs.filter(text("json_extract({0}.{1}, '$.{2}') = '{3}'".format(model.__tablename__, attr, k, v)))
+                qs = qs.filter(text("json_extract({0}.{1}, '$.{2}') = '{3}'".format(model.__tablename__, attr, k, v)) if using_sqlite else (getattr(model, attr)[k].astext == str(v)))
             else:
-                qs = qs.filter(text("json_extract({0}.{1}, '$.{2}') = {3}".format(model.__tablename__, attr, k, v)))
+                qs = qs.filter(text("json_extract({0}.{1}, '$.{2}') = {3}".format(model.__tablename__, attr, k, v)) if using_sqlite else (getattr(model, attr)[k] == v))
     return qs
 
 
