@@ -916,7 +916,7 @@ def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict'):
     _tags = []
     job_proc_tags = get_job_proc_tags(jobs, fold=True)
     for t in tags:
-        if type(t) == str and not(':' in t):
+        if isString(t) and not(':' in t):
             # this means we have specified a label such as 'op'
             # and we want to expand that into a list of tags such as
             # [{'op': 'timavg'}, {'op': 'dmget'},...]
