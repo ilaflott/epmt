@@ -180,7 +180,7 @@ def tags_list(tags):
         tags = [tag_from_string(tags)]
     elif type(tags) in [dict, TrackedDict]:
         tags = [tags]
-    tags = [tag_from_string(t) if type(t)==str else t for t in tags]
+    tags = [tag_from_string(t) if isString(t) else t for t in tags]
     return tags
 
 # Returns True if at least one dictionary in L is contained by d
