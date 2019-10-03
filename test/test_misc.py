@@ -23,7 +23,7 @@ if environ.get('EPMT_USE_PG'):
 
 
 from epmtlib import timing, capture
-from orm import db_session, setup_db, Job
+from orm import db_session, setup_db, Job, orm_db_provider
 import epmt_query as eq
 from epmt_cmds import epmt_submit, epmt_dbsize
 from epmt_cmd_delete import epmt_delete_jobs
@@ -82,10 +82,10 @@ class EPMTCmds(unittest.TestCase):
             argns = argparse.Namespace(auto=False, bytes=False, dbsize=True, drop=False, dry_run=False, epmt_cmd='dbsize', epmt_cmd_args=['database', 'table'], error=False, help=False, jobid=None, json=False, verbose=0)
             from epmt_cmds import epmt_dbsize
             retval,val = epmt_dbsize('',argns)
-        isPG = (settings.db_params.get('provider', '') == 'postgres')
+        isPG = (orm_db_provider() == 'postgres')
         self.assertEqual(retval, isPG, 'wrong database return value')
 
-    @unittest.skipUnless('postgres' in settings.db_params.get('url',settings.db_params.get('provider')), 'requires postgres')
+    @unittest.skipUnless(orm_db_provider() == 'postgres', 'requires postgres')
     def test_dbsize_json(self):
         with capture() as (out,err):
             import argparse,json

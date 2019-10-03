@@ -43,7 +43,7 @@ def get_db_size(findwhat, other):
     import init_logging
     # Test if provider is supported
     if settings.db_params.get('url', '').startswith('postgresql://') is False:
-        logger.warning("%s Not supported", settings.db_params.get('url', ''))
+        logger.warning("%s is not supported", settings.db_params.get('url', ''))
         return(False,"Not supported")
     if other.json:
         import json
