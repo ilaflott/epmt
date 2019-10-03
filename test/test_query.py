@@ -103,12 +103,16 @@ class QueryAPI(unittest.TestCase):
 
         # empty tag check
         j = orm_get(Job, '685016')
+        t = j.tags
         j.tags = {}
         orm_commit()
         jobs = eq.get_jobs(JOBS_LIST, tags='', fmt='terse')
         self.assertEqual(jobs, ['685016'], 'jobs query with empty tag option')
         jobs = eq.get_jobs(JOBS_LIST, tags={}, fmt='terse')
         self.assertEqual(jobs, ['685016'], 'jobs query with {} tag option')
+        # restore tags
+        j.tags = t
+        orm_commit()
 
         jobs = eq.get_jobs(JOBS_LIST, tags=['ocn_res:0.5l75;exp_component:ocean_cobalt_fdet_100', 'ocn_res:0.5l75;exp_component:ocean_annual_rho2_1x1deg'], fmt='terse')
         self.assertEqual(set(jobs), set(['685003', '685000']))
@@ -261,12 +265,12 @@ class QueryAPI(unittest.TestCase):
     def test_job_convert(self):
         for fmt in ['dict', 'terse', 'pandas', 'orm']:
             jobs = eq.get_jobs(['685000', '685003'], fmt=fmt)
-            self.assertEqual(eq.conv_jobs(jobs, fmt='terse'), ['685000', '685003'])
+            self.assertEqual(set(eq.conv_jobs(jobs, fmt='terse')), set(['685000', '685003']))
             j1 = orm_get(Job, '685000')
             j2 = orm_get(Job, '685003')
-            self.assertEqual(eq.conv_jobs(jobs, fmt='orm')[:], [j1, j2])
-            self.assertEqual(list(eq.conv_jobs(jobs, fmt='pandas')['jobid'].values), [u'685000', u'685003'])
-            self.assertEqual([j['jobid'] for j in eq.conv_jobs(jobs, fmt='dict')], ['685000', '685003'])
+            self.assertEqual(set(eq.conv_jobs(jobs, fmt='orm')[:]), set([j1, j2]))
+            self.assertEqual(set(eq.conv_jobs(jobs, fmt='pandas')['jobid'].values), set([u'685000', u'685003']))
+            self.assertEqual(set([j['jobid'] for j in eq.conv_jobs(jobs, fmt='dict')]), set(['685000', '685003']))
 
         ref = eq.get_jobs(JOBS_LIST, fmt='terse')
         for inp_fmt in ['terse','orm','pandas','dict']:
@@ -312,7 +316,7 @@ class QueryAPI(unittest.TestCase):
         top = df[['job', 'tags', 'duration']].sort_values('duration', axis=0, ascending=False)[:1]
         self.assertEqual(top.tags.values[0], {u'op_instance': u'2', u'op_sequence': u'89', u'op': u'dmput'})
         self.assertEqual(int(top.duration.values[0]), 7008334182)
-        df = eq.op_metrics(['685000', '685016'], tags='op_sequence:89')
+        df = eq.op_metrics(['685000', '685016'], tags='op_sequence:89').sort_values('jobid', axis=0, ascending=True)
         self.assertEqual([int(f) for f in list(df.duration.values)], [6463542235, 7008334182])
 
         df = eq.op_metrics(['685000', '685003', '685016'])
@@ -373,8 +377,7 @@ class QueryAPI(unittest.TestCase):
 
     @db_session
     def test_jobs_annotations(self):
-        self.assertEqual(eq.get_job_annotations('685000'), {})
-        r = eq.annotate_job('685000', {'abc': 100})
+        r = eq.annotate_job('685000', {'abc': 100}, replace=True)
         self.assertEqual(r, {'abc': 100})
         self.assertEqual(eq.get_job_annotations('685000'), {'abc': 100})
         r = eq.annotate_job('685000', {'def': 'hello'})
@@ -387,10 +390,10 @@ class QueryAPI(unittest.TestCase):
         r = eq.remove_job_annotations('685000')
         self.assertEqual(r, {})
         self.assertEqual(eq.get_job_annotations('685000'), {})
-        r = eq.annotate_job('685016', 'abc:100;def:hello')
-        self.assertEqual(r, {'abc': '100', 'def': 'hello'})
-        self.assertEqual(eq.get_job_annotations('685016'), {'abc': '100', 'def': 'hello'})
-        self.assertEqual(eq.get_jobs(annotations = {'abc': '100'}, fmt='terse'), [u'685016'])
+        r = eq.annotate_job('685016', 'abc:200;def:bye')
+        self.assertEqual(r, {'abc': '200', 'def': 'bye'})
+        self.assertEqual(eq.get_job_annotations('685016'), {'abc': '200', 'def': 'bye'})
+        self.assertEqual(eq.get_jobs(annotations = {'abc': '200'}, fmt='terse'), [u'685016'])
 
     @db_session
     def test_unanalyzed_jobs(self):

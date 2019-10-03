@@ -44,7 +44,7 @@ def db_session(func):
             completed = True
         except Exception as e:
             import traceback, sys
-            logger.error('\nAn exception occurred: {0}\nWill rollback session..'.format(e))
+            logger.error('\nAn exception occurred.\nWill rollback session..')
             print('-'*60)
             traceback.print_exc(file=sys.stdout)
             print('-'*60)
@@ -464,7 +464,7 @@ def _attribute_filter(qs, attr, target, exact_match = False, model = None, conv_
         # of the passed tag
         for (k,v) in target.items():
             if conv_to_str or (type(v) == str):
-                qs = qs.filter(text("json_extract({0}.{1}, '$.{2}') = '{3}'".format(model.__tablename__, attr, k, v)) if using_sqlite else (getattr(model, attr)[k].astext == str(v)))
+                qs = qs.filter(text("cast(json_extract({0}.{1}, '$.{2}') as text) = '{3}'".format(model.__tablename__, attr, k, v)) if using_sqlite else (getattr(model, attr)[k].astext == str(v)))
             else:
                 qs = qs.filter(text("json_extract({0}.{1}, '$.{2}') = {3}".format(model.__tablename__, attr, k, v)) if using_sqlite else (getattr(model, attr)[k] == v))
     return qs
@@ -472,7 +472,7 @@ def _attribute_filter(qs, attr, target, exact_match = False, model = None, conv_
 
 def _annotation_filter(qs, annotations):
     from .models import Job
-    return _attribute_filter(qs, 'annotations', annotations, model = Job, conv_to_str = False)
+    return _attribute_filter(qs, 'annotations', annotations, model = Job, conv_to_str = True)
 
 def _analyses_filter(qs, analyses):
     from .models import Job

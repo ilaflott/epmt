@@ -78,7 +78,7 @@ class ReferenceModel(with_metaclass(CommonMeta, Base)):
 
 class Job(with_metaclass(CommonMeta, Base)):
     __tablename__ = 'jobs'
-    created_at = Column(DateTime, default=datetime.now)
+    created_at = Column(DateTime, default=datetime.now, index=True)
     updated_at = Column(DateTime, onupdate=datetime.now)
     info_dict = Column(JSON, default={})
     annotations = Column(JSON, default={}, index=True)

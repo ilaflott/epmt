@@ -272,7 +272,8 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
 
     
     limit  : Restrict the output list a specified number of jobs. Defaults to 20.
-             When set to 0, it means no limit
+             When set to 0, it means no limit. There is not default limit when
+             using the ORM format. The default applies to all other formats.
     
     offset : When returning query results, skip offset rows. "offset"
              defaults to 0. 
