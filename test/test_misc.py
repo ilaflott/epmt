@@ -19,7 +19,7 @@ if environ.get('EPMT_USE_SQLALCHEMY'):
         settings.bulk_insert = True
 
 if environ.get('EPMT_USE_PG'):
-    settings.db_params = { 'url': 'postgresql://postgres:example@localhost:5432/EPMT-TEST', 'echo': False }
+    settings.db_params = { 'url': 'postgresql://postgres:example@localhost:5432/EPMT-TEST', 'echo': False } if (settings.orm == 'sqlalchemy') else {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'localhost', 'dbname': 'EPMT'}
 
 
 from epmtlib import timing, capture
@@ -85,7 +85,7 @@ class EPMTCmds(unittest.TestCase):
         isPG = (settings.db_params.get('provider', '') == 'postgres')
         self.assertEqual(retval, isPG, 'wrong database return value')
 
-    @unittest.skipUnless('postgres' in settings.db_params.get('url',''), 'requires postgres')
+    @unittest.skipUnless('postgres' in settings.db_params.get('url',settings.db_params.get('provider')), 'requires postgres')
     def test_dbsize_json(self):
         with capture() as (out,err):
             import argparse,json
