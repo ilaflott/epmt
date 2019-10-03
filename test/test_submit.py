@@ -19,6 +19,9 @@ if environ.get('EPMT_USE_SQLALCHEMY'):
     if environ.get('EPMT_BULK_INSERT'):
         settings.bulk_insert = True
 
+if environ.get('EPMT_USE_PG'):
+    settings.db_params = { 'url': 'postgresql://postgres:example@localhost:5432/EPMT-TEST', 'echo': False }
+
 from epmtlib import timing, capture
 from orm import db_session, setup_db, Job, orm_get
 import epmt_query as eq
@@ -62,10 +65,9 @@ class EPMTSubmit(unittest.TestCase):
         self.assertEqual(len(j.processes[:]) if settings.orm == 'sqlalchemy' else j.processes.count(), 3480, 'wrong proc count in job')
         self.assertEqual(sum([p.duration for p in j.processes]), 24717624686.0, 'wrong proc duration aggregate')
 
-    #@unittest.skipUnless(settings.orm == 'sqlalchemy', "requires sqlalchemy")
     @db_session
     def test_unprocessed_jobs(self):
-        from orm import UnprocessedJob
+        from orm import UnprocessedJob, orm_commit
         from epmt_job import post_process_outstanding_jobs, post_process_job
         with self.assertRaises(Exception):
              u = UnprocessedJob['685003']

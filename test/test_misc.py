@@ -19,7 +19,7 @@ if environ.get('EPMT_USE_SQLALCHEMY'):
         settings.bulk_insert = True
 
 if environ.get('EPMT_USE_PG'):
-    settings.db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'localhost', 'dbname': 'EPMT-TEST'}
+    settings.db_params = { 'url': 'postgresql://postgres:example@localhost:5432/EPMT-TEST', 'echo': False }
 
 
 from epmtlib import timing, capture
@@ -34,7 +34,7 @@ from epmt_cmd_list import  epmt_list_jobs, epmt_list_procs, epmt_list_job_proc_t
 def setUpModule():
     setup_db(settings)
     print('\n' + str(settings.db_params))
-    datafiles='test/data/misc/*.tgz'
+    datafiles='test/data/misc/685000.tgz'
     print('setUpModule: importing {0}'.format(datafiles))
     epmt_submit(glob(datafiles), dry_run=False)
     
@@ -75,6 +75,7 @@ class EPMTCmds(unittest.TestCase):
             retval = epmt_list_job_proc_tags(["685000"])
         self.assertEqual(type(retval), bool, 'wrong list jobs return type')
         self.assertEqual(retval, True, 'wrong list jobs return value')
+
     def test_dbsize_provider(self):
         with capture() as (out,err):
             import argparse
@@ -84,7 +85,7 @@ class EPMTCmds(unittest.TestCase):
         isPG = (settings.db_params.get('provider', '') == 'postgres')
         self.assertEqual(retval, isPG, 'wrong database return value')
 
-    @unittest.skipUnless(settings.db_params.get('provider','') == 'postgres', "requires postgres")
+    @unittest.skipUnless('postgres' in settings.db_params.get('url',''), 'requires postgres')
     def test_dbsize_json(self):
         with capture() as (out,err):
             import argparse,json

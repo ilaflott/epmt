@@ -69,7 +69,7 @@ class QueryAPI(unittest.TestCase):
 #         pass
 
     @db_session
-    def test_jobs(self):
+    def test_job(self):
         j = Job['685000']
         self.assertEqual(j.jobid, '685000')
         jobs = eq.get_jobs(JOBS_LIST, fmt='terse')
@@ -90,7 +90,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(len(jobs), 2, 'job count wrong when selected a comma-separated string')
 
     @db_session
-    def test_jobs_advanced(self):
+    def test_job_advanced(self):
         jobs = eq.get_jobs(JOBS_LIST, fmt='terse', order=desc(Job.start), limit=2, offset=1)
         self.assertEqual(jobs, [u'685003', u'685000'], 'job limit/offset not working')
         if settings.orm == 'sqlalchemy':
@@ -258,7 +258,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(set([proc.pid for proc in p.ancestors]), set([6098, 26859]))
 
     @db_session
-    def test_jobs_convert(self):
+    def test_job_convert(self):
         for fmt in ['dict', 'terse', 'pandas', 'orm']:
             jobs = eq.get_jobs(['685000', '685003'], fmt=fmt)
             self.assertEqual(eq.conv_jobs(jobs, fmt='terse'), ['685000', '685003'])
@@ -372,7 +372,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(pids, [6098, 29001, 31171, 31291, 10015, 10168, 32139, 11002, 32315, 11172, 1311, 1490, 12990, 13118, 13220, 1652, 1941, 13597, 14403, 14547, 2321, 2655, 26466, 26469, 26500, 26726, 26729, 26760, 26986, 26989, 27020, 27246, 27249, 27280, 27506, 27509, 27540, 27775, 27833, 27836, 27867, 28093, 28129, 8082, 8179, 8231, 8283, 8335, 8387, 8439, 8491, 8543, 8603, 8655, 8707, 8863, 8997, 9044, 9090, 9126, 9162, 9198, 9237, 9881, 9930, 9979, 10028, 10077, 10126, 10175])
 
     @db_session
-    def test_job_annotations(self):
+    def test_jobs_annotations(self):
         self.assertEqual(eq.get_job_annotations('685000'), {})
         r = eq.annotate_job('685000', {'abc': 100})
         self.assertEqual(r, {'abc': 100})
@@ -393,7 +393,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(eq.get_jobs(annotations = {'abc': '100'}, fmt='terse'), [u'685016'])
 
     @db_session
-    def test_job_analyses(self):
+    def test_unanalyzed_jobs(self):
         uj = eq.get_unanalyzed_jobs(['685000', '685003', '685016'])
         self.assertEqual(set(uj), set(['685000', '685003', '685016']))
         self.assertEqual(eq.get_job_analyses('685000'), {})
@@ -454,7 +454,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(n, 1, 'wrong ref_model delete count')
 
     @db_session
-    def test_dm_calc(self):
+    def test_ops_dm_calc(self):
         jobs = eq.get_jobs(['685000', '685003', '685016'], fmt='orm')
         self.assertEqual(jobs.count(), 3)
         (perc, df, j_cpu) = eq.dm_calc(jobs)
@@ -464,7 +464,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(j_cpu, 633756327.0)
 
     @db_session
-    def test_dm_calc_iter(self):
+    def test_ops_dm_calc_iter(self):
         jobs = eq.get_jobs(['685000', '685003', '685016'], fmt='orm')
         self.assertEqual(jobs.count(), 3)
         (dm_percent, df, all_jobs_cpu_time, agg_df) = eq.dm_calc_iter(jobs) 

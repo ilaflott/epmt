@@ -199,7 +199,6 @@ def get_db_size(findwhat, other):
             printsettings = settings.db_params.copy()
             printsettings['password'] = "****"
             metadata = {"Generated at:":current_time,
-                        "ORM":"Pony "+p_version,
                         "DB Params":printsettings}
             jsonlist.append({"Metadata":metadata})
             print(json.dumps(jsonlist,indent=4))

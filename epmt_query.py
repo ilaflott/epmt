@@ -991,7 +991,13 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=F
         # group the Query response we got by jobid
         # we use group_concat to join the thread_sums json into a giant string
         if settings.orm == 'sqlalchemy':
-            procs_grp_by_job = orm_get_procs(jobs, t, None, None, 0, None, [], exact_tags_only, [Process.jobid, func.count(Process.id), func.sum(Process.duration), func.sum(Process.cpu_time), func.sum(Process.numtids), func.group_concat(Process.threads_sums, '@@@')]).group_by(Process.jobid)
+            if 'postgres' in settings.db_params.get('url', ''):
+                # postgres doesn't have an group_concat, so we first aggregate into an
+                # an array and then join the array elements into a string using a separator
+                concat_threads_sums = func.array_to_string(func.array_agg(Process.threads_sums), '@@@')
+            else:
+                concat_threads_sums = func.group_concat(Process.threads_sums, '@@@')
+            procs_grp_by_job = orm_get_procs(jobs, t, None, None, 0, None, [], exact_tags_only, [Process.jobid, func.count(Process.id), func.sum(Process.duration), func.sum(Process.cpu_time), func.sum(Process.numtids), concat_threads_sums]).group_by(Process.jobid)
         else:
             # Pony ORM
             procs = get_procs(jobs, tags = t, exact_tag_only = exact_tags_only, fmt='orm')
