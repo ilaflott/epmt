@@ -262,8 +262,9 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
     order  : Optionally sort the output by setting this to a lambda function or string
              e.g, to sort by job duration descending:
                   order = desc(Job.created_at)
-             If not set, this defaults to desc(Job.created_at), in other words
-             jobs are returned in the reverse order of ingestion.
+             If not set, this defaults to Job.start, in other words
+             jobs are returned in the order they were created (not necessarily the
+             same as the other of ingestion -- Job.created_at)
 
              If you are using Pony as the ORM layer, then you can also pass
              in a lambda function, such as:
@@ -343,7 +344,8 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
     if (not(orm_is_query(jobs))) and (type(jobs) != pd.DataFrame) and (jobs in [[], '', None]):
         if (fmt != 'orm') and (limit == None): 
             limit = 20
-        if order is None: order = desc(Job.created_at)
+
+    if order is None: order = Job.start
       
     qs = orm_jobs_col(jobs)
 
@@ -971,7 +973,9 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=F
     fmt:          One of 'dict' or 'pandas'. Defaults to 'pandas'
 
     """
-    if not jobs:
+    jobs = orm_jobs_col(jobs).order_by(Job.start)
+
+    if jobs.count() == 0:
         logger.warning('You need to specify one or more jobs for op_metrics')
         return None
 
@@ -998,7 +1002,7 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=F
                 concat_threads_sums = func.array_to_string(func.array_agg(Process.threads_sums), '@@@')
             else:
                 concat_threads_sums = func.group_concat(Process.threads_sums, '@@@')
-            procs_grp_by_job = orm_get_procs(jobs, t, None, None, 0, None, [], exact_tags_only, [Process.jobid, func.count(Process.id), func.sum(Process.duration), func.sum(Process.cpu_time), func.sum(Process.numtids), concat_threads_sums]).group_by(Process.jobid)
+            procs_grp_by_job = orm_get_procs(jobs, t, None, None, 0, None, [], exact_tags_only, [Process.jobid, func.count(Process.id), func.sum(Process.duration), func.sum(Process.cpu_time), func.sum(Process.numtids), concat_threads_sums]).group_by(Process.jobid).order_by(Process.jobid)
         else:
             # Pony ORM
             procs = get_procs(jobs, tags = t, exact_tag_only = exact_tags_only, fmt='orm')
