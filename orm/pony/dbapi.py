@@ -7,7 +7,7 @@
 # to DB-specific information. All the functions below
 # rely on the ORM being Pony
 
-def get_db_size(findwhat=['database','table','index','tablespace'], usejson=False, usebytes=False, db='EPMT'):
+def get_db_size(findwhat=['database','table','index','tablespace'], usejson=False, usebytes=False):
     """
     Used in finding size of database,tables,index,tablespace storage 
         usage and row count
@@ -26,14 +26,7 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
     usebytes: Will query the database for bytes specific datatype.  
         By default the database determines the largest datatype for the size.
 
-    db: Use a specific database with db='customdb-db'.  Defaults to 'EPMT'
-
     Examples:
-    To use a specific database EPMT-TEST, display all output in bytes, 
-        json and return json:
-    Command Line: ./epmt -v dbsize --db EPMT-TEST --json --bytes
-    Python:
-
     If I want to know the size of only my databases, specify ['database']
         Command Line: ./epmt dbsize database
         Python: get_db_size(['database'])
@@ -132,7 +125,7 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
     EPMT2                                   3430 MB             
     EPMT-TEST                               23 MB               
 
-    ------------------------Table-(DB:EPMT)------------------------
+    ------------------------Table-------------------------
     Table                                   Table Size            COUNT(*)
 
     unprocessed_jobs                        16 kB                        0
@@ -225,9 +218,6 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
         logger.warning("%s Not supported",str(settings.db_params.get('provider','Provider settings key missing')))
         return(False,"")
     # Connect to db for querying
-    if db is not 'EPMT' and db is not None:
-        logger.info("Using alternate database %s",db)
-        settings.db_params['dbname'] = db
     if setup_db(settings) == False:
         logger.warning("Could Not connect to db")
         return(False,"")

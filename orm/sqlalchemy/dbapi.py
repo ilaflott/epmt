@@ -7,7 +7,7 @@
 # to DB-specific information. All the functions below
 # rely on the ORM being sqlalchemy
 
-def get_db_size(findwhat=['database','table','index','tablespace'], usejson=False, usebytes=False, db='EPMT'):
+def get_db_size(findwhat=['database','table','index','tablespace'], usejson=False, usebytes=False):
     """
     Used in finding size of database,tables,index,tablespace storage 
         usage and row count
@@ -26,23 +26,7 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
     usebytes: Will query the database for bytes specific datatype.  
         By default the database determines the largest datatype for the size.
 
-    db: Use a specific database with db='customdb-db'.  Defaults to 'EPMT'
-
     Examples:
-
-    If I want to know the size of only my databases, specify ['database']
-        Command Line: ./epmt dbsize database
-        Python: get_db_size(['database'])
-        ------------------------Database------------------------
-        DB Name                                 DB Size             
-
-        postgres                                7677 kB             
-        template1                               7537 kB             
-        template0                               7537 kB             
-        EPMT                                    6857 MB             
-        EPMT2                                   3430 MB             
-        EPMT-TEST                               23 MB
-
 ----If I'm looking for json output of that list of database sizes 
     specify usejson argument.
         Command line: ./epmt dbsize database --json
@@ -128,7 +112,7 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
     EPMT2                                   3430 MB             
     EPMT-TEST                               23 MB               
 
-    ------------------------Table-(DB:EPMT)------------------------
+    ------------------------Table-------------------------
     Table                                   Table Size            COUNT(*)
 
     unprocessed_jobs                        16 kB                        0
@@ -246,11 +230,6 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
         logger.warning("Could Not connect to orm")
         return(False,"Not connected")
     try:
-        if db is not 'EPMT' and db is not None:
-            logger.info("Using alternate database %s",db)
-            settings.db_params['url'] = settings.db_params['url'].rpartition('/')[0] + "/" + db
-        else:
-            db = 'EPMT'
         if setup_db(settings) == False:
             logger.warning("Could Not connect to db")
             return(False,"Not connected")
@@ -292,7 +271,7 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
                 logger.warning("Db size query failed")
 
         if every or arg.lower() == 'table':
-            print("\n ------------------------Table-(DB:{})------------------------".format(db))
+            print("\n ------------------------Table-------------------------")
             units = "Table Size"
             if usebytes:
                 units = units + "(bytes)"
