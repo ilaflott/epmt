@@ -272,7 +272,7 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
             logger.warning("Db size query failed")
 
         if every or arg.lower() == 'table':
-            print("\n ------------------------Table------------------------")
+            print("\n ------------------------Table---({})---------------------".format(settings.db_params.get('dbname','nodb')))
             units = "Table Size"
             if usebytes:
                 units = units + "(bytes)"
@@ -303,7 +303,7 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
                 logger.warning("Table size query failed")
 
         if every or arg.lower() == 'index':
-            print("\n ------------------------Index------------------------")
+            print("\n ------------------------Index---({})---------------------".format(settings.db_params.get('dbname','nodb')))
             units = "Index Size"
             if usebytes:
                 units = units + "(bytes)"
