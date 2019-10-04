@@ -754,12 +754,13 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
     #    jobs = list(jobs)
     #if type(jobs) == list and isString(jobs[0]):
     #    jobs = Job.select(lambda j: j.jobid in jobs)
-    jobs = orm_jobs_col(jobs)[:]
+    jobs_orm = orm_jobs_col(jobs)
+    jobs = jobs_orm[:]
 
     if op_tags:
         if op_tags == '*':
             logger.info('wildcard op_tags set: obtaining set of unique tags across the input jobs')
-            op_tags = job_proc_tags(jobs, fold=False)
+            op_tags = job_proc_tags(jobs_orm, fold=False)
         # do we have a single tag in string or dict form? 
         # we eventually want a list of dicts
         # elif type(op_tags) == str:
@@ -769,7 +770,7 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
         else:
             op_tags = tags_list(op_tags)
         # let's get the dataframe of metrics aggregated by op_tags
-        ops_df = get_op_metrics(jobs = jobs, tags = op_tags, exact_tags_only = exact_tag_only, fmt='pandas')
+        ops_df = get_op_metrics(jobs = jobs_orm, tags = op_tags, exact_tags_only = exact_tag_only, fmt='pandas')
         scores = {}
         for t in op_tags:
             # serialize the tag so we can use it as a key
