@@ -156,11 +156,11 @@ def orm_delete_jobs(jobs, use_orm = False):
         stmts = []
         for j in jobs:
             jobid = j.jobid
-            stmts.append('DELETE FROM ancestor_descendant_associations WHERE EXISTS (SELECT ad.* from ancestor_descendant_associations ad INNER JOIN processes p ON (ad.ancestor = p.id OR ad.descendant = p.id) WHERE p.jobid = "{0}")'.format(jobid))
-            stmts.append('DELETE FROM host_job_associations WHERE host_job_associations.jobid = "{0}"'.format(jobid))
-            stmts.append('DELETE FROM refmodel_job_associations WHERE refmodel_job_associations.jobid = "{0}"'.format(jobid))
-            stmts.append('DELETE FROM processes WHERE processes.jobid = "{0}"'.format(jobid))
-            stmts.append('DELETE FROM jobs WHERE jobs.jobid = "{0}"'.format(jobid))
+            stmts.append('DELETE FROM ancestor_descendant_associations WHERE EXISTS (SELECT ad.* from ancestor_descendant_associations ad INNER JOIN processes p ON (ad.ancestor = p.id OR ad.descendant = p.id) WHERE p.jobid = \'{0}\')'.format(jobid))
+            stmts.append('DELETE FROM host_job_associations WHERE host_job_associations.jobid = \'{0}\''.format(jobid))
+            stmts.append('DELETE FROM refmodel_job_associations WHERE refmodel_job_associations.jobid = \'{0}\''.format(jobid))
+            stmts.append('DELETE FROM processes WHERE processes.jobid = \'{0}\''.format(jobid))
+            stmts.append('DELETE FROM jobs WHERE jobs.jobid = \'{0}\''.format(jobid))
         try:
             _execute_raw_sql(stmts, commit = True)
             return
@@ -168,7 +168,7 @@ def orm_delete_jobs(jobs, use_orm = False):
             logger.warning("Could not execute delete SQL: {0}".format(str(e)))
 
     # do a slow delete using ORM
-    logger.info("Doing a slow delete using ORM..")
+    logger.warning("Fast-path delete did not work. Doing a slow delete using ORM..")
     for j in jobs:
         Session.delete(j)
     Session.commit()
@@ -476,7 +476,7 @@ def _annotation_filter(qs, annotations):
 
 def _analyses_filter(qs, analyses):
     from .models import Job
-    return _attribute_filter(qs, 'analyses', analyses, model = Job, conv_to_str = False)
+    return _attribute_filter(qs, 'analyses', analyses, model = Job, conv_to_str = True)
 
 def orm_get_refmodels(tag = {}, fltr=None, limit=0, order=None, exact_tag_only=False):
     from .models import ReferenceModel
