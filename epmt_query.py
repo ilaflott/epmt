@@ -103,13 +103,22 @@ def __conv_procs_orm(procs, merge_sums = True, fmt='dict'):
     return pd.DataFrame(out_list) if fmt == 'pandas' else out_list
 
 
-def conv_procs(procs, fmt='pandas'):
+def conv_procs(procs, fmt='pandas', order=None):
     """
     Converts a collection of processes specified in any format
     (orm, pandas, dict-list or terse) to the format specified
-    by 'fmt'
+    by 'fmt'.
+    
+    The function makes no claim on the order of the returned
+    processes. If you care about the order, you should set the
+    'order' argument. It's worth noting that when 'order' is 
+    not set, the input order appears to be preserved in all
+    cases except sqla+postgres. However, that may change, so
+    if you care about the ordering you may need to set 'order'
     """
     procs = orm_procs_col(procs)
+    if not (order is None):
+        procs = procs.order_by(order)
     return __conv_procs_orm(procs, fmt=fmt)
 
 
@@ -430,12 +439,16 @@ def get_procs(jobs = [], tags = None, fltr = None, order = None, limit = 0, when
              and the tag - "op_sequence:5;op_instance:2"
 
     
-    fltr: is a lambda expression or a string of the form:
-          lambda p: p.duration > 1000
-           OR
-          'p.duration > 1000 and p.numtids < 4'
+    fltr:    is a lambda expression or a string of the form:
+             lambda p: p.duration > 1000
+              OR
+             'p.duration > 1000 and p.numtids < 4'
+
+    order:   Order the returned set by the supplied expression.
+             For pony, you can use a expression like 'p.created_at'
+             or a lambda function.
     
-    limit: if set, limits the total number of results
+    limit:   If set, limits the total number of results
     
     when   : Restrict the output to processes running at 'when' time. 'when'
              can be specified as a Python datetime. You can also choose

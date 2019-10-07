@@ -132,7 +132,7 @@ class Process(with_metaclass(CommonMeta, Base)):
     jobid = Column(String, ForeignKey('jobs.jobid'))
     job = relationship('Job', back_populates='processes')
 
-    start = Column(DateTime, default=datetime.now)
+    start = Column(DateTime, default=datetime.now, index=True)
     end = Column(DateTime, default=datetime.now)
     duration = Column(Float, default=0)
     tags = Column(JSON, index=True)

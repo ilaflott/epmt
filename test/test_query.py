@@ -174,16 +174,16 @@ class QueryAPI(unittest.TestCase):
 
     @db_session
     def test_procs_convert(self):
-        for inform in ['dict', 'terse', 'pandas', 'orm']:
-            procs = eq.get_procs('685000', fmt=inform)
+        for inform in ['terse', 'dict', 'pandas', 'orm']:
+            procs = eq.get_procs('685000', order=Process.start, fmt=inform)
             self.assertEqual(procs.count() if inform=='orm' else len(procs), 3480)
-            for outform in ['dict', 'terse', 'pandas', 'orm']:
+            for outform in ['terse', 'dict', 'pandas', 'orm']:
                 procs2 = eq.conv_procs(procs, fmt=outform)
                 if type(procs) == pd.DataFrame:
-                    self.assertTrue(eq.conv_procs(procs2, fmt=inform).equals(procs))
+                    self.assertTrue(eq.conv_procs(procs2, fmt=inform, order=Process.start).equals(procs))
                 else:
                     if inform != 'orm':
-                        self.assertEqual(eq.conv_procs(procs2, fmt=inform), procs)
+                        self.assertEqual(eq.conv_procs(procs2, fmt=inform, order=Process.start), procs)
 
 
     @db_session
@@ -325,7 +325,7 @@ class QueryAPI(unittest.TestCase):
 
         df = eq.op_metrics(['685000', '685003', '685016'], tags=['op:hsmget', 'op:mv'])
         self.assertEqual(df.shape, (6,32), 'wrong op_metrics shape with tags specified')
-        self.assertEqual(list(df.duration.values), [18116213243, 6688820532, 7585973173, 25706545, 212902301, 62601798])
+        self.assertEqual([int(x) for x in df.duration.values], [18116213243, 6688820532, 7585973173, 25706545, 212902301, 62601798])
         self.assertEqual(list(df.tags.values), [{'op': 'hsmget'}, {'op': 'hsmget'}, {'op': 'hsmget'}, {'op': 'mv'}, {'op': 'mv'}, {'op': 'mv'}])
 
     @db_session
