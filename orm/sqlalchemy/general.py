@@ -146,6 +146,7 @@ def orm_findall(model, **kwargs):
 def orm_create(model, **kwargs):
     o = model(**kwargs)
     Session.add(o)
+    Session.flush()
     return o
 
 def orm_delete(o):

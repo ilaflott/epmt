@@ -13,8 +13,14 @@ set_logging(-1)
 
 # Put EPMT imports only after we have called set_logging()
 import epmt_default_settings as settings
-settings.orm = 'sqlalchemy'
-settings.db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
+if environ.get('EPMT_USE_SQLALCHEMY'):
+    settings.orm = 'sqlalchemy'
+    settings.db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
+    if environ.get('EPMT_BULK_INSERT'):
+        settings.bulk_insert = True
+
+if environ.get('EPMT_USE_PG'):
+    settings.db_params = { 'url': 'postgresql://postgres:example@localhost:5432/EPMT-TEST', 'echo': False } if (settings.orm == 'sqlalchemy') else {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'localhost', 'dbname': 'EPMT'}
 
 from epmtlib import capture
 from orm import db_session, setup_db, orm_dump_schema

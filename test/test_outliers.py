@@ -21,6 +21,9 @@ if environ.get('EPMT_USE_SQLALCHEMY'):
     if environ.get('EPMT_BULK_INSERT'):
         settings.bulk_insert = True
 
+if environ.get('EPMT_USE_PG'):
+    settings.db_params = { 'url': 'postgresql://postgres:example@localhost:5432/EPMT-TEST', 'echo': False } if (settings.orm == 'sqlalchemy') else {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'localhost', 'dbname': 'EPMT'}
+
 from epmtlib import timing, frozen_dict
 from orm import db_session, setup_db, Job
 import epmt_query as eq

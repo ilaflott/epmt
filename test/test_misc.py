@@ -76,6 +76,7 @@ class EPMTCmds(unittest.TestCase):
         self.assertEqual(type(retval), bool, 'wrong list jobs return type')
         self.assertEqual(retval, True, 'wrong list jobs return value')
 
+    @unittest.skipIf(orm_db_provider() == 'postgres', 'postgres support requires dbsize PR merge')
     def test_dbsize_provider(self):
         with capture() as (out,err):
             import argparse
@@ -85,6 +86,7 @@ class EPMTCmds(unittest.TestCase):
         isPG = (orm_db_provider() == 'postgres')
         self.assertEqual(retval, isPG, 'wrong database return value')
 
+    @unittest.skip('postgres support requires dbsize PR merge')
     @unittest.skipUnless(orm_db_provider() == 'postgres', 'requires postgres')
     def test_dbsize_json(self):
         with capture() as (out,err):
