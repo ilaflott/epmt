@@ -560,6 +560,11 @@ def _execute_raw_sql(sql, commit = False):
     connection.close()
     return res
 
+def set_sql_debug(discard):
+    print('setting/unsetting SQL debug is not supported on-the-fly')
+    print('Try changing the value of the "echo" key in the settings.py:db_params')
+    return False
+
 #@listens_for(Pool, "connect")
 #def connect(dbapi_connection, connection_rec):
 #    #print(dbapi_connection)
