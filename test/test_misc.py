@@ -78,22 +78,20 @@ class EPMTCmds(unittest.TestCase):
 
     @unittest.skipIf(orm_db_provider() == 'postgres', 'postgres support requires dbsize PR merge')
     def test_dbsize_provider(self):
-        with capture() as (out,err):
-            import argparse
-            argns = argparse.Namespace(auto=False, bytes=False, dbsize=True, drop=False, dry_run=False, epmt_cmd='dbsize', epmt_cmd_args=['database', 'table'], error=False, help=False, jobid=None, json=False, verbose=0)
+        with capture() as (out, err):
             from epmt_cmds import epmt_dbsize
-            retval,val = epmt_dbsize('',argns)
+            retval, val = epmt_dbsize()
         isPG = (orm_db_provider() == 'postgres')
         self.assertEqual(retval, isPG, 'wrong database return value')
 
     @unittest.skip('postgres support requires dbsize PR merge')
     @unittest.skipUnless(orm_db_provider() == 'postgres', 'requires postgres')
     def test_dbsize_json(self):
-        with capture() as (out,err):
-            import argparse,json
-            argns = argparse.Namespace(auto=False, bytes=False, dbsize=True, drop=False, dry_run=False, epmt_cmd='dbsize', epmt_cmd_args=['database', 'table'], error=False, help=False, jobid=None, json=True, verbose=0)
+        with capture() as (out, err):
+            import json
             from epmt_cmds import epmt_dbsize
-            retval,out = epmt_dbsize('', argns)
+            retval, out = epmt_dbsize(
+                ['database', 'table', 'index', 'tablespace'], usejson=True)
             throws = True
             json.loads(out)
             if len(out) > 1:
