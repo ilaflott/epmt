@@ -1262,3 +1262,64 @@ def get_unprocessed_jobs():
     '''
     uj = orm_findall(UnprocessedJob)
     return [ u.jobid for u in uj ]
+
+@db_session
+def get_comparable_jobs(jobs, matching_keys = ['exp_name', 'exp_component']):
+    '''
+    Given a non-empty list of job ids, the function returns a
+    a list of lists, where each sub-list is of the form:
+    [(val1, val2,..), { j1, j2,..}]
+    where val1, val2.. are the values of the matching keys that jobs
+    j1, j2, .. share.
+
+    For example, suppose the following jobs have the following tags:
+        685000 -> {'exp_name': 'ESM4_historical_D151', 'exp_component': 'ocean_annual_rho2_1x1deg', 
+'exp_time': '18840101', 'atm_res': 'c96l49', 'ocn_res': '0.5l75', 'script_name': 'ESM4_historical_D151_oce
+an_annual_rho2_1x1deg_18840101'}
+        685003 -> {'exp_name': 'ESM4_historical_D151', 'exp_component': 'ocean_cobalt_fdet_100', 'exp_time': '18840101', 'atm_res': 'c96l49', 'ocn_res': '0.5l75', 'script_name': 'ESM4_historical_D151_ocean_cobalt_fdet_100_18840101'}
+        And 625151, 627907, 633114, 629322, 685001  share the tag:
+        {u'ocn_res': u'0.5l75', u'atm_res': u'c96l49', u'exp_component': u'ocean_annual_z_1x1deg', u'exp_name': u'ESM4_historical_D151'}`. The difference is only that they have different values for `('exp_time', 'script_name')
+    
+    Then calling get_comparable_jobs(['625151', '627907', '633114', '629322', '685001', '685000', '685003'])
+    returns:
+        [
+          (('ESM4_historical_D151', 'ocean_annual_z_1x1deg'), { '625151', '627907', '633114', '629322', '685001'} ),
+          (('ESM4_historical_D151', 'ocean_annual_rho2_1x1deg'), { '685000' }),
+          (('ESM4_historical_D151',  'ocean_cobalt_fdet_100'), {'685003'})
+        ]
+
+    The default keys that require a match are 'exp_name' and 'exp_component'.
+    The top-level list is ordered in decreasing cardinality of number of jobs. 
+    '''
+    d = {}
+    jobs = orm_jobs_col(jobs)
+    logger.info('doing a get_comparable_jobs on {0} jobs'.format(jobs.count()))
+    for j in jobs:
+        tag = j.tags
+        search_tuple = tuple([tag.get(k, '') for k in matching_keys])
+        if search_tuple in d:
+            d[search_tuple].append(j.jobid)
+        else:
+            d[search_tuple] = [j.jobid]
+    # now assemble the dict into a list of tuples ordered by decreasing 
+    # job count
+    l = []
+    for k in d.keys():
+        l.append((k, d[k]))
+    return sorted(l, key = lambda v: len(v[1]), reverse=True)
+
+def are_jobs_comparable(jobs, matching_keys = ['exp_name', 'exp_component']):
+    '''
+    Returns True if *all* the supplied jobs are comparable. IOW, they share
+    the same values for *all* the keys specified in matching_keys. Returns
+    False otherwise.
+
+    Example:
+    >>> eq.are_jobs_comparable(['625151', '627907', '633114', '629322', '685001', '685000', '685003'])
+    INFO:epmt_query:doing a get_comparable_jobs on 7 jobs
+    False
+    >>> eq.are_jobs_comparable(['625151', '627907', '633114', '629322', '685001'])
+    INFO:epmt_query:doing a get_comparable_jobs on 5 jobs
+    True
+    '''
+    return (len(get_comparable_jobs(jobs, matching_keys)) == 1)
