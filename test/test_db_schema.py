@@ -20,7 +20,7 @@ if environ.get('EPMT_USE_SQLALCHEMY'):
         settings.bulk_insert = True
 
 if environ.get('EPMT_USE_PG'):
-    settings.db_params = { 'url': 'postgresql://postgres:example@localhost:5432/EPMT-TEST', 'echo': False } if (settings.orm == 'sqlalchemy') else {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'localhost', 'dbname': 'EPMT'}
+    settings.db_params = { 'url': 'postgresql://postgres:example@localhost:5432/EPMT-TEST', 'echo': False } if (settings.orm == 'sqlalchemy') else {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'localhost', 'dbname': 'EPMT-TEST'}
 
 from epmtlib import capture
 from orm import db_session, setup_db, orm_dump_schema
