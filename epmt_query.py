@@ -1264,7 +1264,7 @@ def get_unprocessed_jobs():
     return [ u.jobid for u in uj ]
 
 @db_session
-def get_comparable_jobs(jobs, matching_keys = ['exp_name', 'exp_component']):
+def comparable_job_partitions(jobs, matching_keys = ['exp_name', 'exp_component']):
     '''
     Given a non-empty list of job ids, the function returns a
     a list of lists, where each sub-list is of the form:
@@ -1280,7 +1280,7 @@ an_annual_rho2_1x1deg_18840101'}
         And 625151, 627907, 633114, 629322, 685001  share the tag:
         {u'ocn_res': u'0.5l75', u'atm_res': u'c96l49', u'exp_component': u'ocean_annual_z_1x1deg', u'exp_name': u'ESM4_historical_D151'}`. The difference is only that they have different values for `('exp_time', 'script_name')
     
-    Then calling get_comparable_jobs(['625151', '627907', '633114', '629322', '685001', '685000', '685003'])
+    Then calling comparable_job_partitions(['625151', '627907', '633114', '629322', '685001', '685000', '685003'])
     returns:
         [
           (('ESM4_historical_D151', 'ocean_annual_z_1x1deg'), { '625151', '627907', '633114', '629322', '685001'} ),
@@ -1293,7 +1293,7 @@ an_annual_rho2_1x1deg_18840101'}
     '''
     d = {}
     jobs = orm_jobs_col(jobs)
-    logger.info('doing a get_comparable_jobs on {0} jobs'.format(jobs.count()))
+    logger.info('doing a comparable_job_partitions on {0} jobs'.format(jobs.count()))
     for j in jobs:
         tag = j.tags
         search_tuple = tuple([tag.get(k, '') for k in matching_keys])
@@ -1316,10 +1316,10 @@ def are_jobs_comparable(jobs, matching_keys = ['exp_name', 'exp_component']):
 
     Example:
     >>> eq.are_jobs_comparable(['625151', '627907', '633114', '629322', '685001', '685000', '685003'])
-    INFO:epmt_query:doing a get_comparable_jobs on 7 jobs
+    INFO:epmt_query:doing a comparable_job_partitions on 7 jobs
     False
     >>> eq.are_jobs_comparable(['625151', '627907', '633114', '629322', '685001'])
-    INFO:epmt_query:doing a get_comparable_jobs on 5 jobs
+    INFO:epmt_query:doing a comparable_job_partitions on 5 jobs
     True
     '''
-    return (len(get_comparable_jobs(jobs, matching_keys)) == 1)
+    return (len(comparable_job_partitions(jobs, matching_keys)) == 1)

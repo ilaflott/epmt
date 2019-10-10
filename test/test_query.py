@@ -396,6 +396,11 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(eq.get_jobs(annotations = {'abc': '200'}, fmt='terse'), [u'685016'])
 
     @db_session
+    def test_jobs_comparable(self):
+        self.assertEqual(sorted(eq.comparable_job_partitions(['685000', '685003', '685016']), key=lambda v: v[1][0]), [(('ESM4_historical_D151', 'ocean_annual_rho2_1x1deg'), ['685000']), (('ESM4_historical_D151', 'ocean_cobalt_fdet_100'), ['685003']), (('ESM4_historical_D151', 'ocean_month_rho2_1x1deg'), ['685016'])])
+        self.assertFalse(eq.are_jobs_comparable(['685000', '685003', '685016']))
+
+    @db_session
     def test_unanalyzed_jobs(self):
         uj = eq.get_unanalyzed_jobs(['685000', '685003', '685016'])
         self.assertEqual(set(uj), set(['685000', '685003', '685016']))
