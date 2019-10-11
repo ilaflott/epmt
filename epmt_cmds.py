@@ -831,7 +831,7 @@ def epmt_dbsize(findwhat=['database','table','index','tablespace'], usejson=Fals
 #
 # depends on args being global
 #
-def epmt_entrypoint(args, help):
+def epmt_entrypoint(args):
     if args.verbose == None:
         args.verbose = 0
     set_logging(args.verbose, check=True)
@@ -839,40 +839,37 @@ def epmt_entrypoint(args, help):
     if not args.verbose:
         set_logging(settings.verbose, check=True)
 
-    if args.help or args.epmt_cmd == 'help' or not args.epmt_cmd:
-        help(stdout)
-        dump_config(stdout)
-        exit(0)
-    if args.epmt_cmd == 'dbsize':
-        return(epmt_dbsize(findwhat=args.epmt_cmd_args, usejson=args.json, usebytes=args.bytes) == False)
-    if args.epmt_cmd == 'start':
+    
+    if args.command == 'dbsize':
+        return(epmt_dbsize(findwhat=args.names_list, usejson=args.json, usebytes=args.bytes) == False)
+    if args.command== 'start':
         return(epmt_start_job(args.jobid,None,other=args.epmt_cmd_args) == False)
-    if args.epmt_cmd == 'stop':
+    if args.command == 'stop':
         return(epmt_stop_job(args.jobid,None,other=args.epmt_cmd_args) == False)
-    if args.epmt_cmd == 'dump':
+    if args.command == 'dump':
         return(epmt_dump_metadata(args.jobid,None,filelist=args.epmt_cmd_args) == False)
-    if args.epmt_cmd == 'source':
+    if args.command == 'source':
         s = epmt_source(args.jobid,None,(args.verbose > 2),monitor_debug=(args.verbose > 2),add_export=True)
         if s:
             print(s)
             return 0
         return 1
-    if args.epmt_cmd == "stage":
+    if args.command == "stage":
         return(epmt_stage(args.jobid,None,args.epmt_cmd_args) == False)
-    if args.epmt_cmd == 'run':
+    if args.command == 'run':
         if not args.epmt_cmd_args: 
             logger.error("No command given")
             return(1)
         r = epmt_run(args.jobid,None,args.epmt_cmd_args,wrapit=args.auto,dry_run=args.dry_run,debug=(args.verbose > 2))
         return(r)
-    if args.epmt_cmd == 'submit':
+    if args.command == 'submit':
         return(epmt_submit(args.epmt_cmd_args,args.jobid,dry_run=args.dry_run,drop=args.drop,keep_going=not args.error) == False)
-    if args.epmt_cmd == 'check':
+    if args.command == 'check':
         return(epmt_check(args.jobid) == False)
-    if args.epmt_cmd == 'delete':
+    if args.command == 'delete':
         from epmt_cmd_delete import epmt_delete_jobs
         return(epmt_delete_jobs(args.epmt_cmd_args) == False)
-    if args.epmt_cmd == 'list':
+    if args.command == 'list':
         from epmt_cmd_list import epmt_list
         return(epmt_list(args.epmt_cmd_args) == False)
     logger.error("Unknown command, %s. See -h for options.",args.epmt_cmd)
