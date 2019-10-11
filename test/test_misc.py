@@ -19,7 +19,8 @@ if environ.get('EPMT_USE_SQLALCHEMY'):
         settings.bulk_insert = True
 
 if environ.get('EPMT_USE_PG'):
-    settings.db_params = { 'url': 'postgresql://postgres:example@localhost:5432/EPMT-TEST', 'echo': False } if (settings.orm == 'sqlalchemy') else {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'localhost', 'dbname': 'EPMT-TEST'}
+    dbhost = environ.get('POSTGRES_HOST', 'localhost')
+    settings.db_params = { 'url': 'postgresql://postgres:example@{0}:5432/EPMT-TEST'.format(dbhost), 'echo': False } if (settings.orm == 'sqlalchemy') else {'provider': 'postgres', 'user': 'postgres','password': 'example','host': dbhost, 'dbname': 'EPMT-TEST'}
 
 
 from epmtlib import timing, capture

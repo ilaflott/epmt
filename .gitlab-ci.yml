@@ -2,6 +2,10 @@ variables:
   POSTGRES_DB: "EPMT-TEST"
   POSTGRES_USER: "postgres"
   POSTGRES_PASSWORD: "example"
+  POSTGRES_HOST: "postgres"
+
+services:
+  - postgres:9.5
 
 build:python2.7:
   image: python:2.7.16
@@ -22,8 +26,6 @@ build:python2.7:
 
 build:python3:
   image: python:3.7.4
-  services:
-    - postgres:9.5
   script: # Modify the commands below to build your repository.
     - python3 -V
     - pip3 install -r requirements.txt.py3
