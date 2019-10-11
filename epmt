@@ -9,29 +9,68 @@ if (__name__ == "__main__"):
         print >> stderr,"WARNING: system argparse not found, using our own."
         print >> stderr,"WARNING: This python/OS is likely vulnerable to exploits!"
         import argparse26 as argparse
-        
+    
     def printText(args):
         print (args)
 
-    parser = argparse.ArgumentParser(prog='epmt')
+    parser = argparse.ArgumentParser(prog='epmt', description="This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes."\
+        +"PerfMiner \n This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes. This tool uses papiex to perform the "\
+        +"process monitoring. This tool is targeted at batch or ephemeral jobs, not daemon processes.")
     subparser = parser.add_subparsers(title="commands", dest="command")
-    #subparser = subparser.add_parser('epmt_cmd', help="help, start, source, run, stop, dump, stage, submit, check");
+
+    # help, start, source, run, stop, dump, stage, submit, check
+    
+    source_parser = subparser.add_parser('source', help="Find detailed size of database")
+    source_parser.add_argument('size_of', default=[], nargs='*', help="database, table, index, tablespace")
+    source_parser.add_argument('--bytes',action='store_true',help="dbsize --bytes")
+    source_parser.add_argument('--json',action='store_true',help="Output JSON dbsizes")
+    source_parser.set_defaults(func=printText, epmt_cmd='source')
+
     start_parser = subparser.add_parser('start', help="Begin epmt logging")
     start_parser.add_argument('-j', '--jobid',help="Force job ID instead of getting it from the environment");
-    start_parser.set_defaults(epmt_cmd='start')
-    dbsize = subparser.add_parser('dbsize', help="database, table, index, tablespace")
-    dbsize.add_argument('-n', '--names-list', default=[], nargs='+')
-    dbsize.set_defaults(func=printText)
-    parser.add_argument('-n', '--dry-run',action='store_true',help="Don't touch the database");
-    parser.add_argument('-e', '--error',action='store_true',help="Exit at the first sign of trouble");
+    start_parser.add_argument('epmt_cmd_args', nargs='*', help="List of directories from batch")
+    start_parser.set_defaults(func=printText, epmt_cmd='start')
+
+    stage_parser = subparser.add_parser('stage', help="Find detailed size of database")
+    stage_parser.add_argument('-j', '--jobid',help="Force job ID instead of getting it from the environment");
+    stage_parser.add_argument('epmt_cmd_args', nargs='*', help="List of directories from batch")
+    stage_parser.set_defaults(func=printText, epmt_cmd='stage')
+
+    dump_parser = subparser.add_parser('dump', help="Find detailed size of database")
+    dump_parser.add_argument('size_of', default=[], nargs='*', help="database, table, index, tablespace")
+    dump_parser.add_argument('--bytes',action='store_true',help="dbsize --bytes")
+    dump_parser.add_argument('--json',action='store_true',help="Output JSON dbsizes")
+    dump_parser.set_defaults(func=printText, epmt_cmd='dump')
+
+    run_parser = subparser.add_parser('run')
+    run_parser.add_argument('-a', '--auto',action='store_true',help="Do start/stop when running")
+    run_parser.set_defaults(func=printText, epmt_cmd='run')
+    
+    stop_parser = subparser.add_parser('stop', help="Begin epmt logging")
+    stop_parser.add_argument('-j', '--jobid',help="Force job ID instead of getting it from the environment");
+    stop_parser.add_argument('epmt_cmd_args', nargs='*', help="List of directories from batch")
+    stop_parser.set_defaults(func=printText, epmt_cmd='stop')
+
+    submit_parser = subparser.add_parser('submit', help="Commit completed job to database")
+    submit_parser.add_argument('-j', '--jobid', help="Force job ID instead of getting it from the environment")
+    submit_parser.add_argument('-u', '--user', help="Force user instead of getting it from the environment")
+    submit_parser.add_argument('epmt_cmd_args', nargs='*', help="List of directories")
+    submit_parser.add_argument('-e', '--error', action='store_true',help="Exit at the first sign of trouble")
+    submit_parser.add_argument('-n', '--dry-run', action='store_true',help="Don't touch the database")
+    submit_parser.add_argument('--drop',action='store_true',help="Drop all tables/data and recreate before importing")
+    submit_parser.set_defaults(func=printText, epmt_cmd='submit')
+
+    dbsize_parser = subparser.add_parser('dbsize', help="Find detailed size of database")
+    dbsize_parser.add_argument('size_of', default=[], nargs='*', help="database, table, index, tablespace")
+    dbsize_parser.add_argument('--bytes',action='store_true',help="dbsize --bytes")
+    dbsize_parser.add_argument('--json',action='store_true',help="Output JSON dbsizes")
+    dbsize_parser.set_defaults(func=printText, epmt_cmd='submit')
+
     parser.add_argument('-v', '--verbose',action='count',help="Increase level of verbosity/debug")
     #	parser.add_argument('-c', '--csh',action='store_true',help="C-shell mode")
     #	parser.add_argument('-b', '--bash',action='store_true',help="Bash mode")
-    parser.add_argument('-a', '--auto',action='store_true',help="Do start/stop when running")
-    parser.add_argument('--drop',action='store_true',help="Drop all tables/data and recreate before importing")
 
-    parser.add_argument('--bytes',action='store_true',help="dbsize --bytes")
-    parser.add_argument('--json',action='store_true',help="Output JSON dbsizes")
+
     parser.set_defaults(func=printText)
     args = parser.parse_args()
     from epmt_cmds import epmt_entrypoint

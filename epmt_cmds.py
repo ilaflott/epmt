@@ -626,7 +626,7 @@ def get_filedict(dirname,pattern,tar=False):
 
     return filedict
 
-def epmt_submit(other_dirs, forced_jobid=None, dry_run=True, drop=False, keep_going=True):
+def epmt_submit(other_dirs, forced_jobid=None, forced_user=None, dry_run=True, drop=False, keep_going=True):
     if dry_run and drop:
         logger.error("You can't drop tables and do a dry run")
         return(False)
@@ -841,7 +841,7 @@ def epmt_entrypoint(args):
 
     
     if args.command == 'dbsize':
-        return(epmt_dbsize(findwhat=args.names_list, usejson=args.json, usebytes=args.bytes) == False)
+        return(epmt_dbsize(findwhat=args.size_of, usejson=args.json, usebytes=args.bytes) == False)
     if args.command== 'start':
         return(epmt_start_job(args.jobid,None,other=args.epmt_cmd_args) == False)
     if args.command == 'stop':
@@ -863,7 +863,7 @@ def epmt_entrypoint(args):
         r = epmt_run(args.jobid,None,args.epmt_cmd_args,wrapit=args.auto,dry_run=args.dry_run,debug=(args.verbose > 2))
         return(r)
     if args.command == 'submit':
-        return(epmt_submit(args.epmt_cmd_args,args.jobid,dry_run=args.dry_run,drop=args.drop,keep_going=not args.error) == False)
+        return(epmt_submit(args.epmt_cmd_args,args.jobid,args.user,dry_run=args.dry_run,drop=args.drop,keep_going=not args.error) == False)
     if args.command == 'check':
         return(epmt_check(args.jobid) == False)
     if args.command == 'delete':
