@@ -22,7 +22,6 @@ if environ.get('EPMT_USE_SQLALCHEMY'):
 if environ.get('EPMT_USE_PG'):
     dbhost = environ.get('POSTGRES_HOST', 'localhost')
     settings.db_params = { 'url': 'postgresql://postgres:example@{0}:5432/EPMT-TEST'.format(dbhost), 'echo': False } if (settings.orm == 'sqlalchemy') else {'provider': 'postgres', 'user': 'postgres','password': 'example','host': dbhost, 'dbname': 'EPMT-TEST'}
-print('\n' + str(settings.db_params))
 
 from epmtlib import timing, capture
 from orm import db_session, setup_db, Job, orm_get
@@ -32,6 +31,7 @@ from epmt_cmds import epmt_submit
 
 @timing
 def setUpModule():
+    print('\n' + str(settings.db_params))
     setup_db(settings)
     datafiles='test/data/misc/685000.tgz'
     print('setUpModule: importing {0}'.format(datafiles))
