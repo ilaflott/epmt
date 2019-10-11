@@ -28,9 +28,8 @@ from orm import db_session, setup_db, orm_dump_schema
 import epmt_query as eq
 
 def setUpModule():
-    #remove('db.test')
-    setup_db(settings)
     print('\n' + str(settings.db_params))
+    setup_db(settings)
     
 
 class EPMTDBSchema(unittest.TestCase):

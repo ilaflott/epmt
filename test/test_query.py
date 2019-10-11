@@ -40,8 +40,8 @@ def setUpModule():
     # if settings.db_params.get('filename') != ':memory:' and settings.db_params.get('url') != 'sqlite:///:memory:':
     #     print('db_params MUST use in-memory sqlite for testing', file=stderr)
     #     exit(1)
-    setup_db(settings)
     print('\n' + str(settings.db_params))
+    setup_db(settings)
     datafiles='test/data/query/*.tgz'
     print('setUpModdule: importing {0}'.format(datafiles))
     epmt_submit(sorted(glob(datafiles)), dry_run=False)

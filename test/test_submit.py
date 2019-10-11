@@ -31,8 +31,8 @@ from epmt_cmds import epmt_submit
 
 @timing
 def setUpModule():
-    setup_db(settings)
     print('\n' + str(settings.db_params))
+    setup_db(settings)
     datafiles='test/data/misc/685000.tgz'
     print('setUpModule: importing {0}'.format(datafiles))
     epmt_submit(glob(datafiles), dry_run=False)
