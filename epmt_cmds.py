@@ -11,7 +11,7 @@ from imp import find_module
 from grp import getgrall, getgrgid
 from pwd import getpwnam, getpwuid
 from glob import glob
-from sys import stdout, stderr
+from sys import stderr
 from shutil import rmtree
 import fnmatch
 import pickle
@@ -328,7 +328,7 @@ def epmt_check(forced_jobid):
 # These two functions should match _check_and_create_metadata!
 #
 
-def create_start_job_metadata(jobid, submit_ts, from_batch=[]):
+def create_start_job_metadata(jobid, submit_ts):
     ts=datetime.now()
     metadata = {}
     start_env=blacklist_filter(filter,**environ)
@@ -341,14 +341,12 @@ def create_start_job_metadata(jobid, submit_ts, from_batch=[]):
         metadata['job_pl_submit_ts'] = submit_ts
     metadata['job_pl_start_ts'] = ts
     metadata['job_pl_env'] = start_env
-#        metadata['job_pl_from_batch'] = from_batch
     return metadata
 
-def merge_stop_job_metadata(metadata, exitcode, reason, from_batch=[]):
+def merge_stop_job_metadata(metadata, exitcode, reason):
     ts=datetime.now()
     stop_env=blacklist_filter(filter,**environ)
     metadata['job_el_stop_ts'] = ts
-#    metadata['job_el_from_batch'] = from_batch
     metadata['job_el_exitcode'] = exitcode
     metadata['job_el_reason'] = reason
     metadata['job_el_env'] = stop_env
@@ -420,7 +418,7 @@ def epmt_start_job(forced_jobid,forced_user,other=[]):
     jobid,dir,file = setup_vars(forced_jobid,forced_user)
     if jobid == False:
         return False;
-    metadata = create_start_job_metadata(jobid,False,other)
+    metadata = create_start_job_metadata(jobid,False)
     if create_job_dir(dir) is False:
         return False
     if path.exists(file):
@@ -429,7 +427,7 @@ def epmt_start_job(forced_jobid,forced_user,other=[]):
     retval = write_job_metadata(file,metadata)
     return retval
 
-def epmt_stop_job(forced_jobid,forced_user,other=[]):
+def epmt_stop_job(forced_jobid,forced_user):
     jobid,dir,file = setup_vars(forced_jobid,forced_user)
     if jobid == False:
         return False;
@@ -440,7 +438,7 @@ def epmt_stop_job(forced_jobid,forced_user,other=[]):
     if "job_el_stop_ts" in start_metadata:
         logger.error("%s is already complete!",file)
         return False
-    metadata = merge_stop_job_metadata(start_metadata,0,"none",other)
+    metadata = merge_stop_job_metadata(start_metadata,0,"none")
     retval = write_job_metadata(file,metadata)
     return retval
 
@@ -838,14 +836,13 @@ def epmt_entrypoint(args):
     init_settings(settings)
     if not args.verbose:
         set_logging(settings.verbose, check=True)
-
     
     if args.command == 'dbsize':
         return(epmt_dbsize(findwhat=args.size_of, usejson=args.json, usebytes=args.bytes) == False)
     if args.command== 'start':
-        return(epmt_start_job(args.jobid,None,other=args.epmt_cmd_args) == False)
+        return(epmt_start_job(args.jobid,None) == False)
     if args.command == 'stop':
-        return(epmt_stop_job(args.jobid,None,other=args.epmt_cmd_args) == False)
+        return(epmt_stop_job(args.jobid,None) == False)
     if args.command == 'dump':
         return(epmt_dump_metadata(args.jobid,None,filelist=args.epmt_cmd_args) == False)
     if args.command == 'source':
