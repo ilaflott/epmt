@@ -12,10 +12,10 @@ if (__name__ == "__main__"):
         import argparse26 as argparse
     
     def printText(args):
-        print (args)
+        #print (args)
         pass
 
-    parser = argparse.ArgumentParser(prog='epmt', description="This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes."\
+    parser = argparse.ArgumentParser(prog='epmt', add_help=True, description="This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes."\
         +"PerfMiner \n This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes. This tool uses papiex to perform the "\
         +"process monitoring. This tool is targeted at batch or ephemeral jobs, not daemon processes.")
     subparser = parser.add_subparsers(title="commands", dest="command")
@@ -71,8 +71,6 @@ if (__name__ == "__main__"):
     parser.add_argument('-v', '--verbose',action='count',help="Increase level of verbosity/debug")
     #	parser.add_argument('-c', '--csh',action='store_true',help="C-shell mode")
     #	parser.add_argument('-b', '--bash',action='store_true',help="Bash mode")
-
-
     parser.set_defaults(func=printText)
     if len(sys.argv) < 2:
         parser.print_help()
@@ -80,7 +78,8 @@ if (__name__ == "__main__"):
     args = parser.parse_args()
     from epmt_cmds import epmt_entrypoint
     args.func(args)
-    exit(epmt_entrypoint(args))
+    if hasattr(args,'epmt_cmd'):
+        exit(epmt_entrypoint(args))
 else:
     print >> stderr,"ERROR: This module cannot be imported."
     exit(1)
