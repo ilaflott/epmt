@@ -4,14 +4,16 @@ if (__name__ == "__main__"):
     # Handle crappy python 2.6 installations
     try:
         import argparse
+        import sys
     except ImportError:
-        from sys import stderr
+        from sys import stderr, argv
         print >> stderr,"WARNING: system argparse not found, using our own."
         print >> stderr,"WARNING: This python/OS is likely vulnerable to exploits!"
         import argparse26 as argparse
     
     def printText(args):
         print (args)
+        pass
 
     parser = argparse.ArgumentParser(prog='epmt', description="This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes."\
         +"PerfMiner \n This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes. This tool uses papiex to perform the "\
@@ -72,6 +74,9 @@ if (__name__ == "__main__"):
 
 
     parser.set_defaults(func=printText)
+    if len(sys.argv) < 2:
+        parser.print_help()
+        exit(0)
     args = parser.parse_args()
     from epmt_cmds import epmt_entrypoint
     args.func(args)
