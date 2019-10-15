@@ -23,6 +23,8 @@ if (__name__ == "__main__"):
 
     # help, start, source, run, stop, dump, stage, submit, check
     
+    help_parser = subparser.add_parser('help')
+
     source_parser = subparser.add_parser('source', help="Environment variables for performance monitoring")
     source_parser.add_argument('-j', '--jobid',help="Force job ID instead of getting it from the environment")
     source_parser.set_defaults(func=debug_namespace, epmt_cmd='source')
@@ -84,12 +86,13 @@ if (__name__ == "__main__"):
     #	parser.add_argument('-c', '--csh',action='store_true',help="C-shell mode")
     #	parser.add_argument('-b', '--bash',action='store_true',help="Bash mode")
     parser.set_defaults(func=debug_namespace,epmt_cmd='help')
-    if len(argv) < 2:
+
+    args = parser.parse_args()
+    from epmt_cmds import epmt_entrypoint
+    if args.epmt_cmd=='help':
         parser.print_help()
         dump_config(stdout)
         exit(0)
-    args = parser.parse_args()
-    from epmt_cmds import epmt_entrypoint
     args.func(args)
     if hasattr(args,'epmt_cmd'):
         exit(epmt_entrypoint(args))
