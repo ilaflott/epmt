@@ -101,7 +101,7 @@ def partition_jobs_by_ops(jobs, tags=[], features=FEATURES, methods=[modified_z_
 
 
 @db_session
-def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds = thresholds):
+def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds = thresholds, sanity_check=True):
     """
     This function will detects outliers among a set of input jobs
     
@@ -142,6 +142,9 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
                     u'kern-6656-20190614-191138'],
                    [])}
     """
+    if sanity_check:
+        eq._warn_incomparable_jobs(jobs)
+
     # if we don't have a dataframe, get one
     if type(jobs) != pd.DataFrame:
         jobs = eq.conv_jobs(jobs, fmt='pandas')
@@ -182,7 +185,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
         
 
 @db_session
-def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds=thresholds):
+def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds=thresholds, sanity_check=True):
     """
     jobs is a list of jobids or a Pony Query object
     tags is a list of tags specified either as a string or a list of string/list of dicts
@@ -246,6 +249,9 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
     >>> sorted_features
     ['duration', 'cpu_time', 'num_procs']
     """
+    if sanity_check:
+        eq._warn_incomparable_jobs(jobs)
+
     tags = tags_list(tags)
     if features:
         logger.debug('using features: ' + str(features))

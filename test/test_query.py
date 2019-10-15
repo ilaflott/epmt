@@ -28,7 +28,7 @@ if environ.get('EPMT_USE_PG'):
     dbhost = environ.get('POSTGRES_HOST', 'localhost')
     settings.db_params = { 'url': 'postgresql://postgres:example@{0}:5432/EPMT-TEST'.format(dbhost), 'echo': False } if (settings.orm == 'sqlalchemy') else {'provider': 'postgres', 'user': 'postgres','password': 'example','host': dbhost, 'dbname': 'EPMT-TEST'}
 
-from epmtlib import timing, isString, frozen_dict, str_dict
+from epmtlib import timing, isString, frozen_dict, str_dict, capture
 from orm import db_session, setup_db, Job, Process, Operation, orm_get, desc, orm_is_query, orm_commit
 import epmt_query as eq
 from epmt_cmds import epmt_submit
@@ -450,7 +450,9 @@ class QueryAPI(unittest.TestCase):
         jobs = eq.get_jobs(JOBS_LIST, fmt='terse')
         self.assertEqual(len(jobs), 3)
         model_name = 'test_model'
-        r = eq.create_refmodel(jobs, tag='model_name:'+model_name)
+        with capture() as (out, err):
+            r = eq.create_refmodel(jobs, tag='model_name:'+model_name)
+        self.assertIn('WARNING: The jobs do not share identical tag values', err.getvalue())
         self.assertEqual(r['tags'], {'model_name': model_name})
         rq = eq.get_refmodels(tag='model_name:'+model_name, fmt='orm')
         self.assertEqual(rq.count(), 1)

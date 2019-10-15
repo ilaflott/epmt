@@ -702,7 +702,7 @@ def _refmodel_scores(col, outlier_methods, features):
 def create_refmodel(jobs=[], tag={}, op_tags=[], 
                     outlier_methods=[modified_z_score], 
                     features=['duration', 'cpu_time', 'num_procs'], exact_tag_only=False,
-                    fmt='dict'):
+                    fmt='dict', sanity_check = True):
     """
     This function creates a reference model and returns
     the ID of the newly-created model in the database
@@ -769,6 +769,9 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
     #    jobs = Job.select(lambda j: j.jobid in jobs)
     jobs_orm = orm_jobs_col(jobs)
     jobs = jobs_orm[:]
+
+    if sanity_check:
+        _warn_incomparable_jobs(jobs)
 
     if op_tags:
         if op_tags == '*':
@@ -1293,7 +1296,7 @@ an_annual_rho2_1x1deg_18840101'}
     '''
     d = {}
     jobs = orm_jobs_col(jobs)
-    logger.info('doing a comparable_job_partitions on {0} jobs'.format(jobs.count()))
+    # logger.info('doing a comparable_job_partitions on {0} jobs'.format(jobs.count()))
     for j in jobs:
         tag = j.tags
         search_tuple = tuple([tag.get(k, '') for k in matching_keys])
@@ -1323,3 +1326,12 @@ def are_jobs_comparable(jobs, matching_keys = ['exp_name', 'exp_component']):
     True
     '''
     return (len(comparable_job_partitions(jobs, matching_keys)) == 1)
+
+def _warn_incomparable_jobs(jobs):
+    jobs = orm_jobs_col(jobs)
+    if not are_jobs_comparable(jobs):
+        msg = 'The jobs do not share identical tag values for "exp_name" and "exp_component"'
+        from sys import stderr
+        print('WARNING:', msg, file=stderr)
+        for j in jobs:
+            print('   ',j.jobid, j.tags.get('exp_name'), j.tags.get('exp_component'), file=stderr)
