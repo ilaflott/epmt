@@ -16,7 +16,7 @@ if (__name__ == "__main__"):
             print (args)
         pass
     from epmt_cmds import dump_config
-    parser = argparse.ArgumentParser(prog='epmt', add_help=True, description="This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes."\
+    parser = argparse.ArgumentParser(prog='epmt', add_help=True, epilog=None, description="This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes."\
         +"PerfMiner \n This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes. This tool uses papiex to perform the "\
         +"process monitoring. This tool is targeted at batch or ephemeral jobs, not daemon processes.")
     subparser = parser.add_subparsers(title="commands", dest="command")
@@ -85,7 +85,7 @@ if (__name__ == "__main__"):
     parser.add_argument('-v', '--verbose',action='count',help="Increase level of verbosity/debug")
     #	parser.add_argument('-c', '--csh',action='store_true',help="C-shell mode")
     #	parser.add_argument('-b', '--bash',action='store_true',help="Bash mode")
-    parser.set_defaults(func=debug_namespace,epmt_cmd='help')
+    parser.set_defaults(func=debug_namespace, command='help')
 
     args = parser.parse_args()
     from epmt_cmds import epmt_entrypoint
