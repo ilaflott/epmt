@@ -89,13 +89,12 @@ if (__name__ == "__main__"):
 
     args = parser.parse_args()
     from epmt_cmds import epmt_entrypoint
-    if args.epmt_cmd=='help':
+    if args.command=='help':
         parser.print_help()
         dump_config(stdout)
         exit(0)
     args.func(args)
-    if hasattr(args,'epmt_cmd'):
-        exit(epmt_entrypoint(args))
+    exit(epmt_entrypoint(args))
 else:
     print >> stderr,"ERROR: This module cannot be imported."
     exit(1)

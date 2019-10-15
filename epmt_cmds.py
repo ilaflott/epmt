@@ -869,7 +869,7 @@ def epmt_entrypoint(args):
     if args.command == 'list':
         from epmt_cmd_list import epmt_list
         return(epmt_list(args.epmt_cmd_args) == False)
-    logger.error("Unknown command, %s. See -h for options.",args.epmt_cmd)
+    logger.error("Unknown command, %s. See -h for options.",args.command)
     exit(1)
 
 # Use of globals here is gross. FIX!
