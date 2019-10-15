@@ -14,11 +14,12 @@ class Operation(dict):
     __delattr__ = dict.__delitem__
 
     def __init__(self, jobs, tags, exact_tag_only = False):
-        from orm import orm_is_query
+        from orm import orm_is_query, orm_jobs_col
         from epmtlib import tag_from_string, tags_list
         from logging import getLogger
         logger = getLogger(__name__)
-        if (orm_is_query(jobs) and jobs.count() == 0) or (len(jobs) == 0):
+        jobs = orm_jobs_col(jobs)
+        if (jobs.count() == 0):
             raise ValueError("jobs count should be greater than zero")
         self.jobs = jobs
         self.tags = tags_list(tags) if (type(tags) == list) else tag_from_string(tags)
@@ -94,6 +95,7 @@ class Operation(dict):
     def to_dict(self):
         (duration, intervals, proc_sums) = (self.duration, self.intervals, self.proc_sums)
         d = dict(self)
+        d['jobs'] = self.jobs[:]
         d['duration'] = duration
         d['intervals'] = intervals
         d['proc_sums'] = proc_sums
