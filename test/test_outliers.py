@@ -221,7 +221,7 @@ class OutliersAPI(unittest.TestCase):
         self.assertTrue(res, 'detect_rootcause_op returned False')
         self.assertEqual(list(df.columns.values), ['cpu_time', 'duration', 'num_procs'], 'wrong order of features returned by RCA')
         self.assertEqual(df.shape, (12,3), "wrong dataframe format")
-        self.assertEqual([int(x) for x in list(df.loc['modified_z_score_ratio'])], [379, 56, 0], "wrong madz score ratios")
+        self.assertEqual([int(x) for x in list(df.loc['modified_z_score_ratio'])], [379, 41, 0], "wrong madz score ratios")
 
     @db_session
     def test_trained_model(self):
