@@ -12,7 +12,7 @@ if (__name__ == "__main__"):
         import argparse26 as argparse
     
     def debug_namespace(args):
-        if True:
+        if False:
             print (args)
         pass
     parser = argparse.ArgumentParser(prog='epmt', add_help=True, epilog=None, description="This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes."\
