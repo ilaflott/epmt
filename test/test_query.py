@@ -1,37 +1,7 @@
 #!/usr/bin/env python
-from __future__ import print_function
-import unittest
-from sys import stderr, exit
-import sys
-from glob import glob
-import pandas as pd
-import datetime
-from os import environ
 
-# append the parent directory of this test to the module search path
-#from os.path import dirname
-#sys.path.append(dirname(__file__) + "/..")
-
-environ['EPMT_USE_DEFAULT_SETTINGS'] = "1"
-from epmtlib import set_logging
-set_logging(-1)
-
-# Put EPMT imports only after we have called set_logging()
-import epmt_default_settings as settings
-if environ.get('EPMT_USE_SQLALCHEMY'):
-    settings.orm = 'sqlalchemy'
-    settings.db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
-    if environ.get('EPMT_BULK_INSERT'):
-        settings.bulk_insert = True
-
-if environ.get('EPMT_USE_PG'):
-    dbhost = environ.get('POSTGRES_HOST', 'localhost')
-    settings.db_params = { 'url': 'postgresql://postgres:example@{0}:5432/EPMT-TEST'.format(dbhost), 'echo': False } if (settings.orm == 'sqlalchemy') else {'provider': 'postgres', 'user': 'postgres','password': 'example','host': dbhost, 'dbname': 'EPMT-TEST'}
-
-from epmtlib import timing, isString, frozen_dict, str_dict, capture
-from orm import db_session, setup_db, Job, Process, Operation, orm_get, desc, orm_is_query, orm_commit
-import epmt_query as eq
-from epmt_cmds import epmt_submit
+# the import below is crucial to get a sane test environment
+from . import *
 
 JOBS_LIST = ['685016', '685003', '685000']
 
@@ -237,7 +207,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(s, s1 | s2)
 
         # hosts, when
-        procs = eq.get_procs('685000', when=datetime.datetime(2019, 6, 15, 11, 53), fmt='orm')
+        procs = eq.get_procs('685000', when=datetime(2019, 6, 15, 11, 53), fmt='orm')
         pids = [p.pid for p in procs]
         self.assertEqual(set(pids), set([6098, 6226]))
         procs = eq.get_procs('685000', when='06/15/2019 11:53', fmt='orm')
@@ -440,7 +410,7 @@ class QueryAPI(unittest.TestCase):
         procs = eq.timeline(jobs, fmt='orm')
         #p1 = procs.first()
         #self.assertEqual(p1.start, min(min(j.processes.start) for j in jobs))
-        self.assertEqual([ p.start for p in procs[:3] ], [datetime.datetime(2019, 6, 15, 11, 52, 4, 126892), datetime.datetime(2019, 6, 15, 11, 52, 4, 133795), datetime.datetime(2019, 6, 15, 11, 52, 4, 142141)])
+        self.assertEqual([ p.start for p in procs[:3] ], [datetime(2019, 6, 15, 11, 52, 4, 126892), datetime(2019, 6, 15, 11, 52, 4, 133795), datetime(2019, 6, 15, 11, 52, 4, 142141)])
         procs = eq.timeline('685016', fmt='orm', limit=5)
         pids = [p.pid for p in procs]
         self.assertEqual(pids, [122181, 122182, 122183, 122184, 122185])
@@ -498,7 +468,7 @@ class QueryAPI(unittest.TestCase):
 
         # test before/after
         j = eq.get_jobs(JOBS_LIST, fmt='orm')[:][-1]
-        ndays = (datetime.datetime.now() - j.start).days 
+        ndays = (datetime.now() - j.start).days 
         n = eq.delete_jobs(JOBS_LIST, force=True, after=-(ndays-1))
         self.assertEqual(n, 0)
         n = eq.delete_jobs(JOBS_LIST, force=True, after='06/16/2019 00:00')

@@ -1,32 +1,9 @@
 #!/usr/bin/env python
-from __future__ import print_function
-import unittest
-from sys import stderr, exit
-from glob import glob
-from os import environ
 
-# put this above all epmt imports
-environ['EPMT_USE_DEFAULT_SETTINGS'] = "1"
-from epmtlib import set_logging
-set_logging(-1)
+# the import below is crucial to get a sane test environment
+from . import *
 
-# Put EPMT imports only after we have called set_logging()
-import epmt_default_settings as settings
-if environ.get('EPMT_USE_SQLALCHEMY'):
-    settings.orm = 'sqlalchemy'
-    settings.db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
-    if environ.get('EPMT_BULK_INSERT'):
-        settings.bulk_insert = True
-
-if environ.get('EPMT_USE_PG'):
-    dbhost = environ.get('POSTGRES_HOST', 'localhost')
-    settings.db_params = { 'url': 'postgresql://postgres:example@{0}:5432/EPMT-TEST'.format(dbhost), 'echo': False } if (settings.orm == 'sqlalchemy') else {'provider': 'postgres', 'user': 'postgres','password': 'example','host': dbhost, 'dbname': 'EPMT-TEST'}
-
-
-from epmtlib import timing, capture
-from orm import db_session, setup_db, Job, orm_db_provider
-import epmt_query as eq
-from epmt_cmds import epmt_submit, epmt_dbsize
+from epmt_cmds import epmt_dbsize
 from epmt_cmd_delete import epmt_delete_jobs
 from epmt_cmd_list import  epmt_list_jobs, epmt_list_procs, epmt_list_job_proc_tags, epmt_list_refmodels, epmt_list_op_metrics, epmt_list_thread_metrics
 
