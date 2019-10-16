@@ -10,14 +10,11 @@ if (__name__ == "__main__"):
         print >> stderr,"WARNING: system argparse not found, using our own."
         print >> stderr,"WARNING: This python/OS is likely vulnerable to exploits!"
         import argparse26 as argparse
-    
-    def debug_namespace(args):
-        if False:
-            print (args)
-        pass
-    parser = argparse.ArgumentParser(prog='epmt', add_help=True, epilog=None, description="This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes."\
+
+    parser = argparse.ArgumentParser(prog='epmt', add_help=False, epilog=None, description="This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes."\
         +"PerfMiner \n This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes. This tool uses papiex to perform the "\
         +"process monitoring. This tool is targeted at batch or ephemeral jobs, not daemon processes.")
+    parser.add_argument('-h', '--help',action='store_true',help="Show this help message and exit")
     subparser = parser.add_subparsers(title="commands", dest="command")
 
     # help, start, source, run, stop, dump, stage, submit, check
@@ -26,33 +23,31 @@ if (__name__ == "__main__"):
 
     source_parser = subparser.add_parser('source', help="Environment variables for performance monitoring")
     source_parser.add_argument('-j', '--jobid',help="Force job ID instead of getting it from the environment")
-    source_parser.set_defaults(func=debug_namespace, epmt_cmd='source')
 
     start_parser = subparser.add_parser('start', help="Begin EPMT logging")
     start_parser.add_argument('-j', '--jobid',help="Force job ID instead of getting it from the environment")
     start_parser.add_argument('epmt_cmd_args', nargs='*', help="List of directories from batch")
-    start_parser.set_defaults(func=debug_namespace, epmt_cmd='start')
 
     stage_parser = subparser.add_parser('stage', help="Generate job archive")
     stage_parser.add_argument('-j', '--jobid',help="Force job ID instead of getting it from the environment")
     stage_parser.add_argument('epmt_cmd_args', nargs='*', help="List of directories from batch")
-    stage_parser.set_defaults(func=debug_namespace, epmt_cmd='stage', jobid=None)
+    stage_parser.set_defaults(jobid=None)
 
     dump_parser = subparser.add_parser('dump', help="Print metadata from archive")
     dump_parser.add_argument('-j', '--jobid',help="Force job ID instead of getting it from the environment")
     dump_parser.add_argument('epmt_cmd_args', default=[], nargs='*', help="Archive or list of archives to dump")
-    dump_parser.set_defaults(func=debug_namespace, epmt_cmd='dump', jobid=None)
+    dump_parser.set_defaults(jobid=None)
 
     run_parser = subparser.add_parser('run')
     run_parser.add_argument('-j', '--jobid',help="Force job ID instead of getting it from the environment")
     run_parser.add_argument('-a', '--auto',action='store_true',help="Do start/stop when running")
     run_parser.add_argument('-n', '--dry-run', action='store_true',help="Don't touch the database")
     run_parser.add_argument('epmt_cmd_args', default=[], nargs='*', help="")
-    run_parser.set_defaults(func=debug_namespace, epmt_cmd='run', dry_run=False, wrapit=False)
+    run_parser.set_defaults(dry_run=False, wrapit=False)
     
     stop_parser = subparser.add_parser('stop', help="Stop EPMT logging")
     stop_parser.add_argument('-j', '--jobid',help="Force job ID instead of getting it from the environment")
-    stop_parser.set_defaults(func=debug_namespace, epmt_cmd='stop', epmt_cmd_args=None)
+    stop_parser.set_defaults(epmt_cmd_args=None)
 
     submit_parser = subparser.add_parser('submit', help="Commit completed job to database")
     submit_parser.add_argument('epmt_cmd_args', nargs='*', help="List of directories")
@@ -61,38 +56,38 @@ if (__name__ == "__main__"):
     submit_parser.add_argument('-e', '--error', action='store_true',help="Exit at the first sign of trouble")
     submit_parser.add_argument('-n', '--dry-run', action='store_true',help="Don't touch the database")
     submit_parser.add_argument('--drop',action='store_true',help="Drop all tables/data and recreate before importing")
-    submit_parser.set_defaults(func=debug_namespace, epmt_cmd='submit')
 
     dbsize_parser = subparser.add_parser('dbsize', help="Find detailed size of database")
     dbsize_parser.add_argument('size_of', default=[], nargs='*', help="database, table, index, tablespace")
     dbsize_parser.add_argument('--bytes',action='store_true',help="Returns dbsize in bytes")
     dbsize_parser.add_argument('--json',action='store_true',help="Output JSON results of dbsizes")
-    dbsize_parser.set_defaults(func=debug_namespace, epmt_cmd='submit')
 
     check_parser = subparser.add_parser('check', help='Verify EPMT Installation')
     check_parser.add_argument('-j', '--jobid', help="Force job ID instead of getting it from the environment")
-    check_parser.set_defaults(epmt_cmd='check')
 
     delete_parser = subparser.add_parser('delete', help='Delete jobs from the database')
     delete_parser.add_argument('epmt_cmd_args', nargs='*', help="List of jobs to delete")
-    delete_parser.set_defaults(epmt_cmd='delete')
     
     list_parser = subparser.add_parser('list', help='Display all jobs in the database')
     list_parser.add_argument('epmt_cmd_args', nargs='*', help="A list of jobs to search for")
-    list_parser.set_defaults(epmt_cmd='list')
     
     settings_parser = subparser.add_parser('settings', help='Display current settings information')
-    settings_parser.set_defaults(epmt_cmd='settings')
 
     parser.add_argument('-v', '--verbose',action='count',help="Increase level of verbosity/debug")
-    parser.set_defaults(func=debug_namespace, command='help')
 
     args = parser.parse_args()
-    from epmt_cmds import epmt_entrypoint
-    args.func(args)
-    if args.command=='help':
+    from epmt_cmds import epmt_entrypoint, dump_config
+    
+    # Special Cases
+    #print(vars(args))
+    if vars(args).get('help') or args.help or args.command=='help':
+        parser.print_help()
+        dump_config(stdout)
+        exit(0)
+    if args.command==None:
         parser.print_help()
         exit(0)
+
     exit(epmt_entrypoint(args))
 else:
     print >> stderr,"ERROR: This module cannot be imported."

@@ -832,8 +832,7 @@ def epmt_entrypoint(args):
     init_settings(settings)
     if not args.verbose:
         set_logging(settings.verbose, check=True)
-    if args.command == 'settings':
-        return(dump_config(stdout) == False)
+
     if args.command == 'dbsize':
         return(epmt_dbsize(findwhat=args.size_of, usejson=args.json, usebytes=args.bytes) == False)
     if args.command== 'start':
