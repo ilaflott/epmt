@@ -3,11 +3,7 @@ from datetime import datetime
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from six import with_metaclass
 
-from os import environ
-if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
-    import epmt_default_settings as settings
-else:
-    import settings
+from epmt_logging import *
 
 if 'postgres' in settings.db_params.get('url', ''):
     from sqlalchemy.dialects.postgresql import JSONB as JSON

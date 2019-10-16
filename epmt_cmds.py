@@ -17,11 +17,7 @@ import fnmatch
 import pickle
 from logging import getLogger, basicConfig, DEBUG, INFO, WARNING, ERROR
 logger = getLogger(__name__)  # you can use other name
-
-if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
-    import epmt_default_settings as settings
-else:
-    import settings
+from epmt_logging import *
 
 from epmtlib import set_logging, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm, timing
 

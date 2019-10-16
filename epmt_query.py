@@ -10,15 +10,7 @@ from logging import getLogger
 # using set_logging, other than import set_logging
 from epmtlib import set_logging
 logger = getLogger(__name__)  # you can use other name
-if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
-    using_default_settings=True
-    import epmt_default_settings as settings
-else:
-    using_default_settings=False
-    import settings
-
-# now correct the logging level based on settings.verbose
-set_logging(settings.verbose if hasattr(settings, 'verbose') else 0, check=True)
+from epmt_logging import *
 
 ### Put EPMT imports below, after logging is set up
 from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key, stringify_dicts

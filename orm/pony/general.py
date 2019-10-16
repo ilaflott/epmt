@@ -4,8 +4,8 @@ from pony.orm.ormtypes import TrackedDict
 from pony.orm import *
 
 from logging import getLogger
-logger = getLogger(__name__)  # you can use other name
-import init_logging
+logger = getLogger('orm.pony')  # you can use other name
+import epmt_logging
 
 db = Database()
 
