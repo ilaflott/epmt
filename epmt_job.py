@@ -15,12 +15,7 @@ from functools import reduce
 import time
 
 logger = getLogger(__name__)  # you can use other name
-
-if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
-    import epmt_default_settings as settings
-else:
-    import settings
-
+from epmt_logging import *
 from orm import *
 
 #

@@ -1,0 +1,33 @@
+#!/bin/bash -e
+
+# This script is only there to run the tests manually before committing.
+# usage:
+#   tests/run
+# 
+# You need to fire the above command from the top-level EPMT directory
+# The test uses python in PATH, so make sure you already have the
+# right virtualenv loaded. Also, it assumes you have docker available.
+#
+# 
+
+function finish {
+  # Your cleanup code here
+  echo "stopping postgres docker service.."
+  docker stop pg-docker
+}
+
+echo "SQLA + SQLite"
+EPMT_USE_SQLALCHEMY=1 EPMT_BULK_INSERT=1 python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema
+
+echo "------"
+echo "Pony + SQLite"
+python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers
+
+echo "------"
+echo "SQLA + PostgreSQL"
+docker run --rm  --name pg-docker -e POSTGRES_DB=EPMT-TEST -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -d -p 5432:5432  postgres:9.5
+trap finish EXIT INT QUIT HUP
+
+echo "sleeping 15 sec to get PG service up and running.."
+sleep 15
+EPMT_USE_PG=1 EPMT_USE_SQLALCHEMY=1 EPMT_BULK_INSERT=1 python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema

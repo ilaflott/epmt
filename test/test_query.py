@@ -1,37 +1,7 @@
 #!/usr/bin/env python
-from __future__ import print_function
-import unittest
-from sys import stderr, exit
-import sys
-from glob import glob
-import pandas as pd
-import datetime
-from os import environ
 
-# append the parent directory of this test to the module search path
-#from os.path import dirname
-#sys.path.append(dirname(__file__) + "/..")
-
-environ['EPMT_USE_DEFAULT_SETTINGS'] = "1"
-from epmtlib import set_logging
-set_logging(-1)
-
-# Put EPMT imports only after we have called set_logging()
-import epmt_default_settings as settings
-if environ.get('EPMT_USE_SQLALCHEMY'):
-    settings.orm = 'sqlalchemy'
-    settings.db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
-    if environ.get('EPMT_BULK_INSERT'):
-        settings.bulk_insert = True
-
-if environ.get('EPMT_USE_PG'):
-    dbhost = environ.get('POSTGRES_HOST', 'localhost')
-    settings.db_params = { 'url': 'postgresql://postgres:example@{0}:5432/EPMT-TEST'.format(dbhost), 'echo': False } if (settings.orm == 'sqlalchemy') else {'provider': 'postgres', 'user': 'postgres','password': 'example','host': dbhost, 'dbname': 'EPMT-TEST'}
-
-from epmtlib import timing, isString, frozen_dict, str_dict
-from orm import db_session, setup_db, Job, Process, Operation, orm_get, desc, orm_is_query, orm_commit
-import epmt_query as eq
-from epmt_cmds import epmt_submit
+# the import below is crucial to get a sane test environment
+from . import *
 
 JOBS_LIST = ['685016', '685003', '685000']
 
@@ -237,7 +207,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(s, s1 | s2)
 
         # hosts, when
-        procs = eq.get_procs('685000', when=datetime.datetime(2019, 6, 15, 11, 53), fmt='orm')
+        procs = eq.get_procs('685000', when=datetime(2019, 6, 15, 11, 53), fmt='orm')
         pids = [p.pid for p in procs]
         self.assertEqual(set(pids), set([6098, 6226]))
         procs = eq.get_procs('685000', when='06/15/2019 11:53', fmt='orm')
@@ -305,10 +275,10 @@ class QueryAPI(unittest.TestCase):
     def test_op(self):
         op = Operation(['685000'], {'op': 'timavg'})
         self.assertEqual((op.tags, op.duration, op.num_runs()), ({'op': 'timavg'},21033390.000000004, 11))
-        self.assertEqual(op.proc_sums, {'syscr': 127808, 'guest_time': 0, 'inblock': 0, 'processor': 0, 'rchar': 5356358342, 'cancelled_write_bytes': 45056, 'outblock': 5139208, 'timeslices': 2661, 'PERF_COUNT_SW_CPU_CLOCK': 17547070414, 'wchar': 5262916589, 'rssmax': 7854752, 'numtids': 62, 'duration': 41388496.0, 'read_bytes': 0, 'time_waiting': 35814116, 'delayacct_blkio_time': 0, 'invol_ctxsw': 1884, 'majflt': 0, 'syscw': 80433, 'minflt': 92584, 'cpu_time': 17951212.0, 'vol_ctxsw': 714, 'time_oncpu': 17984466575, 'rdtsc_duration': 153196621348, 'user+system': 17951212, 'systemtime': 4074354, 'num_procs': 57, 'write_bytes': 2631274496, 'usertime': 13876858 })
+        self.assertEqual(op.proc_sums, {'syscr': 127808, 'guest_time': 0, 'inblock': 0, 'processor': 0, 'rchar': 5356358342, 'cancelled_write_bytes': 45056, 'outblock': 5139208, 'timeslices': 2661, 'PERF_COUNT_SW_CPU_CLOCK': 17547070414, 'wchar': 5262916589, 'rssmax': 7854752, 'numtids': 62, 'duration': 21033390.0, 'read_bytes': 0, 'time_waiting': 35814116, 'delayacct_blkio_time': 0, 'invol_ctxsw': 1884, 'majflt': 0, 'syscw': 80433, 'minflt': 92584, 'cpu_time': 17951212.0, 'vol_ctxsw': 714, 'time_oncpu': 17984466575, 'rdtsc_duration': 153196621348, 'user+system': 17951212, 'systemtime': 4074354, 'num_procs': 57, 'write_bytes': 2631274496, 'usertime': 13876858 })
         self.assertEqual(set(op.to_dict().keys()), {'jobs', 'proc_sums', 'num_runs', 'duration', 'tags', 'contiguous', 'processes', 'intervals', 'exact_tag_only'})
         op = Operation(['685000', '685003'], {'op': 'timavg'})
-        self.assertEqual(op.proc_sums, {'syscw': 89297, 'PERF_COUNT_SW_CPU_CLOCK': 29297709455, 'time_oncpu': 32531383700, 'usertime': 25906808, 'time_waiting': 81086345, 'timeslices': 8001, 'cancelled_write_bytes': 262144, 'outblock': 5665088, 'guest_time': 0, 'minflt': 647328, 'invol_ctxsw': 3996, 'processor': 0, 'rssmax': 10901764, 'read_bytes': 7303168, 'rdtsc_duration': 244679507379, 'inblock': 14264, 'majflt': 18, 'num_procs': 428, 'write_bytes': 2900525056, 'delayacct_blkio_time': 0, 'duration': 67847274.0, 'syscr': 206204, 'rchar': 8118076508, 'cpu_time': 32325636.0, 'systemtime': 6418828, 'wchar': 5805294586, 'vol_ctxsw': 3571, 'user+system': 32325636, 'numtids': 433})
+        self.assertEqual(op.proc_sums, {'syscw': 89297, 'PERF_COUNT_SW_CPU_CLOCK': 29297709455, 'time_oncpu': 32531383700, 'usertime': 25906808, 'time_waiting': 81086345, 'timeslices': 8001, 'cancelled_write_bytes': 262144, 'outblock': 5665088, 'guest_time': 0, 'minflt': 647328, 'invol_ctxsw': 3996, 'processor': 0, 'rssmax': 10901764, 'read_bytes': 7303168, 'rdtsc_duration': 244679507379, 'inblock': 14264, 'majflt': 18, 'num_procs': 428, 'write_bytes': 2900525056, 'delayacct_blkio_time': 0, 'duration': 36053215.0, 'syscr': 206204, 'rchar': 8118076508, 'cpu_time': 32325636.0, 'systemtime': 6418828, 'wchar': 5805294586, 'vol_ctxsw': 3571, 'user+system': 32325636, 'numtids': 433})
 
     @db_session
     def test_op_metrics(self):
@@ -316,17 +286,17 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(df.shape, (178,32), "wrong dataframe shape for op_metrics")
         top = df[['job', 'tags', 'duration']].sort_values('duration', axis=0, ascending=False)[:1]
         self.assertEqual(top.tags.values[0], {u'op_instance': u'2', u'op_sequence': u'89', u'op': u'dmput'})
-        self.assertEqual(int(top.duration.values[0]), 7008334182)
+        self.assertEqual(int(top.duration.values[0]), 7005558348)
         df = eq.op_metrics(['685000', '685016'], tags='op_sequence:89')
-        self.assertEqual([int(f) for f in list(df.duration.values)], [6463542235, 7008334182])
+        self.assertEqual([int(f) for f in list(df.duration.values)], [6460188134, 7005558348])
 
         df = eq.op_metrics(['685000', '685003', '685016'])
         self.assertEqual(df.shape,(573,32), 'wrong op_metrics shape when no tag specified')
-        self.assertEqual([int(x) for x in df.duration.values][:10], [6598692, 6709043, 6707903, 6676748, 6939098, 6541841, 6788901, 6125293, 6427261, 6472072], 'wrong op_metrics when no tag specified')
+        self.assertEqual([int(x) for x in df.cpu_time.values][:10], [1207637., 1268652., 1225636., 1263656., 1315618., 1261654., 1209636., 1246659., 1205634., 1265656.])
 
         df = eq.op_metrics(['685000', '685003', '685016'], tags=['op:hsmget', 'op:mv'])
         self.assertEqual(df.shape, (6,32), 'wrong op_metrics shape with tags specified')
-        self.assertEqual([int(x) for x in df.duration.values], [18116213243, 6688820532, 7585973173, 25706545, 212902301, 62601798])
+        self.assertEqual([int(x) for x in df.duration.values], [6375786656, 6471901800, 6672575160, 8551396, 69194108, 17359881])
         self.assertEqual(list(df.tags.values), [{'op': 'hsmget'}, {'op': 'hsmget'}, {'op': 'hsmget'}, {'op': 'mv'}, {'op': 'mv'}, {'op': 'mv'}])
 
     @db_session
@@ -334,7 +304,7 @@ class QueryAPI(unittest.TestCase):
         df = eq.op_metrics(['685000', '685003', '685016'], group_by_tag=True)
         self.assertEqual(df.shape,(459,30), 'wrong op_metrics grouped shape when no tag specified')
         self.assertEqual(list(df['tags'].values[:10]), [{u'op_instance': u'11', u'op_sequence': u'66', u'op': u'cp'}, {u'op_instance': u'15', u'op_sequence': u'79', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'247', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'251', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'255', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'259', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'263', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'267', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'271', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'30', u'op': u'cp'}], 'wrong tags ordering in grouped op_metrics')
-        self.assertEqual([int(x) for x in df.duration.values][:10], [13307735, 13384651, 3699824, 3679446, 3683612, 3689543, 3702057, 3735581, 3709788, 13480939], 'wrong duration values in grouped op_metrics')
+        self.assertEqual(list(df.cpu_time.values)[:10], [2476289.0, 2489292.0, 472905.0, 462906.0, 461906.0, 465903.0, 471904.0, 485902.0, 472905.0, 2577272.0])
 
         df = eq.op_metrics(['685000', '685003', '685016'], tags=['op:hsmget', 'op:mv'], group_by_tag=True)
         self.assertEqual(df.shape, (2,30), 'wrong op_metrics shape with tags specified')
@@ -440,7 +410,7 @@ class QueryAPI(unittest.TestCase):
         procs = eq.timeline(jobs, fmt='orm')
         #p1 = procs.first()
         #self.assertEqual(p1.start, min(min(j.processes.start) for j in jobs))
-        self.assertEqual([ p.start for p in procs[:3] ], [datetime.datetime(2019, 6, 15, 11, 52, 4, 126892), datetime.datetime(2019, 6, 15, 11, 52, 4, 133795), datetime.datetime(2019, 6, 15, 11, 52, 4, 142141)])
+        self.assertEqual([ p.start for p in procs[:3] ], [datetime(2019, 6, 15, 11, 52, 4, 126892), datetime(2019, 6, 15, 11, 52, 4, 133795), datetime(2019, 6, 15, 11, 52, 4, 142141)])
         procs = eq.timeline('685016', fmt='orm', limit=5)
         pids = [p.pid for p in procs]
         self.assertEqual(pids, [122181, 122182, 122183, 122184, 122185])
@@ -450,7 +420,9 @@ class QueryAPI(unittest.TestCase):
         jobs = eq.get_jobs(JOBS_LIST, fmt='terse')
         self.assertEqual(len(jobs), 3)
         model_name = 'test_model'
-        r = eq.create_refmodel(jobs, tag='model_name:'+model_name)
+        with capture() as (out, err):
+            r = eq.create_refmodel(jobs, tag='model_name:'+model_name)
+        self.assertIn('WARNING: The jobs do not share identical tag values', err.getvalue())
         self.assertEqual(r['tags'], {'model_name': model_name})
         rq = eq.get_refmodels(tag='model_name:'+model_name, fmt='orm')
         self.assertEqual(rq.count(), 1)
@@ -496,7 +468,7 @@ class QueryAPI(unittest.TestCase):
 
         # test before/after
         j = eq.get_jobs(JOBS_LIST, fmt='orm')[:][-1]
-        ndays = (datetime.datetime.now() - j.start).days 
+        ndays = (datetime.now() - j.start).days 
         n = eq.delete_jobs(JOBS_LIST, force=True, after=-(ndays-1))
         self.assertEqual(n, 0)
         n = eq.delete_jobs(JOBS_LIST, force=True, after='06/16/2019 00:00')

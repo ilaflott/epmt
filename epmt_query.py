@@ -10,15 +10,7 @@ from logging import getLogger
 # using set_logging, other than import set_logging
 from epmtlib import set_logging
 logger = getLogger(__name__)  # you can use other name
-if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
-    using_default_settings=True
-    import epmt_default_settings as settings
-else:
-    using_default_settings=False
-    import settings
-
-# now correct the logging level based on settings.verbose
-set_logging(settings.verbose if hasattr(settings, 'verbose') else 0, check=True)
+from epmt_logging import *
 
 ### Put EPMT imports below, after logging is set up
 from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key, stringify_dicts
@@ -702,7 +694,7 @@ def _refmodel_scores(col, outlier_methods, features):
 def create_refmodel(jobs=[], tag={}, op_tags=[], 
                     outlier_methods=[modified_z_score], 
                     features=['duration', 'cpu_time', 'num_procs'], exact_tag_only=False,
-                    fmt='dict'):
+                    fmt='dict', sanity_check = True):
     """
     This function creates a reference model and returns
     the ID of the newly-created model in the database
@@ -769,6 +761,9 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
     #    jobs = Job.select(lambda j: j.jobid in jobs)
     jobs_orm = orm_jobs_col(jobs)
     jobs = jobs_orm[:]
+
+    if sanity_check:
+        _warn_incomparable_jobs(jobs)
 
     if op_tags:
         if op_tags == '*':
@@ -1016,14 +1011,20 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=F
                 concat_threads_sums = func.array_to_string(func.array_agg(Process.threads_sums), '@@@')
             else:
                 concat_threads_sums = func.group_concat(Process.threads_sums, '@@@')
-            procs_grp_by_job = orm_get_procs(jobs, t, None, None, 0, None, [], exact_tags_only, [Process.jobid, func.count(Process.id), func.sum(Process.duration), func.sum(Process.cpu_time), func.sum(Process.numtids), concat_threads_sums]).group_by(Process.jobid).order_by(Process.jobid)
+            procs_grp_by_job = orm_get_procs(jobs, t, None, None, 0, None, [], exact_tags_only, [Process.jobid, func.count(Process.id), func.sum(Process.cpu_time), func.sum(Process.numtids), concat_threads_sums]).group_by(Process.jobid).order_by(Process.jobid)
         else:
             # Pony ORM
             procs = get_procs(jobs, tags = t, exact_tag_only = exact_tags_only, fmt='orm')
-            procs_grp_by_job = select((p.job, count(p.id), sum(p.duration), sum(p.cpu_time), sum(p.numtids), group_concat(p.threads_sums, sep='@@@')) for p in procs)
+            procs_grp_by_job = select((p.job, count(p.id), sum(p.cpu_time), sum(p.numtids), group_concat(p.threads_sums, sep='@@@')) for p in procs)
 
         for row in procs_grp_by_job:
-            (j, nprocs, duration, excl_cpu, ntids, threads_sums_str) = row
+            (j, nprocs, excl_cpu, ntids, threads_sums_str) = row
+            # now duration calculation requires us to account for
+            # overlapping processes in an operation (since one may
+            # background and wait). 
+            # So we use Operation to correctly compute duration
+            op = Operation(j, t, exact_tags_only)
+            duration = round(op.duration,1)
             # convert from giant string to array of strings where each list
             # list element is a json of a threads_sums dict
             _l1 = threads_sums_str.split('@@@')
@@ -1293,7 +1294,7 @@ an_annual_rho2_1x1deg_18840101'}
     '''
     d = {}
     jobs = orm_jobs_col(jobs)
-    logger.info('doing a comparable_job_partitions on {0} jobs'.format(jobs.count()))
+    # logger.info('doing a comparable_job_partitions on {0} jobs'.format(jobs.count()))
     for j in jobs:
         tag = j.tags
         search_tuple = tuple([tag.get(k, '') for k in matching_keys])
@@ -1323,3 +1324,12 @@ def are_jobs_comparable(jobs, matching_keys = ['exp_name', 'exp_component']):
     True
     '''
     return (len(comparable_job_partitions(jobs, matching_keys)) == 1)
+
+def _warn_incomparable_jobs(jobs):
+    jobs = orm_jobs_col(jobs)
+    if not are_jobs_comparable(jobs):
+        msg = 'The jobs do not share identical tag values for "exp_name" and "exp_component"'
+        from sys import stderr
+        print('WARNING:', msg, file=stderr)
+        for j in jobs:
+            print('   ',j.jobid, j.tags.get('exp_name'), j.tags.get('exp_component'), file=stderr)

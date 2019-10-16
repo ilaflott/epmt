@@ -6,6 +6,9 @@
 # This file contains a low-level API for direct-access
 # to DB-specific information. All the functions below
 # rely on the ORM being Pony
+from logging import getLogger
+logger = getLogger(__name__)
+from epmt_logging import *
 
 def get_db_size(findwhat=['database','table','index','tablespace'], usejson=False, usebytes=False):
     """
@@ -205,14 +208,7 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
     ]
 
     """
-    from os import environ
-    if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
-        import epmt_default_settings as settings
-    else:
-        import settings
     from orm.pony.general import setup_db, _execute_raw_sql
-    from logging import getLogger
-    logger = getLogger(__name__)
     # Test if provider is supported
     if (settings.db_params.get('provider','') == 'postgres') is False:
         logger.warning("%s Not supported",str(settings.db_params.get('provider','Provider settings key missing')))

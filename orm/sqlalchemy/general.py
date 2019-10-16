@@ -8,15 +8,9 @@ from sqlalchemy.orm.query import Query
 import threading
 from functools import wraps
 
-from os import environ
-if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
-    import epmt_default_settings as settings
-else:
-    import settings
-
 from logging import getLogger
-logger = getLogger(__name__)  # you can use other name
-import init_logging
+logger = getLogger('orm.sqlalchemy')  # you can use other name
+from epmt_logging import *
 
 logger.info('sqlalchemy orm selected')
 Base = declarative_base()

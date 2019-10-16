@@ -6,6 +6,7 @@ from os import environ, unlink, devnull
 from contextlib import contextmanager
 from subprocess import call
 from json import dumps, loads
+from pony.orm.ormtypes import TrackedDict
 
 try:
     from StringIO import StringIO
@@ -148,7 +149,7 @@ def capture():
 # Note, both key and values will be strings and no attempt will be made to
 # guess the type for integer/floats
 def tag_from_string(s, delim = ';', sep = ':', tag_default_value = '1'):
-    if type(s) == dict: return s
+    if type(s) in (dict, TrackedDict): return s
     if not s: return (None if s == None else {})
 
     tag = {}
@@ -174,7 +175,6 @@ def tag_from_string(s, delim = ';', sep = ':', tag_default_value = '1'):
 # the input can be a list of strings or a single string.
 # each string will be converted to a dict
 def tags_list(tags):
-    from pony.orm.ormtypes import TrackedDict
     # do we have a single tag in string or dict form? 
     if isString(tags):
         tags = [tag_from_string(tags)]

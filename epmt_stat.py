@@ -7,12 +7,7 @@ from logging import getLogger
 from numbers import Number
 
 logger = getLogger(__name__)  # you can use other name
-
-if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
-    import epmt_default_settings as settings
-else:
-    import settings
-
+from epmt_logging import *
 
 # this sets the defaults to be used when a trained model is not provided
 thresholds = settings.outlier_thresholds 

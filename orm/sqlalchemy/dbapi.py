@@ -6,6 +6,9 @@
 # This file contains a low-level API for direct-access
 # to DB-specific information. All the functions below
 # rely on the ORM being sqlalchemy
+from logging import getLogger
+logger = getLogger(__name__)  # you can use other name
+from epmt_logging import *
 
 def get_db_size(findwhat=['database','table','index','tablespace'], usejson=False, usebytes=False):
     """
@@ -192,16 +195,8 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
     ]
 
     """
-    from os import environ
-    if environ.get('EPMT_USE_DEFAULT_SETTINGS'):
-        import epmt_default_settings as settings
-    else:
-        import settings
     from orm.sqlalchemy.general import _execute_raw_sql
     from sqlalchemy import exc
-    from logging import getLogger
-    logger = getLogger(__name__)  # you can use other name
-    import init_logging
     # Test if provider is supported
     if settings.db_params.get('url', '').startswith('postgresql://') is False:
         logger.warning("%s is not supported", settings.db_params.get('url', ''))
