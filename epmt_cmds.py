@@ -11,7 +11,7 @@ from imp import find_module
 from grp import getgrall, getgrgid
 from pwd import getpwnam, getpwuid
 from glob import glob
-from sys import stderr
+from sys import stdout, stderr
 from shutil import rmtree
 import fnmatch
 import pickle
@@ -836,7 +836,8 @@ def epmt_entrypoint(args):
     init_settings(settings)
     if not args.verbose:
         set_logging(settings.verbose, check=True)
-    
+    if args.command == 'settings':
+        return(dump_config(stdout) == False)
     if args.command == 'dbsize':
         return(epmt_dbsize(findwhat=args.size_of, usejson=args.json, usebytes=args.bytes) == False)
     if args.command== 'start':

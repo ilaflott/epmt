@@ -12,10 +12,9 @@ if (__name__ == "__main__"):
         import argparse26 as argparse
     
     def debug_namespace(args):
-        if False:
+        if True:
             print (args)
         pass
-    from epmt_cmds import dump_config
     parser = argparse.ArgumentParser(prog='epmt', add_help=True, epilog=None, description="This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes."\
         +"PerfMiner \n This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes. This tool uses papiex to perform the "\
         +"process monitoring. This tool is targeted at batch or ephemeral jobs, not daemon processes.")
@@ -82,18 +81,20 @@ if (__name__ == "__main__"):
     list_parser.add_argument('epmt_cmd_args', nargs='*', help="A list of jobs to search for")
     list_parser.set_defaults(epmt_cmd='list')
     
+    settings_parser = subparser.add_parser('settings', help='Display current settings information')
+    settings_parser.set_defaults(epmt_cmd='settings')
+
     parser.add_argument('-v', '--verbose',action='count',help="Increase level of verbosity/debug")
-    #	parser.add_argument('-c', '--csh',action='store_true',help="C-shell mode")
+``    #	parser.add_argument('-c', '--csh',action='store_true',help="C-shell mode")
     #	parser.add_argument('-b', '--bash',action='store_true',help="Bash mode")
     parser.set_defaults(func=debug_namespace, command='help')
 
     args = parser.parse_args()
     from epmt_cmds import epmt_entrypoint
+    args.func(args)
     if args.command=='help':
         parser.print_help()
-        dump_config(stdout)
         exit(0)
-    args.func(args)
     exit(epmt_entrypoint(args))
 else:
     print >> stderr,"ERROR: This module cannot be imported."
