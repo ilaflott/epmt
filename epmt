@@ -85,8 +85,6 @@ if (__name__ == "__main__"):
     settings_parser.set_defaults(epmt_cmd='settings')
 
     parser.add_argument('-v', '--verbose',action='count',help="Increase level of verbosity/debug")
-``    #	parser.add_argument('-c', '--csh',action='store_true',help="C-shell mode")
-    #	parser.add_argument('-b', '--bash',action='store_true',help="Bash mode")
     parser.set_defaults(func=debug_namespace, command='help')
 
     args = parser.parse_args()
