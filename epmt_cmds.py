@@ -830,7 +830,7 @@ def epmt_dbsize(findwhat=['database','table','index','tablespace'], usejson=Fals
 def epmt_entrypoint(args, help):
     if args.verbose == None:
         args.verbose = 0
-    set_logging(args.verbose, check=True)
+    set_logging(args.verbose, check=False)
     init_settings(settings)
     if not args.verbose:
         set_logging(settings.verbose, check=True)

@@ -16,7 +16,7 @@ papiex_options = "PERF_COUNT_SW_CPU_CLOCK"
 epmt_output_prefix = "/tmp/epmt/"
 stage_command = "mv"
 stage_command_dest = "./"
-verbose = 1
+verbose = 0
 # gather profiling information or not
 profile = False
 input_pattern = "*-papiex-*-[0-9]*.csv"
