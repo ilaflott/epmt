@@ -39,14 +39,15 @@ def find_diffs_in_envs(start_env,stop_env):
             env[e] = stop_env[e]
     return env
 
-# Remove those with _ at beginning
+# Remove those with _ at beginning and blacklist
 def blacklist_filter(filter=None, **env):
 #   print env
+    filter = filter or []
     env2 = {}
     for k, v in env.items():
         if k.startswith("_"):
             continue
-        if k == "LS_COLORS":
+        if k in filter:
             continue
         env2[k] = v
     return env2
@@ -327,7 +328,7 @@ def epmt_check(forced_jobid):
 def create_start_job_metadata(jobid, submit_ts):
     ts=datetime.now()
     metadata = {}
-    start_env=blacklist_filter(filter,**environ)
+    start_env=blacklist_filter(filter=vars(settings).get('env_blacklist',None),**environ)
 #   print env
     metadata['job_pl_id'] = jobid
 #   metadata['job_pl_hostname'] = gethostname()
@@ -341,7 +342,7 @@ def create_start_job_metadata(jobid, submit_ts):
 
 def merge_stop_job_metadata(metadata, exitcode, reason):
     ts=datetime.now()
-    stop_env=blacklist_filter(filter,**environ)
+    stop_env=blacklist_filter(filter=vars(settings).get('env_blacklist',None),**environ)
     metadata['job_el_stop_ts'] = ts
     metadata['job_el_exitcode'] = exitcode
     metadata['job_el_reason'] = reason
