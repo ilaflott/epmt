@@ -144,7 +144,7 @@ def load_process_from_pandas(df, h, j, u, settings):
     except Exception as e:
         logger.error("%s",e)
         logger.error("Corrupted CSV or invalid input type");
-        return None
+        raise ValueError('Corrupted CSV or invalid input type')
     # profile.load_process.init += time.time() - _t
 
     # _t = time.time()
@@ -715,6 +715,10 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 pid_map[p.pid] = p
                 all_procs.append(p)
 # Compute duration of job
+                if ((p.start < start_ts) or (p.end > stop_ts)):
+                    msg = 'Corrupted CSV detected: Process ({0}, pid {1}) start/finish times ({2}, {3}) do not fall within job interval ({4}, {5}). Bailing on job ingest..'.format(p.exename, p.pid, p.start, p.end, start_ts, stop_ts)
+                    logger.error(msg)
+                    raise ValueError(msg)
                 if (p.start < earliest_process):
                     earliest_process = p.start
                     root_proc = p
