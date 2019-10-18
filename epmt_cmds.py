@@ -328,7 +328,8 @@ def epmt_check(forced_jobid):
 #
 
 def create_start_job_metadata(jobid, submit_ts, from_batch=[]):
-    ts=datetime.now()
+    # we embed the current timezone by using astimezone()
+    ts=datetime.now().astimezone()
     metadata = {}
     start_env=blacklist_filter(filter,**environ)
 #   print env
@@ -344,7 +345,8 @@ def create_start_job_metadata(jobid, submit_ts, from_batch=[]):
     return metadata
 
 def merge_stop_job_metadata(metadata, exitcode, reason, from_batch=[]):
-    ts=datetime.now()
+    # we embed the current timezone by using astimezone()
+    ts=datetime.now().astimezone()
     stop_env=blacklist_filter(filter,**environ)
     metadata['job_el_stop_ts'] = ts
 #    metadata['job_el_from_batch'] = from_batch

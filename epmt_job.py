@@ -10,9 +10,10 @@ from os import getuid
 from json import dumps, loads
 from pwd import getpwnam, getpwuid
 from epmtlib import tag_from_string, sum_dicts, unique_dicts, fold_dicts, timing, dotdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import reduce
 import time
+import pytz
 
 logger = getLogger(__name__)  # you can use other name
 from epmt_logging import *
@@ -154,8 +155,8 @@ def load_process_from_pandas(df, h, j, u, settings):
     try:
         earliest_thread_start = Timestamp(df['start'].min(), unit='us')
         latest_thread_finish = Timestamp(df['end'].max(), unit='us')
-        p.start = earliest_thread_start.to_pydatetime()
-        p.end = latest_thread_finish.to_pydatetime()
+        p.start = earliest_thread_start.to_pydatetime().replace(tzinfo = timezone.utc)
+        p.end = latest_thread_finish.to_pydatetime().replace(tzinfo = timezone.utc)
         p.duration = float((latest_thread_finish - earliest_thread_start).total_seconds())*float(1000000)
     except Exception as e:
         logger.error("%s",e)
@@ -567,12 +568,24 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     if metadata is False:
         return False
 
+    tz_default = pytz.timezone(settings.tz or 'utc')
+
 # Fields used in this function
     jobid = metadata['job_pl_id']
     username = metadata['job_username']
     start_ts = metadata['job_pl_start_ts']
     stop_ts = metadata['job_el_stop_ts']
     submit_ts = metadata['job_pl_submit_ts']
+    if not start_ts.tzinfo:
+        logger.warning('timezone could not be auto-detected, assuming {0}'.format(settings.tz or 'utc'))
+        start_ts = tz_default.localize(start_ts)
+        stop_ts = tz_default.localize(stop_ts)
+        submit_ts = tz_default.localize(submit_ts)
+    else:
+        tz_default = start_ts.tzinfo
+        logger.debug('timezone auto-detected: {0}'.format(tz_default))
+    logger.info('Job start: {0}'.format(start_ts))
+    logger.info('Job finish: {0}'.format(stop_ts))
     jobname = metadata['job_jobname']
     exitcode = metadata['job_el_exitcode']
     reason = metadata['job_el_reason']
@@ -607,8 +620,8 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     # Initialize elements used in compute
     then = datetime.now()
     csvt = timedelta()
-    earliest_process = datetime.utcnow()
-    latest_process = datetime.fromtimestamp(0)
+    earliest_process = datetime.utcnow().replace(tzinfo=timezone.utc)
+    latest_process = datetime.fromtimestamp(0).replace(tzinfo=timezone.utc)
 
 #    stdout.write('-')
 # Hostname, job, metricname objects
@@ -628,7 +641,6 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 # fix below
     j.env_dict = env_dict
     j.env_changes_dict = env_changes_dict
-    j.info_dict = {}
     job_init_fini_time = time.time()
     logger.debug('job init took: %2.5f sec', job_init_fini_time - job_init_start_time)
 
@@ -715,15 +727,21 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 pid_map[p.pid] = p
                 all_procs.append(p)
 # Compute duration of job
-                # if ((p.start < start_ts) or (p.end > stop_ts)):
-                #     msg = 'Corrupted CSV detected: Process ({0}, pid {1}) start/finish times ({2}, {3}) do not fall within job interval ({4}, {5}). Bailing on job ingest..'.format(p.exename, p.pid, p.start, p.end, start_ts, stop_ts)
-                #     logger.error(msg)
-                #     raise ValueError(msg)
                 if (p.start < earliest_process):
                     earliest_process = p.start
                     root_proc = p
                 if (p.end > latest_process):
                     latest_process = p.end
+
+                # correct the process start/stop times for timezone
+                # start_ts and end_ts are timezone-aware datetime objects
+                p.start = p.start.replace(tzinfo = timezone.utc).astimezone(tz=tz_default)
+                p.end   = p.end.replace(tzinfo = timezone.utc).astimezone(tz=tz_default)
+                if ((p.start < start_ts) or (p.end > stop_ts)):
+                    msg = 'Corrupted CSV detected: Process ({0}, pid {1}) start/finish times ({2}, {3}) do not fall within job interval ({4}, {5}). Bailing on job ingest..'.format(p.exename, p.pid, p.start, p.end, start_ts, stop_ts)
+                    logger.error(msg)
+                    raise ValueError(msg)
+
 # Debugging/    progress
                 cnt += 1
                 nrecs += p.numtids
@@ -758,15 +776,16 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     else:
         logger.warning("Submitting job with no CSV data, tags %s",str(job_tags))
 
-    j.start = start_ts
-    j.end = stop_ts
-    j.submit = submit_ts # Wait time is start - submit and should probably be stored
+    j.start = start_ts  # .astimezone(timezone.utc)
+    j.end = stop_ts     # .astimezone(timezone.utc)
+    j.submit = submit_ts # .astimezone(timezone.utc) # Wait time is start - submit and should probably be stored
+    j.info_dict = {'tz': start_ts.tzinfo.tzname(None)}
     d = j.end - j.start
     j.duration = int(d.total_seconds()*1000000)
     j.cpu_time = reduce(lambda c, p: c + p.cpu_time, all_procs, 0)
     # j.cpu_time = sum([p.cpu_time for p in all_procs])
-    logger.info("Earliest process start: %s",j.start)
-    logger.info("Latest process end: %s",j.end)
+    #logger.info("Earliest process start: %s",j.start)
+    #logger.info("Latest process end: %s",j.end)
     logger.info("Computed duration of job: %f us, %.2f m",j.duration,j.duration/60000000)
 
     if root_proc:
@@ -808,7 +827,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     _c0 = time.time()
     orm_commit()
     logger.debug("commit time: %2.5f sec", time.time() - _c0)
-    now = datetime.now() 
+    now = datetime.now()
     logger.info("Staged import of %d processes took %s, %f processes/sec",
                 len(all_procs), now - then,len(all_procs)/float((now-then).total_seconds()))
     print("Imported successfully - job:",jobid,"processes:",len(all_procs),"rate:",len(all_procs)/float((now-then).total_seconds()))
