@@ -11,9 +11,9 @@ if (__name__ == "__main__"):
         print >> stderr,"WARNING: This python/OS is likely vulnerable to exploits!"
         import argparse26 as argparse
 
-    parser = argparse.ArgumentParser(prog='epmt', add_help=False, epilog=None, description="This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes."\
-        +"PerfMiner \n This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes. This tool uses papiex to perform the "\
-        +"process monitoring. This tool is targeted at batch or ephemeral jobs, not daemon processes.")
+    parser = argparse.ArgumentParser(prog='epmt', add_help=False, epilog=None, description=
+        "  This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes."
+        +"  This tool uses Papiex to perform the process monitoring.  This tool is targeted at batch or ephemeral jobs, not daemon processes.")
     parser.add_argument('-h', '--help',action='store_true',help="Show this help message and exit")
     subparser = parser.add_subparsers(title="commands", dest="command")
 
