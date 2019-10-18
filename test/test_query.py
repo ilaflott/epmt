@@ -458,29 +458,22 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(list(agg_df['jobid'].values), ['685000', '685003', '685016'])
         self.assertEqual(list(agg_df['job_cpu_time'].values), [113135329.0, 93538033.0, 427082965.0])
 
-    @db_session
     def test_zz_delete_jobs(self):
-        #with self.assertRaises(EnvironmentError):
-        #    eq.delete_jobs('685000')
-        #settings.allow_job_deletion = True
         n = eq.delete_jobs(['685000', '685016'])
         self.assertEqual(n, 0, 'multiple jobs deleted without "force"')
 
         # test before/after
-        j = eq.get_jobs(JOBS_LIST, fmt='orm')[:][-1]
-        ndays = (datetime.now() - j.start).days 
+        ndays = (datetime.now() - datetime(2019, 6, 15, 7, 52, 4, 73965)).days 
         n = eq.delete_jobs(JOBS_LIST, force=True, after=-(ndays-1))
         self.assertEqual(n, 0)
         n = eq.delete_jobs(JOBS_LIST, force=True, after='06/16/2019 00:00')
         self.assertEqual(n, 0)
         n = eq.delete_jobs(JOBS_LIST, force=True, before='06/15/2019 00:00')
         self.assertEqual(n, 0)
-
         n = eq.delete_jobs(['685000', '685016'], force=True)
-        self.assertEqual(n, 2, 'jobs not deleted even with "force"')
-
-        n = eq.delete_jobs([], force=True, before=-(ndays-1))
-        self.assertTrue(n >= 1)
+        self.assertEqual(n, 2)
+        # n = eq.delete_jobs([], force=True, before=-(ndays-1))
+        # self.assertTrue(n >= 1)
 
 
 if __name__ == '__main__':
