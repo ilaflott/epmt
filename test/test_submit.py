@@ -71,6 +71,15 @@ class EPMTSubmit(unittest.TestCase):
              u = UnprocessedJob['685003']
         self.assertTrue(j.proc_sums)
 
+    @db_session
+    def test_corrupted_csv(self):
+        datafiles='test/data/misc/corrupted-csv.tgz'
+        # quell the error message
+        set_logging(-2)
+        with self.assertRaises(ValueError):
+            epmt_submit(glob(datafiles), dry_run=False)
+        # restore logging level
+        set_logging(-1)
         
 
 if __name__ == '__main__':

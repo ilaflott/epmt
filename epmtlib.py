@@ -1,7 +1,7 @@
 import sys
 from functools import wraps
 from time import time
-from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
+from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING, CRITICAL
 from os import environ, unlink, devnull
 from contextlib import contextmanager
 from subprocess import call
@@ -20,7 +20,9 @@ def set_logging(intlvl = 0, check = False):
     if intlvl == None:
         intlvl = 0
     intlvl = int(intlvl)
-    if intlvl < 0:
+    if intlvl < -1:
+        level = CRITICAL
+    if intlvl == -1:
         level = ERROR
     if intlvl == 0:
         level = WARNING
