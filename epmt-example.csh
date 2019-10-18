@@ -11,8 +11,11 @@ echo $LD_PRELOAD
 # Workload
 sleep 1
 # End Workload
-unsetenv LD_PRELOAD
-./epmt stop -j1            # Generate epilog and append
-./epmt stage -j1           # Move to medium term storage
+unsource
+echo PAPIEX_OPTIONS: $?PAPIEX_OPTIONS
+echo PAPIEX_OUTPUT: $?PAPIEX_OUTPUT
+echo LD_PRELOAD: $?LD_PRELOAD
+./epmt -j1 stop            # Generate epilog and append
+./epmt -j1 stage           # Move to medium term storage
 ./epmt submit ./1.tgz      # Submit from staged storage
 rm -f ./1.tgz

@@ -25,6 +25,7 @@ function work_unit() {
     echo "  - starting job $1: $jobid $outl"
     epmt -j$jobid start           # Generate prolog
     eval `epmt -j$jobid source`   # Setup environment
+    ${BASH_ALIASES[epmt_source]}
     ##### Work ######
     (
         build_dir=$(tempfile -p epmt_ -s _build)
@@ -47,7 +48,7 @@ function work_unit() {
     )
     #### End work ####
 
-    unset LD_PRELOAD
+    ${BASH_ALIASES[epmt_unsource]}
     epmt -j$jobid stop            # Generate epilog and append
     end_time=$(date +%s)
     duration=$(expr $end_time - $start_time)

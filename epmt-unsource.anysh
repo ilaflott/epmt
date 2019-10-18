@@ -1,0 +1,7 @@
+export USER=testuser
+eval `epmt -j1 source`   # Setup environment
+epmt_instrument
+# Workload
+sleep 1
+# End Workload
+epmt_uninstrument

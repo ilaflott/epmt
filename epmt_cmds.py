@@ -82,8 +82,11 @@ def read_job_metadata_direct(file):
 
 def read_job_metadata(jobdatafile):
     logger.info("Unpickling from "+jobdatafile)
-    with open(jobdatafile,'rb') as file:
-        return read_job_metadata_direct(file)
+    try:
+        with open(jobdatafile,'rb') as file:
+            return read_job_metadata_direct(file)
+    except IOError as i:
+        logger.error("Job metadata missing, possibly didn't start? %s", str(i))
     return False
 
 def write_job_epilog(jobdatafile,metadata):
@@ -475,75 +478,81 @@ def epmt_dump_metadata(forced_jobid, forced_user, filelist=[]):
             print("%-24s%-56s" % (d,str(metadata[d])))
     return True
 
-def epmt_source(forced_jobid, forced_user, papiex_debug=False, monitor_debug=False, add_export=True, run_cmd=False):
-    export="export "
-    equals="="
-    cmd_sep="\n"
-    cmd=""
+def epmt_source(forced_jobid, forced_user, papiex_debug=False, monitor_debug=False, run_cmd=False):
+    """
 
-    # For CSH, for source:
-    # setenv FOO bar;
-    # For CSH, for run:
-    # env FOO=bar
+    epmt_source - produces shell variables that enable transparent instrumentation
 
-    shell_name = environ.get("_")
-    shell_name2 = environ.get("SHELL")
-    if ( shell_name2 and shell_name2.endswith("csh")) or (shell_name and shell_name.endswith("csh")):
-        logger.debug("Detected CSH - please read CSH considered harmful")
-        if run_cmd:
-            cmd = "env "
-            export = ""
-            equals = "="
-        else:
-            export="setenv "
-            equals= " "
-            cmd_sep=";\n"
-    
+    run_cmd: - used when instrumentation is done on the command line by the epmt run command
+
+
+    """
+
     jobid,output_dir,file = setup_vars(forced_jobid, forced_user)
     if jobid == False:
         return None;
 
-    if add_export:
-        cmd = export
-    cmd += "PAPIEX_OPTIONS"+equals+settings.papiex_options
-    if add_export:
-        cmd += cmd_sep
-    else:
-        cmd += " "
+    def detect_csh():
+        for v in [ environ.get("_"), environ.get("SHELL") ]:
+            if (v and v.endswith("csh")):
+                logger.debug("Detected CSH - Please read https://www-uxsup.csx.cam.ac.uk/misc/csh.html")
+                return True
+        return False
     
-    if output_dir:
-        #output_dir = environ.get('PAPIEX_OUTPUT', output_dir)
-        if add_export:
-            cmd += export
-        cmd += "PAPIEX_OUTPUT"+equals+output_dir
-        if add_export:
-            cmd += cmd_sep
-        else:
-            cmd += " "
+    sh_set_var=""
+    equals="="
+    cmd_sep=";\n"
+    cmd=""
 
-    if papiex_debug:
-        if add_export:
-            cmd += export
-        cmd += "PAPIEX_DEBUG"+equals+"TRUE"
-        if add_export:
-            cmd += cmd_sep
-        else:
-            cmd += " "
+    undercsh=detect_csh()
+    if run_cmd: 
+        undercsh = False # All commands under run are started under Bash in Python
+        cmd_sep=" "
+    if undercsh:
+        aliasing = True
+        sh_set_var="set "
 
-    if monitor_debug:
-        if add_export:
-            cmd += export
-        cmd += "MONITOR_DEBUG"+equals+"TRUE"
-        if add_export:
-            cmd += cmd_sep
-        else:
-            cmd += " "
+    def add_var(cmd,str):
+        cmd += sh_set_var
+        cmd += str
+        cmd += cmd_sep
+        return cmd
 
-    if add_export:
-        cmd += export
-    cmd += "LD_PRELOAD"+equals
-    for l in [ "libpapiex.so:","libpapi.so:","libpfm.so:","libmonitor.so" ]:
-        cmd += settings.install_prefix+"lib/"+l
+    cmd = ""
+    if monitor_debug: cmd = add_var(cmd,"MONITOR_DEBUG"+equals+"TRUE")
+    if output_dir: cmd = add_var(cmd,"PAPIEX_OUTPUT"+equals+output_dir) 
+    if papiex_debug: cmd = add_var(cmd,"PAPIEX_DEBUG"+equals+"TRUE")
+    cmd = add_var(cmd,"PAPIEX_OPTIONS"+equals+settings.papiex_options)
+    oldp = environ.get("LD_PRELOAD")
+    if oldp: cmd = add_var(cmd,"OLD_LD_PRELOAD"+equals+oldp)
+    cmd = add_var(cmd,"LD_PRELOAD"+equals+settings.install_prefix+"lib/libpapiex.so:"+
+                  settings.install_prefix+"lib/libmonitor.so"+((":"+oldp) if oldp else ""))
+
+#
+# Use export -n which keeps the variable but prevents it from being exported
+#
+    if undercsh:
+        tmp = "setenv PAPIEX_OPTIONS $PAPIEX_OPTIONS; setenv LD_PRELOAD $LD_PRELOAD;"
+        if monitor_debug: tmp += "setenv MONITOR_DEBUG $MONITOR_DEBUG;"
+        if output_dir: tmp+= "setenv PAPIEX_OUTPUT $PAPIEX_OUTPUT;"
+        if papiex_debug: tmp += "setenv PAPIEX_DEBUG $PAPIEX_DEBUG;" 
+        cmd += "alias epmt_instrument '"+tmp+"';\n"
+        cmd += "alias epmt_uninstrument 'unsetenv MONITOR_DEBUG PAPIEX_OUTPUT PAPIEX_DEBUG PAPIEX_OPTIONS"
+        if not oldp:
+            cmd += " LD_PRELOAD';"
+        else:
+            cmd += "';\nsetenv LD_PRELOAD=$OLD_LD_PRELOAD;"
+        # CSH won't let an alias used in eval be used in the same eval, so we repeat this
+        cmd +="\n"+tmp
+    elif not run_cmd:
+        cmd += "epmt_instrument ()\n{\nexport MONITOR_DEBUG PAPIEX_OUTPUT PAPIEX_DEBUG PAPIEX_OPTIONS LD_PRELOAD;\n};\n"
+        cmd += "epmt_uninstrument ()\n{\nexport -n MONITOR_DEBUG PAPIEX_OUTPUT PAPIEX_DEBUG PAPIEX_OPTIONS"
+        if not oldp:
+            cmd += " LD_PRELOAD;\n"
+        else:
+            cmd += "\nexport LD_PRELOAD=$OLD_LD_PRELOAD;\n"
+        cmd +="};\nepmt_instrument;"
+
     return cmd
 
 def epmt_run(forced_jobid, forced_user, cmdline, wrapit=False, dry_run=False, debug=False):
@@ -556,7 +565,7 @@ def epmt_run(forced_jobid, forced_user, cmdline, wrapit=False, dry_run=False, de
             if not epmt_start_job(forced_jobid,forced_user):
                 return 1
 
-    cmd = epmt_source(forced_jobid, forced_user, papiex_debug=debug, monitor_debug=debug, add_export=False, run_cmd=True)
+    cmd = epmt_source(forced_jobid, forced_user, papiex_debug=debug, monitor_debug=debug, run_cmd=True)
     if not cmd:
         return 1 
     cmd += " "+" ".join(cmdline)
@@ -842,8 +851,8 @@ def epmt_entrypoint(args):
         return(epmt_stop_job(args.jobid,None) == False)
     if args.command == 'dump':
         return(epmt_dump_metadata(args.jobid,None,filelist=args.epmt_cmd_args) == False)
-    if args.command == 'source':
-        s = epmt_source(args.jobid,None,(args.verbose > 2),monitor_debug=(args.verbose > 2),add_export=True)
+    if args.epmt_cmd == 'source':
+        s = epmt_source(args.jobid,None,(args.verbose > 2),monitor_debug=(args.verbose > 2))
         if s:
             print(s)
             return 0
