@@ -207,10 +207,10 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(s, s1 | s2)
 
         # hosts, when
-        procs = eq.get_procs('685000', when=datetime(2019, 6, 15, 11, 53), fmt='orm')
+        procs = eq.get_procs('685000', when=datetime(2019, 6, 15, 7, 53), fmt='orm')
         pids = [p.pid for p in procs]
         self.assertEqual(set(pids), set([6098, 6226]))
-        procs = eq.get_procs('685000', when='06/15/2019 11:53', fmt='orm')
+        procs = eq.get_procs('685000', when='06/15/2019 07:53', fmt='orm')
         pids = [p.pid for p in procs]
         self.assertEqual(set(pids), set([6098, 6226]))
         self.assertEqual(eq.get_procs('685000', hosts=['pp208'], fmt='orm').count(), 3480)
@@ -410,7 +410,7 @@ class QueryAPI(unittest.TestCase):
         procs = eq.timeline(jobs, fmt='orm')
         #p1 = procs.first()
         #self.assertEqual(p1.start, min(min(j.processes.start) for j in jobs))
-        self.assertEqual([ p.start for p in procs[:3] ], [datetime(2019, 6, 15, 11, 52, 4, 126892), datetime(2019, 6, 15, 11, 52, 4, 133795), datetime(2019, 6, 15, 11, 52, 4, 142141)])
+        self.assertEqual([ p.start for p in procs[:3] ], [datetime(2019, 6, 15, 7, 52, 4, 126892), datetime(2019, 6, 15, 7, 52, 4, 133795), datetime(2019, 6, 15, 7, 52, 4, 142141)])
         procs = eq.timeline('685016', fmt='orm', limit=5)
         pids = [p.pid for p in procs]
         self.assertEqual(pids, [122181, 122182, 122183, 122184, 122185])

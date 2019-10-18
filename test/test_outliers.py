@@ -12,6 +12,7 @@ def setUpModule():
     setup_db(settings, drop=True)
     datafiles='test/data/outliers/*.tgz'
     print('setUpModule: importing {0}'.format(datafiles))
+    settings.tz = 'Asia/Kolkata'
     epmt_submit(glob(datafiles), dry_run=False)
 
 def tearDownModule():
