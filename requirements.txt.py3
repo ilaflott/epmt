@@ -15,3 +15,4 @@ python-editor==1.0.4
 pytz==2019.2
 six==1.12.0
 SQLAlchemy==1.3.8
+tzlocal==2.0.0

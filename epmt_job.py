@@ -10,7 +10,7 @@ from os import getuid
 from json import dumps, loads
 from pwd import getpwnam, getpwuid
 from epmtlib import tag_from_string, sum_dicts, unique_dicts, fold_dicts, timing, dotdict
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from functools import reduce
 import time
 import pytz
@@ -155,8 +155,8 @@ def load_process_from_pandas(df, h, j, u, settings):
     try:
         earliest_thread_start = Timestamp(df['start'].min(), unit='us')
         latest_thread_finish = Timestamp(df['end'].max(), unit='us')
-        p.start = earliest_thread_start.to_pydatetime().replace(tzinfo = timezone.utc)
-        p.end = latest_thread_finish.to_pydatetime().replace(tzinfo = timezone.utc)
+        p.start = earliest_thread_start.to_pydatetime().replace(tzinfo = pytz.utc)
+        p.end = latest_thread_finish.to_pydatetime().replace(tzinfo = pytz.utc)
         p.duration = float((latest_thread_finish - earliest_thread_start).total_seconds())*float(1000000)
     except Exception as e:
         logger.error("%s",e)
@@ -620,8 +620,8 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     # Initialize elements used in compute
     then = datetime.now()
     csvt = timedelta()
-    earliest_process = datetime.utcnow().replace(tzinfo=timezone.utc)
-    latest_process = datetime.fromtimestamp(0).replace(tzinfo=timezone.utc)
+    earliest_process = datetime.utcnow().replace(tzinfo=pytz.utc)
+    latest_process = datetime.fromtimestamp(0).replace(tzinfo=pytz.utc)
 
 #    stdout.write('-')
 # Hostname, job, metricname objects
@@ -735,12 +735,15 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 
                 # correct the process start/stop times for timezone
                 # start_ts and end_ts are timezone-aware datetime objects
-                p.start = p.start.replace(tzinfo = timezone.utc).astimezone(tz=tz_default)
-                p.end   = p.end.replace(tzinfo = timezone.utc).astimezone(tz=tz_default)
+                p.start = p.start.replace(tzinfo = pytz.utc).astimezone(tz=tz_default)
+                p.end   = p.end.replace(tzinfo = pytz.utc).astimezone(tz=tz_default)
                 if ((p.start < start_ts) or (p.end > stop_ts)):
                     msg = 'Corrupted CSV detected: Process ({0}, pid {1}) start/finish times ({2}, {3}) do not fall within job interval ({4}, {5}). Bailing on job ingest..'.format(p.exename, p.pid, p.start, p.end, start_ts, stop_ts)
                     logger.error(msg)
                     raise ValueError(msg)
+                # save naive datetime objects in the database
+                p.start = p.start.replace(tzinfo = None)
+                p.end = p.end.replace(tzinfo = None)
 
 # Debugging/    progress
                 cnt += 1
@@ -776,10 +779,12 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     else:
         logger.warning("Submitting job with no CSV data, tags %s",str(job_tags))
 
-    j.start = start_ts  # .astimezone(timezone.utc)
-    j.end = stop_ts     # .astimezone(timezone.utc)
-    j.submit = submit_ts # .astimezone(timezone.utc) # Wait time is start - submit and should probably be stored
+    # save naive datetime objects in the database
+    j.start = start_ts.replace(tzinfo=None)
+    j.end = stop_ts.replace(tzinfo=None)
+    j.submit = submit_ts.replace(tzinfo=None) # Wait time is start - submit and should probably be stored
     j.info_dict = {'tz': start_ts.tzinfo.tzname(None)}
+
     d = j.end - j.start
     j.duration = int(d.total_seconds()*1000000)
     j.cpu_time = reduce(lambda c, p: c + p.cpu_time, all_procs, 0)
