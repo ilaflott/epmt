@@ -857,6 +857,9 @@ def epmt_entrypoint(args, help):
         help(stdout)
         dump_config(stdout)
         exit(0)
+    if args.epmt_cmd == 'version':
+        from epmt_query import version
+        return ".".join([str(i) for i in version])
     if args.epmt_cmd == 'dbsize':
         return(epmt_dbsize(findwhat=args.epmt_cmd_args, usejson=args.json, usebytes=args.bytes) == False)
     if args.epmt_cmd == 'start':
