@@ -15,6 +15,7 @@ from sys import stdout, stderr
 from shutil import rmtree
 import fnmatch
 import pickle
+from tzlocal import get_localzone
 from logging import getLogger, basicConfig, DEBUG, INFO, WARNING, ERROR
 logger = getLogger(__name__)  # you can use other name
 from epmt_logging import *
@@ -42,15 +43,15 @@ def find_diffs_in_envs(start_env,stop_env):
 # Remove those with _ at beginning and blacklist
 def blacklist_filter(filter=None, **env):
 #   print env
-    filter = filter or []
     env2 = {}
     for k, v in env.items():
         if k.startswith("_"):
             continue
-        if k in filter:
+        if k == "LS_COLORS":
             continue
         env2[k] = v
     return env2
+
 
 def dump_config(outf):
     print("\nsettings.py (affected by the below env. vars):", file=outf)
@@ -328,10 +329,14 @@ def epmt_check(forced_jobid):
 # These two functions should match _check_and_create_metadata!
 #
 
-def create_start_job_metadata(jobid, submit_ts):
-    ts=datetime.now()
+def create_start_job_metadata(jobid, submit_ts, from_batch=[]):
+    # use timezone info if available, otherwise use naive datetime objects
+    try:
+        ts=datetime.now(tz=get_localzone())
+    except:
+        ts=datetime.now()
     metadata = {}
-    start_env=blacklist_filter(filter=vars(settings).get('env_blacklist',None),**environ)
+    start_env=blacklist_filter(filter,**environ)
 #   print env
     metadata['job_pl_id'] = jobid
 #   metadata['job_pl_hostname'] = gethostname()
@@ -343,9 +348,13 @@ def create_start_job_metadata(jobid, submit_ts):
     metadata['job_pl_env'] = start_env
     return metadata
 
-def merge_stop_job_metadata(metadata, exitcode, reason):
-    ts=datetime.now()
-    stop_env=blacklist_filter(filter=vars(settings).get('env_blacklist',None),**environ)
+def merge_stop_job_metadata(metadata, exitcode, reason, from_batch=[]):
+    # use timezone info if available, otherwise use naive datetime objects
+    try:
+        ts=datetime.now(tz=get_localzone())
+    except:
+        ts=datetime.now()
+    stop_env=blacklist_filter(filter,**environ)
     metadata['job_el_stop_ts'] = ts
     metadata['job_el_exitcode'] = exitcode
     metadata['job_el_reason'] = reason
