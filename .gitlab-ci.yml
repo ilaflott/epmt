@@ -16,40 +16,17 @@ build:python2.7:
   script: # Modify the commands below to build your repository.
     - python -V
     - pip install -r requirements.txt
-    - apt-get update && apt-get install -y csh tcsh
+    - apt-get update && apt-get install -y csh tcsh make
     - rm -f settings.py; ln -s settings/settings_sqlite_inmem.py settings.py  # Setup in mem sqlite
     - python -m py_compile epmt *.py orm/*/*.py		# Compile everything
-    - env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/bash -x epmt-check.anysh
-    - env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/sh -x epmt-check.anysh
-    - env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/tcsh -v epmt-check.anysh
-    - env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/csh -v epmt-check.anysh
-    - env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/bash -Eeux epmt-example.anysh
-#    - env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/bash -Eeux epmt-unsource.anysh # Bash Non Run Condition Test
-    - env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/bash -Eeuxc './epmt -va -j5 run /bin/sleep 1' # Bash run condition
-#    - env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} SHELL=tcsh /bin/tcsh -v epmt-unsource.anysh # tcsh Non Run Condition Test
-    - env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/tcsh -vc './epmt -va -j5 run /bin/sleep 1' # TCSH Run condition test
-    - env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/bash epmt-check-stage-submit.sh
-    - env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers
-    - env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} EPMT_USE_SQLALCHEMY=1 python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema
+    - make check
 
 build:python3:
   image: python:3.7.4
   script: # Modify the commands below to build your repository.
     - python3 -V
     - pip3 install -r requirements.txt.py3
-    - apt-get update && apt-get install -y csh tcsh
+    - apt-get update && apt-get install -y csh tcsh make
     - rm -f settings.py; ln -s settings/settings_sqlite_inmem.py settings.py  # Setup in mem sqlite
     - python3 -m py_compile epmt *.py orm/*/*.py		# Compile everything
-    - env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/bash -x epmt-check.anysh
-    - env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/sh -x epmt-check.anysh
-    - env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/tcsh -v epmt-check.anysh
-    - env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/csh -v epmt-check.anysh
-    - env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/bash -Eeux epmt-example.anysh
-#    - env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/bash -Eeux epmt-unsource.anysh # Bash Non Run Condition Test
-#    - env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/bash -Eeuxc './epmt -va run /bin/sleep 1' # Bash run condition
-#    - env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} SHELL=tcsh /bin/tcsh -v epmt-unsource.anysh # tcsh Non Run Condition Test
-#    - env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/tcsh -vc './epmt -va run /bin/sleep 1' # TCSH Run condition test
-    - env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/bash epmt-check-stage-submit.sh
-    - env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} python3 -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers
-    - env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} EPMT_USE_SQLALCHEMY=1 EPMT_BULK_INSERT=1 python3 -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema
-    - env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} POSTGRES_HOST=postgres EPMT_USE_PG=1 EPMT_USE_SQLALCHEMY=1 EPMT_BULK_INSERT=1 python3 -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema
+    - make check
