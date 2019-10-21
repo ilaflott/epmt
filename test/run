@@ -16,6 +16,21 @@ function finish {
   docker stop pg-docker
 }
 
+echo "Shell tests"
+env -i PATH=${PWD}:${PATH} /bin/bash -x epmt-check.anysh
+env -i PATH=${PWD}:${PATH} /bin/sh -x epmt-check.anysh
+env -i PATH=${PWD}:${PATH} /bin/tcsh -v epmt-check.anysh
+env -i PATH=${PWD}:${PATH} /bin/csh -v epmt-check.anysh
+env -i PATH=${PWD}:${PATH} /bin/bash -Eeux epmt-example.anysh
+env -i PATH=${PWD}:${PATH} /bin/bash epmt-check-stage-submit.sh
+
+
+echo "SQLA + SQLite"
+EPMT_USE_SQLALCHEMY=1 EPMT_BULK_INSERT=1 python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema
+
+echo "------"
+echo "Pony + SQLite"
+python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers
 
 echo "------"
 echo "SQLA + PostgreSQL"
