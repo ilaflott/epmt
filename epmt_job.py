@@ -568,7 +568,24 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     if metadata is False:
         return False
 
+    job_status = {}
+    if metadata.get('job_pl_scriptname'):
+        job_status['script_name'] = metadata['job_pl_scriptname']
+    if metadata.get('job_pl_script'):
+        job_status['script'] = metadata['job_pl_script']
+    if metadata.get('job_el_stdout'):
+        job_status['stdout'] = metadata['job_el_stdout']
+    if metadata.get('job_el_stderr'):
+        job_status['stderr'] = metadata['job_el_stderr']
+    if metadata.get('job_el_exitcode') is not None:
+        job_status['exit_code'] = metadata['job_el_exitcode']
+    if metadata.get('job_el_reason'):
+        job_status['exit_reason'] = metadata['job_el_reason']
+
     env_dict = metadata['job_pl_env']
+    # sometimes the post-processing script's full path is to be found here
+    if env_dict.get('pp_script'):
+        job_status['script_path'] = env_dict.get('pp_script')
 
 # Fields used in this function
     jobid = metadata['job_pl_id']
@@ -590,9 +607,12 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     logger.info('Job finish: {0}'.format(stop_ts))
     jobname = metadata['job_jobname']
     exitcode = metadata['job_el_exitcode']
-    reason = metadata['job_el_reason']
     env_changes_dict = metadata['job_env_changes']
     job_tags = metadata['job_tags']
+
+    # sometimes script name is to be found in the job tags
+    if (job_status.get('script_name') is None) and job_tags and job_tags.get('script_name'):
+        job_status['script_name'] = job_tags.get('script_name')
 
 #    info_dict = metadata['job_pl_from_batch'] # end batch also
 
@@ -784,7 +804,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     j.start = start_ts.replace(tzinfo=None)
     j.end = stop_ts.replace(tzinfo=None)
     j.submit = submit_ts.replace(tzinfo=None) # Wait time is start - submit and should probably be stored
-    j.info_dict = {'tz': start_ts.tzinfo.tzname(None)}
+    j.info_dict = {'tz': start_ts.tzinfo.tzname(None), 'status': job_status}
 
     d = j.end - j.start
     j.duration = int(d.total_seconds()*1000000)
