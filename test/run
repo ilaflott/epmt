@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -eEu
 
 # This script is only there to run the tests manually before committing.
 # usage:
@@ -16,17 +16,13 @@ function finish {
   docker stop pg-docker
 }
 
-echo "Shell tests"
-env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/bash -x epmt-check.anysh
-env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/sh -x epmt-check.anysh
-env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/tcsh -v epmt-check.anysh
-env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/csh -v epmt-check.anysh
-env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/bash -Eeux epmt-example.anysh
-#env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/bash -Eeux epmt-unsource.anysh # Bash Non Run Condition Test
-env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/bash -Eeuxc './epmt -va -j5 run /bin/sleep 1' # Bash run condition
-#env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} SHELL=tcsh /bin/tcsh -v epmt-unsource.anysh # tcsh Non Run Condition Test
-env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/tcsh -vc './epmt -va -j5 run /bin/sleep 1' # TCSH Run condition test
-env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/bash epmt-check-stage-submit.sh
+function shell_tests {
+    echo "Shell tests"
+    env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/tcsh epmt-example.csh
+    env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/csh epmt-example.csh
+    env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/sh epmt-example.sh
+    env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/bash epmt-example.sh
+}
 
 echo "SQLA + SQLite"
 SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` EPMT_USE_SQLALCHEMY=1 EPMT_BULK_INSERT=1 python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema

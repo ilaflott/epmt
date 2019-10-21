@@ -26,10 +26,10 @@ distclean: clean
 # 
 # Simple python version testing with no database
 #
-check: check-python-driver-bash check-python-driver-sh check-python-driver-tcsh check-python-driver-csh check-example-csh check-example-bash check-stage-submit check-unittests
+check: check-python-shells check-unittests
 
 #SLURM_FAKE_JOB_ID=1
-FORCE_DEFAULT_SETTINGS=EPMT_USE_DEFAULT_SETTINGS=1 SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` EPMT_USE_SQLALCHEMY=1 EPMT_BULK_INSERT=1
+#FORCE_DEFAULT_SETTINGS=EPMT_USE_DEFAULT_SETTINGS=1 SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` 
 #TMP_OUTPUT_DIR=/tmp/epmt/
 #DOCKER_PYTHON_IMAGE=
 #DOCKER_RUN_PYTHON=docker run -ti --rm -v $(shell pwd):/app -w /app -e PAPIEX_OUTPUT=$(TMP_OUTPUT_DIR) -e SLURM_JOB_ID=$(SLURM_FAKE_JOB_ID) -e EPMT_JOB_TAGS=operation:test -e $(FORCE_DEFAULT_SETTINGS)
@@ -43,27 +43,14 @@ FORCE_DEFAULT_SETTINGS=EPMT_USE_DEFAULT_SETTINGS=1 SLURM_JOB_ID=1 SLURM_JOB_USER
 #check-python-native:
 #	@$(MAKE) DOCKER_RUN_PYTHON="PAPIEX_OUTPUT=$(TMP_OUTPUT_DIR) SLURM_JOB_ID=$(SLURM_FAKE_JOB_ID) EPMT_JOB_TAGS=operation:test"  DOCKER_PYTHON_IMAGE="" check-python-driver
 
-check-python-driver-bash:
-	@echo; echo "Testing /bin/bash..."
-	env -i PATH=$(PWD):$$PATH $(FORCE_DEFAULT_SETTINGS) /bin/bash -eu epmt-check.anysh
-check-python-driver-sh:
-	@echo; echo "Testing /bin/sh..."
-	env -i PATH=$(PWD):$$PATH $(FORCE_DEFAULT_SETTINGS) /bin/sh -e epmt-check.anysh
-check-python-driver-tcsh:
-	@echo; echo "Testing /bin/tcsh..."
-	env -i PATH=$(PWD):$$PATH $(FORCE_DEFAULT_SETTINGS) /bin/tcsh -e epmt-check.anysh
-check-python-driver-csh:
-	@echo; echo "Testing /bin/csh..."
-	env -i PATH=$(PWD):$$PATH $(FORCE_DEFAULT_SETTINGS) /bin/csh -e epmt-check.anysh
-check-example-bash:
-	@echo; echo "Testing /bin/bash with epmt-example.anysh..."
-	env -i PATH=$(PWD):$(PATH) $(FORCE_DEFAULT_SETTINGS) /bin/bash -eu epmt-example.anysh
-check-example-csh:
-	@echo; echo "Testing /bin/csh with epmt-example.csh..."
-	env -i PATH=$(PWD):$(PATH) $(FORCE_DEFAULT_SETTINGS) /bin/csh -e epmt-example.csh
-check-stage-submit:
-	@echo; echo "Testing sample data stage/submit with epmt-check-stage-submit.sh..."
-	env -i PATH=$(PWD):$(PATH) $(FORCE_DEFAULT_SETTINGS) /bin/bash -e epmt-check-stage-submit.sh
+EPMT_TEST_ENV=PATH=${PWD}:${PATH} EPMT_USE_SQLALCHEMY=1 EPMT_BULK_INSERT=1 EPMT_USE_DEFAULT_SETTINGS=1 SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` 
+
+check-python-shells:
+	rm -rf /tmp/epmt
+	env -i ${EPMT_TEST_ENV} /bin/tcsh -e epmt-example.csh
+	rm -rf /tmp/epmt
+	env -i ${EPMT_TEST_ENV} /bin/bash -Eeu epmt-example.sh
+	rm -rf /tmp/epmt
 check-unittests:
 	@echo; echo "Testing built in unit tests..."
-	env -i PATH=$(PWD):$(PATH) $(FORCE_DEFAULT_SETTINGS) python3 -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema
+	env -i PATH=${PWD}:${PATH} EPMT_USE_SQLALCHEMY=1 EPMT_BULK_INSERT=1 EPMT_USE_DEFAULT_SETTINGS=1 python3 -m unittest -v -f test.test_misc test.test_query test.test_db_schema test.test_submit test.test_outliers 

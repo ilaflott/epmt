@@ -497,14 +497,17 @@ def get_batch_envvar(var,where):
     logger.debug("looking for %s",var)
     a = False
     if var in key2pbs:
-        logger.debug("looking for %s",key2pbs[var])
         a=where.get(key2pbs[var])
-    if not a and var in key2slurm:
-        logger.debug("looking for %s",key2slurm[var])
+    elif var in key2slurm:
         a=where.get(key2slurm[var])
+
     if not a:
-        logger.debug("%s not found",var)
-        return False
+        a=where.get(var)
+        if not a:
+            logger.debug("%s not found",var)
+            return False
+
+    logger.debug("%s found = %s",var,a)
     return a
 
 def _check_and_create_metadata(raw_metadata):
@@ -521,17 +524,21 @@ def _check_and_create_metadata(raw_metadata):
             return False
 # Now look up any batch environment variables we may use
     username = get_batch_envvar("JOB_USER",raw_metadata['job_pl_env'])
-    if username is None:
+    if username is False:
         username = get_batch_envvar("USER",raw_metadata['job_pl_env'])
         if username is False:
             username = raw_metadata.get('job_username')
-            if username is None:
-                logger.error("No job username found in metadata or environment")
-                return False
+            if username == None:
+                username = False
+    if username is False or len(username) < 1:
+        print(raw_metadata['job_pl_env'])
+        logger.error("No job username found in metadata or environment")
+        return False
     jobname = get_batch_envvar("JOB_NAME",raw_metadata['job_pl_env'])
-    if jobname is False:
+    if jobname is False or len(jobname) < 1:
         jobname = "unknown"
         logger.warning("No job name found, defaulting to %s",jobname)
+
 # Look up job tags from stop environment
     job_tags = tag_from_string(raw_metadata['job_el_env'].get(settings.job_tags_env))
     logger.info("job_tags: %s",str(job_tags))

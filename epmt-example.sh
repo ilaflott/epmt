@@ -1,9 +1,5 @@
 #!/bin/bash
 
-export SLURM_JOB_ID=1
-export SLURM_JOB_USER=`whoami`
-rm -rf ./$SLURM_JOB_ID.tgz /tmp/epmt
-
 epmt start           # Generate prolog
 eval `epmt source`   # Setup environment
 sleep 1              # Workload
@@ -11,5 +7,3 @@ epmt_uninstrument    # End Workload, disable instrumentation
 epmt stop            # Wrap up job stats
 epmt stage           # Move to medium term storage ($PWD)
 epmt submit ./$SLURM_JOB_ID.tgz # Submit to DB
-
-rm -rf ./$SLURM_JOB_ID.tgz /tmp/epmt
