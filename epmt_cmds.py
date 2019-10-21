@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 from __future__ import print_function
 from datetime import datetime
-from os import environ, makedirs, mkdir, path, getpid, getuid, getsid, getcwd, chdir, unlink
+from os import environ, makedirs, mkdir, path, getpid, getsid, getcwd, chdir, unlink
 from socket import gethostname
 from subprocess import call as forkexecwait
 from random import randint
 from imp import find_module
 from glob import glob
 from sys import stdout, stderr
-from pwd import getpwuid
 import errno
 
 from shutil import rmtree
@@ -18,7 +17,7 @@ from logging import getLogger, basicConfig, DEBUG, INFO, WARNING, ERROR
 logger = getLogger(__name__)  # you can use other name
 from epmt_logging import *
 
-from epmtlib import set_logging, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm, timing
+from epmtlib import get_username, set_logging, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm, timing
 
 def find_diffs_in_envs(start_env,stop_env):
     env = {}
@@ -334,6 +333,7 @@ def create_start_job_metadata(jobid, submit_ts, from_batch=[]):
         metadata['job_pl_submit_ts'] = submit_ts
     metadata['job_pl_start_ts'] = ts
     metadata['job_pl_env'] = start_env
+    metadata['job_username'] = get_username()
 #        metadata['job_pl_from_batch'] = from_batch
     return metadata
 
@@ -380,8 +380,6 @@ def setup_vars():
                 return jid
         logger.warning("No valid jobid found in pattern %s",settings.jobid_env_list)
         return False
-    def get_username():
-        return getpwuid( getuid() )[ 0 ]
 
     jobid = get_jobid()
     if not jobid:

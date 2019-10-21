@@ -521,12 +521,16 @@ def _check_and_create_metadata(raw_metadata):
             return False
 # Now look up any batch environment variables we may use
     username = get_batch_envvar("JOB_USER",raw_metadata['job_pl_env'])
-    if username is False:
-        username = getpwuid(getuid()).pw_name
-        logger.warning("No job username found, defaulting to %s",username)
+    if username is None:
+        username = get_batch_envvar("USER",raw_metadata['job_pl_env'])
+        if username is False:
+            username = raw_metadata.get('job_username')
+            if username is None:
+                logger.error("No job username found in metadata or environment")
+                return False
     jobname = get_batch_envvar("JOB_NAME",raw_metadata['job_pl_env'])
     if jobname is False:
-        jobname = username+"-"+"unknown"
+        jobname = "unknown"
         logger.warning("No job name found, defaulting to %s",jobname)
 # Look up job tags from stop environment
     job_tags = tag_from_string(raw_metadata['job_el_env'].get(settings.job_tags_env))

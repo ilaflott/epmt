@@ -2,16 +2,20 @@ import sys
 from functools import wraps
 from time import time
 from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING, CRITICAL
-from os import environ, unlink, devnull
+from os import environ, unlink, devnull, getuid
 from contextlib import contextmanager
 from subprocess import call
 from json import dumps, loads
 from pony.orm.ormtypes import TrackedDict
+from pwd import getpwuid
 
 try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO
+
+def get_username():
+    return getpwuid( getuid() )[ 0 ]
 
 # if check is set, then we will bail if logging has already been initialized
 def set_logging(intlvl = 0, check = False):
