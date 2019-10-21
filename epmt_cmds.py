@@ -58,13 +58,13 @@ def dump_config(outf):
     for key, value in sorted(settings.__dict__.items()):
         if not (key.startswith('__') or key.startswith('_')):
             print("%-24s%-56s" % (key,str(value)), file=outf)
-    print("\nenvironment variables (overrides settings.py):", outf)
+    print("\nenvironment variables (overrides settings.py):", file=outf)
     for v in [ "PAPIEX_OSS_PATH", "PAPIEX_OUTPUT", "EPMT_DB_PROVIDER", "EPMT_DB_USER", "EPMT_DB_PASSWORD", "EPMT_DB_HOST", "EPMT_DB_DBNAME", "EPMT_DB_FILENAME" ]:
 #                "provider", "user", "password", "host", "dbname", "filename" ]:
 # "PAPIEX_OPTIONS","PAPIEX_DEBUG","PAPI_DEBUG","MONITOR_DEBUG","LIBPFM_DEBUG"
 #              ]:
         if v in environ:
-            print("%-24s%-56s" % (v,environ[v]), outf)
+            print("%-24s%-56s" % (v,environ[v]), file=outf)
 
 def merge_two_dicts(x, y):
     z = x.copy()   # start with x's keys and values
@@ -851,7 +851,7 @@ def epmt_entrypoint(args):
         return(epmt_stop_job(args.jobid,None) == False)
     if args.command == 'dump':
         return(epmt_dump_metadata(args.jobid,None,filelist=args.epmt_cmd_args) == False)
-    if args.epmt_cmd == 'source':
+    if args.command == 'source':
         s = epmt_source(args.jobid,None,(args.verbose > 2),monitor_debug=(args.verbose > 2))
         if s:
             print(s)
