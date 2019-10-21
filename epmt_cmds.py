@@ -2,16 +2,15 @@
 from __future__ import print_function
 from datetime import datetime
 from os import environ, makedirs, mkdir, path, getpid, getuid, getsid, getcwd, chdir, unlink
-import errno
 from socket import gethostname
-#from json import dumps as dict_to_json
 from subprocess import call as forkexecwait
 from random import randint
 from imp import find_module
-from grp import getgrall, getgrgid
-from pwd import getpwnam, getpwuid
 from glob import glob
 from sys import stdout, stderr
+from pwd import getpwuid
+import errno
+
 from shutil import rmtree
 import fnmatch
 import pickle
@@ -270,34 +269,33 @@ def verify_stage_command():
     PrintPass()
     return True
 
-
-def verify_papiex(fake_job_id,fake_job_user,dir):
+def verify_papiex():
     print("epmt run functionality")
     logger.info("\tepmt run -a /bin/sleep 1, output to %s",dir)
-    retval = epmt_run(fake_job_id, fake_job_user, ["/bin/sleep","1"],wrapit=True)
+    retval = epmt_run(["/bin/sleep","1"],wrapit=True)
     if retval != 0:
         retval = False
     else:
         retval = True
-        files = glob(dir+settings.input_pattern)
+        files = glob(global_datadir+settings.input_pattern)
         if len(files) != 1:
-            logger.error("%s matched %d papiex CSV output files instead of 1",dir+settings.input_pattern,len(files))
+            logger.error("%s matched %d papiex CSV output files instead of 1",global_datadir+settings.input_pattern,len(files))
             retval = False
     if retval == True:
-        files = glob(dir+"job_metadata")
+        files = glob(global_datadir+"job_metadata")
         if len(files) != 1:
-            logger.error("%s matched %d job_metadata files instead of 1",dir+job_metadata,len(files))
+            logger.error("%s matched %d job_metadata files instead of 1",global_datadir+job_metadata,len(files))
             retval = False
 
     if retval == True:
         PrintPass()
     else:
         PrintFail()
-    logger.info("rmtree %s",dir) 
-    rmtree(dir)
+    logger.info("rmtree %s",global_datadir) 
+    rmtree(global_datadir)
     return retval
 
-def epmt_check(forced_jobid):
+def epmt_check():
     retval = True
     if verify_db_params() == False:
         retval = False
@@ -311,15 +309,7 @@ def epmt_check(forced_jobid):
         retval = False
     if verify_stage_command() == False:
         retval = False
-
-    if not forced_jobid:
-        forced_jobid = "1"
-
-    jobid,dir,file = setup_vars(forced_jobid=forced_jobid,forced_user="testuser")
-    if not jobid or dir or file:
-        retval = False
-
-    if verify_papiex(forced_jobid,"testuser",dir) == False:
+    if verify_papiex() == False:
         retval = False
     return retval
 
@@ -361,16 +351,6 @@ def merge_stop_job_metadata(metadata, exitcode, reason, from_batch=[]):
     metadata['job_el_env'] = stop_env
     return metadata
 
-def get_jobid():
-    if hasattr(settings, 'jobid_env_list'):
-        for e in settings.jobid_env_list:
-            jid = environ.get(e)
-            if jid:
-                return jid
-        logger.error("No valid jobid found in pattern %s, consider using -j <jobid>",settings.jobid_env_list)
-        return False
-    logger.error("No valid job_id_env_list found in settings.py")
-    return False
 
 def create_job_dir(dir):
     try:
@@ -392,75 +372,49 @@ def write_job_metadata(jobdatafile,data):
     return False
     # collect env
 
-def setup_vars(forced_jobid, forced_user):
-    if forced_jobid:
-        jobid = forced_jobid
-    else:
-        jobid = get_jobid()
+def setup_vars():
+    def get_jobid():
+        for e in settings.jobid_env_list:
+            jid = environ.get(e)
+            if jid and len(jid) > 0:
+                return jid
+        logger.warning("No valid jobid found in pattern %s",settings.jobid_env_list)
+        return False
+    def get_username():
+        return getpwuid( getuid() )[ 0 ]
+
+    jobid = get_jobid()
     if not jobid:
         return False,False,False
 
-    if forced_user:
-        userdir = forced_user
-    else:
-        userdir = environ.get("USER")
-    if userdir and len(userdir) > 0:
-        userdir = userdir + "/"
-    else:
-        userdir = ""
-
-    if environ.get("PAPIEX_OUTPUT"):
-        logger.warning("PAPIEX_OUTPUT variable should not be defined, it will be ignored")
-    if environ.get("PAPIEX_OPTIONS"):
-        logger.warning("PAPIEX_OPTIONS variable should not be defined, it will be ignored")
-
-    if not settings.epmt_output_prefix.endswith("/"):
-        userdir = "/" + userdir
-        logger.warning("settings.epmt_output_prefix should end in a /")
-
-    dir = settings.epmt_output_prefix + userdir + "epmt/" + jobid + "/"
+    dir = settings.epmt_output_prefix + get_username() + "/" + jobid + "/"
     file = dir + "job_metadata"
     logger.info("jobid = %s, dir = %s, file = %s",jobid,dir,file)
     return jobid,dir,file
 
-def epmt_start_job(forced_jobid,forced_user,other=[]):
-    jobid,dir,file = setup_vars(forced_jobid,forced_user)
-    if jobid == False:
-        return False;
-    metadata = create_start_job_metadata(jobid,False,other)
-    if create_job_dir(dir) is False:
+def epmt_start_job(other=[]):
+    metadata = create_start_job_metadata(global_jobid,False,other)
+    if create_job_dir(global_datadir) is False:
         return False
-    if path.exists(file):
-        logger.error("%s already exists!",file)
+    if path.exists(global_metadatafile):
+        logger.error("%s already exists!",global_metadatafile)
         return False
-    retval = write_job_metadata(file,metadata)
+    retval = write_job_metadata(global_metadatafile,metadata)
     return retval
 
-def epmt_stop_job(forced_jobid,forced_user,other=[]):
-    jobid,dir,file = setup_vars(forced_jobid,forced_user)
-    if jobid == False:
-        return False;
-    start_metadata = read_job_metadata(file)
+def epmt_stop_job(other=[]):
+    start_metadata = read_job_metadata(global_metadatafile)
     if not start_metadata:
         return False
-    logger.info("read job start metadata from %s",file);
+    logger.info("read job start metadata from %s",global_metadatafile);
     if "job_el_stop_ts" in start_metadata:
-        logger.error("%s is already complete!",file)
+        logger.error("%s is already complete!",global_metadatafile)
         return False
     metadata = merge_stop_job_metadata(start_metadata,0,"none",other)
-    retval = write_job_metadata(file,metadata)
+    retval = write_job_metadata(global_metadatafile,metadata)
     return retval
 
-def epmt_dump_metadata(forced_jobid, forced_user, filelist=[]):
-# If no file specified, then try and find it
-#    if len(filelist) == 0:
-    if len(filelist) is 0:
-        jobid,dir,file = setup_vars(forced_jobid,forced_user)
-        if jobid == False:
-            return False;
-        filelist = [file]
-
-    
+def epmt_dump_metadata(filelist):
     for file in filelist:
         if not path.exists(file):
             logger.error("%s does not exist!",file)
@@ -487,7 +441,7 @@ def epmt_dump_metadata(forced_jobid, forced_user, filelist=[]):
             print("%-24s%-56s" % (d,str(metadata[d])))
     return True
 
-def epmt_source(forced_jobid, forced_user, papiex_debug=False, monitor_debug=False, run_cmd=False):
+def epmt_source(datadir, papiex_debug=False, monitor_debug=False, run_cmd=False):
     """
 
     epmt_source - produces shell variables that enable transparent instrumentation
@@ -496,10 +450,6 @@ def epmt_source(forced_jobid, forced_user, papiex_debug=False, monitor_debug=Fal
 
 
     """
-
-    jobid,output_dir,file = setup_vars(forced_jobid, forced_user)
-    if jobid == False:
-        return None;
 
     def detect_csh():
         for v in [ environ.get("_"), environ.get("SHELL") ]:
@@ -529,8 +479,8 @@ def epmt_source(forced_jobid, forced_user, papiex_debug=False, monitor_debug=Fal
 
     cmd = ""
     if monitor_debug: cmd = add_var(cmd,"MONITOR_DEBUG"+equals+"TRUE")
-    if output_dir: cmd = add_var(cmd,"PAPIEX_OUTPUT"+equals+output_dir) 
     if papiex_debug: cmd = add_var(cmd,"PAPIEX_DEBUG"+equals+"TRUE")
+    cmd = add_var(cmd,"PAPIEX_OUTPUT"+equals+datadir) 
     cmd = add_var(cmd,"PAPIEX_OPTIONS"+equals+settings.papiex_options)
     oldp = environ.get("LD_PRELOAD")
     if oldp: cmd = add_var(cmd,"OLD_LD_PRELOAD"+equals+oldp)
@@ -542,8 +492,8 @@ def epmt_source(forced_jobid, forced_user, papiex_debug=False, monitor_debug=Fal
 #
     if undercsh:
         tmp = "setenv PAPIEX_OPTIONS $PAPIEX_OPTIONS; setenv LD_PRELOAD $LD_PRELOAD;"
+        tmp += "setenv PAPIEX_OUTPUT $PAPIEX_OUTPUT;"
         if monitor_debug: tmp += "setenv MONITOR_DEBUG $MONITOR_DEBUG;"
-        if output_dir: tmp+= "setenv PAPIEX_OUTPUT $PAPIEX_OUTPUT;"
         if papiex_debug: tmp += "setenv PAPIEX_DEBUG $PAPIEX_DEBUG;" 
         cmd += "alias epmt_instrument '"+tmp+"';\n"
         cmd += "alias epmt_uninstrument 'unsetenv MONITOR_DEBUG PAPIEX_OUTPUT PAPIEX_DEBUG PAPIEX_OPTIONS"
@@ -564,20 +514,21 @@ def epmt_source(forced_jobid, forced_user, papiex_debug=False, monitor_debug=Fal
 
     return cmd
 
-def epmt_run(forced_jobid, forced_user, cmdline, wrapit=False, dry_run=False, debug=False):
-    logger.debug("epmt_run(%s, %s, %s, %s, %s)",forced_jobid, cmdline, str(wrapit), str(dry_run), str(debug))
+def epmt_run(cmdline, wrapit=False, dry_run=False, debug=False):
+    logger.debug("epmt_run(%s, %s, %s, %s, %s)", cmdline, str(wrapit), str(dry_run), str(debug))
+
+    cmd = epmt_source(global_datadir, papiex_debug=debug, monitor_debug=debug, run_cmd=True)
+    if not cmd:
+        return 1 
+    cmd += " "+" ".join(cmdline)
+
     if wrapit:
         logger.info("Forcing epmt_start")
         if dry_run:
             print("epmt start")
         else:
-            if not epmt_start_job(forced_jobid,forced_user):
+            if not epmt_start_job():
                 return 1
-
-    cmd = epmt_source(forced_jobid, forced_user, papiex_debug=debug, monitor_debug=debug, run_cmd=True)
-    if not cmd:
-        return 1 
-    cmd += " "+" ".join(cmdline)
 
     logger.info("Executing(%s)",cmd)
     if not dry_run:
@@ -592,7 +543,7 @@ def epmt_run(forced_jobid, forced_user, cmdline, wrapit=False, dry_run=False, de
         if dry_run:
             print("epmt stop")
         else:
-            epmt_stop_job(forced_jobid, forced_user)
+            epmt_stop_job()
     return return_code
 
 def get_filedict(dirname,pattern,tar=False):
@@ -639,25 +590,16 @@ def get_filedict(dirname,pattern,tar=False):
 
     return filedict
 
-def epmt_submit(other_dirs, forced_jobid=None, dry_run=True, drop=False, keep_going=True):
+def epmt_submit(other_dirs, dry_run=True, drop=False, keep_going=True):
+    logger.debug("epmt_submit()",other_dirs,dry_run,drop,keep_going)
     if dry_run and drop:
         logger.error("You can't drop tables and do a dry run")
         return(False)
-    if other_dirs and forced_jobid:
-        logger.error("You can't force a job id and provide a list of directories")
-        return(False)
-    if other_dirs: # specified list of dirs
-        for f in other_dirs:
-            r = submit_to_db(f,settings.input_pattern,dry_run=dry_run,drop=drop)
-            if r is False and not keep_going:
-                return(r)
-        return(True)
-    else:
-        jobid,dir,file = setup_vars(forced_jobid, forced_user)
-        if jobid is False:
-            return(False)
-        return(submit_to_db(dir,settings.input_pattern,dry_run=dry_run,drop=drop))
-        
+    for f in other_dirs:
+        r = submit_to_db(f,settings.input_pattern,dry_run=dry_run,drop=drop)
+        if r is False and not keep_going:
+            return(r)
+    return(True)
 
 def compressed_tar(input):
     tar = None
@@ -720,7 +662,7 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
     if dry_run:
 #        check_workflowdb_dict(metadata,pfx="exp_")
         logger.info("Dry run finished, skipping DB work")
-        return
+        return True
 
 #    if tar:
 #        tar.close()
@@ -736,6 +678,7 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
     if not j:
         return False
     logger.info("Committed job %s to database: %s",j.jobid,j)
+    return True
 
 # Dead code
 # Check if we have anything related to an "experiment"
@@ -820,22 +763,18 @@ def stage_job(jid,dir,file,collate=True,compress_and_tar=True):
         print(settings.stage_command_dest+path.basename(filetostage))
     return True
 
-def epmt_stage(forced_jobid, forced_user, other_dirs):
-    logger.debug("epmt_stage(%s,%s,%s)",forced_jobid,forced_user,other_dirs)
-    if other_dirs:
-        for dir in other_dirs:
-            if not dir.endswith("/"):
-                logger.warning("missing trailing / on %s",dir)
-                dir += "/"
-            jobid = path.basename(path.dirname(dir))
-            file = dir + "job_metadata"
-            r = stage_job(jobid,dir,file)
-            if r is False:
-                return False
-        return True
-    else:
-        jobid,dir,file = setup_vars(forced_jobid, forced_user)
-        return(stage_job(jobid,dir,file))
+def epmt_stage(other_dirs):
+    logger.debug("epmt_stage(%s)",other_dirs)
+    for dir in other_dirs:
+        if not dir.endswith("/"):
+            logger.warning("missing trailing / on %s",dir)
+            dir += "/"
+        jobid = path.basename(path.dirname(dir))
+        file = dir + "job_metadata"
+        r = stage_job(jobid,dir,file)
+        if r is False:
+            return False
+    return True
 
 def epmt_dbsize(findwhat=['database','table','index','tablespace'], usejson=False, usebytes=False):
     from orm import get_db_size
@@ -844,7 +783,12 @@ def epmt_dbsize(findwhat=['database','table','index','tablespace'], usejson=Fals
 #
 # depends on args being global
 #
+global_jobid = None
+global_datadir = None
+global_metadatafile = None
+
 def epmt_entrypoint(args, help):
+
     if args.verbose == None:
         args.verbose = 0
     set_logging(args.verbose, check=False)
@@ -858,30 +802,69 @@ def epmt_entrypoint(args, help):
         exit(0)
     if args.epmt_cmd == 'dbsize':
         return(epmt_dbsize(findwhat=args.epmt_cmd_args, usejson=args.json, usebytes=args.bytes) == False)
+
+    # Set gross globals that may be used by the below commands.
+
+    global global_jobid, global_datadir, global_metadatafile
+    global_jobid,global_datadir,global_metadatafile = setup_vars()
+
+    # Here it's up to each command to validate what it is looking for
+    # and error out appropriately
+
     if args.epmt_cmd == 'start':
-        return(epmt_start_job(args.jobid,None,other=args.epmt_cmd_args) == False)
+        if not global_jobid or not global_metadatafile or not global_datadir:
+            logger.error("Could not identify your job id")
+            return 1
+        return(epmt_start_job(other=args.epmt_cmd_args) == False)
     if args.epmt_cmd == 'stop':
-        return(epmt_stop_job(args.jobid,None,other=args.epmt_cmd_args) == False)
-    if args.epmt_cmd == 'dump':
-        return(epmt_dump_metadata(args.jobid,None,filelist=args.epmt_cmd_args) == False)
-    if args.epmt_cmd == 'source':
-        s = epmt_source(args.jobid,None,(args.verbose > 2),monitor_debug=(args.verbose > 2))
-        if s:
-            print(s)
-            return 0
-        return 1
+        if not global_jobid or not global_metadatafile:
+            logger.error("Could not identify your job id")
+            return 1
+        return(epmt_stop_job(other=args.epmt_cmd_args) == False)
     if args.epmt_cmd == "stage":
-        return(epmt_stage(args.jobid,None,args.epmt_cmd_args) == False)
+        if args.epmt_cmd_args:
+            indir = args.epmt_cmd_args
+        else:
+            indir = [global_datadir]
+        if not indir:
+            logger.error("Could not identify your job id")
+            return 1
+        return(epmt_stage(indir) == False)
     if args.epmt_cmd == 'run':
         if not args.epmt_cmd_args: 
             logger.error("No command given")
             return(1)
-        r = epmt_run(args.jobid,None,args.epmt_cmd_args,wrapit=args.auto,dry_run=args.dry_run,debug=(args.verbose > 2))
+        r = epmt_run(args.epmt_cmd_args,wrapit=args.auto,dry_run=args.dry_run,debug=(args.verbose > 2))
         return(r)
+    if args.epmt_cmd == 'source':
+        if not global_datadir:
+            logger.error("Could not identify your job id")
+            return 1
+        s = epmt_source(global_datadir,papiex_debug=(args.verbose > 2),monitor_debug=(args.verbose > 3))
+        if s:
+            print(s)
+            return 0
+        return 1
+    if args.epmt_cmd == 'dump':
+        if args.epmt_cmd_args:
+            infile = args.epmt_cmd_args
+        else:
+            infile = [global_metadatafile]
+        if not infile:
+            logger.error("Could not identify your job id")
+            return False
+        return(epmt_dump_metadata(infile) == False)
     if args.epmt_cmd == 'submit':
-        return(epmt_submit(args.epmt_cmd_args,args.jobid,dry_run=args.dry_run,drop=args.drop,keep_going=not args.error) == False)
+        if args.epmt_cmd_args:
+            indir = args.epmt_cmd_args
+        else:
+            indir = [global_datadir]
+        if not indir:
+            logger.error("Could not identify your job id")
+            return False
+        return(epmt_submit(indir,dry_run=args.dry_run,drop=args.drop,keep_going=not args.error) == False)
     if args.epmt_cmd == 'check':
-        return(epmt_check(args.jobid) == False)
+        return(epmt_check() == False)
     if args.epmt_cmd == 'delete':
         from epmt_cmd_delete import epmt_delete_jobs
         return(epmt_delete_jobs(args.epmt_cmd_args) == False)

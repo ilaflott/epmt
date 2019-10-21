@@ -1,21 +1,18 @@
-setenv SHELL /bin/csh
-setenv USER testuser
-rm -rf ./1 ./1.tgz
-rm -rf /tmp/epmt 
-./epmt -j1 start           # Generate prolog
-eval `epmt -j1 source`     # Setup environment
-echo $PAPIEX_OPTIONS
-echo $PAPIEX_OUTPUT
-echo $LD_PRELOAD
+#!/bin/csh
 
+setenv SHELL /bin/csh
+setenv SLURM_JOB_ID 1
+setenv SLURM_JOB_USER `whoami`
+rm -rf ./$SLURM_JOB_ID ./$SLURM_JOB_ID.tgz
+rm -rf /tmp/epmt 
+
+./epmt start           # Generate prolog
+eval `epmt source`     # Setup environment
 # Workload
 sleep 1
 # End Workload
-unsource
-echo PAPIEX_OPTIONS: $?PAPIEX_OPTIONS
-echo PAPIEX_OUTPUT: $?PAPIEX_OUTPUT
-echo LD_PRELOAD: $?LD_PRELOAD
-./epmt -j1 stop            # Generate epilog and append
-./epmt -j1 stage           # Move to medium term storage
-./epmt submit ./1.tgz      # Submit from staged storage
-rm -f ./1.tgz
+epmt_uninstrument
+epmt stop            # Generate epilog and append
+epmt stage           # Move to medium term storage
+epmt submit ./$SLURM_JOB_ID.tgz      # Submit from staged storage
+rm -f ./$SLURM_JOB_ID.tgz

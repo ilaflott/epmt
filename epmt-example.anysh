@@ -1,14 +1,17 @@
-export USER=testuser
-rm -rf ./1 ./1.tgz
+#!/bin/bash
+
+export SLURM_JOB_ID=1
+export SLURM_JOB_USER=`whoami`
+rm -rf ./$SLURM_JOB_ID ./$SLURM_JOB_ID.tgz
 rm -rf /tmp/epmt 
-epmt -j1 start           # Generate prolog
-eval `epmt -j1 source`   # Setup environment
-epmt_instrument
+
+epmt start           # Generate prolog
+eval `epmt source`   # Setup environment
 # Workload
 sleep 1
 # End Workload
 epmt_uninstrument
-epmt -j1 stop            # Generate epilog and append
-epmt -j1 stage           # Move to medium term storage
-epmt submit ./1.tgz      # Submit from staged storage
-rm -f ./1.tgz
+epmt stop            # Generate epilog and append
+epmt stage           # Move to medium term storage
+epmt submit ./$SLURM_JOB_ID.tgz      # Submit from staged storage
+rm -f ./$SLURM_JOB_ID.tgz

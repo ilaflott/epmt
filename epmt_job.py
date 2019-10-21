@@ -526,7 +526,7 @@ def _check_and_create_metadata(raw_metadata):
         logger.warning("No job username found, defaulting to %s",username)
     jobname = get_batch_envvar("JOB_NAME",raw_metadata['job_pl_env'])
     if jobname is False:
-        jobname = username+"-"+"interactive"
+        jobname = username+"-"+"unknown"
         logger.warning("No job name found, defaulting to %s",jobname)
 # Look up job tags from stop environment
     job_tags = tag_from_string(raw_metadata['job_el_env'].get(settings.job_tags_env))

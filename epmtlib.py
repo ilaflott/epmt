@@ -38,6 +38,12 @@ def set_logging(intlvl = 0, check = False):
 
 def init_settings(settings):
     logger = getLogger(__name__)
+
+    if environ.get("PAPIEX_OUTPUT"):
+        logger.warning("PAPIEX_OUTPUT variable should not be defined, it will be ignored")
+    if environ.get("PAPIEX_OPTIONS"):
+        logger.warning("PAPIEX_OPTIONS variable should not be defined, it will be ignored")
+
     for k in [ "provider", "user", "password", "host", "dbname", "filename" ]:
         name = "EPMT_DB_"+ k.upper()
         t = environ.get(name)
@@ -45,6 +51,12 @@ def init_settings(settings):
             logger.info("%s found, setting %s:%s now %s:%s",name,k,settings.db_params[k],k,t)
             settings.db_params[k] = t
 
+    if not hasattr(settings,"epmt_output_prefix"):
+        logger.error("missing settings.epmt_output_prefix")
+        exit(1)
+    if not settings.epmt_output_prefix.endswith("/"):
+        logger.warning("settings.epmt_output_prefix should end in a /")
+        settings.epmt_output_prefix += "/"
     if not hasattr(settings, 'job_tags_env'):
         logger.warning("missing settings.job_tags_env")
         settings.job_tags_env = 'EPMT_JOB_TAGS'

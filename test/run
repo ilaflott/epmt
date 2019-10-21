@@ -22,9 +22,9 @@ env -i PATH=${PWD}:${PATH} /bin/sh -x epmt-check.anysh
 env -i PATH=${PWD}:${PATH} /bin/tcsh -v epmt-check.anysh
 env -i PATH=${PWD}:${PATH} /bin/csh -v epmt-check.anysh
 env -i PATH=${PWD}:${PATH} /bin/bash -Eeux epmt-example.anysh
-env -i PATH=${PWD}:${PATH} /bin/bash -Eeux epmt-unsource.anysh # Bash Non Run Condition Test
+#env -i PATH=${PWD}:${PATH} /bin/bash -Eeux epmt-unsource.anysh # Bash Non Run Condition Test
 env -i PATH=${PWD}:${PATH} /bin/bash -Eeuxc './epmt -va -j5 run /bin/sleep 1' # Bash run condition
-env -i PATH=${PWD}:${PATH} SHELL=tcsh /bin/tcsh -v epmt-unsource.anysh # tcsh Non Run Condition Test
+#env -i PATH=${PWD}:${PATH} SHELL=tcsh /bin/tcsh -v epmt-unsource.anysh # tcsh Non Run Condition Test
 env -i PATH=${PWD}:${PATH} /bin/tcsh -vc './epmt -va -j5 run /bin/sleep 1' # TCSH Run condition test
 env -i PATH=${PWD}:${PATH} /bin/bash epmt-check-stage-submit.sh
 
