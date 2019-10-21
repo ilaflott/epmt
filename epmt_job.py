@@ -9,7 +9,7 @@ from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
 from os import getuid
 from json import dumps, loads
 from pwd import getpwnam, getpwuid
-from epmtlib import tag_from_string, sum_dicts, unique_dicts, fold_dicts, timing, dotdict
+from epmtlib import tag_from_string, sum_dicts, unique_dicts, fold_dicts, timing, dotdict, get_first_key_match
 from datetime import datetime, timedelta
 from functools import reduce
 import time
@@ -568,7 +568,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     if metadata is False:
         return False
 
-    tz_default = pytz.timezone(settings.tz or 'utc')
+    env_dict = metadata['job_pl_env']
 
 # Fields used in this function
     jobid = metadata['job_pl_id']
@@ -577,7 +577,9 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     stop_ts = metadata['job_el_stop_ts']
     submit_ts = metadata['job_pl_submit_ts']
     if not start_ts.tzinfo:
-        logger.warning('timezone could not be auto-detected, assuming {0}'.format(settings.tz or 'utc'))
+        tz_str = get_first_key_match(env_dict, 'TZ', 'TIMEZONE') or get_first_key_match(environ, 'EPMT_TZ') or 'US/Eastern'
+        logger.info('timezone could not be auto-detected, assuming {0}'.format(tz_str))
+        tz_default = pytz.timezone(tz_str)
         start_ts = tz_default.localize(start_ts)
         stop_ts = tz_default.localize(stop_ts)
         submit_ts = tz_default.localize(submit_ts)
@@ -589,7 +591,6 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     jobname = metadata['job_jobname']
     exitcode = metadata['job_el_exitcode']
     reason = metadata['job_el_reason']
-    env_dict = metadata['job_pl_env']
     env_changes_dict = metadata['job_env_changes']
     job_tags = metadata['job_tags']
 

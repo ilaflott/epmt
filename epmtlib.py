@@ -390,3 +390,12 @@ def merge_intervals(intervals):
          else:
              merged.append(current)
      return merged
+
+# checks the dictionary (d) for keys in sequence
+# and returns the value for the first key found
+# Returns None if no key matched
+def get_first_key_match(d, *keys):
+    for k in keys:
+        if k in d:
+            return d[k]
+    return None
