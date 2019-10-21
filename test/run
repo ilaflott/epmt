@@ -17,23 +17,23 @@ function finish {
 }
 
 echo "Shell tests"
-env -i PATH=${PWD}:${PATH} /bin/bash -x epmt-check.anysh
-env -i PATH=${PWD}:${PATH} /bin/sh -x epmt-check.anysh
-env -i PATH=${PWD}:${PATH} /bin/tcsh -v epmt-check.anysh
-env -i PATH=${PWD}:${PATH} /bin/csh -v epmt-check.anysh
-env -i PATH=${PWD}:${PATH} /bin/bash -Eeux epmt-example.anysh
-#env -i PATH=${PWD}:${PATH} /bin/bash -Eeux epmt-unsource.anysh # Bash Non Run Condition Test
-env -i PATH=${PWD}:${PATH} /bin/bash -Eeuxc './epmt -va -j5 run /bin/sleep 1' # Bash run condition
-#env -i PATH=${PWD}:${PATH} SHELL=tcsh /bin/tcsh -v epmt-unsource.anysh # tcsh Non Run Condition Test
-env -i PATH=${PWD}:${PATH} /bin/tcsh -vc './epmt -va -j5 run /bin/sleep 1' # TCSH Run condition test
-env -i PATH=${PWD}:${PATH} /bin/bash epmt-check-stage-submit.sh
+env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/bash -x epmt-check.anysh
+env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/sh -x epmt-check.anysh
+env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/tcsh -v epmt-check.anysh
+env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/csh -v epmt-check.anysh
+env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/bash -Eeux epmt-example.anysh
+#env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/bash -Eeux epmt-unsource.anysh # Bash Non Run Condition Test
+env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/bash -Eeuxc './epmt -va -j5 run /bin/sleep 1' # Bash run condition
+#env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} SHELL=tcsh /bin/tcsh -v epmt-unsource.anysh # tcsh Non Run Condition Test
+env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/tcsh -vc './epmt -va -j5 run /bin/sleep 1' # TCSH Run condition test
+env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/bash epmt-check-stage-submit.sh
 
 echo "SQLA + SQLite"
-EPMT_USE_SQLALCHEMY=1 EPMT_BULK_INSERT=1 python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema
+SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` EPMT_USE_SQLALCHEMY=1 EPMT_BULK_INSERT=1 python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema
 
 echo "------"
 echo "Pony + SQLite"
-python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers
+SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers
 
 echo "------"
 echo "SQLA + PostgreSQL"
@@ -42,4 +42,4 @@ trap finish EXIT INT QUIT HUP
 
 echo "sleeping 15 sec to get PG service up and running.."
 sleep 15
-EPMT_USE_PG=1 EPMT_USE_SQLALCHEMY=1 EPMT_BULK_INSERT=1 python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema
+SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` EPMT_USE_PG=1 EPMT_USE_SQLALCHEMY=1 EPMT_BULK_INSERT=1 python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema

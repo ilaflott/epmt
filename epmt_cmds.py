@@ -823,15 +823,20 @@ def epmt_entrypoint(args, help):
         if args.epmt_cmd_args:
             indir = args.epmt_cmd_args
         else:
+            if not global_datadir:
+                logger.error("Could not identify your job id")
+                return 1
             indir = [global_datadir]
-        if not indir:
-            logger.error("Could not identify your job id")
+        if not indir or len(indir) < 1:
             return 1
         return(epmt_stage(indir) == False)
     if args.epmt_cmd == 'run':
         if not args.epmt_cmd_args: 
             logger.error("No command given")
             return(1)
+        if not global_datadir:
+            logger.error("Could not identify your job id")
+            return 1
         r = epmt_run(args.epmt_cmd_args,wrapit=args.auto,dry_run=args.dry_run,debug=(args.verbose > 2))
         return(r)
     if args.epmt_cmd == 'source':
@@ -847,8 +852,11 @@ def epmt_entrypoint(args, help):
         if args.epmt_cmd_args:
             infile = args.epmt_cmd_args
         else:
+            if not global_metadatafile:
+                logger.error("Could not identify your job id")
+                return 1
             infile = [global_metadatafile]
-        if not infile:
+        if not infile or len(infile) < 1:
             logger.error("Could not identify your job id")
             return False
         return(epmt_dump_metadata(infile) == False)
@@ -856,8 +864,11 @@ def epmt_entrypoint(args, help):
         if args.epmt_cmd_args:
             indir = args.epmt_cmd_args
         else:
+            if not global_datadir:
+                logger.error("Could not identify your job id")
+                return 1
             indir = [global_datadir]
-        if not indir:
+        if not indir or len(indir) < 1:
             logger.error("Could not identify your job id")
             return False
         return(epmt_submit(indir,dry_run=args.dry_run,drop=args.drop,keep_going=not args.error) == False)
