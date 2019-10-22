@@ -16,13 +16,15 @@ function finish {
   docker stop pg-docker
 }
 
-function shell_tests {
-    echo "Shell tests"
-    env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/tcsh epmt-example.csh
-    env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/csh epmt-example.csh
-    env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/sh epmt-example.sh
-    env -i SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` PATH=${PWD}:${PATH} /bin/bash epmt-example.sh
-}
+echo "Shell tests"
+env -i PATH=${PWD}:${PATH} /bin/bash -x epmt-check.anysh
+env -i PATH=${PWD}:${PATH} /bin/tcsh -v epmt-check.anysh
+env -i PATH=${PWD}:${PATH} /bin/csh -v epmt-check.anysh
+env -i PATH=${PWD}:${PATH} /bin/bash -Eeux epmt-example.anysh
+env -i PATH=${PWD}:${PATH} /bin/bash -Eeuxc './epmt run -va -j5  /bin/sleep 1' # Bash run condition
+env -i PATH=${PWD}:${PATH} /bin/tcsh -vc './epmt run -va -j5  /bin/sleep 1' # TCSH Run condition test
+env -i PATH=${PWD}:${PATH} /bin/bash epmt-check-stage-submit.sh
+
 
 echo "SQLA + SQLite"
 SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` EPMT_USE_SQLALCHEMY=1 EPMT_BULK_INSERT=1 python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema

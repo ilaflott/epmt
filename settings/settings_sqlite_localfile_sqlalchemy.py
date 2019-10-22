@@ -15,10 +15,6 @@ bulk_insert = True
 # input_pattern = "*-papiex-*-[0-9]*.csv"
 # install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-oss-install/"
 #
-# tz setting is used *ONLY* when timezone cannot be determined automatically
-# tz = 'US/Eastern'
-# 
-#
 # DO NOT EDIT BELOW UNLESS YOU KNOW WHAT YOU ARE DOING!
 # #
 # job_tags_env = 'EPMT_JOB_TAGS'

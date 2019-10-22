@@ -1,12 +1,9 @@
-#!/bin/bash -Eeux
-export SLURM_JOB_ID=1
-export SLURM_JOB_USER=`whoami`
-rm -rf /tmp/epmt
-epmt start               # Generate prolog
-eval `epmt source`       # Setup environment
-/bin/sleep 1		 # Workload
-epmt_uninstrument        # Turn off auto instrumentation
+epmt -h >/dev/null       # help path 1
+epmt help >/dev/null     # help path 2
+epmt check		 # Check platform and settings.py
+epmt start               # Collect job data
+epmt -v run sleep 1      # Run command, if no papiex just run command silently
 epmt stop                # Generate epilog and append
-epmt dump >/dev/null     # Parse/print job_metadata
+epmt dump   >/dev/null   # Parse/print job_metadata
 f=`epmt stage`           # Move to medium term storage
 epmt submit $f           # Submit from staged storage

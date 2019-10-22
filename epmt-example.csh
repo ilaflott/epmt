@@ -1,4 +1,4 @@
-#!/bin/csh
+#!/bin/tcsh
 
 setenv SHELL /bin/tcsh
 ./epmt start           # Generate prolog
@@ -8,4 +8,3 @@ epmt_uninstrument      # End Workload
 epmt stop              # Wrap up job stats
 epmt stage             # Move to medium term storage ($PWD)
 epmt submit ./$SLURM_JOB_ID.tgz # Submit to DB
-

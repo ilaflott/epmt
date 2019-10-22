@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 from datetime import datetime
-from os import environ, makedirs, mkdir, path, getpid, getsid, getcwd, chdir, unlink
+from os import environ, makedirs, mkdir, path, getpid, getsid, getcwd, chdir, unlink, listdir
 from socket import gethostname
 from subprocess import call as forkexecwait
 from random import randint
@@ -13,6 +13,7 @@ import errno
 from shutil import rmtree
 import fnmatch
 import pickle
+from tzlocal import get_localzone
 from logging import getLogger, basicConfig, DEBUG, INFO, WARNING, ERROR
 logger = getLogger(__name__)  # you can use other name
 from epmt_logging import *
@@ -37,7 +38,7 @@ def find_diffs_in_envs(start_env,stop_env):
             env[e] = stop_env[e]
     return env
 
-# Remove those with _ at beginning
+# Remove those with _ at beginning and blacklist
 def blacklist_filter(filter=None, **env):
 #   print env
     env2 = {}
@@ -49,19 +50,20 @@ def blacklist_filter(filter=None, **env):
         env2[k] = v
     return env2
 
+
 def dump_config(outf):
     print("\nsettings.py (affected by the below env. vars):", file=outf)
 #    book = {}
     for key, value in sorted(settings.__dict__.items()):
         if not (key.startswith('__') or key.startswith('_')):
             print("%-24s%-56s" % (key,str(value)), file=outf)
-    print("\nenvironment variables (overrides settings.py):", outf)
+    print("\nenvironment variables (overrides settings.py):", file=outf)
     for v in [ "PAPIEX_OSS_PATH", "PAPIEX_OUTPUT", "EPMT_DB_PROVIDER", "EPMT_DB_USER", "EPMT_DB_PASSWORD", "EPMT_DB_HOST", "EPMT_DB_DBNAME", "EPMT_DB_FILENAME" ]:
 #                "provider", "user", "password", "host", "dbname", "filename" ]:
 # "PAPIEX_OPTIONS","PAPIEX_DEBUG","PAPI_DEBUG","MONITOR_DEBUG","LIBPFM_DEBUG"
 #              ]:
         if v in environ:
-            print("%-24s%-56s" % (v,environ[v]), outf)
+            print("%-24s%-56s" % (v,environ[v]), file=outf)
 
 def merge_two_dicts(x, y):
     z = x.copy()   # start with x's keys and values
@@ -319,7 +321,7 @@ def epmt_check():
 def create_start_job_metadata(jobid, submit_ts, from_batch=[]):
     # use timezone info if available, otherwise use naive datetime objects
     try:
-        ts=datetime.now().astimezone(None)
+        ts=datetime.now(tz=get_localzone())
     except:
         ts=datetime.now()
     metadata = {}
@@ -333,24 +335,21 @@ def create_start_job_metadata(jobid, submit_ts, from_batch=[]):
         metadata['job_pl_submit_ts'] = submit_ts
     metadata['job_pl_start_ts'] = ts
     metadata['job_pl_env'] = start_env
-    metadata['job_username'] = get_username()
-#        metadata['job_pl_from_batch'] = from_batch
+    metadata['job_pl_username'] = get_username()
     return metadata
 
 def merge_stop_job_metadata(metadata, exitcode, reason, from_batch=[]):
     # use timezone info if available, otherwise use naive datetime objects
     try:
-        ts=datetime.now().astimezone(None)
+        ts=datetime.now(tz=get_localzone())
     except:
         ts=datetime.now()
     stop_env=blacklist_filter(filter,**environ)
     metadata['job_el_stop_ts'] = ts
-#    metadata['job_el_from_batch'] = from_batch
     metadata['job_el_exitcode'] = exitcode
     metadata['job_el_reason'] = reason
     metadata['job_el_env'] = stop_env
     return metadata
-
 
 def create_job_dir(dir):
     try:
@@ -624,6 +623,7 @@ def get_filedict(dirname,pattern,tar=False):
     return filedict
 
 def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True):
+    logger.debug("epmt_submit(%s,dry_run=%s,drop=%s,keep_going=%s)",dirs,dry_run,drop,keep_going)
     if not dirs:
         global_jobid,global_datadir,global_metadatafile = setup_vars()
         if not (global_jobid and global_datadir and global_metadatafile):
@@ -632,7 +632,6 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True):
     if not dirs or len(dirs) < 1:
         logger.error("Could not identify your job id")
         return False
-    logger.debug("epmt_submit()",dirs,dry_run,drop,keep_going)
     if dry_run and drop:
         logger.error("You can't drop tables and do a dry run")
         return(False)
@@ -707,6 +706,9 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
         metadata = read_job_metadata(input+"job_metadata")
         filedict = get_filedict(input,settings.input_pattern)
 
+    if not metadata:
+        return False
+
     logger.info("%d hosts found: %s",len(filedict.keys()),filedict.keys())
     for h in filedict.keys():
         logger.info("host %s: %d files to import",h,len(filedict[h]))
@@ -742,21 +744,28 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
 #            exit(1)
 #        logger.info("Committed post process run to database")    
 
-def stage_job(jid,dir,file,collate=True,compress_and_tar=True):
-    logger.debug("stage_job(%s,%s,%s,%s)",jid,dir,file,str(collate))
-    if not jid or len(jid) < 1:
-        return False
+def stage_job(dir,collate=True,compress_and_tar=True):
+    logger.debug("stage_job(%s,collate=%s,compress_and_tar=%s)",dir,str(collate),str(compress_and_tar))
     if not dir or len(dir) < 1:
         return False
-    if not file or len(file) < 1:
-        return False
     if settings.stage_command and len(settings.stage_command) and settings.stage_command_dest and len(settings.stage_command_dest):
+        try:
+            l=listdir(dir)
+            if not l:
+                logger.error(dir + "is empty")
+                return False
+        except Exception as e:
+            logger.error(str(e))
+            return False
+
         if collate:
             from epmt_concat import csvjoiner
             logger.debug("csvjoiner(%s)",dir)
             hack_dir = getcwd()
             status, collated_file = csvjoiner(dir,debug="false")
             chdir(hack_dir)
+            if status == False:
+                return False
             if status == True and collated_file and len(collated_file) > 0:
                 logger.info("Collated file is %s",collated_file)
                 newdir = path.dirname(dir)+".collated"
@@ -831,23 +840,22 @@ def epmt_stage(dirs, keep_going=True):
             dir += "/"
         jobid = path.basename(path.dirname(dir))
         file = dir + "job_metadata"
-        r = stage_job(jobid,dir,file)
+        r = stage_job(dir)
         if r is False and not keep_going:
             return False
     return r
 
 def epmt_dbsize(findwhat=['database','table','index','tablespace'], usejson=False, usebytes=False):
     from orm import get_db_size
+# Absolutely all argument checking should go here, specifically the findwhat stuff
     return(get_db_size(findwhat,usejson,usebytes))
 
 #
 # depends on args being global
 #
-global_jobid = None
-global_datadir = None
-global_metadatafile = None
+def epmt_entrypoint(args):
 
-def epmt_entrypoint(args, help):
+    # I hate this sequence.
 
     if args.verbose == None:
         args.verbose = 0
@@ -856,44 +864,40 @@ def epmt_entrypoint(args, help):
     if not args.verbose:
         set_logging(settings.verbose, check=True)
 
-    if args.help or args.epmt_cmd == 'help' or not args.epmt_cmd:
-        help(stdout)
-        dump_config(stdout)
-        exit(0)
-    if args.epmt_cmd == 'dbsize':
-        return(epmt_dbsize(findwhat=args.epmt_cmd_args, usejson=args.json, usebytes=args.bytes) == False)
-
     # Here it's up to each command to validate what it is looking for
     # and error out appropriately
 
-    if args.epmt_cmd == 'start':
+    if args.command == 'dbsize':
+        return(epmt_dbsize(args.epmt_cmd_args, usejson=args.json, usebytes=args.bytes) == False)
+    if args.command == 'start':
         return(epmt_start_job(other=args.epmt_cmd_args) == False)
-    if args.epmt_cmd == 'stop':
+    if args.command == 'stop':
         return(epmt_stop_job(other=args.epmt_cmd_args) == False)
-    if args.epmt_cmd == "stage":
+    if args.command == "stage":
         return(epmt_stage(args.epmt_cmd_args,keep_going=not args.error) == False)
-    if args.epmt_cmd == 'run':
+    if args.command == 'run':
         return(epmt_run(args.epmt_cmd_args,wrapit=args.auto,dry_run=args.dry_run,debug=(args.verbose > 2)))
-    if args.epmt_cmd == 'source':
+    if args.command == 'source':
         s = epmt_source(papiex_debug=(args.verbose > 2),monitor_debug=(args.verbose > 3))
         if not s:
-            return 1
+            return(1)
         print(s)
-        return 0
-    if args.epmt_cmd == 'dump':
+        return(0)
+    if args.command == 'dump':
         return(epmt_dump_metadata(args.epmt_cmd_args) == False)
-    if args.epmt_cmd == 'submit':
+    if args.command == 'submit':
         return(epmt_submit(args.epmt_cmd_args,dry_run=args.dry_run,drop=args.drop,keep_going=not args.error) == False)
-    if args.epmt_cmd == 'check':
+    if args.command == 'check':
         return(epmt_check() == False)
-    if args.epmt_cmd == 'delete':
+    if args.command == 'delete':
         from epmt_cmd_delete import epmt_delete_jobs
         return(epmt_delete_jobs(args.epmt_cmd_args) == False)
-    if args.epmt_cmd == 'list':
+    if args.command == 'list':
         from epmt_cmd_list import epmt_list
         return(epmt_list(args.epmt_cmd_args) == False)
-    logger.error("Unknown command, %s. See -h for options.",args.epmt_cmd)
-    exit(1)
+
+    logger.error("Unknown command, %s. See -h for options.",args.command)
+    return(1)
 
 # Use of globals here is gross. FIX!
 # 

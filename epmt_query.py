@@ -16,6 +16,14 @@ from epmt_logging import *
 from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key, stringify_dicts
 from epmt_stat import modified_z_score
 
+# semantic version
+# first element is the major version number
+# second element is the minor version number
+# third element is the patch or bugfix number
+# Since we are saving as a tuple you can do a simple
+# compare of two version tuples and python will do the right thing
+version = (1,3,0)
+
 if using_default_settings:
     logger.warning('ignoring settings.py and using defaults in epmt_default_settings')
 

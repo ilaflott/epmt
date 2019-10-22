@@ -3,7 +3,6 @@ variables:
   POSTGRES_USER: "postgres"
   POSTGRES_PASSWORD: "example"
 #  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
-
 #cache:
 #  paths:
 #    - .cache/pip
@@ -11,15 +10,15 @@ variables:
 services:
   - postgres:9.5
 
-build:python2.7:
-  image: python:2.7.16
-  script: # Modify the commands below to build your repository.
-    - python -V
-    - pip install -r requirements.txt
-    - apt-get update && apt-get install -y csh tcsh make
-    - rm -f settings.py; ln -s settings/settings_sqlite_inmem.py settings.py  # Setup in mem sqlite
-    - python -m py_compile epmt *.py orm/*/*.py		# Compile everything
-    - make check
+#build:python2.7:
+#  image: python:2.7.16
+#  script: # Modify the commands below to build your repository.
+#    - python -V
+#    - pip install -r requirements.txt
+#    - apt-get update && apt-get install -y csh tcsh make
+#    - rm -f settings.py; ln -s settings/settings_sqlite_inmem.py settings.py  # Setup in mem sqlite
+#    - python -m py_compile epmt *.py orm/*/*.py		# Compile everything
+#    - make check
 
 build:python3:
   image: python:3.7.4

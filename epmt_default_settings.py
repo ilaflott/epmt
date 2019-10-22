@@ -22,8 +22,9 @@ profile = False
 input_pattern = "*-papiex-*-[0-9]*.csv"
 install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-oss-install/"
 
-# tz setting is used *ONLY* when timezone cannot be determined automatically
-tz = 'US/Eastern'
+# Blacklist for environment filter
+env_blacklist = ["LS_COLORS"]
+
 #
 job_tags_env = 'EPMT_JOB_TAGS'
 per_process_fields = ["tags","hostname","exename","path","args","exitcode","pid","generation","ppid","pgid","sid","numtids"]

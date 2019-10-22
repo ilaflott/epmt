@@ -43,9 +43,10 @@ check: check-python-shells check-unittests
 #check-python-native:
 #	@$(MAKE) DOCKER_RUN_PYTHON="PAPIEX_OUTPUT=$(TMP_OUTPUT_DIR) SLURM_JOB_ID=$(SLURM_FAKE_JOB_ID) EPMT_JOB_TAGS=operation:test"  DOCKER_PYTHON_IMAGE="" check-python-driver
 
-EPMT_TEST_ENV=PATH=${PWD}:${PATH} EPMT_USE_SQLALCHEMY=1 EPMT_BULK_INSERT=1 EPMT_USE_DEFAULT_SETTINGS=1 SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` 
+EPMT_TEST_ENV=PATH=${PWD}:${PATH} SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` EPMT_USE_DEFAULT_SETTINGS=1
 
 check-python-shells:
+	@if [ -d /tmp/epmt ]; then echo "Directory /tmp/epmt exists! Hit return to remove it, Control-C to stop now."; read yesno; fi
 	rm -rf /tmp/epmt
 	env -i ${EPMT_TEST_ENV} /bin/tcsh -e epmt-example.csh
 	rm -rf /tmp/epmt
@@ -53,4 +54,4 @@ check-python-shells:
 	rm -rf /tmp/epmt
 check-unittests:
 	@echo; echo "Testing built in unit tests..."
-	env -i PATH=${PWD}:${PATH} EPMT_USE_SQLALCHEMY=1 EPMT_BULK_INSERT=1 EPMT_USE_DEFAULT_SETTINGS=1 python3 -m unittest -v -f test.test_misc test.test_query test.test_db_schema test.test_submit test.test_outliers 
+	env -i PATH=${PWD}:${PATH} EPMT_USE_DEFAULT_SETTINGS=1 python3 -m unittest -v -f test.test_misc test.test_query test.test_db_schema test.test_submit test.test_outliers 

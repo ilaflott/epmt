@@ -9,8 +9,8 @@ from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
 from os import getuid
 from json import dumps, loads
 from pwd import getpwnam, getpwuid
-from epmtlib import tag_from_string, sum_dicts, unique_dicts, fold_dicts, timing, dotdict
-from datetime import datetime, timedelta, timezone
+from epmtlib import tag_from_string, sum_dicts, unique_dicts, fold_dicts, timing, dotdict, get_first_key_match
+from datetime import datetime, timedelta
 from functools import reduce
 import time
 import pytz
@@ -155,8 +155,8 @@ def load_process_from_pandas(df, h, j, u, settings):
     try:
         earliest_thread_start = Timestamp(df['start'].min(), unit='us')
         latest_thread_finish = Timestamp(df['end'].max(), unit='us')
-        p.start = earliest_thread_start.to_pydatetime().replace(tzinfo = timezone.utc)
-        p.end = latest_thread_finish.to_pydatetime().replace(tzinfo = timezone.utc)
+        p.start = earliest_thread_start.to_pydatetime().replace(tzinfo = pytz.utc)
+        p.end = latest_thread_finish.to_pydatetime().replace(tzinfo = pytz.utc)
         p.duration = float((latest_thread_finish - earliest_thread_start).total_seconds())*float(1000000)
     except Exception as e:
         logger.error("%s",e)
@@ -481,31 +481,17 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
 
 def get_batch_envvar(var,where):
     logger = getLogger(__name__)  # you can use other name
-# Torque
-# http://docs.adaptivecomputing.com/torque/4-1-7/Content/topics/2-jobs/exportedBatchEnvVar.htm
-    key2pbs = {
-        "JOB_NAME":"PBS_JOBNAME",
-        "JOB_USER":"PBS_O_LOGNAME"
-        }
-# Slurm
-# http://hpcc.umd.edu/hpcc/help/slurmenv.html
     key2slurm = {
         "JOB_NAME":"SLURM_JOB_NAME", 
         "JOB_USER":"SLURM_JOB_USER"
         }
-
-    logger.debug("looking for %s",var)
-    a = False
-    if var in key2pbs:
-        a=where.get(key2pbs[var])
-    elif var in key2slurm:
-        a=where.get(key2slurm[var])
-
+    if var in key2slurm.keys():
+        var = key2slurm[var]
+    logger.debug("looking for %s in %s",var,where)
+    a=where.get(var)
     if not a:
-        a=where.get(var)
-        if not a:
-            logger.debug("%s not found",var)
-            return False
+        logger.debug("%s not found",var)
+        return False
 
     logger.debug("%s found = %s",var,a)
     return a
@@ -579,7 +565,24 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     if metadata is False:
         return False
 
-    tz_default = pytz.timezone(settings.tz or 'utc')
+    job_status = {}
+    if metadata.get('job_pl_scriptname'):
+        job_status['script_name'] = metadata['job_pl_scriptname']
+    if metadata.get('job_pl_script'):
+        job_status['script'] = metadata['job_pl_script']
+    if metadata.get('job_el_stdout'):
+        job_status['stdout'] = metadata['job_el_stdout']
+    if metadata.get('job_el_stderr'):
+        job_status['stderr'] = metadata['job_el_stderr']
+    if metadata.get('job_el_exitcode') is not None:
+        job_status['exit_code'] = metadata['job_el_exitcode']
+    if metadata.get('job_el_reason'):
+        job_status['exit_reason'] = metadata['job_el_reason']
+
+    env_dict = metadata['job_pl_env']
+    # sometimes the post-processing script's full path is to be found here
+    if env_dict.get('pp_script'):
+        job_status['script_path'] = env_dict.get('pp_script')
 
 # Fields used in this function
     jobid = metadata['job_pl_id']
@@ -588,7 +591,9 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     stop_ts = metadata['job_el_stop_ts']
     submit_ts = metadata['job_pl_submit_ts']
     if not start_ts.tzinfo:
-        logger.warning('timezone could not be auto-detected, assuming {0}'.format(settings.tz or 'utc'))
+        tz_str = get_first_key_match(env_dict, 'TZ', 'TIMEZONE') or get_first_key_match(environ, 'EPMT_TZ') or 'US/Eastern'
+        logger.info('timezone could not be auto-detected, assuming {0}'.format(tz_str))
+        tz_default = pytz.timezone(tz_str)
         start_ts = tz_default.localize(start_ts)
         stop_ts = tz_default.localize(stop_ts)
         submit_ts = tz_default.localize(submit_ts)
@@ -599,10 +604,12 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     logger.info('Job finish: {0}'.format(stop_ts))
     jobname = metadata['job_jobname']
     exitcode = metadata['job_el_exitcode']
-    reason = metadata['job_el_reason']
-    env_dict = metadata['job_pl_env']
     env_changes_dict = metadata['job_env_changes']
     job_tags = metadata['job_tags']
+
+    # sometimes script name is to be found in the job tags
+    if (job_status.get('script_name') is None) and job_tags and job_tags.get('script_name'):
+        job_status['script_name'] = job_tags.get('script_name')
 
 #    info_dict = metadata['job_pl_from_batch'] # end batch also
 
@@ -631,8 +638,8 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     # Initialize elements used in compute
     then = datetime.now()
     csvt = timedelta()
-    earliest_process = datetime.utcnow().replace(tzinfo=timezone.utc)
-    latest_process = datetime.fromtimestamp(0).replace(tzinfo=timezone.utc)
+    earliest_process = datetime.utcnow().replace(tzinfo=pytz.utc)
+    latest_process = datetime.fromtimestamp(0).replace(tzinfo=pytz.utc)
 
 #    stdout.write('-')
 # Hostname, job, metricname objects
@@ -746,12 +753,15 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 
                 # correct the process start/stop times for timezone
                 # start_ts and end_ts are timezone-aware datetime objects
-                p.start = p.start.replace(tzinfo = timezone.utc).astimezone(tz=tz_default)
-                p.end   = p.end.replace(tzinfo = timezone.utc).astimezone(tz=tz_default)
+                p.start = p.start.replace(tzinfo = pytz.utc).astimezone(tz=tz_default)
+                p.end   = p.end.replace(tzinfo = pytz.utc).astimezone(tz=tz_default)
                 if ((p.start < start_ts) or (p.end > stop_ts)):
                     msg = 'Corrupted CSV detected: Process ({0}, pid {1}) start/finish times ({2}, {3}) do not fall within job interval ({4}, {5}). Bailing on job ingest..'.format(p.exename, p.pid, p.start, p.end, start_ts, stop_ts)
                     logger.error(msg)
                     raise ValueError(msg)
+                # save naive datetime objects in the database
+                p.start = p.start.replace(tzinfo = None)
+                p.end = p.end.replace(tzinfo = None)
 
 # Debugging/    progress
                 cnt += 1
@@ -787,10 +797,12 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     else:
         logger.warning("Submitting job with no CSV data, tags %s",str(job_tags))
 
-    j.start = start_ts  # .astimezone(timezone.utc)
-    j.end = stop_ts     # .astimezone(timezone.utc)
-    j.submit = submit_ts # .astimezone(timezone.utc) # Wait time is start - submit and should probably be stored
-    j.info_dict = {'tz': start_ts.tzinfo.tzname(None)}
+    # save naive datetime objects in the database
+    j.start = start_ts.replace(tzinfo=None)
+    j.end = stop_ts.replace(tzinfo=None)
+    j.submit = submit_ts.replace(tzinfo=None) # Wait time is start - submit and should probably be stored
+    j.info_dict = {'tz': start_ts.tzinfo.tzname(None), 'status': job_status}
+
     d = j.end - j.start
     j.duration = int(d.total_seconds()*1000000)
     j.cpu_time = reduce(lambda c, p: c + p.cpu_time, all_procs, 0)
