@@ -28,21 +28,6 @@ distclean: clean
 #
 check: check-python-shells check-unittests
 
-#SLURM_FAKE_JOB_ID=1
-#FORCE_DEFAULT_SETTINGS=EPMT_USE_DEFAULT_SETTINGS=1 SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` 
-#TMP_OUTPUT_DIR=/tmp/epmt/
-#DOCKER_PYTHON_IMAGE=
-#DOCKER_RUN_PYTHON=docker run -ti --rm -v $(shell pwd):/app -w /app -e PAPIEX_OUTPUT=$(TMP_OUTPUT_DIR) -e SLURM_JOB_ID=$(SLURM_FAKE_JOB_ID) -e EPMT_JOB_TAGS=operation:test -e $(FORCE_DEFAULT_SETTINGS)
-
-#check-python-2.6: 
-#	@$(MAKE) DOCKER_PYTHON_IMAGE=lovato/python-2.6.6 check-python-driver
-#check-python-2.7: 
-#	@$(MAKE) DOCKER_PYTHON_IMAGE=python:2.7 check-python-driver
-#check-python-3: 
-#	@$(MAKE) DOCKER_PYTHON_IMAGE=python:3 check-python-driver
-#check-python-native:
-#	@$(MAKE) DOCKER_RUN_PYTHON="PAPIEX_OUTPUT=$(TMP_OUTPUT_DIR) SLURM_JOB_ID=$(SLURM_FAKE_JOB_ID) EPMT_JOB_TAGS=operation:test"  DOCKER_PYTHON_IMAGE="" check-python-driver
-
 EPMT_TEST_ENV=PATH=${PWD}:${PATH} SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` EPMT_USE_DEFAULT_SETTINGS=1
 
 check-python-shells:
@@ -54,4 +39,4 @@ check-python-shells:
 	rm -rf /tmp/epmt
 check-unittests:
 	@echo; echo "Testing built in unit tests..."
-	env -i PATH=${PWD}:${PATH} EPMT_USE_DEFAULT_SETTINGS=1 python3 -m unittest -v -f test.test_misc test.test_query test.test_db_schema test.test_submit test.test_outliers 
+	env -i PATH=${PWD}:${PATH} EPMT_USE_DEFAULT_SETTINGS=1 python3 -m unittest -v -f test.test_misc test.test_query test.test_submit test.test_outliers test.test_db_schema 2>&1
