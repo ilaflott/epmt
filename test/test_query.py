@@ -458,6 +458,13 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(list(agg_df['jobid'].values), ['685000', '685003', '685016'])
         self.assertEqual(list(agg_df['job_cpu_time'].values), [113135329.0, 93538033.0, 427082965.0])
 
+    def test_status(self):
+        status = eq.get_job_status('685000')
+        self.assertEqual(status, {'exit_code': 0, 'exit_reason': 'none', 'script_path': '/home/Jeffrey.Durachta/ESM4/DECK/ESM4_historical_D151/gfdl.ncrc4-intel16-prod-openmp/scripts/postProcess/ESM4_historical_D151_ocean_annual_rho2_1x1deg_18840101.tags', 'script_name': 'ESM4_historical_D151_ocean_annual_rho2_1x1deg_18840101'})
+
+    def test_version(self):
+        self.assertTrue(eq.version > (1,0,0))
+
     def test_zz_delete_jobs(self):
         n = eq.delete_jobs(['685000', '685016'])
         self.assertEqual(n, 0, 'multiple jobs deleted without "force"')

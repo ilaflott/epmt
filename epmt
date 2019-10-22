@@ -37,6 +37,14 @@ if (__name__ == "__main__"):
         "\nThis tool uses EPMT to perform the process monitoring."+
         "\nThis tool is targeted at batch or ephemeral jobs, not daemon processes.",
         formatter_class=argparse.RawDescriptionHelpFormatter)
+    
+    # Version
+    from epmt_query import version
+    epmt_version = "EPMT " + ".".join([str(i) for i in version])
+    parser.add_argument('-V', '--version',action='version', version=epmt_version, help="Display EPMT Version")
+    
+    # Global Verbose
+    parser.add_argument('-v', '--verbose',action='count',help="Increase level of verbosity/debug")
 
     subparser = parser.add_subparsers(title="EPMT Commands", dest="command")
     # Source
@@ -124,8 +132,6 @@ if (__name__ == "__main__"):
     list_parser.add_argument('-v', '--verbose',action='count',help="Increase level of verbosity/debug")
     # Dummy Help for ./epmt help
     help_parser = subparser.add_parser('help', help="Display this help with extended configuration information")
-    # Global Verbose
-    parser.add_argument('-v', '--verbose',action='count',help="Increase level of verbosity/debug")
 
     # Print help without dump config
     if len(argv) == 1:
