@@ -1,5 +1,5 @@
 export USER=testuser
-eval `epmt -j1 source`   # Setup environment
+eval `epmt source -j1`   # Setup environment
 epmt_instrument
 # Workload
 sleep 1
