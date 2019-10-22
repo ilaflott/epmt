@@ -2,8 +2,8 @@
 
 epmt start           # Generate prolog
 eval `epmt source`   # Setup environment
-sleep 1              # Workload
+/bin/sleep 1 2>/dev/null >&2 # Workload
 epmt_uninstrument    # End Workload, disable instrumentation
 epmt stop            # Wrap up job stats
-epmt stage           # Move to medium term storage ($PWD)
-epmt submit ./$SLURM_JOB_ID.tgz # Submit to DB
+f=`epmt stage`       # Move to medium term storage ($PWD)
+epmt submit $f       # Submit to DB

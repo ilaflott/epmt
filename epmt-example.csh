@@ -3,8 +3,8 @@
 setenv SHELL /bin/tcsh
 ./epmt start           # Generate prolog
 eval `epmt source`     # Setup environment
-sleep 1                # Workload
+/bin/sleep 1 >& /dev/null   # Workload
 epmt_uninstrument      # End Workload
 epmt stop              # Wrap up job stats
-epmt stage             # Move to medium term storage ($PWD)
-epmt submit ./$SLURM_JOB_ID.tgz # Submit to DB
+set f=`epmt stage`     # Move to medium term storage ($PWD)
+epmt submit $f         # Submit to DB
