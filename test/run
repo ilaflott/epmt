@@ -16,28 +16,18 @@ function finish {
   docker stop pg-docker
 }
 
-echo "Shell tests"
-env -i PATH=${PWD}:${PATH} /bin/bash -x epmt-check.anysh
-env -i PATH=${PWD}:${PATH} /bin/tcsh -v epmt-check.anysh
-env -i PATH=${PWD}:${PATH} /bin/csh -v epmt-check.anysh
-env -i PATH=${PWD}:${PATH} /bin/bash -Eeux epmt-example.anysh
-env -i PATH=${PWD}:${PATH} /bin/bash -Eeuxc './epmt run -va -j5  /bin/sleep 1' # Bash run condition
-env -i PATH=${PWD}:${PATH} /bin/tcsh -vc './epmt run -va -j5  /bin/sleep 1' # TCSH Run condition test
-env -i PATH=${PWD}:${PATH} /bin/bash epmt-check-stage-submit.sh
-
-
-echo "SQLA + SQLite"
-SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` EPMT_USE_SQLALCHEMY=1 EPMT_BULK_INSERT=1 python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema
-
 echo "------"
 echo "Pony + SQLite"
-SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers
+make check
+
+echo "------"
+echo "SQLA + SQLite"
+make EXTRA_TEST_ARGS="EPMT_USE_SQLALCHEMY=1 EPMT_BULK_INSERT=1" check
 
 echo "------"
 echo "SQLA + PostgreSQL"
 docker run --rm  --name pg-docker -e POSTGRES_DB=EPMT-TEST -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -d -p 5432:5432  postgres:9.5
 trap finish EXIT INT QUIT HUP
-
 echo "sleeping 15 sec to get PG service up and running.."
 sleep 15
-SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` EPMT_USE_PG=1 EPMT_USE_SQLALCHEMY=1 EPMT_BULK_INSERT=1 python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema
+make EXTRA_TEST_ARGS="EPMT_USE_PG=1 EPMT_USE_SQLALCHEMY=1 EPMT_BULK_INSERT=1" check
