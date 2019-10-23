@@ -51,7 +51,7 @@ fi
 if [ $start_postgres -eq 1 ]; then
     echo "Starting postgres service.."
     docker run --rm  --name pg-docker -e POSTGRES_DB=EPMT -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -d -p 5432:5432  postgres:9.5
-    pg_settings_file="settings_pg_localhost_sqlachemy.py"
+    pg_settings_file="settings_pg_localhost_sqlalchemy.py"
 else
     pg_settings_file="settings_pg_container_sqlalchemy.py"
 fi
