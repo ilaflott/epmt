@@ -2,10 +2,10 @@ variables:
   POSTGRES_DB: "EPMT"
   POSTGRES_USER: "postgres"
   POSTGRES_PASSWORD: "example"
-#  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
-#cache:
-#  paths:
-#    - .cache/pip
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+cache:
+  paths:
+    - .cache/pip
 
 services:
   - postgres:9.5
