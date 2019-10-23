@@ -1,12 +1,8 @@
 from epmt_default_settings import *
 from os import environ
-db = environ.get('POSTGRES_DB', 'EPMT')
-pguser = environ.get('POSTGRES_USER', "postgres")
-pgpass = environ.get('POSTGRES_PASSWORD', "example")
-dbhost = environ.get('POSTGRES_HOST', 'db')
 
 orm = 'sqlalchemy'
-db_params = { 'url': 'postgresql://{0}:{1}@{2}:5432/{3}'.format(pguser, pgpass, dbhost, db), 'echo': False }
+db_params = { 'url': 'postgresql://postgres:example@postgres:5432/EPMT', 'echo': False }
 bulk_insert = True
 
 

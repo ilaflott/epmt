@@ -1,12 +1,8 @@
 from epmt_default_settings import *
 from os import environ
-db = environ.get('POSTGRES_DB', 'EPMT')
-pguser = environ.get('POSTGRES_USER', "postgres")
-pgpass = environ.get('POSTGRES_PASSWORD', "example")
-dbhost = environ.get('POSTGRES_HOST', 'db')
 
 orm = 'pony'
-db_params = {'provider': 'postgres', 'user': pguser,'password': pgpass,'host': dbhost, 'dbname': db}
+db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'postgres', 'dbname': 'EPMT'}
 
 # You can alter the settings below to override defaults
 #
