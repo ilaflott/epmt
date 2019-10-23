@@ -33,9 +33,9 @@ EPMT_TEST_ENV=PATH=${PWD}:${PATH} SLURM_JOB_USER=`whoami`
 check-python-shells:
 	@if [ -d /tmp/epmt ]; then echo "Directory /tmp/epmt exists! Hit return to remove it, Control-C to stop now."; read yesno; fi
 	@rm -rf /tmp/epmt
-	@echo "epmt-example.csh (tcsh)" ; env -i SLURM_JOB_ID=1 ${EPMT_TEST_ENV} /bin/tcsh -e epmt-example.csh
+	@echo "epmt-example.csh (tcsh)" ; env -i SLURM_JOB_ID=111 ${EPMT_TEST_ENV} /bin/tcsh -e epmt-example.csh
 	@rm -rf /tmp/epmt
-	@echo "epmt-example.sh (bash)" ; env -i SLURM_JOB_ID=2 ${EPMT_TEST_ENV} /bin/bash -Eeu epmt-example.sh
+	@echo "epmt-example.sh (bash)" ; env -i SLURM_JOB_ID=222 ${EPMT_TEST_ENV} /bin/bash -Eeu epmt-example.sh
 	@rm -rf /tmp/epmt
 check-unittests:
 	@echo; echo "Testing built-in unit tests..."
