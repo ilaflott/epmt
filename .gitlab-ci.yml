@@ -18,4 +18,4 @@ build:python3:
     - pip3 install -r requirements.txt.py3
     - apt-get update && apt-get install -y csh tcsh make
     - python3 -m py_compile epmt *.py orm/*/*.py		# Compile everything
-    - test/run
+    - test/run --no-postgres-svc

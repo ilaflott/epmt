@@ -2,47 +2,57 @@
 
 # This script is only there to run the tests manually before committing.
 # usage:
-#   tests/run
+#   tests/run [--no-postgres-svc]
 # 
+# container is started up.
 # You need to fire the above command from the top-level EPMT directory
-# The test uses python in PATH, so make sure you already have the
+# The test uses python3 in PATH, so make sure you already have the
 # right virtualenv loaded. Also, it assumes you have docker available.
+# Unless "--no-postgres-svc" is supplied as an argument, a docker postgres
 #
-# 
+#
+usage="test/run [--no-postgres-svc]" 
 
-SETTINGS_BACKUP="settings.py.`whoami`.$$"
-pg_service_started=0
+settings_backup="settings.py.`whoami`.$$"
+epmt_tmpdir="/tmp/epmt"
+start_postgres=1
+
+case "$1" in
+  --no-postgres-svc) start_postgres=0;;
+  "");;
+  *) echo $usage >&2; exit 0;;
+esac
+
 
 function finish {
   # Your cleanup code here
-  if [ $pg_service_started -eq 1 ]; then
-      echo "stopping postgres docker service.."
+  if [ $start_postgres -eq 1 ]; then
+      echo "stopping postgres docker service (might take a minute).."
       docker stop pg-docker
   fi
-  if [ -f $SETTINGS_BACKUP ]; then
-    echo "Restoring settings.py (from $SETTINGS_BACKUP)"
-    mv -vf $SETTINGS_BACKUP settings.py
+  if [ -f $settings_backup ]; then
+    echo "Restoring settings.py (from $settings_backup)"
+    mv -vf $settings_backup settings.py
   else
     rm -f settings.py settings.pyc
   fi
+  rm -rf $epmt_tmpdir
 }
 
 rm -f settings.pyc # remove stale stuff
-trap finish EXIT INT QUIT HUP
+trap finish EXIT INT QUIT HUP TERM
 
 if [ -f settings.py ]; then
-    echo "Found an existing settings.py. Saving it to $SETTINGS_BACKUP"
-    mv -v settings.py $SETTINGS_BACKUP
+    echo "Found an existing settings.py. Saving it to $settings_backup"
+    mv -v settings.py $settings_backup
 fi
 
 
-if [ "$POSTGRES_HOST" == "" ]; then
-    echo "No postgres service found -- starting postgres docker container.."
+if [ $start_postgres -eq 1 ]; then
+    echo "Starting postgres service.."
     docker run --rm  --name pg-docker -e POSTGRES_DB=EPMT -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -d -p 5432:5432  postgres:9.5
-    pg_service_started=1
     pg_settings_file="settings_pg_localhost_sqlachemy.py"
 else
-    echo "Postges service running on $POSTGRES_HOST"
     pg_settings_file="settings_pg_container_sqlalchemy.py"
 fi
 
