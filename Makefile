@@ -28,15 +28,15 @@ distclean: clean
 #
 check: check-python-shells check-unittests
 
-EPMT_TEST_ENV=PATH=${PWD}:${PATH} SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami` EPMT_USE_DEFAULT_SETTINGS=1 $(EXTRA_TEST_ARGS)
+EPMT_TEST_ENV=PATH=${PWD}:${PATH} SLURM_JOB_ID=1 SLURM_JOB_USER=`whoami`
 
 check-python-shells:
 	@if [ -d /tmp/epmt ]; then echo "Directory /tmp/epmt exists! Hit return to remove it, Control-C to stop now."; read yesno; fi
-	rm -rf /tmp/epmt
-	env -i ${EPMT_TEST_ENV} /bin/tcsh -e epmt-example.csh
-	rm -rf /tmp/epmt
-	env -i ${EPMT_TEST_ENV} /bin/bash -Eeu epmt-example.sh
-	rm -rf /tmp/epmt
+	@rm -rf /tmp/epmt
+	@echo "epmt-example.csh (tcsh)" ; env -i ${EPMT_TEST_ENV} /bin/tcsh -e epmt-example.csh
+	@rm -rf /tmp/epmt
+	@echo "epmt-example.sh (bash)" ; env -i ${EPMT_TEST_ENV} /bin/bash -Eeu epmt-example.sh
+	@rm -rf /tmp/epmt
 check-unittests:
 	@echo; echo "Testing built-in unit tests..."
-	env -i PATH=${PWD}:${PATH} EPMT_USE_DEFAULT_SETTINGS=1 $(EXTRA_TEST_ARGS) python3 -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema
+	@env -i PATH=${PWD}:${PATH} python3 -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema

@@ -1,7 +1,7 @@
-# settings.py
 from epmt_default_settings import *
 
-db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'localhost', 'dbname': 'EPMT'}
+orm = 'pony'
+db_params = {'provider': 'sqlite', 'filename':'database.sqlite', 'create_db': True }
 
 # You can alter the settings below to override defaults
 #
@@ -24,3 +24,4 @@ db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','h
 # # outlier detection
 # outlier_thresholds = { 'modified_z_score': 2.5, 'iqr': [20,80], 'z_score': 3.0 }
 # outlier_features = ['duration', 'cpu_time', 'num_procs']
+bulk_insert = False

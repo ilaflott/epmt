@@ -24,9 +24,6 @@ from epmt_stat import modified_z_score
 # compare of two version tuples and python will do the right thing
 version = (1,3,0)
 
-# if using_default_settings:
-#     logger.warning('ignoring settings.py and using defaults in epmt_default_settings')
-
 init_settings(settings)
 setup_db(settings)
 

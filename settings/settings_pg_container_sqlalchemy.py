@@ -1,6 +1,14 @@
 from epmt_default_settings import *
+from os import environ
+db = environ.get('POSTGRES_DB', 'EPMT')
+pguser = environ.get('POSTGRES_USER', "postgres")
+pgpass = environ.get('POSTGRES_PASSWORD', "example")
+dbhost = environ.get('POSTGRES_HOST', 'db')
 
-db_params = {'provider': 'sqlite', 'filename':'database.sqlite', 'create_db': True }
+orm = 'sqlalchemy'
+db_params = { 'url': 'postgresql://{0}:{1}@{2}:5432/{3}'.format(pguser, pgpass, dbhost, db), 'echo': False }
+bulk_insert = True
+
 
 # You can alter the settings below to override defaults
 #
@@ -23,3 +31,4 @@ db_params = {'provider': 'sqlite', 'filename':'database.sqlite', 'create_db': Tr
 # # outlier detection
 # outlier_thresholds = { 'modified_z_score': 2.5, 'iqr': [20,80], 'z_score': 3.0 }
 # outlier_features = ['duration', 'cpu_time', 'num_procs']
+bulk_insert = False

@@ -37,11 +37,9 @@ outlier_features = ['duration', 'cpu_time', 'num_procs']
 
 # we expect the settings below to be overriden in settings.py
 # depending on the template of your choice
-orm = 'pony'
-db_params = {'provider': 'sqlite', 'filename': ':memory:'}
-
-# bulk_insert is ONLY supported by sqlalchemy
-bulk_insert = False
+orm = 'sqlalchemy'
+db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
+bulk_insert = True
 
 # we should normally always post-process on ingestion
 # otherwise we will need to run a separate cron-job
