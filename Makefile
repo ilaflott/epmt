@@ -6,15 +6,18 @@ SHELL=/bin/sh
 	clean distclean \\
 	check check-python-native check-python-driver check-python-2.6 check-python-2.7 check-python-3
 
-build default: 
+build:
+	python -bb -m py_compile *.py orm/*.py orm/*/*.py test/*.py
+
+dist default: 
 	docker build -f Dockerfiles/Dockerfile.python-epmt -t python-epmt:latest .
-	dir=`date "+epmt-build-%Y-%m-%d-%H:%M:%S"`; docker run -i --tty --rm --volume=$$PWD:$$PWD:z -w $$PWD --privileged epmt-python pyinstaller --distpath=$$dir -s epmt
+	dir=`date "+epmt-build-%Y-%m-%d-%H:%M:%S"`; docker run -i --tty --rm --volume=$$PWD:$$PWD:z -w $$PWD --privileged epmt-python pyinstaller --clean --hidden-import epmt_default_settings --exclude-module settings --distpath=$$dir -s epmt
 
 clean:
-	rm -f *~ *.pyc 
+	find . -name "*~" -o -name "*.pyc" -exec rm -f {} \; 
 	rm -rf __pycache__
 distclean: clean
-	rm -f settings.py; ln -s settings/settings_sqlite_inmem.py settings.py  # Setup in mem sqlite
+	rm -f settings.py; ln -s preset_settings/settings_sqlite_inmem_sqlalchemy.py settings.py # Setup in mem sqlite
 # 
 # Simple python version testing with no database
 #
