@@ -1,23 +1,15 @@
 SHELL=/bin/sh
 #export SHELL
 
-.PHONY: default \\
+.PHONY: default build \\
 	epmt-build epmt-test \\
 	clean distclean \\
 	check check-python-native check-python-driver check-python-2.6 check-python-2.7 check-python-3
 
-default: epmt-build epmt-build-stack
+build default: 
+	docker build -f Dockerfiles/Dockerfile.python-epmt -t python-epmt:latest .
+	dir=`date "+epmt-build-%Y-%m-%d-%H:%M:%S"`; docker run -i --tty --rm --volume=$$PWD:$$PWD:z -w $$PWD --privileged epmt-python pyinstaller --distpath=$$dir -s epmt
 
-epmt-build: Dockerfiles/Dockerfile.python-epmt Dockerfiles/Dockerfile.epmt-command Dockerfiles/Dockerfile.epmt-notebook
-	docker build -f Dockerfiles/Dockerfile.python-epmt -t python-epmt:latest --squash .
-	docker build -f Dockerfiles/Dockerfile.epmt-command -t epmt-command:latest --squash .
-	docker build -f Dockerfiles/Dockerfile.epmt-notebook -t epmt-notebook:latest --squash .
-
-epmt-build-stack: epmt-build docker-compose.yml
-	docker-compose build
-#epmt-test:
-#	docker run epmt:latest
-#	docker-compose up
 clean:
 	rm -f *~ *.pyc 
 	rm -rf __pycache__
