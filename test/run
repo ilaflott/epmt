@@ -1,45 +1,65 @@
-#!/bin/bash -e
+#!/bin/bash -eE
 
 # This script is only there to run the tests manually before committing.
 # usage:
-#   tests/run
+#   tests/run [--no-postgres-svc]
 # 
+# container is started up.
 # You need to fire the above command from the top-level EPMT directory
-# The test uses python in PATH, so make sure you already have the
+# The test uses python3 in PATH, so make sure you already have the
 # right virtualenv loaded. Also, it assumes you have docker available.
+# Unless "--no-postgres-svc" is supplied as an argument, a docker postgres
 #
-# 
+#
+usage="test/run [--no-postgres-svc]" 
+
+settings_backup="settings.py.`whoami`.$$"
+epmt_tmpdir="/tmp/epmt"
+start_postgres=1
+
+case "$1" in
+  --no-postgres-svc) start_postgres=0;;
+  "");;
+  *) echo $usage >&2; exit 0;;
+esac
+
 
 function finish {
   # Your cleanup code here
-  echo "stopping postgres docker service.."
-  docker stop pg-docker
+  if [ $start_postgres -eq 1 ]; then
+      echo "stopping postgres docker service (might take a minute).."
+      docker stop pg-docker
+  fi
+  if [ -f $settings_backup ]; then
+    echo "Restoring settings.py (from $settings_backup)"
+    mv -vf $settings_backup settings.py
+  else
+    rm -f settings.py settings.pyc
+  fi
+  rm -rf $epmt_tmpdir
 }
 
-echo "Shell tests"
-env -i PATH=${PWD}:${PATH} /bin/bash -x epmt-check.anysh
-env -i PATH=${PWD}:${PATH} /bin/sh -x epmt-check.anysh
-env -i PATH=${PWD}:${PATH} /bin/tcsh -v epmt-check.anysh
-env -i PATH=${PWD}:${PATH} /bin/csh -v epmt-check.anysh
-env -i PATH=${PWD}:${PATH} /bin/bash -Eeux epmt-example.anysh
-env -i PATH=${PWD}:${PATH} /bin/bash -Eeux epmt-unsource.anysh # Bash Non Run Condition Test
-env -i PATH=${PWD}:${PATH} /bin/bash -Eeuxc './epmt -va -j5 run /bin/sleep 1' # Bash run condition
-env -i PATH=${PWD}:${PATH} SHELL=tcsh /bin/tcsh -v epmt-unsource.anysh # tcsh Non Run Condition Test
-env -i PATH=${PWD}:${PATH} /bin/tcsh -vc './epmt -va -j5 run /bin/sleep 1' # TCSH Run condition test
-env -i PATH=${PWD}:${PATH} /bin/bash epmt-check-stage-submit.sh
+rm -f settings.pyc # remove stale stuff
+trap finish EXIT INT QUIT HUP TERM
 
-echo "SQLA + SQLite"
-EPMT_USE_SQLALCHEMY=1 EPMT_BULK_INSERT=1 python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema
+if [ -f settings.py ]; then
+    echo "Found an existing settings.py. Saving it to $settings_backup"
+    mv -v settings.py $settings_backup
+fi
 
-echo "------"
-echo "Pony + SQLite"
-python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers
 
-echo "------"
-echo "SQLA + PostgreSQL"
-docker run --rm  --name pg-docker -e POSTGRES_DB=EPMT-TEST -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -d -p 5432:5432  postgres:9.5
-trap finish EXIT INT QUIT HUP
+if [ $start_postgres -eq 1 ]; then
+    echo "Starting postgres service.."
+    docker run --rm  --name pg-docker -e POSTGRES_DB=EPMT -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -d -p 5432:5432  postgres:9.5
+    pg_settings_file="settings_pg_localhost_sqlalchemy.py"
+else
+    pg_settings_file="settings_pg_container_sqlalchemy.py"
+fi
 
-echo "sleeping 15 sec to get PG service up and running.."
-sleep 15
-EPMT_USE_PG=1 EPMT_USE_SQLALCHEMY=1 EPMT_BULK_INSERT=1 python -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema
+for settings_file in settings/{settings_sqlite_inmem_pony.py,settings_sqlite_inmem_sqlalchemy.py,$pg_settings_file}; do
+    echo "------------------------"
+    echo "using settings_file"
+    cp -v $settings_file settings.py
+    chmod 0644 settings.py
+    make check
+done

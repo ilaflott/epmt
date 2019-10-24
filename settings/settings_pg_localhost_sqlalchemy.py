@@ -1,7 +1,8 @@
-# settings.py
 from epmt_default_settings import *
 
-db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'localhost', 'dbname': 'EPMT'}
+orm = 'sqlalchemy'
+db_params = { 'url': 'postgresql://postgres:example@localhost:5432/EPMT', 'echo': False }
+bulk_insert = True
 
 # You can alter the settings below to override defaults
 #
@@ -13,7 +14,6 @@ db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','h
 # verbose = 1
 # input_pattern = "*-papiex-*-[0-9]*.csv"
 # install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-oss-install/"
-# 
 #
 # DO NOT EDIT BELOW UNLESS YOU KNOW WHAT YOU ARE DOING!
 # #

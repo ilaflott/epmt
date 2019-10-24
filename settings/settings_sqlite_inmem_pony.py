@@ -1,6 +1,7 @@
 from epmt_default_settings import *
 
-db_params = {'provider': 'sqlite', 'filename':'database.sqlite', 'create_db': True }
+orm = 'pony'
+db_params = {'provider': 'sqlite', 'filename': ':memory:'}
 
 # You can alter the settings below to override defaults
 #
@@ -13,7 +14,6 @@ db_params = {'provider': 'sqlite', 'filename':'database.sqlite', 'create_db': Tr
 # input_pattern = "*-papiex-*-[0-9]*.csv"
 # install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-oss-install/"
 # 
-#
 # DO NOT EDIT BELOW UNLESS YOU KNOW WHAT YOU ARE DOING!
 # #
 # job_tags_env = 'EPMT_JOB_TAGS'
@@ -24,3 +24,4 @@ db_params = {'provider': 'sqlite', 'filename':'database.sqlite', 'create_db': Tr
 # # outlier detection
 # outlier_thresholds = { 'modified_z_score': 2.5, 'iqr': [20,80], 'z_score': 3.0 }
 # outlier_features = ['duration', 'cpu_time', 'num_procs']
+bulk_insert = False

@@ -1,9 +1,6 @@
 #!/bin/bash
-set -Eeuxo pipefail
-export USER=testuser
-JOB=615503
-rm -rf /tmp/epmt
-mkdir -p /tmp/epmt/$USER/epmt/$JOB
-tar -C /tmp/epmt/$USER/epmt/$JOB -xzf sample/uncollated/postprocruns/short-ESM4_historical_D151_atmos_18540101.papiex.$JOB.tgz
-epmt -v -j $JOB stage
-epmt -v submit ./$JOB.tgz
+
+mkdir -p /tmp/epmt/$SLURM_JOB_USER/$SLURM_JOB_ID
+tar -C /tmp/epmt/$SLURM_JOB_USER/$SLURM_JOB_ID -xzf sample/uncollated/postprocruns/short-ESM4_historical_D151_atmos_18540101.papiex.$SLURM_JOB_ID.tgz
+epmt -v stage
+epmt -v submit ./$SLURM_JOB_ID.tgz

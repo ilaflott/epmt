@@ -10,14 +10,11 @@ from logging import getLogger
 # using set_logging, other than import set_logging
 from epmtlib import set_logging
 logger = getLogger(__name__)  # you can use other name
-from epmt_logging import *
+import epmt_logging
 
 ### Put EPMT imports below, after logging is set up
-from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key, stringify_dicts
+from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key, stringify_dicts, version, version_str
 from epmt_stat import modified_z_score
-
-if using_default_settings:
-    logger.warning('ignoring settings.py and using defaults in epmt_default_settings')
 
 init_settings(settings)
 setup_db(settings)

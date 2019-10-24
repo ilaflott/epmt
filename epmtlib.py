@@ -1,17 +1,35 @@
 import sys
 from functools import wraps
 from time import time
-from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
-from os import environ, unlink, devnull
+from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING, CRITICAL
+from os import environ, unlink, devnull, getuid
 from contextlib import contextmanager
 from subprocess import call
 from json import dumps, loads
 from pony.orm.ormtypes import TrackedDict
+from pwd import getpwuid
 
 try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO
+
+# semantic version
+# first element is the major version number
+# second element is the minor version number
+# third element is the patch or bugfix number
+# Since we are saving as a tuple you can do a simple
+# compare of two version tuples and python will do the right thing
+_version = (1,3,0)
+
+def version():
+    return _version
+
+def version_str():
+    return "EPMT " + ".".join([str(i) for i in _version])
+
+def get_username():
+    return getpwuid( getuid() )[ 0 ]
 
 # if check is set, then we will bail if logging has already been initialized
 def set_logging(intlvl = 0, check = False):
@@ -20,7 +38,9 @@ def set_logging(intlvl = 0, check = False):
     if intlvl == None:
         intlvl = 0
     intlvl = int(intlvl)
-    if intlvl < 0:
+    if intlvl < -1:
+        level = CRITICAL
+    if intlvl == -1:
         level = ERROR
     if intlvl == 0:
         level = WARNING
@@ -36,6 +56,12 @@ def set_logging(intlvl = 0, check = False):
 
 def init_settings(settings):
     logger = getLogger(__name__)
+
+    if environ.get("PAPIEX_OUTPUT"):
+        logger.warning("PAPIEX_OUTPUT variable should not be defined, it will be ignored")
+    if environ.get("PAPIEX_OPTIONS"):
+        logger.warning("PAPIEX_OPTIONS variable should not be defined, it will be ignored")
+
     for k in [ "provider", "user", "password", "host", "dbname", "filename" ]:
         name = "EPMT_DB_"+ k.upper()
         t = environ.get(name)
@@ -43,6 +69,12 @@ def init_settings(settings):
             logger.info("%s found, setting %s:%s now %s:%s",name,k,settings.db_params[k],k,t)
             settings.db_params[k] = t
 
+    if not hasattr(settings,"epmt_output_prefix"):
+        logger.error("missing settings.epmt_output_prefix")
+        exit(1)
+    if not settings.epmt_output_prefix.endswith("/"):
+        logger.warning("settings.epmt_output_prefix should end in a /")
+        settings.epmt_output_prefix += "/"
     if not hasattr(settings, 'job_tags_env'):
         logger.warning("missing settings.job_tags_env")
         settings.job_tags_env = 'EPMT_JOB_TAGS'
@@ -118,7 +150,7 @@ def timing(f):
         ts = time()
         result = f(*args, **kw)
         te = time()
-        logger.debug('%r function took: %2.4f sec\n' % (f.__name__, te-ts))
+        logger.debug('%r function took: %2.4f sec' % (f.__name__, te-ts))
         return result
     return wrap
 
@@ -388,3 +420,12 @@ def merge_intervals(intervals):
          else:
              merged.append(current)
      return merged
+
+# checks the dictionary (d) for keys in sequence
+# and returns the value for the first key found
+# Returns None if no key matched
+def get_first_key_match(d, *keys):
+    for k in keys:
+        if k in d:
+            return d[k]
+    return None

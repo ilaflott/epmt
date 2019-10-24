@@ -1,43 +1,7 @@
 #!/usr/bin/env python
-from __future__ import print_function
-import unittest
-from sys import stderr, exit
-from glob import glob
-from os import environ
 
-# put this above all epmt imports
-environ['EPMT_USE_DEFAULT_SETTINGS'] = "1"
-from epmtlib import set_logging
-set_logging(3)
-
-# Put EPMT imports only after we have called set_logging()
-import epmt_default_settings as settings
-if environ.get('EPMT_USE_SQLALCHEMY'):
-    settings.orm = 'sqlalchemy'
-    settings.db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
-    if environ.get('EPMT_BULK_INSERT'):
-        settings.bulk_insert = True
-
-if environ.get('EPMT_USE_PG'):
-    settings.db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'localhost', 'dbname': 'EPMT'}
-
-
-from epmtlib import timing, capture
-from orm import db_session, setup_db, Job
-import epmt_query as eq
-from epmt_cmds import epmt_submit
-from epmt_cmd_list import  epmt_list_jobs, epmt_list_procs, epmt_list_job_proc_tags, epmt_list_refmodels, epmt_list_op_metrics, epmt_list_thread_metrics
-
-
-#@timing
-#def setUpModule():
-#    setup_db(settings)
-#    print('\n' + str(settings.db_params))
-#    datafiles='test/data/misc/*.tgz'
-#    print('setUpModule: importing {0}'.format(datafiles))
-#    epmt_submit(glob(datafiles), dry_run=False)
-    
-#def tearDownModule():
+# the import below is crucial to get a sane test environment
+from . import *
 
 class SHELLCmds(unittest.TestCase):
     def run_cond(self):

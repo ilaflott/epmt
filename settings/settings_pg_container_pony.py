@@ -1,6 +1,8 @@
 from epmt_default_settings import *
+from os import environ
 
-db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'db', 'dbname': 'EPMT'}
+orm = 'pony'
+db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'postgres', 'dbname': 'EPMT'}
 
 # You can alter the settings below to override defaults
 #
@@ -12,7 +14,6 @@ db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','h
 # verbose = 1
 # input_pattern = "*-papiex-*-[0-9]*.csv"
 # install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-oss-install/"
-# 
 #
 # DO NOT EDIT BELOW UNLESS YOU KNOW WHAT YOU ARE DOING!
 # #
@@ -24,3 +25,4 @@ db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','h
 # # outlier detection
 # outlier_thresholds = { 'modified_z_score': 2.5, 'iqr': [20,80], 'z_score': 3.0 }
 # outlier_features = ['duration', 'cpu_time', 'num_procs']
+bulk_insert = False

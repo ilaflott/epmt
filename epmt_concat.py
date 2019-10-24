@@ -18,11 +18,14 @@ from sys import argv, version_info
 from re import compile
 from os import chdir, getcwd, path
 from glob import glob
+from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
 
+logger = getLogger(__name__)  # you can use other name
+
+# The below should just use a verbosity level 
 CommentDebug = False
 HeaderDebug = False
 DataDebug = False
-
 
 def parseFile(file, masterHeader, headerFound, headerDelimCount, delim, commentDelim):
     """ Take file and paramaters for parsing return tuple of csv data"""
@@ -257,58 +260,51 @@ def csvjoiner(indir,
 # String (Directory) Mode ##################################
     if(type(indir) == str):
         try:
-            if(path.isfile(outfile)):
-                        print("File ", outfile, " already there, exiting")
-                        return False, ""
-        except:
-            raise SystemError
-        try:
+            if (path.isfile(outfile)):
+                logger.error(outfile + " already exists")
+                return False, None
             chdir(indir)
-        except IOError:
-            print("Bad input dir\nPlease provide directory to collate containing csv files")
-            raise SystemError
+        except Exception as e:
+            logger.error(str(e))
+            return False, None
         fileList = glob("*.csv")
         if(len(fileList) < 2):
-            # logger.debug()            
-#            print("Found less than 2 csv files, exiting\nPlease provide directory to collate containing csv files")
+            logger.info("%d files, less than 2 csv files",len(fileList))
             return True,""
-
-            raise SystemError
         try:
             jobid = indir.split("/")[-2].split("_")[-1].split("/")[0]
             host = fileList[0].split("-")[0]
-        except IndexError as E:
-            print("CSV files in directory have malformed name (jobid or host?)\nPlease provide directory to collate containing csv files\n")
-            helpDoc()
-            raise SystemError
+        except Exception as e:
+            logger.error(str(e))
+            return False, None
         if(outfile is ""):
             outfile = indir + host + "-collated" + "-papiex-" + jobid + "-0.csv"
             # Verify concat does not exist, break if does
             if any(outfile.rsplit("/", 1)[1] in FL.lower() for FL in fileList):
-                print("File: ", outfile, " already exists remove to collate again")
-                raise SystemError
+                logger.error( outfile + " already exists remove to collate again")
+                return False, None
         else:
             # still verify concat hasn't already been done
             tempoutfile = indir + host + "-collated" + "-papiex-" + jobid + "-0.csv"
             # Verify concat does not exist, break if does
             if any(tempoutfile.rsplit("/", 1)[1] in FL.lower() for FL in fileList):
-                print("File: ", tempoutfile, " already exists remove to collate again")
-                raise SystemError
+                logger.error(tempoutfile + " already exists remove to collate again")
+                return False, None
 
             if any(outfile in FL.lower() for FL in fileList):
-                print("File: ", outfile, " already already exists remove to collate again")
-                raise SystemError
+                logger.error(outfile + " already already exists remove to collate again")
+                return False, None
             print("Output File:", str(outfile))
 # List Mode #########################################
     if(type(indir) == list):
             fileList = indir
             for test in fileList:
                 if(path.isfile(test) is False):
-                    print(test, " file does not exist, please provide csv file list OR directory containing csv files")
-                    raise SystemError
+                    logger.error(test + " does not exist, please provide csv file list OR directory containing csv files")
+                    return False, None
             if(len(fileList) != len(set(fileList))):
-                print("List has duplicates")
-                raise SystemError
+                logger.error("List has duplicates")
+                return False, None
             try:
                 # Assumption: use first directory as jobid
                 jobid = indir[0].split("/")[-2].split("_")[-1].split("/")[0]
@@ -318,21 +314,21 @@ def csvjoiner(indir,
                 tempoutfile = indir[0].rsplit("/", 1)[0] + "/" + host + "-collated" + "-papiex-" + jobid + "-0.csv"
 
             except IndexError as E:
-                print("CSV name not formatted properly(jobid or host?)\n")
+                logger.error("CSV name not formatted properly(jobid or host?)\n")
                 helpDoc()
-                raise SystemError
+                return False, None
 
             if(path.isfile(outfile)):
-                print("File ", outfile, " already exists")
-                raise SystemError
+                logger.error("File ", outfile, " already exists")
+                return False, None
             if(path.isfile(tempoutfile)):
-                print("File ", tempoutfile, " already exists")
-                raise SystemError
+                logger.error("File ", tempoutfile, " already exists")
+                return False, None
 
             # Verify concat does not exist, break if does
             if any("concat" in FL.lower() for FL in fileList):
-                print("File ", outfile, " already exists")
-                raise SystemError
+                logger.error(outfile + " already exists")
+                return False, None
             else:
                 print("Output File:", str(outfile))
 

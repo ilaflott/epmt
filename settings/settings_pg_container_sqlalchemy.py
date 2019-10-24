@@ -1,8 +1,10 @@
 from epmt_default_settings import *
+from os import environ
 
 orm = 'sqlalchemy'
-db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
+db_params = { 'url': 'postgresql://postgres:example@postgres:5432/EPMT', 'echo': False }
 bulk_insert = True
+
 
 # You can alter the settings below to override defaults
 #
