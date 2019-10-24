@@ -7,7 +7,8 @@ from logging import getLogger
 from numbers import Number
 
 logger = getLogger(__name__)  # you can use other name
-from epmt_logging import *
+import epmt_logging
+import settings
 
 # this sets the defaults to be used when a trained model is not provided
 thresholds = settings.outlier_thresholds 

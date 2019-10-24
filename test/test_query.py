@@ -463,7 +463,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(status, {'exit_code': 0, 'exit_reason': 'none', 'script_path': '/home/Jeffrey.Durachta/ESM4/DECK/ESM4_historical_D151/gfdl.ncrc4-intel16-prod-openmp/scripts/postProcess/ESM4_historical_D151_ocean_annual_rho2_1x1deg_18840101.tags', 'script_name': 'ESM4_historical_D151_ocean_annual_rho2_1x1deg_18840101'})
 
     def test_version(self):
-        self.assertTrue(eq.version > (1,0,0))
+        self.assertTrue(eq.version() > (1,0,0))
 
     def test_zz_delete_jobs(self):
         n = eq.delete_jobs(['685000', '685016'])

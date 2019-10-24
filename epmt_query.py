@@ -10,19 +10,11 @@ from logging import getLogger
 # using set_logging, other than import set_logging
 from epmtlib import set_logging
 logger = getLogger(__name__)  # you can use other name
-from epmt_logging import *
+import epmt_logging
 
 ### Put EPMT imports below, after logging is set up
-from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key, stringify_dicts
+from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key, stringify_dicts, version, version_str
 from epmt_stat import modified_z_score
-
-# semantic version
-# first element is the major version number
-# second element is the minor version number
-# third element is the patch or bugfix number
-# Since we are saving as a tuple you can do a simple
-# compare of two version tuples and python will do the right thing
-version = (1,3,0)
 
 init_settings(settings)
 setup_db(settings)

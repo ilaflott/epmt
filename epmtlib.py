@@ -14,6 +14,20 @@ try:
 except ImportError:
     from io import StringIO
 
+# semantic version
+# first element is the major version number
+# second element is the minor version number
+# third element is the patch or bugfix number
+# Since we are saving as a tuple you can do a simple
+# compare of two version tuples and python will do the right thing
+_version = (1,3,0)
+
+def version():
+    return _version
+
+def version_str():
+    return "EPMT " + ".".join([str(i) for i in _version])
+
 def get_username():
     return getpwuid( getuid() )[ 0 ]
 

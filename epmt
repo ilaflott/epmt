@@ -39,9 +39,8 @@ if (__name__ == "__main__"):
         formatter_class=argparse.RawDescriptionHelpFormatter)
     
     # Version
-    from epmt_query import version
-    epmt_version = "EPMT " + ".".join([str(i) for i in version])
-    parser.add_argument('-V', '--version',action='version', version=epmt_version, help="Display EPMT Version")
+    from epmtlib import version_str
+    parser.add_argument('-V', '--version',action='version', version=version_str(), help="Display EPMT Version")
     
     # Global Verbose
     parser.add_argument('-v', '--verbose',action='count',help="Increase level of verbosity/debug")
