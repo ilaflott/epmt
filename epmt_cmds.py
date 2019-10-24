@@ -19,7 +19,7 @@ logger = getLogger(__name__)  # you can use other name
 import epmt_logging
 import settings
 
-from epmtlib import get_username, set_logging, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm, timing
+from epmtlib import get_username, set_logging, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm, timing, dict_filter
 
 def find_diffs_in_envs(start_env,stop_env):
     env = {}
@@ -39,18 +39,6 @@ def find_diffs_in_envs(start_env,stop_env):
             env[e] = stop_env[e]
     return env
 
-# Remove those with _ at beginning and blacklist
-def blacklist_filter(filter=None, **env):
-#   print env
-    env2 = {}
-    for k, v in env.items():
-        if k.startswith("_"):
-            continue
-        if k == "LS_COLORS":
-            continue
-        env2[k] = v
-    return env2
-
 
 def dump_config(outf):
     print("\nsettings.py (affected by the below env. vars):", file=outf)
@@ -65,11 +53,6 @@ def dump_config(outf):
 #              ]:
         if v in environ:
             print("%-24s%-56s" % (v,environ[v]), file=outf)
-
-def merge_two_dicts(x, y):
-    z = x.copy()   # start with x's keys and values
-    z.update(y)    # modifies z with y's keys and values & returns None
-    return z
 
 def read_job_metadata_direct(file):
     try:
@@ -326,7 +309,7 @@ def create_start_job_metadata(jobid, submit_ts, from_batch=[]):
     except:
         ts=datetime.now()
     metadata = {}
-    start_env=blacklist_filter(filter,**environ)
+    start_env=dict_filter(environ, vars(settings).get('env_blacklist',None))
 #   print env
     metadata['job_pl_id'] = jobid
 #   metadata['job_pl_hostname'] = gethostname()
@@ -345,7 +328,7 @@ def merge_stop_job_metadata(metadata, exitcode, reason, from_batch=[]):
         ts=datetime.now(tz=get_localzone())
     except:
         ts=datetime.now()
-    stop_env=blacklist_filter(filter,**environ)
+    stop_env=dict_filter(environ, vars(settings).get('env_blacklist',None))
     metadata['job_el_stop_ts'] = ts
     metadata['job_el_exitcode'] = exitcode
     metadata['job_el_reason'] = reason
