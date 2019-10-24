@@ -429,3 +429,15 @@ def get_first_key_match(d, *keys):
         if k in d:
             return d[k]
     return None
+
+# Remove those with _ at beginning and blacklist
+def dict_filter(kvdict, blacklisted_keys, remove_underscores = True):
+    d = { k: kvdict[k] for k in kvdict.keys() if k not in blacklisted_keys }
+    if remove_underscores:
+        d = { k: d[k] for k in d.keys() if not k.startswith('_') }
+    return d
+
+def merge_dicts(x, y):
+    z = x.copy()   # start with x's keys and values
+    z.update(y)    # modifies z with y's keys and values & returns None
+    return z

@@ -22,7 +22,8 @@ profile = False
 input_pattern = "*-papiex-*-[0-9]*.csv"
 install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-oss-install/"
 
-# Blacklist for environment filter
+# blacklist for environment filter (in addition to all keys with
+# leading underscores)
 env_blacklist = ["LS_COLORS"]
 
 #
