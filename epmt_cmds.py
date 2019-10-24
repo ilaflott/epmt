@@ -847,8 +847,16 @@ def epmt_stage(dirs, keep_going=True):
 
 def epmt_dbsize(findwhat=['database','table','index','tablespace'], usejson=False, usebytes=False):
     from orm import get_db_size
-# Absolutely all argument checking should go here, specifically the findwhat stuff
-    return(get_db_size(findwhat,usejson,usebytes))
+    options = ['tablespace', 'table', 'index', 'database']
+    cleanList = []
+    for test in findwhat:
+        cleaner = ''.join(e for e in test if e.isalnum())
+        if cleaner.lower() not in options:
+            logger.warning("Ignoring %s Not a valid option",cleaner)
+        else:
+            if cleaner not in cleanList:
+                cleanList.append(cleaner)
+    return(get_db_size(cleanList,usejson,usebytes))
 
 #
 # depends on args being global
@@ -868,7 +876,7 @@ def epmt_entrypoint(args):
     # and error out appropriately
 
     if args.command == 'dbsize':
-        return(epmt_dbsize(args.epmt_cmd_args, usejson=args.json, usebytes=args.bytes) == False)
+        return(epmt_dbsize(args.size_of, usejson=args.json, usebytes=args.bytes) == False)
     if args.command == 'start':
         return(epmt_start_job(other=args.epmt_cmd_args) == False)
     if args.command == 'stop':

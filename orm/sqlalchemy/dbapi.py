@@ -201,19 +201,7 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
     if settings.db_params.get('url', '').startswith('postgresql://') is False:
         logger.warning("%s is not supported", settings.db_params.get('url', ''))
         return(False,"Not supported")
-    if usejson:
-        import json
-        jsonlist = []
-    #Sanitizing
-    options = ['tablespace', 'table', 'index', 'database']
-    cleanList = []
-    for test in findwhat:
-        cleaner = ''.join(e for e in test if e.isalnum())
-        if cleaner.lower() not in options:
-            logger.warning("Ignoring %s Not a valid option",cleaner)
-        else:
-            if cleaner not in cleanList:
-                cleanList.append(cleaner)
+    jsonlist = []
     logger.info("epmt dbsize: %s",str(findwhat))
     logger.info("epmt dbsize: bytes:%s, json:%s",str(usebytes),str(usejson))
     every = False
@@ -231,11 +219,11 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
     except exc.SQLAlchemyError as e:
         logger.warning("Could Not connect to db"+str(e))
         return(False,"Not connected")
-    if len(cleanList) < 1:
+    if len(findwhat) < 1:
         logger.info("Displaying all options")
         every = True
-        cleanList = range(1)
-    for arg in cleanList:
+        findwhat = range(1)
+    for arg in findwhat:
         if every or arg.lower() == 'database':
             databased = {}
             cmd = 'SELECT pg_database.datname, pg_size_pretty(pg_database_size(pg_database.datname)) AS size FROM pg_database'
@@ -297,7 +285,8 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
                 logger.warning("Table query failed")
 
         if every or arg.lower() == 'index':
-            print("\n ------------------------Index---({})---------------------".format(settings.db_params.get('dbname','nodb')))
+            dbname = settings.db_params.get('url','DB URL Missing').split('/')[-1]
+            print("\n ------------------------Index---({})---------------------".format(dbname))
             units = "Index Size"
             if usebytes:
                 units = units + "(bytes)"
@@ -350,6 +339,7 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
 
     if usejson:
         if jsonlist:
+            import json
             import datetime
             current_time = datetime.datetime.utcnow().isoformat()+"Z"
             from sqlalchemy import __version__ as sa_version

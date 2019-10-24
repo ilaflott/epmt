@@ -219,26 +219,13 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
         return(False,"")
     else:
         logger.info("Connected to db with pony")
-    # Json requested 
-    if usejson:
-        import json
-        jsonlist = []
-    # Sanitizing user input
-    options = ['tablespace', 'table', 'index', 'database']
-    cleanList = []
-    for test in findwhat:
-        cleaner = ''.join(e for e in test if e.isalnum())
-        if cleaner.lower() not in options:
-            logger.warning("Ignoring %s Not a valid option",cleaner)
-        else:
-            if cleaner not in cleanList:
-                cleanList.append(cleaner)
+    jsonlist = []
     every = False
-    if len(cleanList) < 1:
+    if len(findwhat) < 1:
         logger.info("Displaying all size results")
         every = True
-        cleanList = range(1)
-    for arg in cleanList:
+        findwhat = range(1)
+    for arg in findwhat:
         selectables = """SELECT table_name FROM information_schema.tables WHERE table_type = 'BASE TABLE' AND table_schema NOT IN ('pg_catalog', 'information_schema')"""
         try:
             results = _execute_raw_sql(selectables)
@@ -350,6 +337,7 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
                 logger.warning("Tablespace query failed")
     if usejson:
         if jsonlist:
+            import json
             import datetime
             current_time = datetime.datetime.utcnow().isoformat()+"Z"
             from pony import __version__ as p_version
