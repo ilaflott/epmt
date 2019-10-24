@@ -17,8 +17,13 @@ from tzlocal import get_localzone
 from logging import getLogger, basicConfig, DEBUG, INFO, WARNING, ERROR
 logger = getLogger(__name__)  # you can use other name
 import epmt_logging
-import settings
 
+try:
+    import settings
+except Exception as e:
+    logger.error(str(e))
+    exit(1)
+    
 from epmtlib import get_username, set_logging, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm, timing, dict_filter
 
 def find_diffs_in_envs(start_env,stop_env):
