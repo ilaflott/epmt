@@ -262,6 +262,7 @@ def verify_papiex():
         retval = False
     else:
         retval = True
+        global_jobid,global_datadir,global_metadatafile = setup_vars()
         files = glob(global_datadir+settings.input_pattern)
         if len(files) != 1:
             logger.error("%s matched %d papiex CSV output files instead of 1",global_datadir+settings.input_pattern,len(files))
@@ -273,11 +274,11 @@ def verify_papiex():
             retval = False
 
     if retval == True:
+        logger.info("rmtree %s",global_datadir) 
+        rmtree(global_datadir)
         PrintPass()
     else:
         PrintFail()
-    logger.info("rmtree %s",global_datadir) 
-    rmtree(global_datadir)
     return retval
 
 def epmt_check():
