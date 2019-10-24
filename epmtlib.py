@@ -1,4 +1,5 @@
-from sys import exit, stdout, stderr
+# Fixme!
+import sys
 from functools import wraps
 from time import time
 from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING, CRITICAL
@@ -71,7 +72,7 @@ def init_settings(settings):
 
     if not hasattr(settings,"epmt_output_prefix"):
         logger.error("missing settings.epmt_output_prefix")
-        exit(1)
+        sys.exit(1)
     if not settings.epmt_output_prefix.endswith("/"):
         logger.warning("settings.epmt_output_prefix should end in a /")
         settings.epmt_output_prefix += "/"
@@ -113,16 +114,16 @@ def init_settings(settings):
         settings.bulk_insert = False
     if (settings.orm != 'sqlalchemy' and settings.bulk_insert):
         logger.error('bulk_insert is only supported by sqlalchemy')
-        exit(1)
+        sys.exit(1)
     if not hasattr(settings, 'post_process_job_on_ingest'):
         logger.warning("missing settings.post_process_job_on_ingest")
         settings.post_process_job_on_ingest = True
     if ((settings.orm != 'sqlalchemy') and (not(settings.post_process_job_on_ingest))):
         logger.error('post_process_job_on_ingest set as False is only permitted with sqlalchemy')
-        exit(1)
+        sys.exit(1)
     if not hasattr(settings, 'db_params'):
         logger.error("missing settings.db_params")
-        exit(1)
+        sys.exit(1)
 
 def run_shell_cmd(*cmd):
     nf = open(devnull, 'w')
@@ -159,12 +160,12 @@ def timing(f):
 @contextmanager
 def capture():
     new_out, new_err = StringIO(), StringIO()
-    old_out, old_err = stdout, stderr
+    old_out, old_err = sys.stdout, sys.stderr
     try:
-        stdout, stderr = new_out, new_err
-        yield stdout, stderr
+        sys.stdout, sys.stderr = new_out, new_err
+        yield sys.stdout, sys.stderr
     finally:
-        stdout, stderr = old_out, old_err
+        sys.stdout, sys.stderr = old_out, old_err
 
 # we assume tag is of the format:
 #  "key1:value1 ; key2:value2"
