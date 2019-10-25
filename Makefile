@@ -34,4 +34,4 @@ check-python-shells:
 	@rm -rf /tmp/epmt
 check-unittests:
 	@echo; echo "Testing built-in unit tests..."
-	@env -i PATH=${PWD}:${PATH} python3 -m unittest -v -f test.test_lib test.test_anysh test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema
+	@env -i PATH=${PWD}:${PATH} python3 -m unittest -v -f test.test_lib test.test_settings test.test_anysh test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema

@@ -12,11 +12,7 @@ from sys import stderr, exit
 # except NameError: 
 #     logger = getLogger(__name__)
 
-try:
-    import settings
-except Exception as e:
-    print(str(e),file=stderr)
-    exit(1)
+import epmt_settings as settings
 
 # now correct the logging level based on settings.verbose
 set_logging(settings.verbose if hasattr(settings, 'verbose') else 0, check=True)

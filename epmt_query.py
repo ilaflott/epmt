@@ -5,6 +5,7 @@ from orm import *
 from json import loads, dumps
 from os import environ
 from logging import getLogger
+import epmt_settings as settings
 
 # do NOT do any epmt imports until logging is set up
 # using set_logging, other than import set_logging

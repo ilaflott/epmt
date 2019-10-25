@@ -1,5 +1,3 @@
-from epmt_default_settings import *
-
 orm = 'sqlalchemy'
 db_params = { 'url': 'postgresql://postgres:example@localhost:5432/EPMT', 'echo': False }
 bulk_insert = True

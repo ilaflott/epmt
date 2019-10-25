@@ -8,7 +8,8 @@
 # rely on the ORM being Pony
 from logging import getLogger
 logger = getLogger(__name__)
-from epmt_logging import *
+import epmt_logging
+import epmt_settings as settings
 
 def get_db_size(findwhat=['database','table','index','tablespace'], usejson=False, usebytes=False):
     """

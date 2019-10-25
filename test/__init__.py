@@ -14,7 +14,7 @@ import pandas as pd
 from epmtlib import set_logging, capture
 set_logging(-1)
 
-import settings
+import epmt_settings as settings
 import epmt_query as eq
 from epmt_cmds import epmt_submit
 from epmtlib import *

@@ -1,6 +1,3 @@
-from epmt_default_settings import *
-from os import environ
-
 orm = 'pony'
 db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'postgres', 'dbname': 'EPMT'}
 

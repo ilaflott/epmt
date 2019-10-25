@@ -1,5 +1,3 @@
-from epmt_default_settings import *
-
 orm = 'pony'
 db_params = {'provider': 'sqlite', 'filename':'database.sqlite', 'create_db': True }
 

@@ -2,8 +2,8 @@ from .general import *
 from datetime import datetime
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from six import with_metaclass
-
-from epmt_logging import *
+import epmt_logging
+import epmt_settings as settings
 
 if 'postgres' in settings.db_params.get('url', ''):
     from sqlalchemy.dialects.postgresql import JSONB as JSON

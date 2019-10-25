@@ -1,6 +1,6 @@
 from os import environ
 import epmt_logging
-import settings
+import epmt_settings as settings
 
 if settings.orm == 'sqlalchemy':
     from .sqlalchemy import *

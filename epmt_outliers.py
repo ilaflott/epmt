@@ -14,7 +14,7 @@ from epmt_stat import thresholds, modified_z_score,outliers_iqr,outliers_modifie
 
 logger = getLogger(__name__)  # you can use other name
 import epmt_logging
-import settings
+import epmt_settings as settings
 
 FEATURES = settings.outlier_features
 

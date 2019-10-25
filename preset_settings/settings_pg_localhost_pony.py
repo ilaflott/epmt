@@ -1,6 +1,3 @@
-# settings.py
-from epmt_default_settings import *
-
 orm = 'pony'
 db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'localhost', 'dbname': 'EPMT'}
 
