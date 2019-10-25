@@ -10,8 +10,8 @@ build:
 	python -bb -m py_compile *.py orm/*.py orm/*/*.py test/*.py
 
 dist default: 
-	docker build -f Dockerfiles/Dockerfile.python-epmt -t python-epmt:latest .
-	dir=`date "+epmt-build-%Y-%m-%d-%H:%M:%S"`; docker run -i --tty --rm --volume=$$PWD:$$PWD:z -w $$PWD --privileged epmt-python pyinstaller --clean --hidden-import epmt_default_settings --exclude-module settings --distpath=$$dir -s epmt
+	docker build -f Dockerfiles/Dockerfile.epmt-dist -t epmt-dist:latest .
+	set -e; dir=`date "+epmt-build-%Y-%m-%d-%H:%M:%S"`; docker run -i --tty --rm --volume=$$PWD:$$PWD:z -w $$PWD --privileged epmt-dist pyinstaller --clean --hidden-import epmt_default_settings --exclude-module settings --distpath=$$dir -s epmt; tar cfz $$dir.tgz $$dir; echo; echo "Release file: $$dir.tgz";
 
 clean:
 	find . -name "*~" -o -name "*.pyc" -exec rm -f {} \; 
