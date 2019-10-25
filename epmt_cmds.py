@@ -212,13 +212,13 @@ def verify_db_params():
     
 def verify_perf():
     f="/proc/sys/kernel/perf_event_paranoid"
-    print(f,"exists and has a value of 0")
+    print(f,"exists and has a value of 1 or less")
     try:
         with open(f, 'r') as content_file:
             value = int(content_file.read())
             logger.info("%s = %d",f,value)
-            if value != 0:
-                logger.error("bad %s value of %d, should be 0 to allow cpu events",f,value)
+            if value > 1:
+                logger.error("bad %s value of %d, should be 1 or less to allow cpu events",f,value)
                 PrintFail()
                 return False
             logger.info("perf_event_paranoid is %d",value)

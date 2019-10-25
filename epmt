@@ -118,6 +118,14 @@ if (__name__ == "__main__"):
         exit(1)
     args = parser.parse_args()
     #print(vars(args))
+
+    if args.command == 'check':
+        # fake a job id so that epmt_check doesn't fail because of a missing job id
+        from epmt_cmds import epmt_check
+        from os import environ
+        environ['SLURM_JOB_ID'] = '1'
+        exit(0 if epmt_check() else 1)
+ 
     # Print help if epmt help is called
     if args.command == 'help':
         parser.print_help()
