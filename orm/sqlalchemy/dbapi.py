@@ -198,8 +198,10 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
     from orm.sqlalchemy.general import _execute_raw_sql
     from sqlalchemy import exc
     # Test if provider is supported
-    if settings.db_params.get('url', '').startswith('postgresql://') is False:
-        logger.warning("%s is not supported", settings.db_params.get('url', ''))
+    from orm import orm_db_provider
+    # Test if provider is supported
+    if (orm_db_provider() != 'postgres'):
+        logger.warning("%s Not supported",str(settings.db_params.get('provider','Provider settings key missing')))
         return(False,"Not supported")
     if usejson:
         import json
