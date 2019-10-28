@@ -13,7 +13,6 @@ from epmtlib import tags_list, tag_from_string, dict_in_list, isString
 from epmt_stat import thresholds, modified_z_score,outliers_iqr,outliers_modified_z_score,rca
 
 logger = getLogger(__name__)  # you can use other name
-import epmt_logging
 import epmt_settings as settings
 
 FEATURES = settings.outlier_features

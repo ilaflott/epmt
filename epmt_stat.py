@@ -7,7 +7,6 @@ from logging import getLogger
 from numbers import Number
 
 logger = getLogger(__name__)  # you can use other name
-import epmt_logging
 import epmt_settings as settings
 
 # this sets the defaults to be used when a trained model is not provided

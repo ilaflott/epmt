@@ -10,7 +10,6 @@ from functools import wraps
 
 from logging import getLogger
 logger = getLogger('orm.sqlalchemy')  # you can use other name
-import epmt_logging
 import epmt_settings as settings
 
 logger.info('sqlalchemy orm selected')

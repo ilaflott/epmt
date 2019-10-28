@@ -2,7 +2,6 @@ from .general import *
 from datetime import datetime
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from six import with_metaclass
-import epmt_logging
 import epmt_settings as settings
 
 if 'postgres' in settings.db_params.get('url', ''):

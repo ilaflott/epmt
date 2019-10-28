@@ -5,7 +5,6 @@ from pony.orm import *
 
 from logging import getLogger
 logger = getLogger('orm.pony')  # you can use other name
-import epmt_logging
 
 db = Database()
 

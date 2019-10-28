@@ -16,7 +16,6 @@ import time
 import pytz
 
 logger = getLogger(__name__)  # you can use other name
-import epmt_logging
 import epmt_settings as settings
 from orm import *
 
