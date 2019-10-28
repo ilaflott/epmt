@@ -3,7 +3,7 @@
 # Then feel free to edit the file to suit you.
 
 orm = 'pony'
-db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'postgres', 'dbname': 'EPMT'}
+db_params = { 'url': 'postgresql://postgres:example@postgres:5432/EPMT' }
 
 # You can alter the settings below to override defaults
 #

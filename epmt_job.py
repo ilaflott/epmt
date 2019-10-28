@@ -592,7 +592,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     submit_ts = metadata['job_pl_submit_ts']
     if not start_ts.tzinfo:
         tz_str = get_first_key_match(env_dict, 'TZ', 'TIMEZONE') or get_first_key_match(environ, 'EPMT_TZ') or 'US/Eastern'
-        logger.info('timezone could not be auto-detected, assuming {0}'.format(tz_str))
+        logger.debug('timezone could not be auto-detected, assuming {0}'.format(tz_str))
         tz_default = pytz.timezone(tz_str)
         start_ts = tz_default.localize(start_ts)
         stop_ts = tz_default.localize(stop_ts)

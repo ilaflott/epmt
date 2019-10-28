@@ -3,7 +3,7 @@
 # Then feel free to edit the file to suit you.
 
 orm = 'pony'
-db_params = {'provider': 'sqlite', 'filename': ':memory:'}
+db_params = { 'url': 'sqlite:///:memory:' }
 
 # You can alter the settings below to override defaults
 #
