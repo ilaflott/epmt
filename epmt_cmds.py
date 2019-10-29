@@ -658,7 +658,7 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
 #        logger.error("Job ID is empty!");
 #        exit(1);
 
-    logger.info("submit_to_db(%s,%s,%s)",input,pattern,str(dry_run))
+    logger.info("submit_to_db(%s,%s,dry_run=%s,drop=%s)",input,pattern,str(dry_run),str(drop))
 
     err,tar = compressed_tar(input)
     if err:
@@ -711,7 +711,7 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
 # Now we touch the Database
     from orm import setup_db
     from epmt_job import ETL_job_dict
-    if setup_db(settings) == False:
+    if setup_db(settings,drop) == False:
         return False
     j = ETL_job_dict(metadata,filedict,settings,tarfile=tar)
     if not j:
@@ -848,9 +848,20 @@ def epmt_entrypoint(args):
     if not args.verbose:
         set_logging(settings.verbose, check=True)
 
+
     # Here it's up to each command to validate what it is looking for
     # and error out appropriately
 
+    # submit does the drop on its own, so here we handle
+    if args.command == 'drop':
+        if (not(args.force)):
+            confirm = input("This will drop the entire database. This action cannot be reversed. Are you sure (yes/NO): ")
+            if (confirm.upper() not in ('Y', 'YES')):
+                return 0
+        logger.info('request to drop all data in the database')
+        from orm import setup_db
+        setup_db(settings, drop=True)
+        return 0
     if args.command == 'dbsize':
         return(epmt_dbsize(args.epmt_cmd_args, usejson=args.json, usebytes=args.bytes) == False)
     if args.command == 'start':

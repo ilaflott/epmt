@@ -48,9 +48,11 @@ function finish {
 
 function cleandb {
     if [ $no_compose -eq 1 ]; then
-        utils/drop_pg_tables
+        # utils/drop_pg_tables
+        ./epmt drop --force
     else
-        docker-compose $compose_args run test bash -c 'cd /epmt && utils/drop_pg_tables'
+        # docker-compose $compose_args run test bash -c 'cd /epmt && utils/drop_pg_tables'
+        docker-compose $compose_args run test bash -c 'cd /epmt && ./epmt drop --force'
     fi
 }
 
@@ -70,7 +72,7 @@ if [ $no_compose -eq 0 ]; then
     #docker run --rm  --name pg-docker -e POSTGRES_DB=EPMT -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -d -p 5432:5432  postgres:9.5
 fi
 
-for settings_file in preset_settings/{$pg_pony_settings_file,settings_sqlite_inmem_pony.py,settings_sqlite_inmem_sqlalchemy.py,$pg_sqla_settings_file}; do
+for settings_file in preset_settings/{$pg_sqla_settings_file,$pg_pony_settings_file,settings_sqlite_inmem_pony.py,settings_sqlite_inmem_sqlalchemy.py}; do
     echo "------------------------"
     echo "using settings_file"
     cp -v $settings_file settings.py

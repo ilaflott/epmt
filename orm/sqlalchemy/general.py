@@ -115,7 +115,7 @@ def setup_db(settings,drop=False,create=True):
             logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
             return False
 
-    logger.info('Configuring scoped session..')
+    logger.debug('Configuring scoped session..')
     Session.configure(bind=engine, expire_on_commit=False, autoflush=True)
     db_setup_complete = True
     return True

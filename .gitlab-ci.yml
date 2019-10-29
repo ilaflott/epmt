@@ -16,6 +16,6 @@ build:python3:
   script: # Modify the commands below to build your repository.
     - python3 -V
     - pip3 install -r requirements.txt.py3
-    - apt-get update && apt-get install -y csh tcsh make postgresql-client-9.5 postgresql-client-common
+    - apt-get update && apt-get install -y csh tcsh
     - python3 -m py_compile epmt *.py orm/*/*.py		# Compile everything
     - test/run --no-compose

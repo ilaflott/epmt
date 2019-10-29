@@ -79,6 +79,9 @@ if (__name__ == "__main__"):
     stop_parser = subparser.add_parser('stop', help="Stop EPMT logging",
         description = "Stop will append to the metadata log file with the environment variables at stop time.")
     stop_parser.set_defaults(epmt_cmd_args=None)
+    # drop
+    drop_parser = subparser.add_parser('drop', help="Drop the entire database. Caution!! This action is irreversible.")
+    drop_parser.add_argument('-f', '--force', action='store_true',help="Do not prompt to confirm")
     # Submit
     submit_parser = subparser.add_parser('submit', help="Commit completed job to database",
         description="Submit accepts job directories and updates the database configured with \
@@ -130,11 +133,11 @@ if (__name__ == "__main__"):
     if args.command == 'help':
         parser.print_help()
         exit(0)
+
     # Print help if 
     if args.command == None:
         parser.print_help()
         exit(0)
-
     exit(epmt_entrypoint(args))
 else:
     print >> stderr,"ERROR: This module cannot be imported."
