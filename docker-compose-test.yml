@@ -1,0 +1,19 @@
+version: '3'
+services:
+  postgres:
+    image: postgres:9.5
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=example
+      - POSTGRES_DB=EPMT
+
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfiles/Dockerfile.epmt-test
+    command: /bin/bash -c 'cd /epmt && utils/wait-for.sh postgres:5432 -t 30 -- make check'
+    volumes:
+      - ./:/epmt
+    links:
+      - postgres
