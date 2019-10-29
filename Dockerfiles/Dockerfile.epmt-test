@@ -1,7 +1,7 @@
 FROM phusion/baseimage:0.10.2
 
 COPY requirements.txt.py3 /tmp
-RUN add-apt-repository ppa:deadsnakes/ppa && install_clean netcat make tcsh python3.7 python3.7-venv python3.7-dev python3-pip python3-setuptools && python3.7 -m pip install --upgrade pip && python3.7 -m pip install -r /tmp/requirements.txt.py3 && rm /usr/bin/python3 && ln -s /usr/bin/python3.7 /usr/bin/python3
+RUN add-apt-repository ppa:deadsnakes/ppa && install_clean netcat make tcsh postgresql-client-common postgresql-client-9.5 python3.7 python3.7-venv python3.7-dev python3-pip python3-setuptools && python3.7 -m pip install --upgrade pip && python3.7 -m pip install -r /tmp/requirements.txt.py3 && rm /usr/bin/python3 && ln -s /usr/bin/python3.7 /usr/bin/python3
 
 # ENTRYPOINT ["python3"]
 # When run without anything, print python version

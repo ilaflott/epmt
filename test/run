@@ -2,23 +2,30 @@
 
 # This script is only there to run the tests manually before committing.
 # usage:
-#   tests/run [--no-postgres-svc]
+#   tests/run [---no-compose]
 # 
 # container is started up.
 # You need to fire the above command from the top-level EPMT directory
 # The test uses python3 in PATH, so make sure you already have the
-# right virtualenv loaded. Also, it assumes you have docker available.
-# Unless "--no-postgres-svc" is supplied as an argument, a docker postgres
+# right virtualenv loaded. The script will use docker-compose and
+# docker to run tests. However, if --no-compose is specified then
+# it's assumed that you want to run all the commands directly
+# and not under docker/compose.
+# Hence, --no-compose is essentially used when running in an external
+# CI environment such as Gitlab
 #
 #
-usage="test/run [--no-postgres-svc]" 
+usage="test/run [--no-compose]"
 
 settings_backup="settings.py.`whoami`.$$"
 epmt_tmpdir="/tmp/epmt"
-start_postgres=1
+no_compose=0
+compose_args="-f docker-compose-test.yml"
+pg_sqla_settings_file="settings_pg_container_sqlalchemy.py"
+pg_pony_settings_file="settings_pg_container_pony.py"
 
 case "$1" in
-  --no-postgres-svc) start_postgres=0;;
+  --no-compose) no_compose=1;;
   "");;
   *) echo $usage >&2; exit 0;;
 esac
@@ -26,9 +33,9 @@ esac
 
 function finish {
   # Your cleanup code here
-  if [ $start_postgres -eq 1 ]; then
-      echo "stopping postgres docker service (might take a minute).."
-      docker stop pg-docker
+  if [ $no_compose -eq 0 ]; then
+      echo "stopping docker-based service (might take a minute).."
+      docker-compose $compose_args down
   fi
   if [ -f $settings_backup ]; then
     echo "Restoring settings.py (from $settings_backup)"
@@ -37,6 +44,14 @@ function finish {
     rm -f settings.py settings.pyc
   fi
   rm -rf $epmt_tmpdir
+}
+
+function cleandb {
+    if [ $no_compose -eq 1 ]; then
+        utils/drop_pg_tables
+    else
+        docker-compose $compose_args run test bash -c 'cd /epmt && utils/drop_pg_tables'
+    fi
 }
 
 rm -f settings.pyc # remove stale stuff
@@ -48,20 +63,25 @@ if [ -f settings.py ]; then
 fi
 
 
-if [ $start_postgres -eq 1 ]; then
+if [ $no_compose -eq 0 ]; then
     echo "Starting postgres service.."
-    docker run --rm  --name pg-docker -e POSTGRES_DB=EPMT -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -d -p 5432:5432  postgres:9.5
-    pg_sqla_settings_file="settings_pg_localhost_sqlalchemy.py"
-    pg_pony_settings_file="settings_pg_localhost_pony.py"
-else
-    pg_sqla_settings_file="settings_pg_container_sqlalchemy.py"
-    pg_pony_settings_file="settings_pg_container_pony.py"
+    docker-compose $compose_args up -d postgres
+    docker-compose $compose_args build
+    #docker run --rm  --name pg-docker -e POSTGRES_DB=EPMT -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -d -p 5432:5432  postgres:9.5
 fi
 
-for settings_file in preset_settings/{settings_sqlite_inmem_pony.py,settings_sqlite_inmem_sqlalchemy.py,$pg_sqla_settings_file}; do
+for settings_file in preset_settings/{$pg_pony_settings_file,settings_sqlite_inmem_pony.py,settings_sqlite_inmem_sqlalchemy.py,$pg_sqla_settings_file}; do
     echo "------------------------"
     echo "using settings_file"
     cp -v $settings_file settings.py
     chmod 0644 settings.py
-    make check
+    if [ $no_compose -eq 1 ]; then
+        make check
+    else
+        docker-compose $compose_args run test
+    fi
+    # restore pg db to pristine state
+    case $settings_file in
+        *pg*) cleandb;;
+    esac
 done
