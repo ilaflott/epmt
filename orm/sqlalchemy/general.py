@@ -54,11 +54,11 @@ def db_session(func):
         return retval
     return wrapper
 
-def setup_db(settings,drop=False,create=True, force=False):
+def setup_db(settings,drop=False,create=True):
     global db_setup_complete
     global engine
 
-    if db_setup_complete and not(force):
+    if db_setup_complete and not(drop):
         logger.debug('skipping DB setup as it has already been initialized')
         return True
     logger.info("Creating engine with db_params: %s", settings.db_params)
@@ -78,19 +78,11 @@ def setup_db(settings,drop=False,create=True, force=False):
 
     if drop:
         logger.warning("DROPPING ALL DATA AND TABLES!")
-        #if Session:
-        #    Session.rollback()
-        #    Session.expire_all()
-        #    Session.remove()
-        #    Session = None
+        if Session:
+            Session.rollback()
+            Session.flush()
+            Session.close()
         Base.metadata.drop_all(engine)
-        #meta = MetaData()
-        #import contextlib
-        #with contextlib.closing(engine.connect()) as con:
-        #    trans = con.begin()
-        #    for table in reversed(meta.sorted_tables):
-        #        con.execute(table.delete())
-        #    trans.commit()
     ins = inspect(engine)
     if len(ins.get_table_names()) >= 8:
         logger.info("Reflecting existing schema..")
@@ -119,18 +111,6 @@ def setup_db(settings,drop=False,create=True, force=False):
     Session.configure(bind=engine, expire_on_commit=False, autoflush=True)
     db_setup_complete = True
     return True
-
-def orm_drop_db():
-    #return setup_db(settings, drop=True, force=True)
-    if engine:
-        if Session:
-            Session.rollback()
-            Session.flush()
-            Session.close()
-        Base.metadata.drop_all(engine)
-        setup_db(settings, force=True)
-    else:
-        setup_db(settings, drop=True)
 
 # orm_get(Job, '6355501')
 # or

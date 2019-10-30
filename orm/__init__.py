@@ -18,3 +18,6 @@ def orm_db_provider():
     if 'postgres' in settings.db_params.get('url', settings.db_params.get('provider')): return 'postgres'
     if 'sqlite' in settings.db_params.get('url', settings.db_params.get('provider')): return 'sqlite'
     return settings.db_params.get('provider', 'unknown')
+
+def orm_drop_db():
+    return setup_db(settings, drop=True)
