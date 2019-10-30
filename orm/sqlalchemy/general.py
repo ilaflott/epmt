@@ -121,8 +121,16 @@ def setup_db(settings,drop=False,create=True, force=False):
     return True
 
 def orm_drop_db():
-    Session.rollback()
-    return setup_db(settings, drop=True, force=True)
+    #return setup_db(settings, drop=True, force=True)
+    if engine:
+        if Session:
+            Session.rollback()
+            Session.flush()
+            Session.close()
+        Base.metadata.drop_all(engine)
+        setup_db(settings, force=True)
+    else:
+        setup_db(settings, drop=True)
 
 # orm_get(Job, '6355501')
 # or

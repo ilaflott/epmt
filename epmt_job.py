@@ -67,7 +67,19 @@ def create_job(jobid,user):
 created_hosts = {}
 def lookup_or_create_host(hostname):
     logger = getLogger(__name__)  # you can use other name
-    host = created_hosts.get(hostname, orm_get(Host, hostname))
+    host = created_hosts.get(hostname)
+    if host:
+        # sometimes we may have cached a host entry that's been invalidated 
+        # in the session cache. In such a case, we need to purge it
+        try:
+            host.name
+        except:
+            del created_hosts[hostname]
+            host = None
+
+    if host is None:
+        host = orm_get(Host, hostname)
+        
     if host is None:
         host = orm_create(Host, name=hostname)
         logger.info("Created host %s",hostname)
@@ -76,6 +88,7 @@ def lookup_or_create_host(hostname):
         # and so we don't want use our create_hosts map with Pony
         if settings.orm == 'sqlalchemy':
             created_hosts[hostname] = host
+    assert(host.name == hostname)
     return host
 
 def lookup_or_create_user(username):
@@ -408,17 +421,18 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
                 # process tree creation step
                 proc_descendants = desc_map.get(proc.id, set())
                 proc.inclusive_cpu_time = float(proc.cpu_time + sum([p.cpu_time for p in proc_descendants]))
+                hosts.add(proc.host_id)
             else:
                 proc.inclusive_cpu_time = float(proc.cpu_time + orm_sum_attribute(proc.descendants, 'cpu_time'))
+                hosts.add(proc.host)
             nthreads += proc.numtids
             threads_sums_across_procs = sum_dicts(threads_sums_across_procs, proc.threads_sums)
-            hosts.add(proc.host)
         logger.info("job contains %d processes (%d threads)",len(all_procs), nthreads)
         _t3 = time.time()
         logger.debug('thread sums calculation took: %2.5f sec', _t3 - _t2)
         if settings.bulk_insert:
             t = Base.metadata.tables['host_job_associations']
-            thr_data.engine.execute(t.insert(), [ { 'jobid': j.jobid, 'hostname': h.name } for h in hosts])
+            thr_data.engine.execute(t.insert(), [ { 'jobid': j.jobid, 'hostname': h } for h in hosts])
         else:
             j.hosts = list(hosts)
         _t4 = time.time()
