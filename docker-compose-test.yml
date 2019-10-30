@@ -11,7 +11,7 @@ services:
   test:
     build:
       context: .
-      dockerfile: Dockerfiles/Dockerfile.epmt-test
+      dockerfile: Dockerfiles/Dockerfile.epmt-test.alpine
     command: /bin/bash -c 'cd /epmt && utils/wait-for.sh postgres:5432 -t 30 -- make check'
     volumes:
       - ./:/epmt
