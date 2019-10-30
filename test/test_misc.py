@@ -74,5 +74,14 @@ class EPMTCmds(unittest.TestCase):
                 throws = False
         self.assertEqual(throws, False, 'JSON not loaded successfully')
 
+    def test_zz_drop_db(self):
+        jobs = eq.get_jobs(fmt='terse')
+        self.assertTrue(len(jobs) > 0)
+        from orm import orm_drop_db
+        with capture() as (out,err):
+            orm_drop_db()
+        jobs = eq.get_jobs(fmt='terse')
+        self.assertEqual(len(jobs), 0)
+
 if __name__ == '__main__':
     unittest.main()

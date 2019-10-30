@@ -859,8 +859,8 @@ def epmt_entrypoint(args):
             if (confirm.upper() not in ('Y', 'YES')):
                 return 0
         logger.info('request to drop all data in the database')
-        from orm import setup_db
-        setup_db(settings, drop=True)
+        from orm import orm_drop_db
+        orm_drop_db()
         return 0
     if args.command == 'dbsize':
         return(epmt_dbsize(args.epmt_cmd_args, usejson=args.json, usebytes=args.bytes) == False)

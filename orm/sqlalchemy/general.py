@@ -54,11 +54,11 @@ def db_session(func):
         return retval
     return wrapper
 
-def setup_db(settings,drop=False,create=True):
+def setup_db(settings,drop=False,create=True, force=False):
     global db_setup_complete
     global engine
 
-    if db_setup_complete:
+    if db_setup_complete and not(force):
         logger.debug('skipping DB setup as it has already been initialized')
         return True
     logger.info("Creating engine with db_params: %s", settings.db_params)
@@ -119,6 +119,10 @@ def setup_db(settings,drop=False,create=True):
     Session.configure(bind=engine, expire_on_commit=False, autoflush=True)
     db_setup_complete = True
     return True
+
+def orm_drop_db():
+    Session.rollback()
+    return setup_db(settings, drop=True, force=True)
 
 # orm_get(Job, '6355501')
 # or

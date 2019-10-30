@@ -56,6 +56,10 @@ def setup_db(settings,drop=False,create=True):
         db.create_tables()
     return True
 
+def orm_drop_db():
+    import epmt_settings as settings
+    return setup_db(settings, drop=True)
+
 def orm_get(model, pk=None, **kwargs):
     if pk != None:
         try:
