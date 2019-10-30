@@ -78,7 +78,8 @@ class EPMTCmds(unittest.TestCase):
         jobs = eq.get_jobs(fmt='terse')
         self.assertTrue(len(jobs) > 0)
         from orm import orm_drop_db
-        orm_drop_db()
+        with capture() as (out,err):
+            orm_drop_db()
         jobs = eq.get_jobs(fmt='terse')
         self.assertEqual(len(jobs), 0)
 
