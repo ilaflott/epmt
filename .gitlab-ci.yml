@@ -12,11 +12,10 @@ services:
 
 
 build:python3:
-  image: centos:7
+  image: python:3.7.4
   script: # Modify the commands below to build your repository.
-    - yum install -y gcc openssl-devel bzip2-devel libffi-devel bash tcsh nc curl make postgresql-devel sqlite-devel && yum clean all
-    - cd /usr/src && echo "downloading python" && curl -o Python-3.7.4.tgz https://www.python.org/ftp/python/3.7.4/Python-3.7.4.tgz && tar xzf Python-3.7.4.tgz && cd Python-3.7.4 && echo "building python3" && ./configure -q --enable-optimizations && make --silent install > /dev/null
     - python3 -V
     - pip3 install -r requirements.txt.py3
+    - apt-get update && apt-get install -y csh tcsh
     - python3 -m py_compile epmt *.py orm/*/*.py		# Compile everything
     - test/run --no-compose
