@@ -142,6 +142,10 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(procs.count(), 6892, 'wrong count of processes in ORM format')
         df = eq.get_procs(JOBS_LIST, fmt='pandas', limit=10)
         self.assertEqual(df.shape, (10,50))
+        procs_limit = eq.get_procs(fmt='terse')
+        self.assertEqual(len(procs_limit), 10000)
+        procs_unlimited = eq.get_procs(fmt='orm')
+        self.assertNotEqual(procs_unlimited.count(), 10000)
 
     @db_session
     def test_procs_convert(self):
@@ -271,6 +275,8 @@ class QueryAPI(unittest.TestCase):
 
     @db_session
     def test_job_proc_tags(self):
+        with self.assertRaises(ValueError): 
+            eq.job_proc_tags([], fold=False)
         tags = eq.job_proc_tags(['685000', '685016'], fold=False)
         self.assertEqual(len(tags), 89, "wrong unique process tags count")
         tags = [ str_dict(d) for d in tags ]
@@ -290,6 +296,8 @@ class QueryAPI(unittest.TestCase):
 
     @db_session
     def test_op_metrics(self):
+        with self.assertRaises(ValueError):
+            eq.op_metrics([])
         df = eq.op_metrics(['685000', '685016'])
         self.assertEqual(df.shape, (178,32), "wrong dataframe shape for op_metrics")
         top = df[['job', 'tags', 'duration']].sort_values('duration', axis=0, ascending=False)[:1]
@@ -403,6 +411,7 @@ class QueryAPI(unittest.TestCase):
 
     @db_session
     def test_op_roots(self):
+        with self.assertRaises(ValueError): eq.op_roots([], 'op_sequence:4', fmt='orm')
         op_root_procs = eq.op_roots(['685000', '685003'], 'op_sequence:4', fmt='orm')
         self.assertEqual([p.pid for p in op_root_procs], [11023, 11185, 11187, 32160, 32328, 32330])
         #op_root_procs = eq.op_roots(['685000', '685003', '685016'], 'op_sequence:1', fmt='orm')

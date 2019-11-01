@@ -138,6 +138,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
                     u'kern-6656-20190614-191138'],
                    [])}
     """
+    eq._empty_collection_check(jobs)
     if sanity_check:
         eq._warn_incomparable_jobs(jobs)
 
@@ -245,6 +246,7 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
     >>> sorted_features
     ['duration', 'cpu_time', 'num_procs']
     """
+    eq._empty_collection_check(jobs)
     if sanity_check:
         eq._warn_incomparable_jobs(jobs)
 
@@ -400,6 +402,7 @@ def detect_outlier_processes(processes, trained_model=None,
     This function detects outlier processes using either a trained model
     or from within the input set.
     """
+    eq._empty_collection_check(processes)
     retval = pd.DataFrame(0, columns=features, index=processes.index)
     for c in features:
         for m in methods:

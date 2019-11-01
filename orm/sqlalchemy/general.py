@@ -38,7 +38,7 @@ def db_session(func):
             retval = func(*args, **kwargs) # No need to pass session explicitly
             completed = True
         except Exception as e:
-            logger.error('\nAn exception occurred; rolling back session..')
+            logger.warning('\nAn exception occurred; rolling back session..')
             # import traceback, sys
             # print('-'*60)
             # traceback.print_exc(file=sys.stdout)

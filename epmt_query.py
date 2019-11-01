@@ -401,7 +401,7 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
 
 #
 @db_session
-def get_procs(jobs = [], tags = None, fltr = None, order = None, limit = 0, when=None, hosts=[], fmt='dict', merge_threads_sums=True, exact_tag_only = False):
+def get_procs(jobs = [], tags = None, fltr = None, order = None, limit = None, when=None, hosts=[], fmt='dict', merge_threads_sums=True, exact_tag_only = False):
     """
     Filter a supplied list of jobs to find a match
     by tag or some primary keys. If no jobs list is provided,
@@ -442,7 +442,8 @@ def get_procs(jobs = [], tags = None, fltr = None, order = None, limit = 0, when
              For pony, you can use a expression like 'p.created_at'
              or a lambda function.
     
-    limit:   If set, limits the total number of results
+    limit:   If set, limits the total number of results. For formats
+             other than 'orm' this defaults to 10000
     
     when   : Restrict the output to processes running at 'when' time. 'when'
              can be specified as a Python datetime. You can also choose
@@ -502,6 +503,10 @@ def get_procs(jobs = [], tags = None, fltr = None, order = None, limit = 0, when
     by using the default merge_threads_sums=True, it will be available as column in the output
     dataframe. The output will be pre-sorted on this field because we have set 'order'
     """
+
+    if (limit is None) and (fmt != 'orm'):
+        limit = 10000
+        logger.info('No limit set, defaults to {0}. Set limit to 0 to avoid limits'.format(limit))
 
     if when:
         if type(when) == str:
@@ -1342,7 +1347,7 @@ def _warn_incomparable_jobs(jobs):
 
 
 def _empty_collection_check(col):
-    if (col is None) or ((type(col) == list) and (col == [])):
+    if (not(orm_is_query(col))) and (type(col) != pd.DataFrame) and (col in [[], '', None]):
         msg = 'You need to specify a non-empty collection as a parameter'
         logger.warning(msg)
         raise ValueError(msg)
