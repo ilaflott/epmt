@@ -145,6 +145,10 @@ class QueryAPI(unittest.TestCase):
 
     @db_session
     def test_procs_convert(self):
+        # check and ensure that we cannot run a conversion on the full db!
+        with self.assertRaises(ValueError): eq.conv_procs([])
+        with self.assertRaises(ValueError): eq.conv_procs(None)
+
         for inform in ['terse', 'dict', 'pandas', 'orm']:
             procs = eq.get_procs('685000', order=Process.start, fmt=inform)
             self.assertEqual(procs.count() if inform=='orm' else len(procs), 3480)
@@ -234,6 +238,10 @@ class QueryAPI(unittest.TestCase):
 
     @db_session
     def test_job_convert(self):
+        # check and ensure that we cannot run a conversion on the full db!
+        with self.assertRaises(ValueError): eq.conv_jobs([])
+        with self.assertRaises(ValueError): eq.conv_jobs(None)
+
         for fmt in ['dict', 'terse', 'pandas', 'orm']:
             jobs = eq.get_jobs(['685000', '685003'], fmt=fmt)
             self.assertEqual(set(eq.conv_jobs(jobs, fmt='terse')), set(['685000', '685003']))

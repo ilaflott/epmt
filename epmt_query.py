@@ -41,6 +41,7 @@ def conv_jobs(jobs, fmt='dict', merge_sums = True):
                 This option is silently ignored for 'orm' and 'terse' formats.
 
     """
+    _empty_collection_check(jobs)
 
     jobs = orm_jobs_col(jobs)
     if fmt == 'orm':
@@ -106,13 +107,15 @@ def conv_procs(procs, fmt='pandas', order=None):
     cases except sqla+postgres. However, that may change, so
     if you care about the ordering you may need to set 'order'
     """
+    _empty_collection_check(procs)
+
     procs = orm_procs_col(procs)
     if not (order is None):
         procs = procs.order_by(order)
     return __conv_procs_orm(procs, fmt=fmt)
 
 
-def timeline(jobs = [], limit=0, fltr='', when=None, hosts=[], fmt='pandas'):
+def timeline(jobs, limit=0, fltr='', when=None, hosts=[], fmt='pandas'):
     """
     Timeline returns a timeline of processes ordered chronologically 
     by start time. 
@@ -204,6 +207,7 @@ def op_roots(jobs, tag, fmt='dict'):
     op_root returns a collection of processes in the format specified.
     The processes are sorted by jobid and within a job by start time
     """
+    _empty_collection_check(jobs)
     jobs = orm_jobs_col(jobs)
     if not tag:
         logger.error('You must specify a tag (string or dict)')
@@ -558,7 +562,7 @@ def get_thread_metrics(*processes):
 
 
 @db_session
-def job_proc_tags(jobs = [], exclude=[], fold=False):
+def job_proc_tags(jobs, exclude=[], fold=False):
     """
     gets all the unique tags across all processes of a job or collection of jobs
 
@@ -569,6 +573,7 @@ def job_proc_tags(jobs = [], exclude=[], fold=False):
 
     exclude: an optional list of keys to exclude from each tag (if present)
     """
+    _empty_collection_check(jobs)
     jobs = orm_jobs_col(jobs)
     tags = []
     for j in jobs:
@@ -602,6 +607,7 @@ def rank_proc_tags_keys(jobs, order = 'cardinality', exclude = []):
       >>> eq.rank_proc_tags_keys(['685000'], order = 'frequency')
       [('op', {'ncatted', 'ncrcat', 'dmput', 'fregrid', 'rm', 'timavg', 'hsmget', 'mv', 'cp', 'splitvars', 'untar'}), ('op_instance', {'9', '19', '6', '4', '20', '12', '8', '16', '2', '15', '5', '13', '10', '3', '11', '7', '14', '1', '18'}), ('op_sequence', {'83', '9', '67', '82', '60', '89', '85', '79', '20', '72', '8', '12', '27', '2', '51', '55', '87', '17', '48', '61', '40', '14', '7', '53', '26', '56', '37', '35', '4', '18', '36', '54', '62', '84', '70', '24', '50', '63', '58', '5', '13', '64', '57', '76', '44', '34', '1', '39', '21', '29', '81', '78', '42', '46', '19', '66', '43', '16', '28', '49', '30', '15', '10', '22', '73', '86', '77', '33', '47', '68', '31', '75', '6', '45', '32', '71', '41', '65', '80', '25', '74', '3', '11', '69', '52', '23', '59', '88', '38'})]
     '''
+    _empty_collection_check(jobs)
     if order.lower() not in ('cardinality', 'frequency'):
         logger.warning('order needs to be one or "cardinality" or "frequency"')
         return []
@@ -914,7 +920,7 @@ def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict'):
           >>> len(ops)
           12
     '''
-
+    _empty_collection_check(jobs)
     if not tags:
         tags = rank_proc_tags_keys(jobs)[0][0]
         logger.debug('no tag specified, using tags: {0}'.format(tags))
@@ -980,6 +986,7 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=F
     fmt:          One of 'dict' or 'pandas'. Defaults to 'pandas'
 
     """
+    _empty_collection_check(jobs)
     jobs = orm_jobs_col(jobs).order_by(Job.start)
 
     if jobs.count() == 0:
@@ -1110,6 +1117,7 @@ def dm_calc(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op
     for small collection of jobs (len(jobs) < 100). For large collections
     use dm_calc_iter instead
     """
+    _empty_collection_check(jobs)
     logger.debug('dm ops: {0}'.format(tags))
     jobs = orm_jobs_col(jobs)
     num_jobs = jobs.count()
@@ -1331,3 +1339,10 @@ def _warn_incomparable_jobs(jobs):
         print('WARNING:', msg, file=stderr)
         for j in jobs:
             print('   ',j.jobid, j.tags.get('exp_name'), j.tags.get('exp_component'), file=stderr)
+
+
+def _empty_collection_check(col):
+    if (col is None) or ((type(col) == list) and (col == [])):
+        msg = 'You need to specify a non-empty collection as a parameter'
+        logger.warning(msg)
+        raise ValueError(msg)
