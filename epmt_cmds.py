@@ -405,6 +405,9 @@ def epmt_stop_job(other=[]):
         return False
     metadata = merge_stop_job_metadata(start_metadata,0,"none",other)
     checked_metadata = check_fix_metadata(metadata)
+    if not checked_metadata:
+        logger.error('Metadata check failed. Writing raw metadata for post-mortem analysis..')
+        checked_metadata = metadata
     retval = write_job_metadata(global_metadatafile,checked_metadata)
     return retval
 
