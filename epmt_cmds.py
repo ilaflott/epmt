@@ -18,7 +18,7 @@ from logging import getLogger, basicConfig, DEBUG, INFO, WARNING, ERROR
 logger = getLogger(__name__)  # you can use other name
 import epmt_settings as settings
 
-from epmtlib import get_username, set_logging, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm, timing, dict_filter
+from epmtlib import get_username, set_logging, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm, timing, dict_filter, check_fix_metadata
 
 def find_diffs_in_envs(start_env,stop_env):
     env = {}
@@ -404,7 +404,8 @@ def epmt_stop_job(other=[]):
         logger.error("%s is already complete!",global_metadatafile)
         return False
     metadata = merge_stop_job_metadata(start_metadata,0,"none",other)
-    retval = write_job_metadata(global_metadatafile,metadata)
+    checked_metadata = check_fix_metadata(metadata)
+    retval = write_job_metadata(global_metadatafile,checked_metadata)
     return retval
 
 def epmt_dump_metadata(filelist):
@@ -874,8 +875,3 @@ def epmt_entrypoint(args):
 
     logger.error("Unknown command, %s. See -h for options.",args.command)
     return(1)
-
-# Use of globals here is gross. FIX!
-# 
-# if (__name__ == "__main__"):
-

@@ -9,7 +9,7 @@ from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
 from os import getuid
 from json import dumps, loads
 from pwd import getpwnam, getpwuid
-from epmtlib import tag_from_string, sum_dicts, unique_dicts, fold_dicts, timing, dotdict, get_first_key_match
+from epmtlib import tag_from_string, sum_dicts, unique_dicts, fold_dicts, timing, dotdict, get_first_key_match, check_fix_metadata
 from datetime import datetime, timedelta
 from functools import reduce
 import time
@@ -494,89 +494,13 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
 #    metadata['job_el_exitcode'] = exitcode
 #    metadata['job_el_reason'] = reason
 
-def get_batch_envvar(var,where):
-    logger = getLogger(__name__)  # you can use other name
-    key2slurm = {
-        "JOB_NAME":"SLURM_JOB_NAME", 
-        "JOB_USER":"SLURM_JOB_USER"
-        }
-    if var in key2slurm.keys():
-        var = key2slurm[var]
-    logger.debug("looking for %s in %s",var,where)
-    a=where.get(var)
-    if not a:
-        logger.debug("%s not found",var)
-        return False
-
-    logger.debug("%s found = %s",var,a)
-    return a
-
-def _check_and_create_metadata(raw_metadata):
-    logger = getLogger(__name__)  # you can use other name
-# First check what should be here
-    for n in [ 'job_pl_id', 'job_pl_submit_ts', 'job_pl_start_ts', 'job_pl_env', 
-               'job_el_stop_ts', 'job_el_exitcode', 'job_el_reason', 'job_el_env' ]:
-        s = str(raw_metadata.get(n))
-        if not s:
-            logger.error("Could not find %s in job metadata, job incomplete?",n)
-            return False
-        if len(s) == 0:
-            logger.error("Null value of %s in job metadata, corrupt data?",n)
-            return False
-# Now look up any batch environment variables we may use
-    username = get_batch_envvar("JOB_USER",raw_metadata['job_pl_env'])
-    if username is False:
-        username = get_batch_envvar("USER",raw_metadata['job_pl_env'])
-        if username is False:
-            username = raw_metadata.get('job_username')
-            if username == None:
-                username = False
-    if username is False or len(username) < 1:
-        print(raw_metadata['job_pl_env'])
-        logger.error("No job username found in metadata or environment")
-        return False
-    jobname = get_batch_envvar("JOB_NAME",raw_metadata['job_pl_env'])
-    if jobname is False or len(jobname) < 1:
-        jobname = "unknown"
-        logger.warning("No job name found, defaulting to %s",jobname)
-
-# Look up job tags from stop environment
-    job_tags = tag_from_string(raw_metadata['job_el_env'].get(settings.job_tags_env))
-    logger.info("job_tags: %s",str(job_tags))
-# Compute difference in start vs stop environment
-    env={}
-    start_env=raw_metadata['job_pl_env']
-    stop_env=raw_metadata['job_el_env']
-    for e in start_env.keys():
-        if e in stop_env.keys():
-            if start_env[e] == stop_env[e]:
-                logger.debug("Found "+e+"\t"+start_env[e])
-            else:
-                logger.debug("Different at stop "+e+"\t"+stop_env[e])
-                env[e] = stop_env[e]
-        else:
-            logger.debug("Deleted "+e+"\t"+start_env[e])
-            env[e] = start_env[e]
-    for e in stop_env.keys():
-        if e not in start_env.keys():
-            logger.debug("Added "+e+"\t"+stop_env[e])
-            env[e] = stop_env[e]
-    env_changes = env
-# Augment the metadata
-    metadata = raw_metadata
-    metadata['job_username'] = username
-    metadata['job_jobname'] = jobname
-    metadata['job_env_changes'] = env_changes
-    metadata['job_tags'] = job_tags
-
-    return metadata
-
 @db_session
 def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     logger = getLogger(__name__)  # you can use other name
     job_init_start_time = time.time()
 # Synthesize what we need
-    metadata = _check_and_create_metadata(raw_metadata)
+    # if we have already checked the metadata then we don't check it again
+    metadata = raw_metadata if ('checked' in raw_metadata) else check_fix_metadata(raw_metadata) 
     if metadata is False:
         return False
 

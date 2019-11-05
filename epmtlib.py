@@ -453,3 +453,93 @@ def compare_dicts(d1, d2):
         modified = {o : (d1[o], d2[o]) for o in intersect_keys if d1[o] != d2[o]}
         same = set(o for o in intersect_keys if d1[o] == d2[o])
         return added, removed, modified, same
+
+
+def get_batch_envvar(var,where):
+    logger = getLogger(__name__)  # you can use other name
+    key2slurm = {
+        "JOB_NAME":"SLURM_JOB_NAME",
+        "JOB_USER":"SLURM_JOB_USER"
+        }
+    if var in key2slurm.keys():
+        var = key2slurm[var]
+    logger.debug("looking for %s in %s",var,where)
+    a=where.get(var)
+    if not a:
+        logger.debug("%s not found",var)
+        return False
+
+    logger.debug("%s found = %s",var,a)
+    return a
+
+
+def get_metadata_env_changes(metadata):
+    logger = getLogger(__name__)  # you can use other name
+    start_env=metadata['job_pl_env']
+    stop_env=metadata['job_el_env']
+    (added, removed, modified, same) = compare_dicts(stop_env, start_env)
+    env_changes = {}
+    for e in same:
+        logger.debug("Found "+e+"\t"+start_env[e])
+    for e in modified:
+        logger.debug("Different at stop "+e+"\t"+stop_env[e])
+        env_changes[e] = stop_env[e]
+    for e in removed:
+        logger.debug("Deleted "+e+"\t"+start_env[e])
+        env_changes[e] = start_env[e]
+    for e in added:
+        logger.debug("Added "+e+"\t"+stop_env[e])
+        env_changes[e] = stop_env[e]
+    return (env_changes, added, removed, modified, same)
+
+def check_fix_metadata(raw_metadata):
+    import epmt_settings as settings
+    logger = getLogger(__name__)  # you can use other name
+# First check what should be here
+    try:
+        for n in [ 'job_pl_id', 'job_pl_submit_ts', 'job_pl_start_ts', 'job_pl_env', 
+                   'job_el_stop_ts', 'job_el_exitcode', 'job_el_reason', 'job_el_env' ]:
+            s = str(raw_metadata[n])
+            assert(len(s) > 0)
+    except KeyError:
+        logger.error("Could not find %s in job metadata, job incomplete?",n)
+        return False
+    except AssertionError:
+        logger.error("Null value of %s in job metadata, corrupt data?",n)
+        return False
+
+# Now look up any batch environment variables we may use
+    username = get_batch_envvar("JOB_USER",raw_metadata['job_pl_env'])
+    if username is False:
+        username = get_batch_envvar("USER",raw_metadata['job_pl_env'])
+        if username is False:
+            username = raw_metadata.get('job_username')
+            if username == None:
+                username = False
+    if username is False or len(username) < 1:
+        print(raw_metadata['job_pl_env'])
+        logger.error("No job username found in metadata or environment")
+        return False
+    jobname = get_batch_envvar("JOB_NAME",raw_metadata['job_pl_env'])
+    if jobname is False or len(jobname) < 1:
+        jobname = "unknown"
+        logger.warning("No job name found, defaulting to %s",jobname)
+
+# Look up job tags from stop environment
+    job_tags = tag_from_string(raw_metadata['job_el_env'].get(settings.job_tags_env))
+    logger.debug("job_tags: %s",str(job_tags))
+
+# Compute difference in start vs stop environment
+# we can ignore all the fields returned except the first
+    env_changes = get_metadata_env_changes(raw_metadata)[0]
+    if env_changes:
+        logger.debug('start/stop environment changed: {0}'.format(env_changes))
+
+# Augment the metadata
+    metadata = dict.copy(raw_metadata)
+    metadata['job_username'] = username
+    metadata['job_jobname'] = jobname
+    metadata['job_env_changes'] = env_changes
+    metadata['job_tags'] = job_tags
+    metadata['checked'] = True
+    return metadata
