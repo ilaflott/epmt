@@ -2,6 +2,12 @@
 
 from sys import exit, stdout, stderr
 if (__name__ == "__main__"):
+    try:
+        import epmt_settings as settings
+    except Exception as e:
+        print('\n'+str(e)+'\n', file=stderr)
+        exit(1)
+
     from sys import version_info, argv
     from epmt_cmds import epmt_entrypoint, dump_config
     # Handle crappy python 2.6 installations
@@ -140,10 +146,9 @@ if (__name__ == "__main__"):
     # trap any unhandled exceptions
     try:
         retval = epmt_entrypoint(args)
-    except:
+    except Exception as e:
         retval = -1
-        print(str(e), file=stderr)
-
+        print('\n'+str(e)+'\n', file=stderr)
     exit(retval)
 
 else:

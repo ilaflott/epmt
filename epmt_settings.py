@@ -5,4 +5,4 @@ from epmt_default_settings import *
 try:
     from settings import *
 except ModuleNotFoundError:
-    raise ModuleNotFoundError("Could not find settings.py. Please copy a suitable file from preset_settings/* to ./settings.py")
+    raise ModuleNotFoundError("Could not find settings.py: Please copy a suitable file from preset_settings/* as ./settings.py")
