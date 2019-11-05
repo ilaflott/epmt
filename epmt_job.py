@@ -1,5 +1,5 @@
 from __future__ import print_function
-from sys import stdout, argv, stderr, exit
+from sys import stdout, argv, stderr
 import sys
 from os.path import basename
 from glob import glob
@@ -240,8 +240,9 @@ def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
         try:
             info = tarfile.getmember(jobdatafile)
         except KeyError:
-            logger.error('BUG: Did not find %s in tar archive' % str(tarfile))
-            exit(1)
+            err_msg = 'BUG: Did not find %s in tar archive' % str(tarfile)
+            logger.error(err_msg)
+            raise LookupError(err_msg)
         else:
             file = tarfile.extractfile(info)
     else:
@@ -873,69 +874,70 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 #
 # We should remove below here
 #
-if (__name__ == "__main__"):
-    import argparse
-    from epmt_cmds import read_job_metadata, dump_settings
-
-    parser=argparse.ArgumentParser(description="Load a job into the database.\nDetailed configuration is stored in settings.py.")
-
-    parser.add_argument('data_dir',type=str,help="Directory containing papiex data files with pattern: "+settings.input_pattern);
-    parser.add_argument('metadata_dir',nargs="?",type=str,help="Directory containing the job_metadata file, defaults to data_dir");
-    parser.add_argument('jobid',type=str,nargs="?",help="Job id, a unique integer, should match that in job_metadata file");
-    parser.add_argument('-d', '--debug',action='count',help="Increase level of verbosity/debug")
-    parser.add_argument('--drop',action='store_true',help="Drop all tables/data and recreate before import")
-    parser.add_argument('-f', '--force',action='store_true',help="Override job id in job_metadata file")
-    parser.add_argument('-n', '--dry-run',action='store_true',help="Don't touch the database");
-
-#    parser.add_argument("-v", "--verbosity", action="count",
-#                        help="increase output verbosity")
-# parser.add_argument("-v", "--verbosity", type=int, choices=[0, 1, 2],
-#                    help="increase output verbosity")
-    args = parser.parse_args()
-
-    if not args.debug:
-        basicConfig(level=WARNING)
-    elif args.debug == 1:
-        basicConfig(level=INFO)
-    elif args.debug >= 2:
-        basicConfig(level=DEBUG)
-
-    if args.dry_run and args.drop:
-        logger.warning("Dry-run will still drop tables, hope you know what you are doing!")
-
-    if not args.data_dir.endswith("/"):
-        logger.warn("data_dir %s should have a trailing /",args.data_dir)
-        args.data_dir = args.data_dir+"/"
-
-    if args.data_dir and not args.metadata_dir:
-        logger.info("Assuming metadata_dir is data_dir %s",args.data_dir)
-        args.metadata_dir = args.data_dir
-    elif not args.metadata_dir.endswith("/"):
-        logger.warn("metadata_dir %s should have a trailing /",args.metadata_dir)
-        args.metadata_dir = args.metadata_dir+"/"
-
-    metadata = read_job_metadata(args.metadata_dir+"job_metadata")
-
-    if not args.jobid:
-        args.jobid = metadata['job_pl_id']
-    elif args.jobid != metadata['job_pl_id']:
-        if not args.force:
-            logger.error("Job id in metadata %s different from %s on command line, see --force",metadata['job_pl_id'],args.jobid)
-            exit(1)
-        else:
-            logger.warning("Forcing job id to be %s from command line",args.jobid)
-            metadata['job_pl_id'] = args.jobid
-
-    if setup_orm_db(args.drop) == False:
-        exit(1)
-
-    if args.dry_run:
-        logger.info("Skipping ETL...")
-    else:
-        j = ETL_job_dir(args.jobid,args.data_dir,metadata)
-        if not j:
-            exit(1)
-    exit(0)
+# if (__name__ == "__main__"):
+#     import argparse
+#     from epmt_cmds import read_job_metadata, dump_settings
+# 
+#     parser=argparse.ArgumentParser(description="Load a job into the database.\nDetailed configuration is stored in settings.py.")
+# 
+#     parser.add_argument('data_dir',type=str,help="Directory containing papiex data files with pattern: "+settings.input_pattern);
+#     parser.add_argument('metadata_dir',nargs="?",type=str,help="Directory containing the job_metadata file, defaults to data_dir");
+#     parser.add_argument('jobid',type=str,nargs="?",help="Job id, a unique integer, should match that in job_metadata file");
+#     parser.add_argument('-d', '--debug',action='count',help="Increase level of verbosity/debug")
+#     parser.add_argument('--drop',action='store_true',help="Drop all tables/data and recreate before import")
+#     parser.add_argument('-f', '--force',action='store_true',help="Override job id in job_metadata file")
+#     parser.add_argument('-n', '--dry-run',action='store_true',help="Don't touch the database");
+# 
+# #    parser.add_argument("-v", "--verbosity", action="count",
+# #                        help="increase output verbosity")
+# # parser.add_argument("-v", "--verbosity", type=int, choices=[0, 1, 2],
+# #                    help="increase output verbosity")
+#     args = parser.parse_args()
+# 
+#     if not args.debug:
+#         basicConfig(level=WARNING)
+#     elif args.debug == 1:
+#         basicConfig(level=INFO)
+#     elif args.debug >= 2:
+#         basicConfig(level=DEBUG)
+# 
+#     if args.dry_run and args.drop:
+#         logger.warning("Dry-run will still drop tables, hope you know what you are doing!")
+# 
+#     if not args.data_dir.endswith("/"):
+#         logger.warn("data_dir %s should have a trailing /",args.data_dir)
+#         args.data_dir = args.data_dir+"/"
+# 
+#     if args.data_dir and not args.metadata_dir:
+#         logger.info("Assuming metadata_dir is data_dir %s",args.data_dir)
+#         args.metadata_dir = args.data_dir
+#     elif not args.metadata_dir.endswith("/"):
+#         logger.warn("metadata_dir %s should have a trailing /",args.metadata_dir)
+#         args.metadata_dir = args.metadata_dir+"/"
+# 
+#     metadata = read_job_metadata(args.metadata_dir+"job_metadata")
+# 
+#     if not args.jobid:
+#         args.jobid = metadata['job_pl_id']
+#     elif args.jobid != metadata['job_pl_id']:
+#         if not args.force:
+#             msg = "Job id in metadata %s different from %s on command line, see --force",metadata['job_pl_id'],args.jobid
+#             logger.error(msg)
+#             exit(1)
+#         else:
+#             logger.warning("Forcing job id to be %s from command line",args.jobid)
+#             metadata['job_pl_id'] = args.jobid
+# 
+#     if setup_orm_db(args.drop) == False:
+#         exit(1)
+# 
+#     if args.dry_run:
+#         logger.info("Skipping ETL...")
+#     else:
+#         j = ETL_job_dir(args.jobid,args.data_dir,metadata)
+#         if not j:
+#             exit(1)
+#     exit(0)
 
 def post_process_outstanding_jobs():
     '''

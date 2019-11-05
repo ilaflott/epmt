@@ -1,4 +1,3 @@
-from sys import exit
 from functools import wraps
 from time import time
 from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING, CRITICAL
@@ -56,6 +55,7 @@ def set_logging(intlvl = 0, check = False):
 
 def init_settings(settings):
     logger = getLogger(__name__)
+    err_msg = ""
 
     if environ.get("PAPIEX_OUTPUT"):
         logger.warning("PAPIEX_OUTPUT variable should not be defined, it will be ignored")
@@ -70,8 +70,7 @@ def init_settings(settings):
             settings.db_params[k] = t
 
     if not hasattr(settings,"epmt_output_prefix"):
-        logger.error("missing settings.epmt_output_prefix")
-        exit(1)
+        err_msg += "\nmissing settings.epmt_output_prefix"
     if not settings.epmt_output_prefix.endswith("/"):
         logger.warning("settings.epmt_output_prefix should end in a /")
         settings.epmt_output_prefix += "/"
@@ -112,17 +111,19 @@ def init_settings(settings):
         logger.warning("missing settings.bulk_insert")
         settings.bulk_insert = False
     if (settings.orm != 'sqlalchemy' and settings.bulk_insert):
-        logger.error('bulk_insert is only supported by sqlalchemy')
-        exit(1)
+        err_msg += '\nbulk_insert is only supported by sqlalchemy'
     if not hasattr(settings, 'post_process_job_on_ingest'):
         logger.warning("missing settings.post_process_job_on_ingest")
         settings.post_process_job_on_ingest = True
     if ((settings.orm != 'sqlalchemy') and (not(settings.post_process_job_on_ingest))):
-        logger.error('post_process_job_on_ingest set as False is only permitted with sqlalchemy')
-        exit(1)
+        err_msg += '\npost_process_job_on_ingest set as False is only permitted with sqlalchemy'
     if not hasattr(settings, 'db_params'):
-        logger.error("missing settings.db_params")
-        exit(1)
+        err_msg += "\nmissing settings.db_params"
+    if err_msg:
+        err_msg = "The following error(s) were detecting in your settings: " + err_msg
+        logger.error(err_msg)
+        raise ValueError(err_msg)
+    return True
 
 def run_shell_cmd(*cmd):
     nf = open(devnull, 'w')

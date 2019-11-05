@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 
-from sys import exit
+from sys import exit, stdout, stderr
 if (__name__ == "__main__"):
     from sys import version_info, argv
     from epmt_cmds import epmt_entrypoint, dump_config
     # Handle crappy python 2.6 installations
     try:
         import argparse
-        from sys import stdout, stderr
     except ImportError:
-        from sys import stdout, stderr
         print >> stderr,"WARNING: system argparse not found, using our own."
         print >> stderr,"WARNING: This python/OS is likely vulnerable to exploits!"
         import argparse26 as argparse
@@ -138,7 +136,16 @@ if (__name__ == "__main__"):
     if args.command == None:
         parser.print_help()
         exit(0)
-    exit(epmt_entrypoint(args))
+
+    # trap any unhandled exceptions
+    try:
+        retval = epmt_entrypoint(args)
+    except:
+        retval = -1
+        print(str(e), file=stderr)
+
+    exit(retval)
+
 else:
     print >> stderr,"ERROR: This module cannot be imported."
     exit(1)

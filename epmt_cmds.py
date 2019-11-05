@@ -654,10 +654,6 @@ def compressed_tar(input):
 
 @timing
 def submit_to_db(input, pattern, dry_run=True, drop=False):
-#    if not jobid:
-#        logger.error("Job ID is empty!");
-#        exit(1);
-
     logger.info("submit_to_db(%s,%s,dry_run=%s,drop=%s)",input,pattern,str(dry_run),str(drop))
 
     err,tar = compressed_tar(input)
@@ -703,11 +699,6 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
         logger.info("Dry run finished, skipping DB work")
         return True
 
-#    if tar:
-#        tar.close()
-#        logger.error('Unsupported at the moment.')
-#        exit(1)
-
 # Now we touch the Database
     from orm import setup_db
     from epmt_job import ETL_job_dict
@@ -719,14 +710,6 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
     logger.info("Committed job %s to database: %s",j.jobid,j)
     return True
 
-# Dead code
-# Check if we have anything related to an "experiment"
-#
-#    if check_workflowdb_dict(metadata,pfx="exp_"):
-#        e = ETL_ppr(metadata,j.jobid)
-#        if not e:
-#            exit(1)
-#        logger.info("Committed post process run to database")    
 
 def stage_job(dir,collate=True,compress_and_tar=True):
     logger.debug("stage_job(%s,collate=%s,compress_and_tar=%s)",dir,str(collate),str(compress_and_tar))
@@ -834,9 +817,7 @@ def epmt_dbsize(findwhat=['database','table','index','tablespace'], usejson=Fals
 # Absolutely all argument checking should go here, specifically the findwhat stuff
     return(get_db_size(findwhat,usejson,usebytes))
 
-#
-# depends on args being global
-#
+
 def epmt_entrypoint(args):
 
     # I hate this sequence.

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 import unittest
-from sys import stderr, exit
+from sys import stderr
 from glob import glob
 from os import environ
 from datetime import datetime
