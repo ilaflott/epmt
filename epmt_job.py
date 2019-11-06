@@ -499,8 +499,9 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     logger = getLogger(__name__)  # you can use other name
     job_init_start_time = time.time()
 # Synthesize what we need
-    # if we have already checked the metadata then we don't check it again
-    metadata = raw_metadata if ('checked' in raw_metadata) else check_fix_metadata(raw_metadata) 
+    # it's safe and fast to call the check_fix_metadata
+    # it will not waste time re-checking (since it marks the metadata as checked)
+    metadata = check_fix_metadata(raw_metadata) 
     if metadata is False:
         return False
 

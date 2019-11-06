@@ -492,7 +492,15 @@ def get_metadata_env_changes(metadata):
         env_changes[e] = stop_env[e]
     return (env_changes, added, removed, modified, same)
 
+# This function will do a sanity check on the metadata.
+# It will mark the metadata as checked, so it's safe and
+# fast to call the function (idempotently)
 def check_fix_metadata(raw_metadata):
+    # fast path: if we have already checked the metadata
+    # we don't check it again
+    if raw_metadata.get('checked'):
+        return raw_metadata
+
     import epmt_settings as settings
     logger = getLogger(__name__)  # you can use other name
 # First check what should be here
@@ -508,38 +516,43 @@ def check_fix_metadata(raw_metadata):
         logger.error("Null value of %s in job metadata, corrupt data?",n)
         return False
 
-# Now look up any batch environment variables we may use
-    username = get_batch_envvar("JOB_USER",raw_metadata['job_pl_env'])
-    if username is False:
-        username = get_batch_envvar("USER",raw_metadata['job_pl_env'])
-        if username is False:
-            username = raw_metadata.get('job_username')
-            if username == None:
-                username = False
-    if username is False or len(username) < 1:
-        print(raw_metadata['job_pl_env'])
-        logger.error("No job username found in metadata or environment")
-        return False
-    jobname = get_batch_envvar("JOB_NAME",raw_metadata['job_pl_env'])
-    if jobname is False or len(jobname) < 1:
-        jobname = "unknown"
-        logger.warning("No job name found, defaulting to %s",jobname)
-
-# Look up job tags from stop environment
-    job_tags = tag_from_string(raw_metadata['job_el_env'].get(settings.job_tags_env))
-    logger.debug("job_tags: %s",str(job_tags))
-
-# Compute difference in start vs stop environment
-# we can ignore all the fields returned except the first
-    env_changes = get_metadata_env_changes(raw_metadata)[0]
-    if env_changes:
-        logger.debug('start/stop environment changed: {0}'.format(env_changes))
-
-# Augment the metadata
     metadata = dict.copy(raw_metadata)
-    metadata['job_username'] = username
-    metadata['job_jobname'] = jobname
-    metadata['job_env_changes'] = env_changes
-    metadata['job_tags'] = job_tags
+    # Augment metadata where needed
+    if not ('job_username' in metadata):
+        username = get_batch_envvar("JOB_USER",raw_metadata['job_pl_env'])
+        if username is False:
+            username = get_batch_envvar("USER",raw_metadata['job_pl_env'])
+            if username is False:
+                username = raw_metadata.get('job_username')
+                if username == None:
+                    username = False
+        if username is False or len(username) < 1:
+            print(raw_metadata['job_pl_env'])
+            logger.error("No job username found in metadata or environment")
+            return False
+        metadata['job_username'] = username
+
+    if not ('job_jobname' in metadata):
+        jobname = get_batch_envvar("JOB_NAME",raw_metadata['job_pl_env'])
+        if jobname is False or len(jobname) < 1:
+            jobname = "unknown"
+            logger.warning("No job name found, defaulting to %s",jobname)
+        metadata['job_jobname'] = jobname
+
+    if not ('job_tags' in metadata):
+        # Look up job tags from stop environment
+        job_tags = tag_from_string(raw_metadata['job_el_env'].get(settings.job_tags_env))
+        logger.debug("job_tags: %s",str(job_tags))
+        metadata['job_tags'] = job_tags
+
+    if not ('job_env_changes' in metadata):
+        # Compute difference in start vs stop environment
+        # we can ignore all the fields returned except the first
+        env_changes = get_metadata_env_changes(raw_metadata)[0]
+        if env_changes:
+            logger.debug('start/stop environment changed: {0}'.format(env_changes))
+        metadata['job_env_changes'] = env_changes
+
+    # mark the metadata as checked so we don't check it again unnecessarily
     metadata['checked'] = True
     return metadata
