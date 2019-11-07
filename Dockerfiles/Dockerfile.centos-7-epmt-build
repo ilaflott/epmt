@@ -16,3 +16,6 @@ RUN ldconfig
 COPY requirements.txt.py3 /tmp/
 RUN python3 -V && pip3 install --upgrade pip && pip3 install -r /tmp/requirements.txt.py3
 RUN pip3 install pyinstaller
+
+RUN yum clean all
+RUN rm -rf /usr/src /var/cache/yum
