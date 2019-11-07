@@ -10,7 +10,6 @@ old
 .ipython
 .jupyter
 .local
-*.tgz
 db
 *.sqlite
 *.sqlite3

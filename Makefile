@@ -1,5 +1,7 @@
-SHELL=/bin/sh
-#export SHELL
+VERSION=2.0.0
+RELEASE=epmt-$(VERSION).tgz
+SHELL=/bin/bash
+PWD=$(shell pwd)
 
 .PHONY: default build \\
 	epmt-build epmt-test \\
@@ -9,9 +11,26 @@ SHELL=/bin/sh
 build:
 	python -bb -m py_compile *.py orm/*.py orm/*/*.py test/*.py
 
-dist default: 
-	docker build -f Dockerfiles/Dockerfile.epmt-dist -t epmt-dist:latest .
-	set -e; dir=`date "+epmt-build-%Y-%m-%d-%H:%M:%S"`; docker run -i --tty --rm --volume=$$PWD:$$PWD:z -w $$PWD --privileged epmt-dist pyinstaller --clean --hidden-import epmt_default_settings --exclude-module settings --distpath=$$dir -s epmt; tar cfz $$dir.tgz $$dir; echo; echo "Release file: $$dir.tgz";
+dist:
+	rm -rf epmt-install
+	pyinstaller --hidden-import sqlalchemy.ext.baked --clean --distpath=epmt-install -s epmt
+	cp -Rp preset_settings epmt-install
+#	--hidden-import epmt_default_settings --exclude-module settings 
+	rm -f $(RELEASE); tar cvfz $(RELEASE) epmt-install
+
+dist-test:
+	rm -rf epmt-install-tests
+	mkdir epmt-install-tests
+	cp -Rp test Makefile epmt-example.csh epmt-example.sh epmt-install-tests
+	rm -f test-$(RELEASE); tar cvfz test-$(RELEASE) epmt-install-tests 
+
+$(RELEASE) test-$(RELEASE) docker-dist: 
+	docker build -f Dockerfiles/Dockerfile.centos-7-epmt-build -t centos-7-epmt-build .
+	docker run -i --tty --rm --volume=$(PWD):$(PWD):z -w $(PWD) centos-7-epmt-build make distclean dist dist-test
+
+docker-test-dist: $(RELEASE) test-$(RELEASE)
+	docker build -f Dockerfiles/Dockerfile.centos-7-epmt-test -t centos-7-epmt-test --build-arg release=$(RELEASE) .
+	docker run --privileged --rm -it centos-7-epmt-test
 
 clean:
 	find . -name "*~" -o -name "*.pyc" -exec rm -f {} \; 

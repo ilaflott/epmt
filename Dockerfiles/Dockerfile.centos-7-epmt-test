@@ -1,0 +1,16 @@
+FROM centos:7
+
+WORKDIR /home
+RUN yum update -y
+RUN yum install -y make tcsh
+
+ARG release=epmt-2.0.0.tgz
+ADD ${release} /opt/epmt/
+ADD test-${release} .
+WORKDIR /home/epmt-install-tests
+ENV PATH="/opt/epmt/epmt-install/epmt:${PATH}"
+
+# Allow perf events
+# RUN echo -e "#!/bin/bash\nmount -o remount rw /proc\nsysctl -w kernel.perf_event_paranoid=0\n/usr/sbin/sshd\n\$\*" > /tmp/init.sh
+#CMD ["/bin/bash","/tmp/init.sh","make","check"]
+CMD ["make","check"]
