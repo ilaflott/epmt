@@ -206,11 +206,11 @@ def verify_db_params():
     
 def verify_perf():
     f="/proc/sys/kernel/perf_event_paranoid"
-    print(f,"exists and has a value of 1 or less")
+    print(f,end='')
     try:
         with open(f, 'r') as content_file:
             value = int(content_file.read())
-            logger.info("%s = %d",f,value)
+            print(" = ",value)
             if value > 1:
                 logger.error("bad %s value of %d, should be 1 or less to allow cpu events",f,value)
                 PrintFail()
@@ -406,7 +406,7 @@ def epmt_stop_job(other=[]):
     metadata = merge_stop_job_metadata(start_metadata,0,"none",other)
     checked_metadata = check_fix_metadata(metadata)
     if not checked_metadata:
-        logger.error('Metadata check failed. Writing raw metadata for post-mortem analysis..')
+        logger.error('Metadata check failed. Writing raw metadata for post-mortem analysis.')
         checked_metadata = metadata
     retval = write_job_metadata(global_metadatafile,checked_metadata)
     return retval
@@ -500,7 +500,10 @@ def epmt_source(papiex_debug=False, monitor_debug=False, run_cmd=False):
     cmd = add_var(cmd,"PAPIEX_OPTIONS"+equals+settings.papiex_options)
     oldp = environ.get("LD_PRELOAD")
     if oldp: cmd = add_var(cmd,"OLD_LD_PRELOAD"+equals+oldp)
-    cmd = add_var(cmd,"LD_PRELOAD"+equals+settings.install_prefix+"lib/libpapiex.so:"+
+    cmd = add_var(cmd,"LD_PRELOAD"+equals+
+                  settings.install_prefix+"lib/libpapiex.so:"+
+                  settings.install_prefix+"lib/libpapi.so:"+
+                  settings.install_prefix+"lib/libpfm.so:"+
                   settings.install_prefix+"lib/libmonitor.so"+((":"+oldp) if oldp else ""))
 
 #
