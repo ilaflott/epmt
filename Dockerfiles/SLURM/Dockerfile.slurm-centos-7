@@ -11,8 +11,9 @@ ADD epmt-${release}.tgz /opt/epmt/
 COPY SLURM/settings_slurm_test.py /opt/epmt/epmt-install/epmt/settings.py
 ADD epmt-example.sh epmt-example.csh /opt/epmt/examples/
 ENV PATH="/opt/epmt/epmt-install/epmt:${PATH}"
+ENV USER="root"
 
-RUN echo -e "#!/bin/bash\nmount -o remount rw /proc\nsysctl -w kernel.perf_event_paranoid=0\n\$\*" > /tmp/pep.sh
+RUN echo -e "#!/bin/bash\nmount -o remount rw /proc\nsysctl -w kernel.perf_event_paranoid=0\n" > /tmp/pep.sh
 RUN cat /usr/local/bin/docker-entrypoint.sh >> /tmp/pep.sh && mv /tmp/pep.sh /usr/local/bin/docker-entrypoint.sh && chmod 755 /usr/local/bin/docker-entrypoint.sh
 
 

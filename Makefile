@@ -32,6 +32,12 @@ docker-test-dist: $(RELEASE) test-$(RELEASE)
 	docker build -f Dockerfiles/Dockerfile.centos-7-epmt-test -t centos-7-epmt-test --build-arg release=$(RELEASE) .
 	docker run --privileged --rm -it centos-7-epmt-test
 
+docker-test-dist-slurm:
+	docker build -f Dockerfiles/SLURM/Dockerfile.slurm-centos-7 -t centos-epmt-test-slurm --build-arg release=$(VERSION) .
+	docker run --privileged --rm -it -h ernie centos-epmt-test-slurm epmt check
+	docker run --privileged --rm -it -h ernie centos-epmt-test-slurm srun -n1 /opt/epmt/examples/epmt-example.sh
+	docker run --privileged --rm -it -h ernie centos-epmt-test-slurm srun -n1 /opt/epmt/examples/epmt-example.csh
+
 clean:
 	find . -name "*~" -o -name "*.pyc" -exec rm -f {} \; 
 	rm -rf __pycache__
