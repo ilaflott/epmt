@@ -10,7 +10,7 @@ from functools import wraps
 
 from logging import getLogger
 logger = getLogger('orm.sqlalchemy')  # you can use other name
-from epmt_logging import *
+import epmt_settings as settings
 
 logger.info('sqlalchemy orm selected')
 Base = declarative_base()
@@ -38,7 +38,7 @@ def db_session(func):
             retval = func(*args, **kwargs) # No need to pass session explicitly
             completed = True
         except Exception as e:
-            logger.error('\nAn exception occurred; rolling back session..')
+            logger.warning('\nAn exception occurred; rolling back session..')
             # import traceback, sys
             # print('-'*60)
             # traceback.print_exc(file=sys.stdout)
@@ -58,7 +58,7 @@ def setup_db(settings,drop=False,create=True):
     global db_setup_complete
     global engine
 
-    if db_setup_complete:
+    if db_setup_complete and not(drop):
         logger.debug('skipping DB setup as it has already been initialized')
         return True
     logger.info("Creating engine with db_params: %s", settings.db_params)
@@ -78,19 +78,11 @@ def setup_db(settings,drop=False,create=True):
 
     if drop:
         logger.warning("DROPPING ALL DATA AND TABLES!")
-        #if Session:
-        #    Session.rollback()
-        #    Session.expire_all()
-        #    Session.remove()
-        #    Session = None
+        if Session:
+            Session.rollback()
+            Session.flush()
+            Session.close()
         Base.metadata.drop_all(engine)
-        #meta = MetaData()
-        #import contextlib
-        #with contextlib.closing(engine.connect()) as con:
-        #    trans = con.begin()
-        #    for table in reversed(meta.sorted_tables):
-        #        con.execute(table.delete())
-        #    trans.commit()
     ins = inspect(engine)
     if len(ins.get_table_names()) >= 8:
         logger.info("Reflecting existing schema..")
@@ -115,7 +107,7 @@ def setup_db(settings,drop=False,create=True):
             logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
             return False
 
-    logger.info('Configuring scoped session..')
+    logger.debug('Configuring scoped session..')
     Session.configure(bind=engine, expire_on_commit=False, autoflush=True)
     db_setup_complete = True
     return True

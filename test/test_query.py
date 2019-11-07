@@ -7,9 +7,6 @@ JOBS_LIST = ['685016', '685003', '685000']
 
 @timing
 def setUpModule():
-    # if settings.db_params.get('filename') != ':memory:' and settings.db_params.get('url') != 'sqlite:///:memory:':
-    #     print('db_params MUST use in-memory sqlite for testing', file=stderr)
-    #     exit(1)
     print('\n' + str(settings.db_params))
     setup_db(settings)
     datafiles='test/data/query/*.tgz'
@@ -142,9 +139,17 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(procs.count(), 6892, 'wrong count of processes in ORM format')
         df = eq.get_procs(JOBS_LIST, fmt='pandas', limit=10)
         self.assertEqual(df.shape, (10,50))
+        procs_limit = eq.get_procs(fmt='terse')
+        self.assertEqual(len(procs_limit), 10000)
+        procs_unlimited = eq.get_procs(fmt='orm')
+        self.assertNotEqual(procs_unlimited.count(), 10000)
 
     @db_session
     def test_procs_convert(self):
+        # check and ensure that we cannot run a conversion on the full db!
+        with self.assertRaises(ValueError): eq.conv_procs([])
+        with self.assertRaises(ValueError): eq.conv_procs(None)
+
         for inform in ['terse', 'dict', 'pandas', 'orm']:
             procs = eq.get_procs('685000', order=Process.start, fmt=inform)
             self.assertEqual(procs.count() if inform=='orm' else len(procs), 3480)
@@ -234,6 +239,10 @@ class QueryAPI(unittest.TestCase):
 
     @db_session
     def test_job_convert(self):
+        # check and ensure that we cannot run a conversion on the full db!
+        with self.assertRaises(ValueError): eq.conv_jobs([])
+        with self.assertRaises(ValueError): eq.conv_jobs(None)
+
         for fmt in ['dict', 'terse', 'pandas', 'orm']:
             jobs = eq.get_jobs(['685000', '685003'], fmt=fmt)
             self.assertEqual(set(eq.conv_jobs(jobs, fmt='terse')), set(['685000', '685003']))
@@ -263,6 +272,8 @@ class QueryAPI(unittest.TestCase):
 
     @db_session
     def test_job_proc_tags(self):
+        with self.assertRaises(ValueError): 
+            eq.job_proc_tags([], fold=False)
         tags = eq.job_proc_tags(['685000', '685016'], fold=False)
         self.assertEqual(len(tags), 89, "wrong unique process tags count")
         tags = [ str_dict(d) for d in tags ]
@@ -282,6 +293,8 @@ class QueryAPI(unittest.TestCase):
 
     @db_session
     def test_op_metrics(self):
+        with self.assertRaises(ValueError):
+            eq.op_metrics([])
         df = eq.op_metrics(['685000', '685016'])
         self.assertEqual(df.shape, (178,32), "wrong dataframe shape for op_metrics")
         top = df[['job', 'tags', 'duration']].sort_values('duration', axis=0, ascending=False)[:1]
@@ -395,6 +408,7 @@ class QueryAPI(unittest.TestCase):
 
     @db_session
     def test_op_roots(self):
+        with self.assertRaises(ValueError): eq.op_roots([], 'op_sequence:4', fmt='orm')
         op_root_procs = eq.op_roots(['685000', '685003'], 'op_sequence:4', fmt='orm')
         self.assertEqual([p.pid for p in op_root_procs], [11023, 11185, 11187, 32160, 32328, 32330])
         #op_root_procs = eq.op_roots(['685000', '685003', '685016'], 'op_sequence:1', fmt='orm')
@@ -463,7 +477,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(status, {'exit_code': 0, 'exit_reason': 'none', 'script_path': '/home/Jeffrey.Durachta/ESM4/DECK/ESM4_historical_D151/gfdl.ncrc4-intel16-prod-openmp/scripts/postProcess/ESM4_historical_D151_ocean_annual_rho2_1x1deg_18840101.tags', 'script_name': 'ESM4_historical_D151_ocean_annual_rho2_1x1deg_18840101'})
 
     def test_version(self):
-        self.assertTrue(eq.version > (1,0,0))
+        self.assertTrue(eq.version() > (1,0,0))
 
     def test_zz_delete_jobs(self):
         n = eq.delete_jobs(['685000', '685016'])

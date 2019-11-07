@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 import unittest
-from sys import stderr, exit
+from sys import stderr
 from glob import glob
 from os import environ
 from datetime import datetime
@@ -12,9 +12,10 @@ import pandas as pd
 #sys.path.append(dirname(__file__) + "/..")
 
 from epmtlib import set_logging, capture
+# we only want to emit errors or higher
 set_logging(-1)
 
-import settings
+import epmt_settings as settings
 import epmt_query as eq
 from epmt_cmds import epmt_submit
 from epmtlib import *

@@ -1,0 +1,51 @@
+version: "2.2"
+
+services:
+  slurmctld:
+    image: slurm-docker-cluster:latest
+    command: ["slurmctld"]
+    container_name: slurmctld
+    hostname: slurmctld
+    volumes:
+      - etc_munge:/etc/munge
+      - etc_slurm:/etc/slurm-llnl
+      - slurm_jobdir:/data
+      - var_log_slurm:/var/log/slurm-llnl
+    expose:
+      - "6817"
+
+  c1:
+    image: slurm-docker-cluster:latest
+    command: ["slurmd"]
+    hostname: c1
+    container_name: c1
+    volumes:
+      - etc_munge:/etc/munge
+      - etc_slurm:/etc/slurm-llnl
+      - slurm_jobdir:/data
+      - var_log_slurm:/var/log/slurm-llnl
+    expose:
+      - "6818"
+    depends_on:
+      - "slurmctld"
+
+  c2:
+    image: slurm-docker-cluster:latest
+    command: ["slurmd"]
+    hostname: c2
+    container_name: c2
+    volumes:
+      - etc_munge:/etc/munge
+      - etc_slurm:/etc/slurm-llnl
+      - slurm_jobdir:/data
+      - var_log_slurm:/var/log/slurm-llnl
+    expose:
+      - "6818"
+    depends_on:
+      - "slurmctld"
+
+volumes:
+  etc_munge:
+  etc_slurm:
+  slurm_jobdir:
+  var_log_slurm:

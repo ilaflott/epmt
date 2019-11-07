@@ -1,15 +1,19 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
+from sys import exit, stdout, stderr
 if (__name__ == "__main__"):
-    
+    try:
+        import epmt_settings as settings
+    except Exception as e:
+        print('\n'+str(e)+'\n', file=stderr)
+        exit(1)
+
     from sys import version_info, argv
     from epmt_cmds import epmt_entrypoint, dump_config
     # Handle crappy python 2.6 installations
     try:
         import argparse
-        from sys import stdout, stderr
     except ImportError:
-        from sys import stdout, stderr
         print >> stderr,"WARNING: system argparse not found, using our own."
         print >> stderr,"WARNING: This python/OS is likely vulnerable to exploits!"
         import argparse26 as argparse
@@ -39,9 +43,8 @@ if (__name__ == "__main__"):
         formatter_class=argparse.RawDescriptionHelpFormatter)
     
     # Version
-    from epmt_query import version
-    epmt_version = "EPMT " + ".".join([str(i) for i in version])
-    parser.add_argument('-V', '--version',action='version', version=epmt_version, help="Display EPMT Version")
+    from epmtlib import version_str
+    parser.add_argument('-V', '--version',action='version', version=version_str(), help="Display EPMT Version")
     
     # Global Verbose
     parser.add_argument('-v', '--verbose',action='count',help="Increase level of verbosity/debug")
@@ -80,6 +83,9 @@ if (__name__ == "__main__"):
     stop_parser = subparser.add_parser('stop', help="Stop EPMT logging",
         description = "Stop will append to the metadata log file with the environment variables at stop time.")
     stop_parser.set_defaults(epmt_cmd_args=None)
+    # drop
+    drop_parser = subparser.add_parser('drop', help="Drop the entire database. Caution!! This action is irreversible.")
+    drop_parser.add_argument('-f', '--force', action='store_true',help="Do not prompt to confirm")
     # Submit
     submit_parser = subparser.add_parser('submit', help="Commit completed job to database",
         description="Submit accepts job directories and updates the database configured with \
@@ -119,16 +125,32 @@ if (__name__ == "__main__"):
         exit(1)
     args = parser.parse_args()
     #print(vars(args))
+
+    if args.command == 'check':
+        # fake a job id so that epmt_check doesn't fail because of a missing job id
+        from epmt_cmds import epmt_check
+        from os import environ
+        environ['SLURM_JOB_ID'] = '1'
+        exit(0 if epmt_check() else 1)
+ 
     # Print help if epmt help is called
     if args.command == 'help':
         parser.print_help()
         exit(0)
+
     # Print help if 
     if args.command == None:
         parser.print_help()
         exit(0)
 
-    exit(epmt_entrypoint(args))
+    # trap any unhandled exceptions
+    try:
+        retval = epmt_entrypoint(args)
+    except Exception as e:
+        retval = -1
+        print('\n'+str(e)+'\n', file=stderr)
+    exit(retval)
+
 else:
     print >> stderr,"ERROR: This module cannot be imported."
     exit(1)

@@ -1,4 +1,3 @@
-import sys
 from functools import wraps
 from time import time
 from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING, CRITICAL
@@ -13,6 +12,20 @@ try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO
+
+# semantic version
+# first element is the major version number
+# second element is the minor version number
+# third element is the patch or bugfix number
+# Since we are saving as a tuple you can do a simple
+# compare of two version tuples and python will do the right thing
+_version = (1,3,0)
+
+def version():
+    return _version
+
+def version_str():
+    return "EPMT " + ".".join([str(i) for i in _version])
 
 def get_username():
     return getpwuid( getuid() )[ 0 ]
@@ -42,6 +55,7 @@ def set_logging(intlvl = 0, check = False):
 
 def init_settings(settings):
     logger = getLogger(__name__)
+    err_msg = ""
 
     if environ.get("PAPIEX_OUTPUT"):
         logger.warning("PAPIEX_OUTPUT variable should not be defined, it will be ignored")
@@ -56,8 +70,7 @@ def init_settings(settings):
             settings.db_params[k] = t
 
     if not hasattr(settings,"epmt_output_prefix"):
-        logger.error("missing settings.epmt_output_prefix")
-        exit(1)
+        err_msg += "\n - missing settings.epmt_output_prefix"
     if not settings.epmt_output_prefix.endswith("/"):
         logger.warning("settings.epmt_output_prefix should end in a /")
         settings.epmt_output_prefix += "/"
@@ -98,17 +111,19 @@ def init_settings(settings):
         logger.warning("missing settings.bulk_insert")
         settings.bulk_insert = False
     if (settings.orm != 'sqlalchemy' and settings.bulk_insert):
-        logger.error('bulk_insert is only supported by sqlalchemy')
-        sys.exit(1)
+        err_msg += '\n - bulk_insert is only supported by sqlalchemy'
     if not hasattr(settings, 'post_process_job_on_ingest'):
         logger.warning("missing settings.post_process_job_on_ingest")
         settings.post_process_job_on_ingest = True
     if ((settings.orm != 'sqlalchemy') and (not(settings.post_process_job_on_ingest))):
-        logger.error('post_process_job_on_ingest set as False is only permitted with sqlalchemy')
-        sys.exit(1)
+        err_msg += '\n - post_process_job_on_ingest set as False is only permitted with sqlalchemy'
     if not hasattr(settings, 'db_params'):
-        logger.error("missing settings.db_params")
-        sys.exit(1)
+        err_msg += "\n - missing settings.db_params"
+    if err_msg:
+        err_msg = "The following error(s) were detecting in your settings: " + err_msg
+        logger.error(err_msg)
+        raise ValueError(err_msg)
+    return True
 
 def run_shell_cmd(*cmd):
     nf = open(devnull, 'w')
@@ -144,6 +159,7 @@ def timing(f):
 
 @contextmanager
 def capture():
+    import sys
     new_out, new_err = StringIO(), StringIO()
     old_out, old_err = sys.stdout, sys.stderr
     try:
@@ -415,3 +431,128 @@ def get_first_key_match(d, *keys):
         if k in d:
             return d[k]
     return None
+
+# Remove those with _ at beginning and blacklist
+def dict_filter(kvdict, blacklisted_keys, remove_underscores = True):
+    d = { k: kvdict[k] for k in kvdict.keys() if k not in blacklisted_keys }
+    if remove_underscores:
+        d = { k: d[k] for k in d.keys() if not k.startswith('_') }
+    return d
+
+def merge_dicts(x, y):
+    z = x.copy()   # start with x's keys and values
+    z.update(y)    # modifies z with y's keys and values & returns None
+    return z
+
+def compare_dicts(d1, d2):
+        d1_keys = set(d1.keys())
+        d2_keys = set(d2.keys())
+        intersect_keys = d1_keys.intersection(d2_keys)
+        added = d1_keys - d2_keys
+        removed = d2_keys - d1_keys
+        modified = {o : (d1[o], d2[o]) for o in intersect_keys if d1[o] != d2[o]}
+        same = set(o for o in intersect_keys if d1[o] == d2[o])
+        return added, removed, modified, same
+
+
+def get_batch_envvar(var,where):
+    logger = getLogger(__name__)  # you can use other name
+    key2slurm = {
+        "JOB_NAME":"SLURM_JOB_NAME",
+        "JOB_USER":"SLURM_JOB_USER"
+        }
+    if var in key2slurm.keys():
+        var = key2slurm[var]
+    logger.debug("looking for %s in %s",var,where)
+    a=where.get(var)
+    if not a:
+        logger.debug("%s not found",var)
+        return False
+
+    logger.debug("%s found = %s",var,a)
+    return a
+
+
+def get_metadata_env_changes(metadata):
+    logger = getLogger(__name__)  # you can use other name
+    start_env=metadata['job_pl_env']
+    stop_env=metadata['job_el_env']
+    (added, removed, modified, same) = compare_dicts(stop_env, start_env)
+    env_changes = {}
+    for e in same:
+        logger.debug("Found "+e+"\t"+start_env[e])
+    for e in modified:
+        logger.debug("Different at stop "+e+"\t"+stop_env[e])
+        env_changes[e] = stop_env[e]
+    for e in removed:
+        logger.debug("Deleted "+e+"\t"+start_env[e])
+        env_changes[e] = start_env[e]
+    for e in added:
+        logger.debug("Added "+e+"\t"+stop_env[e])
+        env_changes[e] = stop_env[e]
+    return (env_changes, added, removed, modified, same)
+
+# This function will do a sanity check on the metadata.
+# It will mark the metadata as checked, so it's safe and
+# fast to call the function (idempotently)
+def check_fix_metadata(raw_metadata):
+    # fast path: if we have already checked the metadata
+    # we don't check it again
+    if raw_metadata.get('checked'):
+        return raw_metadata
+
+    import epmt_settings as settings
+    logger = getLogger(__name__)  # you can use other name
+# First check what should be here
+    try:
+        for n in [ 'job_pl_id', 'job_pl_submit_ts', 'job_pl_start_ts', 'job_pl_env', 
+                   'job_el_stop_ts', 'job_el_exitcode', 'job_el_reason', 'job_el_env' ]:
+            s = str(raw_metadata[n])
+            assert(len(s) > 0)
+    except KeyError:
+        logger.error("Could not find %s in job metadata, job incomplete?",n)
+        return False
+    except AssertionError:
+        logger.error("Null value of %s in job metadata, corrupt data?",n)
+        return False
+
+    metadata = dict.copy(raw_metadata)
+    # Augment metadata where needed
+    if not ('job_username' in metadata):
+        username = get_batch_envvar("JOB_USER",raw_metadata['job_pl_env'])
+        if username is False:
+            username = get_batch_envvar("USER",raw_metadata['job_pl_env'])
+            if username is False:
+                username = raw_metadata.get('job_username')
+                if username == None:
+                    username = False
+        if username is False or len(username) < 1:
+            print(raw_metadata['job_pl_env'])
+            logger.error("No job username found in metadata or environment")
+            return False
+        metadata['job_username'] = username
+
+    if not ('job_jobname' in metadata):
+        jobname = get_batch_envvar("JOB_NAME",raw_metadata['job_pl_env'])
+        if jobname is False or len(jobname) < 1:
+            jobname = "unknown"
+            logger.warning("No job name found, defaulting to %s",jobname)
+        metadata['job_jobname'] = jobname
+
+    if not ('job_tags' in metadata):
+        # Look up job tags from stop environment
+        job_tags = tag_from_string(raw_metadata['job_el_env'].get(settings.job_tags_env))
+        logger.debug("job_tags: %s",str(job_tags))
+        metadata['job_tags'] = job_tags
+
+    if not ('job_env_changes' in metadata):
+        # Compute difference in start vs stop environment
+        # we can ignore all the fields returned except the first
+        env_changes = get_metadata_env_changes(raw_metadata)[0]
+        if env_changes:
+            logger.debug('start/stop environment changed: {0}'.format(env_changes))
+        metadata['job_env_changes'] = env_changes
+
+    # mark the metadata as checked so we don't check it again unnecessarily
+    metadata['checked'] = True
+    return metadata

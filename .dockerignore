@@ -10,3 +10,6 @@ old
 .ipython
 .jupyter
 .local
+db
+*.sqlite
+*.sqlite3

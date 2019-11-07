@@ -5,7 +5,6 @@ from pony.orm import *
 
 from logging import getLogger
 logger = getLogger('orm.pony')  # you can use other name
-import epmt_logging
 
 db = Database()
 
@@ -13,9 +12,25 @@ logger.info('Pony ORM selected')
 
 ### API ###
 def setup_db(settings,drop=False,create=True):
-    logger.info("Binding to DB: %s", settings.db_params)
+    db_params = dict.copy(settings.db_params)
+    if 'url' in db_params:
+        db_params = _url2params(settings.db_params['url'])
+        logger.debug('mapping db url to Pony-specific db params: %s', db_params)
+
+    # FIX: There should be a better way than the hack below!
+    # For relative filenames when using sqlite, we want to save
+    # in the top-level directory and not in 'orm/pony' where this
+    # module is, so we use an absolute path
+    if ('filename' in db_params)  \
+        and db_params['filename'] != ':memory:' \
+        and (not (db_params['filename'].startswith('/'))):
+        from os import getcwd
+        db_params['filename'] = '{0}/{1}'.format(getcwd(), db_params['filename'])
+
+    logger.info("Binding to DB: %s", db_params)
+
     try:
-        db.bind(**settings.db_params)
+        db.bind(**db_params)
     except Exception as e:
         if (type(e).__name__ == "BindingError"):
             pass
@@ -390,3 +405,33 @@ def _execute_raw_sql(sql, commit = False):
         return 1
     return out
 
+# convert a url string to a dictionary of parameters
+# suitable for establishing a database connection
+#
+# input: 'postgresql://postgres:example@localhost:5432/EPMT'
+# output: {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'localhost', 'port': 5432, 'dbname': 'EPMT'}
+#
+# input: 'sqlite:///:memory:'
+# output: { 'provider': 'sqlite', 'filename': ':memory:', 'create_db': True }
+#
+# input: 'sqlite:///db.sqlite'
+# output: {'provider': 'sqlite', 'filename':'database.sqlite', 'create_db': True }
+
+def _url2params(url):
+    try:
+        # sqlite has a different format so we handle it separately
+        if 'sqlite' not in url:
+            (provider, _, user_host_port, dbname) = url.split('/')
+            (user_pass, host_port) = user_host_port.split('@')
+            (user, passwd) = user_pass.split(':')
+            (host, port) = host_port.split(':')
+            port = int(port or 5432)
+            provider = provider.replace(':','')
+            if provider == 'postgresql':
+                provider = 'postgres'
+        else:
+            filename = url.split('///')[-1]
+            return dict(provider='sqlite', filename=filename, create_db=True)
+    except:
+        raise ValueError('database url ({0}) does not have the right format'.format(url))
+    return dict(provider=provider, host=host, port=port, user=user, password=passwd, dbname=dbname)

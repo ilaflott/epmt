@@ -1,8 +1,9 @@
-# settings.py
-from epmt_default_settings import *
+# Copy this file and edit it as follows:
+# cp preset_settings/settings_xxxxxxx.py settings.py
+# Then feel free to edit the file to suit you.
 
 orm = 'pony'
-db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'localhost', 'dbname': 'EPMT'}
+db_params = { 'url': 'sqlite:///:memory:' }
 
 # You can alter the settings below to override defaults
 #
@@ -15,6 +16,10 @@ db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','h
 # input_pattern = "*-papiex-*-[0-9]*.csv"
 # install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-oss-install/"
 #
+# blacklist for environment filter (in addition to all keys with
+# leading underscores)
+# env_blacklist = ["LS_COLORS"]
+# 
 # DO NOT EDIT BELOW UNLESS YOU KNOW WHAT YOU ARE DOING!
 # #
 # job_tags_env = 'EPMT_JOB_TAGS'
@@ -25,4 +30,8 @@ db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','h
 # # outlier detection
 # outlier_thresholds = { 'modified_z_score': 2.5, 'iqr': [20,80], 'z_score': 3.0 }
 # outlier_features = ['duration', 'cpu_time', 'num_procs']
+#
+# post_process_job_on_ingest = True
+#
+# Pony doesn't support bulk inserts
 bulk_insert = False

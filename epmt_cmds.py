@@ -16,9 +16,9 @@ import pickle
 from tzlocal import get_localzone
 from logging import getLogger, basicConfig, DEBUG, INFO, WARNING, ERROR
 logger = getLogger(__name__)  # you can use other name
-from epmt_logging import *
+import epmt_settings as settings
 
-from epmtlib import get_username, set_logging, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm, timing
+from epmtlib import get_username, set_logging, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm, timing, dict_filter, check_fix_metadata
 
 def find_diffs_in_envs(start_env,stop_env):
     env = {}
@@ -38,18 +38,6 @@ def find_diffs_in_envs(start_env,stop_env):
             env[e] = stop_env[e]
     return env
 
-# Remove those with _ at beginning and blacklist
-def blacklist_filter(filter=None, **env):
-#   print env
-    env2 = {}
-    for k, v in env.items():
-        if k.startswith("_"):
-            continue
-        if k == "LS_COLORS":
-            continue
-        env2[k] = v
-    return env2
-
 
 def dump_config(outf):
     print("\nsettings.py (affected by the below env. vars):", file=outf)
@@ -64,11 +52,6 @@ def dump_config(outf):
 #              ]:
         if v in environ:
             print("%-24s%-56s" % (v,environ[v]), file=outf)
-
-def merge_two_dicts(x, y):
-    z = x.copy()   # start with x's keys and values
-    z.update(y)    # modifies z with y's keys and values & returns None
-    return z
 
 def read_job_metadata_direct(file):
     try:
@@ -223,13 +206,13 @@ def verify_db_params():
     
 def verify_perf():
     f="/proc/sys/kernel/perf_event_paranoid"
-    print(f,"exists and has a value of 0")
+    print(f,end='')
     try:
         with open(f, 'r') as content_file:
             value = int(content_file.read())
-            logger.info("%s = %d",f,value)
-            if value != 0:
-                logger.error("bad %s value of %d, should be 0 to allow cpu events",f,value)
+            print(" = ",value)
+            if value > 1:
+                logger.error("bad %s value of %d, should be 1 or less to allow cpu events",f,value)
                 PrintFail()
                 return False
             logger.info("perf_event_paranoid is %d",value)
@@ -278,6 +261,7 @@ def verify_papiex():
         retval = False
     else:
         retval = True
+        global_jobid,global_datadir,global_metadatafile = setup_vars()
         files = glob(global_datadir+settings.input_pattern)
         if len(files) != 1:
             logger.error("%s matched %d papiex CSV output files instead of 1",global_datadir+settings.input_pattern,len(files))
@@ -289,11 +273,11 @@ def verify_papiex():
             retval = False
 
     if retval == True:
+        logger.info("rmtree %s",global_datadir) 
+        rmtree(global_datadir)
         PrintPass()
     else:
         PrintFail()
-    logger.info("rmtree %s",global_datadir) 
-    rmtree(global_datadir)
     return retval
 
 def epmt_check():
@@ -325,7 +309,7 @@ def create_start_job_metadata(jobid, submit_ts, from_batch=[]):
     except:
         ts=datetime.now()
     metadata = {}
-    start_env=blacklist_filter(filter,**environ)
+    start_env=dict_filter(environ, vars(settings).get('env_blacklist',None))
 #   print env
     metadata['job_pl_id'] = jobid
 #   metadata['job_pl_hostname'] = gethostname()
@@ -344,7 +328,7 @@ def merge_stop_job_metadata(metadata, exitcode, reason, from_batch=[]):
         ts=datetime.now(tz=get_localzone())
     except:
         ts=datetime.now()
-    stop_env=blacklist_filter(filter,**environ)
+    stop_env=dict_filter(environ, vars(settings).get('env_blacklist',None))
     metadata['job_el_stop_ts'] = ts
     metadata['job_el_exitcode'] = exitcode
     metadata['job_el_reason'] = reason
@@ -420,7 +404,11 @@ def epmt_stop_job(other=[]):
         logger.error("%s is already complete!",global_metadatafile)
         return False
     metadata = merge_stop_job_metadata(start_metadata,0,"none",other)
-    retval = write_job_metadata(global_metadatafile,metadata)
+    checked_metadata = check_fix_metadata(metadata)
+    if not checked_metadata:
+        logger.error('Metadata check failed. Writing raw metadata for post-mortem analysis.')
+        checked_metadata = metadata
+    retval = write_job_metadata(global_metadatafile,checked_metadata)
     return retval
 
 def epmt_dump_metadata(filelist):
@@ -512,7 +500,10 @@ def epmt_source(papiex_debug=False, monitor_debug=False, run_cmd=False):
     cmd = add_var(cmd,"PAPIEX_OPTIONS"+equals+settings.papiex_options)
     oldp = environ.get("LD_PRELOAD")
     if oldp: cmd = add_var(cmd,"OLD_LD_PRELOAD"+equals+oldp)
-    cmd = add_var(cmd,"LD_PRELOAD"+equals+settings.install_prefix+"lib/libpapiex.so:"+
+    cmd = add_var(cmd,"LD_PRELOAD"+equals+
+                  settings.install_prefix+"lib/libpapiex.so:"+
+                  settings.install_prefix+"lib/libpapi.so:"+
+                  settings.install_prefix+"lib/libpfm.so:"+
                   settings.install_prefix+"lib/libmonitor.so"+((":"+oldp) if oldp else ""))
 
 #
@@ -670,11 +661,7 @@ def compressed_tar(input):
 
 @timing
 def submit_to_db(input, pattern, dry_run=True, drop=False):
-#    if not jobid:
-#        logger.error("Job ID is empty!");
-#        exit(1);
-
-    logger.info("submit_to_db(%s,%s,%s)",input,pattern,str(dry_run))
+    logger.info("submit_to_db(%s,%s,dry_run=%s,drop=%s)",input,pattern,str(dry_run),str(drop))
 
     err,tar = compressed_tar(input)
     if err:
@@ -719,15 +706,10 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
         logger.info("Dry run finished, skipping DB work")
         return True
 
-#    if tar:
-#        tar.close()
-#        logger.error('Unsupported at the moment.')
-#        exit(1)
-
 # Now we touch the Database
     from orm import setup_db
     from epmt_job import ETL_job_dict
-    if setup_db(settings) == False:
+    if setup_db(settings,drop) == False:
         return False
     j = ETL_job_dict(metadata,filedict,settings,tarfile=tar)
     if not j:
@@ -735,14 +717,6 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
     logger.info("Committed job %s to database: %s",j.jobid,j)
     return True
 
-# Dead code
-# Check if we have anything related to an "experiment"
-#
-#    if check_workflowdb_dict(metadata,pfx="exp_"):
-#        e = ETL_ppr(metadata,j.jobid)
-#        if not e:
-#            exit(1)
-#        logger.info("Committed post process run to database")    
 
 def stage_job(dir,collate=True,compress_and_tar=True):
     logger.debug("stage_job(%s,collate=%s,compress_and_tar=%s)",dir,str(collate),str(compress_and_tar))
@@ -858,9 +832,7 @@ def epmt_dbsize(findwhat=['database','table','index','tablespace'], usejson=Fals
                 cleanList.append(cleaner)
     return(get_db_size(cleanList,usejson,usebytes))
 
-#
-# depends on args being global
-#
+
 def epmt_entrypoint(args):
 
     # I hate this sequence.
@@ -872,9 +844,20 @@ def epmt_entrypoint(args):
     if not args.verbose:
         set_logging(settings.verbose, check=True)
 
+
     # Here it's up to each command to validate what it is looking for
     # and error out appropriately
 
+    # submit does the drop on its own, so here we handle
+    if args.command == 'drop':
+        if (not(args.force)):
+            confirm = input("This will drop the entire database. This action cannot be reversed. Are you sure (yes/NO): ")
+            if (confirm.upper() not in ('Y', 'YES')):
+                return 0
+        logger.info('request to drop all data in the database')
+        from orm import orm_drop_db
+        orm_drop_db()
+        return 0
     if args.command == 'dbsize':
         return(epmt_dbsize(args.size_of, usejson=args.json, usebytes=args.bytes) == False)
     if args.command == 'start':
@@ -906,8 +889,3 @@ def epmt_entrypoint(args):
 
     logger.error("Unknown command, %s. See -h for options.",args.command)
     return(1)
-
-# Use of globals here is gross. FIX!
-# 
-# if (__name__ == "__main__"):
-

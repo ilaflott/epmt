@@ -1,5 +1,5 @@
 from __future__ import print_function
-from sys import stdout, argv, stderr, exit
+from sys import stdout, argv, stderr
 import sys
 from os.path import basename
 from glob import glob
@@ -9,14 +9,14 @@ from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
 from os import getuid
 from json import dumps, loads
 from pwd import getpwnam, getpwuid
-from epmtlib import tag_from_string, sum_dicts, unique_dicts, fold_dicts, timing, dotdict, get_first_key_match
+from epmtlib import tag_from_string, sum_dicts, unique_dicts, fold_dicts, timing, dotdict, get_first_key_match, check_fix_metadata
 from datetime import datetime, timedelta
 from functools import reduce
 import time
 import pytz
 
 logger = getLogger(__name__)  # you can use other name
-from epmt_logging import *
+import epmt_settings as settings
 from orm import *
 
 #
@@ -67,7 +67,19 @@ def create_job(jobid,user):
 created_hosts = {}
 def lookup_or_create_host(hostname):
     logger = getLogger(__name__)  # you can use other name
-    host = created_hosts.get(hostname, orm_get(Host, hostname))
+    host = created_hosts.get(hostname)
+    if host:
+        # sometimes we may have cached a host entry that's been invalidated 
+        # in the session cache. In such a case, we need to purge it
+        try:
+            host.name
+        except:
+            del created_hosts[hostname]
+            host = None
+
+    if host is None:
+        host = orm_get(Host, hostname)
+        
     if host is None:
         host = orm_create(Host, name=hostname)
         logger.info("Created host %s",hostname)
@@ -76,6 +88,7 @@ def lookup_or_create_host(hostname):
         # and so we don't want use our create_hosts map with Pony
         if settings.orm == 'sqlalchemy':
             created_hosts[hostname] = host
+    assert(host.name == hostname)
     return host
 
 def lookup_or_create_user(username):
@@ -227,8 +240,9 @@ def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
         try:
             info = tarfile.getmember(jobdatafile)
         except KeyError:
-            logger.error('BUG: Did not find %s in tar archive' % str(tarfile))
-            exit(1)
+            err_msg = 'BUG: Did not find %s in tar archive' % str(tarfile)
+            logger.error(err_msg)
+            raise LookupError(err_msg)
         else:
             file = tarfile.extractfile(info)
     else:
@@ -408,17 +422,18 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
                 # process tree creation step
                 proc_descendants = desc_map.get(proc.id, set())
                 proc.inclusive_cpu_time = float(proc.cpu_time + sum([p.cpu_time for p in proc_descendants]))
+                hosts.add(proc.host_id)
             else:
                 proc.inclusive_cpu_time = float(proc.cpu_time + orm_sum_attribute(proc.descendants, 'cpu_time'))
+                hosts.add(proc.host)
             nthreads += proc.numtids
             threads_sums_across_procs = sum_dicts(threads_sums_across_procs, proc.threads_sums)
-            hosts.add(proc.host)
         logger.info("job contains %d processes (%d threads)",len(all_procs), nthreads)
         _t3 = time.time()
         logger.debug('thread sums calculation took: %2.5f sec', _t3 - _t2)
         if settings.bulk_insert:
             t = Base.metadata.tables['host_job_associations']
-            thr_data.engine.execute(t.insert(), [ { 'jobid': j.jobid, 'hostname': h.name } for h in hosts])
+            thr_data.engine.execute(t.insert(), [ { 'jobid': j.jobid, 'hostname': h } for h in hosts])
         else:
             j.hosts = list(hosts)
         _t4 = time.time()
@@ -479,89 +494,14 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
 #    metadata['job_el_exitcode'] = exitcode
 #    metadata['job_el_reason'] = reason
 
-def get_batch_envvar(var,where):
-    logger = getLogger(__name__)  # you can use other name
-    key2slurm = {
-        "JOB_NAME":"SLURM_JOB_NAME", 
-        "JOB_USER":"SLURM_JOB_USER"
-        }
-    if var in key2slurm.keys():
-        var = key2slurm[var]
-    logger.debug("looking for %s in %s",var,where)
-    a=where.get(var)
-    if not a:
-        logger.debug("%s not found",var)
-        return False
-
-    logger.debug("%s found = %s",var,a)
-    return a
-
-def _check_and_create_metadata(raw_metadata):
-    logger = getLogger(__name__)  # you can use other name
-# First check what should be here
-    for n in [ 'job_pl_id', 'job_pl_submit_ts', 'job_pl_start_ts', 'job_pl_env', 
-               'job_el_stop_ts', 'job_el_exitcode', 'job_el_reason', 'job_el_env' ]:
-        s = str(raw_metadata.get(n))
-        if not s:
-            logger.error("Could not find %s in job metadata, job incomplete?",n)
-            return False
-        if len(s) == 0:
-            logger.error("Null value of %s in job metadata, corrupt data?",n)
-            return False
-# Now look up any batch environment variables we may use
-    username = get_batch_envvar("JOB_USER",raw_metadata['job_pl_env'])
-    if username is False:
-        username = get_batch_envvar("USER",raw_metadata['job_pl_env'])
-        if username is False:
-            username = raw_metadata.get('job_username')
-            if username == None:
-                username = False
-    if username is False or len(username) < 1:
-        print(raw_metadata['job_pl_env'])
-        logger.error("No job username found in metadata or environment")
-        return False
-    jobname = get_batch_envvar("JOB_NAME",raw_metadata['job_pl_env'])
-    if jobname is False or len(jobname) < 1:
-        jobname = "unknown"
-        logger.warning("No job name found, defaulting to %s",jobname)
-
-# Look up job tags from stop environment
-    job_tags = tag_from_string(raw_metadata['job_el_env'].get(settings.job_tags_env))
-    logger.info("job_tags: %s",str(job_tags))
-# Compute difference in start vs stop environment
-    env={}
-    start_env=raw_metadata['job_pl_env']
-    stop_env=raw_metadata['job_el_env']
-    for e in start_env.keys():
-        if e in stop_env.keys():
-            if start_env[e] == stop_env[e]:
-                logger.debug("Found "+e+"\t"+start_env[e])
-            else:
-                logger.debug("Different at stop "+e+"\t"+stop_env[e])
-                env[e] = stop_env[e]
-        else:
-            logger.debug("Deleted "+e+"\t"+start_env[e])
-            env[e] = start_env[e]
-    for e in stop_env.keys():
-        if e not in start_env.keys():
-            logger.debug("Added "+e+"\t"+stop_env[e])
-            env[e] = stop_env[e]
-    env_changes = env
-# Augment the metadata
-    metadata = raw_metadata
-    metadata['job_username'] = username
-    metadata['job_jobname'] = jobname
-    metadata['job_env_changes'] = env_changes
-    metadata['job_tags'] = job_tags
-
-    return metadata
-
 @db_session
 def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     logger = getLogger(__name__)  # you can use other name
     job_init_start_time = time.time()
 # Synthesize what we need
-    metadata = _check_and_create_metadata(raw_metadata)
+    # it's safe and fast to call the check_fix_metadata
+    # it will not waste time re-checking (since it marks the metadata as checked)
+    metadata = check_fix_metadata(raw_metadata) 
     if metadata is False:
         return False
 
@@ -592,7 +532,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     submit_ts = metadata['job_pl_submit_ts']
     if not start_ts.tzinfo:
         tz_str = get_first_key_match(env_dict, 'TZ', 'TIMEZONE') or get_first_key_match(environ, 'EPMT_TZ') or 'US/Eastern'
-        logger.info('timezone could not be auto-detected, assuming {0}'.format(tz_str))
+        logger.debug('timezone could not be auto-detected, assuming {0}'.format(tz_str))
         tz_default = pytz.timezone(tz_str)
         start_ts = tz_default.localize(start_ts)
         stop_ts = tz_default.localize(stop_ts)
@@ -859,69 +799,70 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 #
 # We should remove below here
 #
-if (__name__ == "__main__"):
-    import argparse
-    from epmt_cmds import read_job_metadata, dump_settings
-
-    parser=argparse.ArgumentParser(description="Load a job into the database.\nDetailed configuration is stored in settings.py.")
-
-    parser.add_argument('data_dir',type=str,help="Directory containing papiex data files with pattern: "+settings.input_pattern);
-    parser.add_argument('metadata_dir',nargs="?",type=str,help="Directory containing the job_metadata file, defaults to data_dir");
-    parser.add_argument('jobid',type=str,nargs="?",help="Job id, a unique integer, should match that in job_metadata file");
-    parser.add_argument('-d', '--debug',action='count',help="Increase level of verbosity/debug")
-    parser.add_argument('--drop',action='store_true',help="Drop all tables/data and recreate before import")
-    parser.add_argument('-f', '--force',action='store_true',help="Override job id in job_metadata file")
-    parser.add_argument('-n', '--dry-run',action='store_true',help="Don't touch the database");
-
-#    parser.add_argument("-v", "--verbosity", action="count",
-#                        help="increase output verbosity")
-# parser.add_argument("-v", "--verbosity", type=int, choices=[0, 1, 2],
-#                    help="increase output verbosity")
-    args = parser.parse_args()
-
-    if not args.debug:
-        basicConfig(level=WARNING)
-    elif args.debug == 1:
-        basicConfig(level=INFO)
-    elif args.debug >= 2:
-        basicConfig(level=DEBUG)
-
-    if args.dry_run and args.drop:
-        logger.warning("Dry-run will still drop tables, hope you know what you are doing!")
-
-    if not args.data_dir.endswith("/"):
-        logger.warn("data_dir %s should have a trailing /",args.data_dir)
-        args.data_dir = args.data_dir+"/"
-
-    if args.data_dir and not args.metadata_dir:
-        logger.info("Assuming metadata_dir is data_dir %s",args.data_dir)
-        args.metadata_dir = args.data_dir
-    elif not args.metadata_dir.endswith("/"):
-        logger.warn("metadata_dir %s should have a trailing /",args.metadata_dir)
-        args.metadata_dir = args.metadata_dir+"/"
-
-    metadata = read_job_metadata(args.metadata_dir+"job_metadata")
-
-    if not args.jobid:
-        args.jobid = metadata['job_pl_id']
-    elif args.jobid != metadata['job_pl_id']:
-        if not args.force:
-            logger.error("Job id in metadata %s different from %s on command line, see --force",metadata['job_pl_id'],args.jobid)
-            exit(1)
-        else:
-            logger.warning("Forcing job id to be %s from command line",args.jobid)
-            metadata['job_pl_id'] = args.jobid
-
-    if setup_orm_db(args.drop) == False:
-        exit(1)
-
-    if args.dry_run:
-        logger.info("Skipping ETL...")
-    else:
-        j = ETL_job_dir(args.jobid,args.data_dir,metadata)
-        if not j:
-            exit(1)
-    exit(0)
+# if (__name__ == "__main__"):
+#     import argparse
+#     from epmt_cmds import read_job_metadata, dump_settings
+# 
+#     parser=argparse.ArgumentParser(description="Load a job into the database.\nDetailed configuration is stored in settings.py.")
+# 
+#     parser.add_argument('data_dir',type=str,help="Directory containing papiex data files with pattern: "+settings.input_pattern);
+#     parser.add_argument('metadata_dir',nargs="?",type=str,help="Directory containing the job_metadata file, defaults to data_dir");
+#     parser.add_argument('jobid',type=str,nargs="?",help="Job id, a unique integer, should match that in job_metadata file");
+#     parser.add_argument('-d', '--debug',action='count',help="Increase level of verbosity/debug")
+#     parser.add_argument('--drop',action='store_true',help="Drop all tables/data and recreate before import")
+#     parser.add_argument('-f', '--force',action='store_true',help="Override job id in job_metadata file")
+#     parser.add_argument('-n', '--dry-run',action='store_true',help="Don't touch the database");
+# 
+# #    parser.add_argument("-v", "--verbosity", action="count",
+# #                        help="increase output verbosity")
+# # parser.add_argument("-v", "--verbosity", type=int, choices=[0, 1, 2],
+# #                    help="increase output verbosity")
+#     args = parser.parse_args()
+# 
+#     if not args.debug:
+#         basicConfig(level=WARNING)
+#     elif args.debug == 1:
+#         basicConfig(level=INFO)
+#     elif args.debug >= 2:
+#         basicConfig(level=DEBUG)
+# 
+#     if args.dry_run and args.drop:
+#         logger.warning("Dry-run will still drop tables, hope you know what you are doing!")
+# 
+#     if not args.data_dir.endswith("/"):
+#         logger.warn("data_dir %s should have a trailing /",args.data_dir)
+#         args.data_dir = args.data_dir+"/"
+# 
+#     if args.data_dir and not args.metadata_dir:
+#         logger.info("Assuming metadata_dir is data_dir %s",args.data_dir)
+#         args.metadata_dir = args.data_dir
+#     elif not args.metadata_dir.endswith("/"):
+#         logger.warn("metadata_dir %s should have a trailing /",args.metadata_dir)
+#         args.metadata_dir = args.metadata_dir+"/"
+# 
+#     metadata = read_job_metadata(args.metadata_dir+"job_metadata")
+# 
+#     if not args.jobid:
+#         args.jobid = metadata['job_pl_id']
+#     elif args.jobid != metadata['job_pl_id']:
+#         if not args.force:
+#             msg = "Job id in metadata %s different from %s on command line, see --force",metadata['job_pl_id'],args.jobid
+#             logger.error(msg)
+#             exit(1)
+#         else:
+#             logger.warning("Forcing job id to be %s from command line",args.jobid)
+#             metadata['job_pl_id'] = args.jobid
+# 
+#     if setup_orm_db(args.drop) == False:
+#         exit(1)
+# 
+#     if args.dry_run:
+#         logger.info("Skipping ETL...")
+#     else:
+#         j = ETL_job_dir(args.jobid,args.data_dir,metadata)
+#         if not j:
+#             exit(1)
+#     exit(0)
 
 def post_process_outstanding_jobs():
     '''

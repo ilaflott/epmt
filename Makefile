@@ -1,28 +1,48 @@
-SHELL=/bin/sh
-#export SHELL
+VERSION=2.0.0
+RELEASE=epmt-$(VERSION).tgz
+SHELL=/bin/bash
+PWD=$(shell pwd)
 
-.PHONY: default \\
+.PHONY: default build \\
 	epmt-build epmt-test \\
 	clean distclean \\
 	check check-python-native check-python-driver check-python-2.6 check-python-2.7 check-python-3
 
-default: epmt-build epmt-build-stack
+build:
+	python -bb -m py_compile *.py orm/*.py orm/*/*.py test/*.py
 
-epmt-build: Dockerfiles/Dockerfile.python-epmt Dockerfiles/Dockerfile.epmt-command Dockerfiles/Dockerfile.epmt-notebook
-	docker build -f Dockerfiles/Dockerfile.python-epmt -t python-epmt:latest --squash .
-	docker build -f Dockerfiles/Dockerfile.epmt-command -t epmt-command:latest --squash .
-	docker build -f Dockerfiles/Dockerfile.epmt-notebook -t epmt-notebook:latest --squash .
+dist:
+	rm -rf epmt-install
+	pyinstaller --hidden-import sqlalchemy.ext.baked --exclude-module settings --clean --distpath=epmt-install -s epmt
+	cp -Rp preset_settings epmt-install
+#	--hidden-import epmt_default_settings --exclude-module settings 
+	rm -f $(RELEASE); tar cvfz $(RELEASE) epmt-install
 
-epmt-build-stack: epmt-build docker-compose.yml
-	docker-compose build
-#epmt-test:
-#	docker run epmt:latest
-#	docker-compose up
+dist-test:
+	rm -rf epmt-install-tests
+	mkdir epmt-install-tests
+	cp -Rp test Makefile epmt-example.csh epmt-example.sh epmt-install-tests
+	rm -f test-$(RELEASE); tar cvfz test-$(RELEASE) epmt-install-tests 
+
+$(RELEASE) test-$(RELEASE) docker-dist: 
+	docker build -f Dockerfiles/Dockerfile.centos-7-epmt-build -t centos-7-epmt-build .
+	docker run -i --tty --rm --volume=$(PWD):$(PWD):z -w $(PWD) centos-7-epmt-build make distclean dist dist-test
+
+docker-test-dist: $(RELEASE) test-$(RELEASE)
+	docker build -f Dockerfiles/Dockerfile.centos-7-epmt-test -t centos-7-epmt-test --build-arg release=$(RELEASE) .
+	docker run --privileged --rm -it centos-7-epmt-test
+
+docker-test-dist-slurm:
+	docker build -f Dockerfiles/SLURM/Dockerfile.slurm-centos-7 -t centos-epmt-test-slurm --build-arg release=$(VERSION) .
+	docker run --privileged --rm -it -h ernie centos-epmt-test-slurm epmt check
+	docker run --privileged --rm -it -h ernie centos-epmt-test-slurm srun -n1 /opt/epmt/examples/epmt-example.sh
+	docker run --privileged --rm -it -h ernie centos-epmt-test-slurm srun -n1 /opt/epmt/examples/epmt-example.csh
+
 clean:
-	rm -f *~ *.pyc 
+	find . -name "*~" -o -name "*.pyc" -exec rm -f {} \; 
 	rm -rf __pycache__
 distclean: clean
-	rm -f settings.py; ln -s settings/settings_sqlite_inmem.py settings.py  # Setup in mem sqlite
+	rm -f settings.py; ln -s preset_settings/settings_sqlite_inmem_sqlalchemy.py settings.py # Setup in mem sqlite
 # 
 # Simple python version testing with no database
 #
@@ -39,4 +59,5 @@ check-python-shells:
 	@rm -rf /tmp/epmt
 check-unittests:
 	@echo; echo "Testing built-in unit tests..."
-	@env -i PATH=${PWD}:${PATH} python3 -m unittest -v -f test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema
+	python3 -V
+	@env -i PATH=${PWD}:${PATH} python3 -m unittest -v -f test.test_lib test.test_settings test.test_anysh test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema
