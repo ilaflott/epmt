@@ -8,12 +8,13 @@ RUN yum install -y unzip bash tcsh nc curl make git gcc postgresql-devel zlib-de
 # we set SQLITE_MAX_VARIABLE_NUMBER to a limit higher than 999
 # to avoid the sqlite OperationalError: Too many variables
 # https://stackoverflow.com/questions/7106016/too-many-sql-variables-error-in-django-witih-sqlite3
-RUN cd /usr/src && echo "downloading sqlite3" && curl -o sqlite-amalgamation-3300100.zip https://www.sqlite.org/2019/sqlite-amalgamation-3300100.zip && unzip sqlite-amalgamation-3300100.zip && echo "building libsqlite3 with json1 and other useful extensions" && cd sqlite-amalgamation-3300100 && gcc -shared -fPIC -O2  -DSQLITE_ENABLE_JSON1 -DSQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_MAX_VARIABLE_NUMBER=9999 sqlite3.c -o libsqlite3.so
 
-RUN cd /usr/src && echo "downloading python" && curl -o Python-3.7.4.tgz https://www.python.org/ftp/python/3.7.4/Python-3.7.4.tgz && tar xzf Python-3.7.4.tgz && cd Python-3.7.4 && echo "building python3" && ./configure --enable-optimizations --enable-loadable-sqlite-extensions --with-libs=/usr/src/sqlite-amalgamation-3300100/libsqlite3.so && make --silent install > /dev/null
+RUN cd /usr/src && echo "downloading sqlite3" && curl -o sqlite-amalgamation-3300100.zip https://www.sqlite.org/2019/sqlite-amalgamation-3300100.zip && unzip sqlite-amalgamation-3300100.zip && echo "building libsqlite3 with json1 and other useful extensions" && cd sqlite-amalgamation-3300100 && gcc -shared -fPIC -O2  -DSQLITE_ENABLE_JSON1 -DSQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_MAX_VARIABLE_NUMBER=9999 sqlite3.c -o /usr/lib64/libsqlite3.so
 
-# pyenv
-# RUN curl https://pyenv.run | bash && echo 'export PATH="/root/.pyenv/bin:$PATH"; eval "$(pyenv init -)"; eval "$(pyenv virtuale# nv-init -)"' >> /root/.bashrc && source /root/.bashrc && pyenv install 3.7.4 && pyenv global 3.7.4
+RUN cd /usr/src && echo "downloading python" && curl -o Python-3.7.4.tgz https://www.python.org/ftp/python/3.7.4/Python-3.7.4.tgz && tar xzf Python-3.7.4.tgz && cd Python-3.7.4 && echo "building python3" && ./configure --quiet --prefix=/usr --enable-shared --enable-optimizations --enable-loadable-sqlite-extensions && make --silent install > /dev/null
 
+RUN ldconfig
 COPY requirements.txt.py3 /tmp/
 RUN python3 -V && pip3 install --upgrade pip && pip3 install -r /tmp/requirements.txt.py3
+
+RUN yum clean all && rm -rf /usr/src /var/cache/yum
