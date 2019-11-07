@@ -13,7 +13,7 @@ build:
 
 dist:
 	rm -rf epmt-install
-	pyinstaller --hidden-import sqlalchemy.ext.baked --clean --distpath=epmt-install -s epmt
+	pyinstaller --hidden-import sqlalchemy.ext.baked --exclude-module settings --clean --distpath=epmt-install -s epmt
 	cp -Rp preset_settings epmt-install
 #	--hidden-import epmt_default_settings --exclude-module settings 
 	rm -f $(RELEASE); tar cvfz $(RELEASE) epmt-install
