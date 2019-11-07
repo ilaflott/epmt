@@ -5,20 +5,21 @@
 * Stage/collation does not work on 'remote' nodes, ie any sruns.
 
 # Environment build
-cd ../..
-docker build -f epmt.git/SLURM/Dockerfile.slurm -t slurm-epmt-papiex:latest .
 
-# Environment run
-scuba -r -d=-h -d=ernie -d=--privileged --image slurm-epmt-papiex
+  See output of:
+      make -n docker-dist-slurm 
+      make -n docker-test-dist-slurm
+      
+## SLURM Notes
 
-# Environment test
-[root@ernie GFDL]# srun -n1 sleep 10
-[root@ernie GFDL]# ls /tmp/epmt/3/
-ernie-papiex-806-0.csv  job_metadata
-[root@ernie GFDL]# srun -n1 hostname
-ernie
-[root@ernie GFDL]# ls /tmp/epmt/4
-ernie-papiex-848-0.csv  job_metadata
+TaskProlog and TaskEpilog are not run:
+ * salloc
+
+But are run during:
+ * sbatch
+ * srun
+
+## Docker Notes
 
 SLURM 19 and a later kernel, plus all pythons
 https://github.com/giovtorres/docker-centos7-slurm
@@ -36,11 +37,3 @@ https://github.com/giovtorres/docker-centos6-slurm
 docker pull giovtorres/docker-centos6-slurm:latest
 docker run -it -h ernie giovtorres/docker-centos6-slurm:latest
 
-## SLURM Notes
-
-TaskProlog and TaskEpilog are not run:
- * salloc
-
-But are run during:
- * sbatch
- * srun
