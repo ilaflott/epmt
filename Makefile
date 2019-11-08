@@ -17,19 +17,21 @@ dist:
 	cp -Rp preset_settings epmt-install
 #	--hidden-import epmt_default_settings --exclude-module settings 
 	rm -f $(RELEASE); tar cvfz $(RELEASE) epmt-install
+	rm -rf epmt-install build epmt.spec
 
 dist-test:
 	rm -rf epmt-install-tests
 	mkdir epmt-install-tests
 	cp -Rp test Makefile epmt-example.csh epmt-example.sh epmt-install-tests
-	rm -f test-$(RELEASE); tar cvfz test-$(RELEASE) epmt-install-tests 
+	rm -f test-$(RELEASE); tar cvfz test-$(RELEASE) epmt-install-tests
+	rm -rf epmt-install-tests
 
 $(RELEASE) test-$(RELEASE) docker-dist: 
 	docker build -f Dockerfiles/Dockerfile.centos-7-epmt-build -t centos-7-epmt-build .
 	docker run -i --tty --rm --volume=$(PWD):$(PWD):z -w $(PWD) centos-7-epmt-build make distclean dist dist-test
 
 docker-test-dist: $(RELEASE) test-$(RELEASE)
-	docker build -f Dockerfiles/Dockerfile.centos-7-epmt-test -t centos-7-epmt-test --build-arg release=$(RELEASE) .
+	docker build -f Dockerfiles/Dockerfile.centos-7-epmt-test -t centos-7-epmt-test --build-arg release=$(VERSION) .
 	docker run --privileged --rm -it centos-7-epmt-test
 
 docker-dist-slurm:
@@ -57,7 +59,8 @@ clean:
 	find . -name "*~" -o -name "*.pyc" -exec rm -f {} \; 
 	rm -rf __pycache__
 distclean: clean
-	rm -f settings.py; ln -s preset_settings/settings_sqlite_inmem_sqlalchemy.py settings.py # Setup in mem sqlite
+	rm -f settings.py test-$(RELEASE) $(RELEASE)
+	rm -rf epmt-install epmt-install-tests build epmt.spec
 # 
 # Simple python version testing with no database
 #

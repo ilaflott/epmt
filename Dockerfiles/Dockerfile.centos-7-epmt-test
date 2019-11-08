@@ -6,11 +6,15 @@ RUN yum install -y make tcsh
 RUN yum clean all
 RUN rm -rf /var/cache/yum
 
-ARG release=epmt-2.0.0.tgz
-ADD ${release} /opt/epmt/
-ADD test-${release} .
+ARG release=2.0.0
+ARG settings=settings_sqlite_inmem_sqlalchemy.py
+ARG destdir=/opt/epmt
+
+ADD epmt-${release}.tgz ${destdir}
+ADD test-epmt-${release}.tgz .
+COPY preset_settings/${settings} ${destdir}/epmt-install/epmt/settings.py
 WORKDIR /home/epmt-install-tests
-ENV PATH="/opt/epmt/epmt-install/epmt:${PATH}"
+ENV PATH="${destdir}/epmt-install/epmt:${PATH}"
 
 # Allow perf events
 # RUN echo -e "#!/bin/bash\nmount -o remount rw /proc\nsysctl -w kernel.perf_event_paranoid=0\n\$\*" > /tmp/init.sh
