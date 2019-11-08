@@ -32,7 +32,7 @@ $(RELEASE) test-$(RELEASE) docker-dist:
 
 docker-test-dist: $(RELEASE) test-$(RELEASE)
 	docker build -f Dockerfiles/Dockerfile.centos-7-epmt-test -t centos-7-epmt-test --build-arg release=$(VERSION) .
-	docker run --privileged --rm -it centos-7-epmt-test
+	docker run --rm -it centos-7-epmt-test
 
 docker-dist-slurm:
 	docker build -f Dockerfiles/Dockerfile.slurm-centos-7 -t centos7-epmt-papiex-slurm-test --build-arg release=$(VERSION) .
@@ -56,7 +56,7 @@ docker-test-dist-slurm: docker-dist-slurm
 	docker stop centos7-slurm
 
 clean:
-	find . -name "*~" -o -name "*.pyc" -exec rm -f {} \; 
+	find . -name "*~" -o -name "*.pyc" -o -name core -exec rm -f {} \; 
 	rm -rf __pycache__
 distclean: clean
 	rm -f settings.py test-$(RELEASE) $(RELEASE)
