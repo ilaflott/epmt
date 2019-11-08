@@ -1,8 +1,16 @@
 # load defaults
 from epmt_default_settings import *
+from logging import getLogger, basicConfig, ERROR
+from sys import exit
 
 # now load the user-specific settings.py so they override the defaults
 try:
     from settings import *
-except ModuleNotFoundError:
-    raise ModuleNotFoundError("Could not find settings.py: Please copy a suitable file from preset_settings/* as ./settings.py")
+except Exception as e:
+    basicConfig(level=ERROR)
+    logger = getLogger(__name__)
+    if e.__class__ == ModuleNotFoundError:
+        logger.error(str(e)+":install one from preset_settings?")
+    else:
+        logger.error(str(e))
+    exit(1)
