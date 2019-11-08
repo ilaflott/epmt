@@ -132,8 +132,10 @@ def run_shell_cmd(*cmd):
 
 def cmd_exists(cmd):
     if not cmd: return False
-    rc = run_shell_cmd('which', cmd)
-    return (rc == 0)
+    # rc = run_shell_cmd('which', cmd)
+    # return (rc == 0)
+    from shutil import which
+    return which(cmd) is not None
 
 def safe_rm(f):
     if not(f): return False

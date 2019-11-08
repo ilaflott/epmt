@@ -101,7 +101,7 @@ def PrintWarning():
 
 def verify_install_prefix():
     str = settings.install_prefix
-    print("settings.install_prefix =",str)
+    print("settings.install_prefix =",str, end='')
     retval = True
 # Check for bad stuff and shortcut
     if "*" in str or "?" in str:
@@ -125,7 +125,7 @@ def verify_install_prefix():
     
 def verify_epmt_output_prefix():
     str = settings.epmt_output_prefix
-    print("settings.epmt_output_prefix =",str)
+    print("settings.epmt_output_prefix =",str, end='')
     retval = True
 # Check for bad stuff and shortcut
     if "*" in str or "?" in str:
@@ -164,7 +164,7 @@ def verify_epmt_output_prefix():
 
 def verify_papiex_options():
     str = settings.papiex_options
-    print("settings.papiex_options =",str)
+    print("settings.papiex_options =",str, end='')
     retval = True
 # Check for any components
     cmd = settings.install_prefix+"bin/papi_component_avail 2>&1 "+"| sed -n -e '/Active/,$p' | grep perf_event >/dev/null 2>&1"
@@ -190,7 +190,7 @@ def verify_papiex_options():
     return retval
 
 def verify_db_params():
-    print("settings.db_params =",str(settings.db_params))
+    print("settings.db_params =",str(settings.db_params), end='')
     try:
         from orm import setup_db
         if setup_db(settings) == False:
@@ -210,7 +210,7 @@ def verify_perf():
     try:
         with open(f, 'r') as content_file:
             value = int(content_file.read())
-            print(" = ",value)
+            print(" = ",value, end='')
             if value > 1:
                 logger.error("bad %s value of %d, should be 1 or less to allow cpu events",f,value)
                 PrintFail()
@@ -224,7 +224,7 @@ def verify_perf():
     return False
 
 def verify_stage_command():
-    print("epmt stage functionality")
+    print("epmt stage functionality", end='')
     stage_cmd = settings.stage_command
     if not(cmd_exists(stage_cmd)):
         PrintFail()
@@ -254,7 +254,7 @@ def verify_stage_command():
     return True
 
 def verify_papiex():
-    print("epmt run functionality")
+    print("epmt run functionality", end='')
     logger.info("\tepmt run -a /bin/sleep 1, output to %s",dir)
     retval = epmt_run(["/bin/sleep","1"],wrapit=True)
     if retval != 0:
@@ -831,6 +831,7 @@ def epmt_entrypoint(args):
 
     if args.verbose == None:
         args.verbose = 0
+    logger = getLogger(__name__)  # you can use other name
     set_logging(args.verbose, check=False)
     init_settings(settings)
     if not args.verbose:
@@ -839,6 +840,11 @@ def epmt_entrypoint(args):
 
     # Here it's up to each command to validate what it is looking for
     # and error out appropriately
+
+    if args.command == 'check':
+        # fake a job id so that epmt_check doesn't fail because of a missing job id
+        environ['SLURM_JOB_ID'] = '1'
+        return(0 if epmt_check() else 1)
 
     # submit does the drop on its own, so here we handle
     if args.command == 'drop':
