@@ -37,8 +37,13 @@ docker-test-dist: $(RELEASE) test-$(RELEASE)
 docker-dist-slurm:
 	docker build -f Dockerfiles/Dockerfile.slurm-centos-7 -t centos7-epmt-papiex-slurm-test --build-arg release=$(VERSION) .
 
-docker-test-dist-slurm: docker-dist-slurm
+slurm-start: docker-dist-slurm
 	docker run --name centos7-slurm --privileged -dt --rm --volume=$(PWD):$(PWD):z -w $(PWD) -h ernie centos7-epmt-papiex-slurm-test tail -f /dev/null
+
+slurm-stop:
+	docker stop centos7-slurm
+
+docker-test-dist-slurm: slurm-start
 	docker exec centos7-slurm epmt check
 	docker exec centos7-slurm srun -n1 /opt/epmt/examples/epmt-example.sh
 	docker exec centos7-slurm srun -n1 /opt/epmt/examples/epmt-example.csh

@@ -10,6 +10,18 @@
       make -n docker-dist-slurm 
       make -n docker-test-dist-slurm
       
+  make slurm-start
+
+  Starts SLURM image in background named slurm
+
+  make slurm-stop
+
+  Stops the above SLURM image
+
+  docker exec centos7-slurm epmt submit ./sample/615503.tgz
+
+  Runs the command on the above SLURM image
+  
 ## SLURM Notes
 
 TaskProlog and TaskEpilog are not run:
