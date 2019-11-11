@@ -39,6 +39,10 @@ class EPMTSettings(unittest.TestCase):
         default_vars = vars(defaults)
         later_vars = vars(later_settings)
         settings_vars = vars(settings)
+        # Hack for the extra functions in the module. I'm confused yet I wrote this. -Pjm
+        for n in ['basicConfig','getLogger','exit','ERROR']:
+            del settings_vars[n]
+        
         # the settings module keys are a union of the defaults and the later settings
         self.assertEqual(set(default_vars) | set(later_vars), set(settings_vars))
         # the values of the later settings take precedence over defaults

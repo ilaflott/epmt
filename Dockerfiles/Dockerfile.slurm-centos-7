@@ -6,22 +6,22 @@ FROM giovtorres/docker-centos7-slurm:latest as slurm
 RUN yum install -y tcsh
 
 ARG release=2.0.0
-ADD papiex-epmt-${release}.tgz /opt/epmt/
-ADD epmt-${release}.tgz /opt/epmt/
-COPY SLURM/settings_slurm_test.py /opt/epmt/epmt-install/epmt/settings.py
-ADD epmt-example.sh epmt-example.csh /opt/epmt/examples/
-ENV PATH="/opt/epmt/epmt-install/epmt:${PATH}"
+ARG settings=settings_slurm_test.py
+ARG destdir=/opt/epmt
+
+ADD papiex-epmt-${release}.tgz ${destdir}
+ADD epmt-${release}.tgz ${destdir}
+COPY preset_settings/${settings} ${destdir}/epmt-install/epmt/settings.py
+ADD epmt-example.sh epmt-example.csh ${destdir}/examples/
+ENV PATH="${destdir}/epmt-install/epmt:${PATH}"
 ENV USER="root"
 
 RUN echo -e "#!/bin/bash\nmount -o remount rw /proc\nsysctl -w kernel.perf_event_paranoid=0\n" > /tmp/pep.sh
 RUN cat /usr/local/bin/docker-entrypoint.sh >> /tmp/pep.sh && mv /tmp/pep.sh /usr/local/bin/docker-entrypoint.sh && chmod 755 /usr/local/bin/docker-entrypoint.sh
 
-
-
 # SLURM integration
 # Should edit install path here in prolog/epilog
-#COPY SLURM/slurm_task_prolog_epmt.sh SLURM/slurm_task_epilog_epmt.sh /opt/epmt/slurm/
-#RUN echo "TaskProlog=/opt/epmt/slurm/slurm_task_prolog_epmt.sh" >> /etc/slurm/slurm.conf
-#RUN echo "TaskEpilog=/opt/epmt/slurm/slurm_task_epilog_epmt.sh" >> /etc/slurm/slurm.conf
+COPY SLURM/slurm_task_prolog_epmt.sh SLURM/slurm_task_epilog_epmt.sh ${destdir}/slurm/
+RUN sed -i 's;dDebug=3;dDebug=0;' /etc/slurm/slurm.conf
 
 

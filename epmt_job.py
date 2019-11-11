@@ -735,7 +735,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             logger.warning("Something went wrong in parsing CSV files")
             return False
     else:
-        logger.warning("Submitting job with no CSV data, tags %s",str(job_tags))
+        logger.warning("job %s, user %s, jobname %s has no CSV data",jobid,username,jobname)
 
     # save naive datetime objects in the database
     j.start = start_ts.replace(tzinfo=None)
