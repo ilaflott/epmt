@@ -18,6 +18,7 @@ if [[ -f $EPMT ]] && [[ -x $EPMT ]]; then
     if [[ ! -z "$SLURM_LOCALID" ]] && [[ $SLURM_LOCALID == "0" ]]; then
         $EPMT start
     fi
-    $EPMT source | sed 's/^/export /' | egrep "PAPIEX_OUTPUT=|PAPIEX_OPTIONS=|LD_PRELOAD=" | tr -d ';' 
+    $EPMT source --slurm
+    # | sed 's/^/export /' | egrep "PAPIEX_OUTPUT=|PAPIEX_OPTIONS=|LD_PRELOAD=" | tr -d ';' 
 fi
 

@@ -55,6 +55,7 @@ if (__name__ == "__main__"):
         description="Source provides commands to begin epmt performance monitoring or instrumentation. \
             Instrumentation is automatically called when eval on source is done. Two functions are created \
                 for starting of instrumentation epmt_instrument and stopping of instrumentation epmt_uninstrument")
+    source_parser.add_argument('-s','--slurm', action='store_true',help="Generate shell code for a SLURM prolog, https://slurm.schedmd.com/prolog_epilog.html")
     source_parser._action_groups.pop()
     # Start
     start_parser = subparser.add_parser('start', help="Begin EPMT logging",

@@ -449,7 +449,7 @@ def epmt_dump_metadata(filelist):
             print("%-24s%-56s" % (d,str(metadata[d])))
     return True
 
-def epmt_source(papiex_debug=False, monitor_debug=False, run_cmd=False):
+def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run_cmd=False):
     """
 
     epmt_source - produces shell variables that enable transparent instrumentation
@@ -474,8 +474,14 @@ def epmt_source(papiex_debug=False, monitor_debug=False, run_cmd=False):
     equals="="
     cmd_sep=";\n"
     cmd=""
+    undercsh=False
+    
+    if slurm_prolog:
+        sh_set_var="export "
+        cmd_sep="\n"
+    else:
+        undercsh=detect_csh()        
 
-    undercsh=detect_csh()
     if run_cmd: 
         undercsh = False # All commands under run are started under Bash in Python
         cmd_sep=" "
@@ -489,10 +495,6 @@ def epmt_source(papiex_debug=False, monitor_debug=False, run_cmd=False):
         cmd += cmd_sep
         return cmd
 
-        if not global_datadir:
-            logger.error("Could not identify your job id")
-            return 1
-
     cmd = ""
     if monitor_debug: cmd = add_var(cmd,"MONITOR_DEBUG"+equals+"TRUE")
     if papiex_debug: cmd = add_var(cmd,"PAPIEX_DEBUG"+equals+"TRUE")
@@ -505,7 +507,6 @@ def epmt_source(papiex_debug=False, monitor_debug=False, run_cmd=False):
                   settings.install_prefix+"lib/libpapi.so:"+
                   settings.install_prefix+"lib/libpfm.so:"+
                   settings.install_prefix+"lib/libmonitor.so"+((":"+oldp) if oldp else ""))
-
 #
 # Use export -n which keeps the variable but prevents it from being exported
 #
@@ -521,15 +522,15 @@ def epmt_source(papiex_debug=False, monitor_debug=False, run_cmd=False):
         else:
             cmd += "';\nsetenv LD_PRELOAD=$OLD_LD_PRELOAD;"
         # CSH won't let an alias used in eval be used in the same eval, so we repeat this
-        cmd +="\n"+tmp
-    elif not run_cmd:
+        cmd +="\n"+tmp+"\n"
+    elif not run_cmd and not slurm_prolog:
         cmd += "epmt_instrument ()\n{\nexport MONITOR_DEBUG PAPIEX_OUTPUT PAPIEX_DEBUG PAPIEX_OPTIONS LD_PRELOAD;\n};\n"
         cmd += "epmt_uninstrument ()\n{\nexport -n MONITOR_DEBUG PAPIEX_OUTPUT PAPIEX_DEBUG PAPIEX_OPTIONS"
         if not oldp:
             cmd += " LD_PRELOAD;\n"
         else:
             cmd += "\nexport LD_PRELOAD=$OLD_LD_PRELOAD;\n"
-        cmd +="};\nepmt_instrument;"
+        cmd +="};\nepmt_instrument;\n"
 
     return cmd
 
@@ -867,10 +868,10 @@ def epmt_entrypoint(args):
     if args.command == 'run':
         return(epmt_run(args.epmt_cmd_args,wrapit=args.auto,dry_run=args.dry_run,debug=(args.verbose > 2)))
     if args.command == 'source':
-        s = epmt_source(papiex_debug=(args.verbose > 2),monitor_debug=(args.verbose > 3))
+        s = epmt_source(slurm_prolog=args.slurm,papiex_debug=(args.verbose > 2),monitor_debug=(args.verbose > 3))
         if not s:
             return(1)
-        print(s)
+        print(s,end="")
         return(0)
     if args.command == 'dump':
         return(epmt_dump_metadata(args.epmt_cmd_args) == False)
