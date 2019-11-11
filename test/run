@@ -72,6 +72,7 @@ if [ $no_compose -eq 0 ]; then
     #docker run --rm  --name pg-docker -e POSTGRES_DB=EPMT -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -d -p 5432:5432  postgres:9.5
 fi
 
+start_ts=$(date +%s)
 for settings_file in preset_settings/{settings_sqlite_inmem_sqlalchemy.py,settings_sqlite_inmem_pony.py,$pg_sqla_settings_file,$pg_pony_settings_file}; do
     echo "------------------------"
     echo "using settings_file"
@@ -87,4 +88,8 @@ for settings_file in preset_settings/{settings_sqlite_inmem_sqlalchemy.py,settin
         *pg*) cleandb;;
     esac
 done
-echo;echo "All tests successfully PASSED"
+fini_ts=$(date +%s)
+duration=$((fini_ts-start_ts))
+echo
+echo "Test suite took $duration seconds"
+echo "All tests successfully PASSED"
