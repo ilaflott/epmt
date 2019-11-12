@@ -558,3 +558,25 @@ def check_fix_metadata(raw_metadata):
     # mark the metadata as checked so we don't check it again unnecessarily
     metadata['checked'] = True
     return metadata
+
+def check_pid(pid):
+    """Check whether pid exists"""
+    if pid < 0:
+        return (False, 'Invalid PID: {0}'.format(pid))
+    from os import kill
+    try:
+        kill(pid, 0)
+    except OSError as err:
+        from errno import ESRCH, EPERM
+        if err.errno == ESRCH:
+            # ESRCH == No such process
+            return (False, 'No such process (PID: {0})'.format(pid))
+        elif err.errno == EPERM:
+            # EPERM clearly means there's a process but we cannot
+            # send a signal to it
+            return (True, 'Not authorized to send signals to it (EPERM)')
+        else:
+            # According to "man 2 kill" possible error values are
+            # (EINVAL, EPERM, ESRCH)
+            return (True, str(err.errno))
+    return (True,'')
