@@ -4,7 +4,9 @@ from getpass import getuser
 
 logger = getLogger(__name__)  # you can use other name
 
-def start_daemon(lockfile = '/tmp/epmt.pid.' + getuser()):
+PID_FILE = '/tmp/epmt.pid.' + getuser()
+
+def start_daemon(lockfile = PID_FILE):
     from os import path
     if (path.exists(lockfile)):
         logger.warning('Lock file exists. Perhaps a daemon is already running. If not, please remove the lock file ({0}) and try again'.format(lockfile))
@@ -16,7 +18,7 @@ def start_daemon(lockfile = '/tmp/epmt.pid.' + getuser()):
         daemon_loop()
     return 0
 
-def _get_daemon_pid(pidfile = '/tmp/epmt.pid.' + getuser()):
+def _get_daemon_pid(pidfile = PID_FILE):
     try:
         with open(pidfile, 'r') as f:
             pid = f.read().strip()
@@ -27,10 +29,17 @@ def _get_daemon_pid(pidfile = '/tmp/epmt.pid.' + getuser()):
         logger.warning(str(e))
         return -2
     return (int(pid))
+
+def is_daemon_running(pidfile = PID_FILE):
+    pid = _get_daemon_pid(pidfile)
+    if pid < 0:
+        return False
+    from epmtlib import check_pid
+    return check_pid(pid)[0]
     
 
 
-def stop_daemon(pidfile = '/tmp/epmt.pid.' + getuser()):
+def stop_daemon(pidfile = PID_FILE):
     pid = _get_daemon_pid(pidfile)
     if pid < 0:
         logger.warning('No lock file found. Is the daemon even running?')
@@ -60,17 +69,18 @@ def stop_daemon(pidfile = '/tmp/epmt.pid.' + getuser()):
         pass
     return 0
 
-def print_daemon_status(pidfile = '/tmp/epmt.pid.' + getuser()):
+def print_daemon_status(pidfile = PID_FILE):
     pid = _get_daemon_pid(pidfile)
     if pid < 0:
-        print('EPMT daemon is not running')
+        print('EPMT daemon is not running.')
         return 0
     else:
         logger.debug('Found lock file (PID: {0})'.format(pid))
     from epmtlib import check_pid
     rc = check_pid(pid)
-    print('EPMT daemon running OK (pid: {0})'.format(pid) if rc[0] else 'EPMT daemon not running. You should probably remove the stale lock file ({0}).'.format(pidfile))
+    print('EPMT daemon running OK (pid: {0})'.format(pid) if rc[0] else 'EPMT daemon is not running. You should probably remove the stale lock file ({0}).'.format(pidfile))
     return 0
 
 def daemon_loop():
-    while True: pass
+    from time import sleep
+    while True: sleep(1)
