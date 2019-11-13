@@ -151,6 +151,10 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
         logger.debug('using a trained model for detecting outliers')
         if type(trained_model) == int:
             trained_model = orm_get(ReferenceModel, trained_model)
+    else:
+        if len(jobs) < 4:
+            logger.warning('Too few jobs to do outlier detection. Need at least 4!')
+            return (None, None)
 
     for m in methods:
         model_params[m] = trained_model.computed[m.__name__] if trained_model else {}
