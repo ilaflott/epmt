@@ -1228,6 +1228,19 @@ def get_job_annotations(jobid):
 def remove_job_annotations(jobid):
     return annotate_job(jobid, {}, True)
 
+
+@db_session
+def analyze_jobs(jobids, check_comparable = True):
+    if check_comparable:
+        _warn_incomparable_jobs(jobids)
+    logger.debug('analyzing jobs: {0}'.format(jobids))
+    # do analyses
+    # ...
+    #
+    # finally mark the jobs as analyzed
+    for j in jobids:
+        set_job_analyses(j, {'analyzed': 1})
+
 @db_session
 def set_job_analyses(jobid, analyses, replace=False):
     '''
@@ -1341,6 +1354,7 @@ def _warn_incomparable_jobs(jobs):
     if not are_jobs_comparable(jobs):
         msg = 'The jobs do not share identical tag values for "exp_name" and "exp_component"'
         from sys import stderr
+        logger.warning(msg)
         print('WARNING:', msg, file=stderr)
         for j in jobs:
             print('   ',j.jobid, j.tags.get('exp_name'), j.tags.get('exp_component'), file=stderr)

@@ -82,5 +82,33 @@ def print_daemon_status(pidfile = PID_FILE):
     return 0
 
 def daemon_loop():
-    from time import sleep
-    while True: sleep(1)
+    from time import sleep, time
+    from epmt_query import get_unprocessed_jobs, get_unanalyzed_jobs, comparable_job_partitions, analyze_jobs
+    from epmt_job import post_process_outstanding_jobs
+    while True:
+        delay = 10 # in seconds
+        _t1 = time()
+        # unprocessed jobs (these are jobs on whom post-processing
+        # pipeline hasn't run; these are different from jobs on whom
+        # the analysis pipeline hasn't run)
+        # The post-processing pipeline computes the process tree
+        post_process_outstanding_jobs()
+        ua_jobs = get_unanalyzed_jobs()
+        if ua_jobs:
+            logger.debug('{0} unanalyzed jobs: {1}'.format(len(ua_jobs), ua_jobs))
+            # partition the jobs into sets of comparable jobs based on their tags
+            comp_job_parts = comparable_job_partitions(ua_jobs)
+            logger.debug('{0} sets of comparable jobs: {1}'.format(len(comp_job_parts), comp_job_parts))
+            # iterate over the comparable jobs' sets
+            for j_part in comp_job_parts:
+                (_, jobids) = j_part
+                # we set check_comparable as False since we already know
+                # that the jobs are comparable -- don't waste time!
+                analyze_jobs(jobids, check_comparable = False)
+        _loop_time = (time() - _t1)
+        delay = delay - _loop_time
+        if delay > 0:
+            logger.debug('sleeping for {0} sec'.format(delay))
+            sleep(delay)
+        else:
+            logger.warning("daemon loop took {0} seconds. No sleep for me!".format(_loop_time))
