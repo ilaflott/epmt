@@ -15,6 +15,7 @@ db_params = { 'url': 'sqlite:///db.sqlite3' }
 # verbose = 1
 # input_pattern = "*-papiex-*-[0-9]*.csv"
 # install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-oss-install/"
+# logfile = 'epmt.log'
 #
 # blacklist for environment filter (in addition to all keys with
 # leading underscores)

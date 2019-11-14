@@ -33,6 +33,7 @@ def get_username():
 # if check is set, then we will bail if logging has already been initialized
 def set_logging(intlvl = 0, check = False):
     import logging
+    import epmt_settings as settings
 
     if check and hasattr(set_logging, 'initialized'): return
     set_logging.initialized = True
@@ -54,7 +55,7 @@ def set_logging(intlvl = 0, check = False):
     rootLogger.setLevel(level)
     # basicConfig(filename='epmt.log', filemode='a', level=level)
     logFormatter = logging.Formatter("[%(asctime)-19.19s, %(process)6d] %(levelname)-7.7s %(name)s:%(message)s")
-    fileHandler = logging.FileHandler("epmt.log")
+    fileHandler = logging.FileHandler(settings.logfile)
     fileHandler.setFormatter(logFormatter)
     rootLogger.addHandler(fileHandler)
 
@@ -96,6 +97,9 @@ def init_settings(settings):
     if not hasattr(settings, 'verbose'):
         logger.warning("missing settings.verbose")
         settings.verbose = 1
+    if not hasattr(settings, 'logfile'):
+        logger.warning("missing settings.logfile")
+        settings.verbose = 'epmt.log'
     if not hasattr(settings, 'stage_command'):
         logger.warning("missing settings.stage_command ")
         settings.stage_command = "cp"
