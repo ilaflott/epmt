@@ -847,9 +847,9 @@ def epmt_entrypoint(args):
         environ['SLURM_JOB_ID'] = '1'
         return(0 if epmt_check() else 1)
     if args.command == 'daemon':
-        from epmt_daemon import start_daemon, stop_daemon, print_daemon_status
-        if args.start:
-            return start_daemon()
+        from epmt_daemon import start_daemon, stop_daemon, daemon_loop, print_daemon_status
+        if args.start or args.foreground:
+            return daemon_loop() if args.foreground else start_daemon()
         elif args.stop:
             return stop_daemon()
         else:

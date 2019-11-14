@@ -126,6 +126,7 @@ def daemon_loop():
     from time import sleep, time
     from epmt_query import get_unprocessed_jobs, get_unanalyzed_jobs, comparable_job_partitions, analyze_jobs
     from epmt_job import post_process_outstanding_jobs
+    logger.debug('starting daemon loop..')
     while True:
         if (sig_count > 0):
             logger.warning('Terminating EPMT daemon gracefully..')
