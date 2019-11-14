@@ -19,6 +19,25 @@ def setUpModule():
 #def tearDownModule():
 
 class EPMTCmds(unittest.TestCase):
+    def test_daemon(self):
+        from epmt_daemon import is_daemon_running, start_daemon, \
+             print_daemon_status, stop_daemon
+        # from warnings import simplefilter
+        # simplefilter("ignore", ResourceWarning)
+        self.assertFalse(is_daemon_running())
+        # rc = start_daemon()
+        # self.assertEqual(rc, 0)
+        # self.assertTrue(is_daemon_running())
+        # with capture() as (out,err):
+        #     print_daemon_status()
+        # self.assertIn('EPMT daemon running OK', out)
+        # rc = stop_daemon()
+        # self.assertEqual(rc, 0)
+        # self.assertFalse(is_daemon_running())
+        # with capture() as (out,err):
+        #     print_daemon_status()
+        # self.assertEqual('EPMT daemon is not running.', out)
+        
     def test_list_jobs(self):
         with capture() as (out,err):
             retval = epmt_list_jobs([])

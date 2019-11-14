@@ -1228,6 +1228,60 @@ def get_job_annotations(jobid):
 def remove_job_annotations(jobid):
     return annotate_job(jobid, {}, True)
 
+
+@db_session
+def analyze_jobs(jobids, check_comparable = True, keys = ('exp_name', 'exp_component')):
+    """
+    Analyzes one or more jobs. The jobs must be comparable; a warning
+    will be issued if they aren't (unless check_comparable is disabled).
+
+    jobids: List of job ids
+
+    keys: is a tuple of job tag keys that will be used to query for
+    trained models. If trained model(s) are found then outlier detection
+    is run on the jobs against the trained model(s).
+
+    It's possible no trained model is found, then we will do an outlier
+    detection on the job set (partition_jobs) assuming that's possible.
+    """
+    from epmt_outliers import detect_outlier_jobs
+    if check_comparable:
+        _warn_incomparable_jobs(jobids)
+    logger.debug('analyzing jobs: {0}'.format(jobids))
+    model_tag = {}
+    for k in keys:
+        model_tag[k] = Job[jobids[0]].tags[k]
+        # make sure all the jobids have the same value for the tag key
+        if check_comparable:
+            for j in jobids:
+                assert(jobids[j].tags[k] == model_tag[k])
+    logger.debug('Searching for trained models with tag: {0}'.format(model_tag))
+    trained_models = get_refmodels(tag = model_tag)
+    outlier_results = []
+    if trained_models:
+        logger.debug('found {0} trained models for job set'.format(len(trained_models)))
+        for r in trained_models:
+            model_id = r['id']
+            outlier_detect_results = detect_outlier_jobs(jobids, trained_model = model_id)
+            outlier_results.append({'model_id': model_id, 'results': outlier_detect_results})
+    else:
+        # no trained model found. 
+        # Can we run a detect_outlier_jobs on the exisiting job set?
+        if len(jobids) < 4:
+            logger.warning('{0} -- No trained model found, and too few jobs for outlier detection (need at least 4)'.format(jobids))
+        else:
+            outlier_detect_results = detect_outlier_jobs(jobids)
+            outlier_results.append({'model_id': None, 'results': outlier_detect_results})
+    analyses = { 'outlier_detection': outlier_results }
+
+    # finally mark the jobs as analyzed
+    for j in jobids:
+        set_job_analyses(j, analyses)
+    msg = 'analyzed {0}: '.format(jobids)
+    for k in analyses:
+        msg += '{0} runs of {1}; '.format(len(analyses[k]), k)
+    logger.info(msg)
+
 @db_session
 def set_job_analyses(jobid, analyses, replace=False):
     '''
@@ -1255,12 +1309,12 @@ def get_job_analyses(jobid):
     j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
     return j.analyses
 
-def get_unanalyzed_jobs(jobs = [], fmt='terse'):
+def get_unanalyzed_jobs(jobs = [], analyses_filter = {}, fmt='terse'):
     '''
     Returns the subset of jobs that have not had any analysis pipeline
     run on them.
     '''
-    return get_jobs(jobs, analyses = {}, fmt=fmt)
+    return get_jobs(jobs, analyses = analyses_filter, fmt=fmt)
 
 
 def remove_job_analyses(jobid):
@@ -1341,6 +1395,7 @@ def _warn_incomparable_jobs(jobs):
     if not are_jobs_comparable(jobs):
         msg = 'The jobs do not share identical tag values for "exp_name" and "exp_component"'
         from sys import stderr
+        logger.warning(msg)
         print('WARNING:', msg, file=stderr)
         for j in jobs:
             print('   ',j.jobid, j.tags.get('exp_name'), j.tags.get('exp_component'), file=stderr)

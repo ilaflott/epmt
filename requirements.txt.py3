@@ -1,15 +1,17 @@
-# Tested with python 3.7.4
 alembic==1.1.0
 cffi==1.12.3
+docutils==0.15.2
 frozendict==1.2
+lockfile==0.12.2
 Mako==1.1.0
 MarkupSafe==1.1.1
-numpy==1.17.2
 numexpr==2.6.9
+numpy==1.17.2
 pandas==0.25.1
 pony==0.7.10
 psycopg2-binary==2.7.5
 pycparser==2.19
+python-daemon==2.2.4
 python-dateutil==2.8.0
 python-editor==1.0.4
 pytz==2019.2
