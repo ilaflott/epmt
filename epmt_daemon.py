@@ -6,15 +6,57 @@ logger = getLogger(__name__)  # you can use other name
 
 PID_FILE = '/tmp/epmt.pid.' + getuser()
 
+# we use this global so we can force exit if
+# more than one signal is received. Otherwise,
+# in each iteration of the daemon we will check if
+# we received a signal earlier and stop gracefully.
+# A global is unfortunately necessary as this variable
+# is shared between the signal handler and the daemon loop
+sig_count = 0
+
+
+
 def start_daemon(lockfile = PID_FILE):
+    import logging
+    logger = getLogger(__name__)  # you can use other name
     from os import path
     if (path.exists(lockfile)):
         logger.warning('Lock file exists. Perhaps a daemon is already running. If not, please remove the lock file ({0}) and try again'.format(lockfile))
         return(-1)
+
+    # set up signal handlers
+    # from signal import SIGHUP, SIGTERM, SIGQUIT, SIGINT, SIGUSR1, signal
+    # for sig in [SIGHUP, SIGTERM, SIGQUIT, SIGINT, SIGUSR1]:
+    #     signal(sig, signal_handler)
+    # logger.debug('Finished setting up signal handlers')
+
     from daemon import DaemonContext, pidfile
+    context = DaemonContext()
+    context.pidfile =  pidfile.PIDLockFile(lockfile)
+    context.signal_map = {}
+    # daemon_args = { 'pidfile': pidfile.PIDLockFile(lockfile), 'signal_map': {} }
+    # set up signal handlers
+    from signal import SIGHUP, SIGTERM, SIGQUIT, SIGINT, SIGUSR1
+    for sig in [SIGHUP, SIGTERM, SIGQUIT, SIGINT, SIGUSR1]:
+        context.signal_map[sig] = signal_handler
+
+    # ensure logging uses the same file-descriptors and they are preserved
+    # across the fork
+    logger_files = []
+    try:
+        for handler in logging.root.handlers:
+            fileno = handler.stream.fileno()
+            logger_files.append(fileno)
+        if logger_files:
+            # daemon_args['files_preserve'] = logger_files
+            context.files_preserve = logger_files
+    except:
+        logger.warning('could not get file descriptor for logging in daemon')
+
     # start daemon
-    logger.info('Starting EPMT daemon (lockfile: {0})..'.format(lockfile))
-    with DaemonContext(pidfile=pidfile.PIDLockFile(lockfile)):
+    logger.info('Starting the EPMT daemon (lock file: {0})..'.format(lockfile))
+    print('Starting the EPMT daemon..')
+    with context:
         daemon_loop()
     return 0
 
@@ -47,10 +89,10 @@ def stop_daemon(pidfile = PID_FILE):
     from epmtlib import check_pid
     if check_pid(pid)[0]:
         from os import kill
-        from signal import SIGINT
-        logger.warning('Sending SIGINT to EPMT daemon with PID({0})'.format(pid))
+        from signal import SIGUSR1
+        logger.warning('Sending signal to EPMT daemon with PID({0})'.format(pid))
         try:
-            kill(pid, SIGINT)
+            kill(pid, SIGUSR1)
         except Exception as e:
             logger.warning('Error killing process (PID {0}): {1}'.format(pid, str(e)))
             return -1
@@ -72,13 +114,11 @@ def stop_daemon(pidfile = PID_FILE):
 def print_daemon_status(pidfile = PID_FILE):
     pid = _get_daemon_pid(pidfile)
     if pid < 0:
-        print('EPMT daemon is not running.')
+        print('EPMT daemon is not running. Start it with "epmt daemon --start"')
         return 0
-    else:
-        logger.debug('Found lock file (PID: {0})'.format(pid))
     from epmtlib import check_pid
     rc = check_pid(pid)
-    print('EPMT daemon running OK (pid: {0})'.format(pid) if rc[0] else 'EPMT daemon is not running. You should probably remove the stale lock file ({0}).'.format(pidfile))
+    print('EPMT daemon running OK (pid: {0}). Stop it with "epmt daemon --stop"'.format(pid) if rc[0] else 'EPMT daemon is not running. You should probably remove the stale lock file ({0}).'.format(pidfile))
     return 0
 
 def daemon_loop():
@@ -86,6 +126,10 @@ def daemon_loop():
     from epmt_query import get_unprocessed_jobs, get_unanalyzed_jobs, comparable_job_partitions, analyze_jobs
     from epmt_job import post_process_outstanding_jobs
     while True:
+        if (sig_count > 0):
+            logger.warning('Terminating EPMT daemon gracefully..')
+            from sys import exit
+            exit(0)
         delay = 10 # in seconds
         _t1 = time()
         # unprocessed jobs (these are jobs on whom post-processing
@@ -112,3 +156,15 @@ def daemon_loop():
             sleep(delay)
         else:
             logger.warning("daemon loop took {0} seconds. No sleep for me!".format(_loop_time))
+
+def signal_handler(signum, frame):
+    if sig_count > 0:
+        # logger.warning('Received multiple signals to terminate. Terminating now!')
+        from sys import exit
+        exit(signum)
+    else:
+        # let the daemon loop know that we should exit gracefully at the
+        # very next opportunity
+        # logger.warning('Received signal; will terminate shortly..')
+        sig_count = 1
+    return None

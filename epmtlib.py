@@ -32,6 +32,8 @@ def get_username():
 
 # if check is set, then we will bail if logging has already been initialized
 def set_logging(intlvl = 0, check = False):
+    import logging
+
     if check and hasattr(set_logging, 'initialized'): return
     set_logging.initialized = True
     if intlvl == None:
@@ -47,10 +49,21 @@ def set_logging(intlvl = 0, check = False):
         level = INFO
     elif intlvl >= 2:
         level = DEBUG
-    basicConfig(level=level)
-    logger = getLogger()
-    logger.setLevel(level)
-    for handler in logger.handlers:
+
+    rootLogger = getLogger()
+    rootLogger.setLevel(level)
+    # basicConfig(filename='epmt.log', filemode='a', level=level)
+    logFormatter = logging.Formatter("[%(asctime)-19.19s, %(process)6d] %(levelname)-7.7s %(name)s:%(message)s")
+    fileHandler = logging.FileHandler("epmt.log")
+    fileHandler.setFormatter(logFormatter)
+    rootLogger.addHandler(fileHandler)
+
+    consoleHandler = logging.StreamHandler()
+    consoleFormatter = logging.Formatter("%(levelname)s:%(name)s:%(message)s")
+    consoleHandler.setFormatter(consoleFormatter)
+    rootLogger.addHandler(consoleHandler)
+
+    for handler in rootLogger.handlers:
         handler.setLevel(level)
 
 def init_settings(settings):

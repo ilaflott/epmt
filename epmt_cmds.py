@@ -847,8 +847,12 @@ def epmt_entrypoint(args):
         return(0 if epmt_check() else 1)
     if args.command == 'daemon':
         from epmt_daemon import start_daemon, stop_daemon, print_daemon_status
-        if args.print_daemon_status: return print_daemon_status()
-        return stop_daemon() if args.kill_daemon else start_daemon()
+        if args.start:
+            return start_daemon()
+        elif args.stop:
+            return stop_daemon()
+        else:
+            return print_daemon_status()
     # submit does the drop on its own, so here we handle
     if args.command == 'drop':
         if (not(args.force)):

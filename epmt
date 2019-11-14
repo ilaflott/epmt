@@ -85,10 +85,10 @@ if (__name__ == "__main__"):
     stop_parser.set_defaults(epmt_cmd_args=None)
     # Daemon
     daemon_parser = subparser.add_parser('daemon', help="Run the EPMT daemon",
-        description = "daemon runs an EPMT daemon in the background that will periodically check and process jobs")
-    daemon_parser.add_argument('-p', '--print-daemon-status',action='store_true',help="Print daemon status and exit")
-    daemon_parser.add_argument('-k', '--kill-daemon',action='store_true',help="Stop EPMT daemon")
-    daemon_parser.set_defaults(kill_daemon=False, print_daemon_status=False)
+        description = "daemon runs an EPMT daemon that will periodically check and process jobs")
+    daemon_parser.add_argument('-s', '--start',action='store_true',help="Start the EPMT daemon")
+    daemon_parser.add_argument('-S', '--stop',action='store_true',help="Stop the EPMT daemon")
+    daemon_parser.set_defaults(start_daemon=False, stop_daemon=False)
     # drop
     drop_parser = subparser.add_parser('drop', help="Drop the entire database. Caution!! This action is irreversible.")
     drop_parser.add_argument('-f', '--force', action='store_true',help="Do not prompt to confirm")
