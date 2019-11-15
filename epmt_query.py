@@ -1228,12 +1228,41 @@ def get_job_annotations(jobid):
 def remove_job_annotations(jobid):
     return annotate_job(jobid, {}, True)
 
+def analyze_outstanding_jobs(jobs = [], analyses_filter = {}):
+    """
+    Analyze all outstanding jobs. The jobs may or may not be
+    comparable. 
+    
+    jobs: Restrict applying the analyses to a subset specified by jobs.
+          In the most common usage, you will leave jobs unset.
+
+    analyses_filter: This tag defines what constitutes an unanalyzed job
+
+    Returns: The total number of analyses algorithms executed
+    """
+    ua_jobs = get_unanalyzed_jobs(jobs = jobs, analyses_filter = analyses_filter)
+    num_analyses_run = 0
+    if ua_jobs:
+        logger.debug('{0} unanalyzed jobs: {1}'.format(len(ua_jobs), ua_jobs))
+        # partition the jobs into sets of comparable jobs based on their tags
+        comp_job_parts = comparable_job_partitions(ua_jobs)
+        logger.debug('{0} sets of comparable jobs: {1}'.format(len(comp_job_parts), comp_job_parts))
+        # iterate over the comparable jobs' sets
+        for j_part in comp_job_parts:
+            (_, jobids) = j_part
+            # we set check_comparable as False since we already know
+            # that the jobs are comparable -- don't waste time!
+            num_analyses_run += analyze_comparable_jobs(jobids, check_comparable = False)
+    return num_analyses_run
+
+
 
 @db_session
-def analyze_jobs(jobids, check_comparable = True, keys = ('exp_name', 'exp_component')):
+def analyze_comparable_jobs(jobids, check_comparable = True, keys = ('exp_name', 'exp_component')):
     """
     Analyzes one or more jobs. The jobs must be comparable; a warning
     will be issued if they aren't (unless check_comparable is disabled).
+    You may want to use the higher-level function -- analyze_outstanding_jobs -- instead.
 
     jobids: List of job ids
 
@@ -1243,6 +1272,10 @@ def analyze_jobs(jobids, check_comparable = True, keys = ('exp_name', 'exp_compo
 
     It's possible no trained model is found, then we will do an outlier
     detection on the job set (partition_jobs) assuming that's possible.
+
+    Returns: Number of analyses algorithms executed. This may be zero
+             if number of comparable jobs are too few and there are
+             no trained models.
     """
     from epmt_outliers import detect_outlier_jobs
     if check_comparable:
@@ -1273,6 +1306,7 @@ def analyze_jobs(jobids, check_comparable = True, keys = ('exp_name', 'exp_compo
             outlier_detect_results = detect_outlier_jobs(jobids)
             outlier_results.append({'model_id': None, 'results': outlier_detect_results})
     analyses = { 'outlier_detection': outlier_results }
+    num_analyses_runs = len(outlier_results)
 
     # finally mark the jobs as analyzed
     for j in jobids:
@@ -1281,6 +1315,7 @@ def analyze_jobs(jobids, check_comparable = True, keys = ('exp_name', 'exp_compo
     for k in analyses:
         msg += '{0} runs of {1}; '.format(len(analyses[k]), k)
     logger.info(msg)
+    return num_analyses_runs
 
 @db_session
 def set_job_analyses(jobid, analyses, replace=False):

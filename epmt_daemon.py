@@ -124,7 +124,7 @@ def print_daemon_status(pidfile = PID_FILE):
 
 def daemon_loop():
     from time import sleep, time
-    from epmt_query import get_unprocessed_jobs, get_unanalyzed_jobs, comparable_job_partitions, analyze_jobs
+    from epmt_query import analyze_outstanding_jobs
     from epmt_job import post_process_outstanding_jobs
     logger.debug('starting daemon loop..')
     while True:
@@ -138,19 +138,10 @@ def daemon_loop():
         # pipeline hasn't run; these are different from jobs on whom
         # the analysis pipeline hasn't run)
         # The post-processing pipeline computes the process tree
-        post_process_outstanding_jobs()
-        ua_jobs = get_unanalyzed_jobs()
-        if ua_jobs:
-            logger.debug('{0} unanalyzed jobs: {1}'.format(len(ua_jobs), ua_jobs))
-            # partition the jobs into sets of comparable jobs based on their tags
-            comp_job_parts = comparable_job_partitions(ua_jobs)
-            logger.debug('{0} sets of comparable jobs: {1}'.format(len(comp_job_parts), comp_job_parts))
-            # iterate over the comparable jobs' sets
-            for j_part in comp_job_parts:
-                (_, jobids) = j_part
-                # we set check_comparable as False since we already know
-                # that the jobs are comparable -- don't waste time!
-                analyze_jobs(jobids, check_comparable = False)
+        num_pp_run = len(post_process_outstanding_jobs())
+        # now run the analyses pipelines (outlier detection, etc)
+        num_analyses_run = analyze_outstanding_jobs()
+        logger.debug('{0} jobs post-processed; {0} analyses filters run'.format(num_pp_run, num_analyses_run))
         _loop_time = (time() - _t1)
         delay = delay - _loop_time
         if delay > 0:
