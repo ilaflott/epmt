@@ -401,9 +401,16 @@ class QueryAPI(unittest.TestCase):
         r = eq.set_job_analyses('685000', {'rca': 1}, True)
         self.assertEqual(r, {'rca': 1})
         self.assertEqual(eq.get_job_analyses('685000'), {'rca': 1})
+        # get back to pristine state
         r = eq.remove_job_analyses('685000')
         self.assertEqual(r, {})
         self.assertEqual(eq.get_job_analyses('685000'), {})
+        uj = eq.get_unanalyzed_jobs(['685000', '685003', '685016'])
+        self.assertEqual(set(uj), set(['685000', '685003', '685016']))
+        eq.analyze_outstanding_jobs(['685000', '685003', '685016'])
+        uj = eq.get_unanalyzed_jobs(['685000', '685003', '685016'])
+        self.assertEqual(set(uj), set([]))
+
 
 
     @db_session
