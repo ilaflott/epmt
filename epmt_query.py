@@ -1294,20 +1294,25 @@ def analyze_comparable_jobs(jobids, check_comparable = True, keys = ('exp_name',
     logger.debug('Searching for trained models with tag: {0}'.format(model_tag))
     trained_models = get_refmodels(tag = model_tag)
     outlier_results = []
+    # can we make the if/then more DNRY?
     if trained_models:
         logger.debug('found {0} trained models for job set'.format(len(trained_models)))
         for r in trained_models:
             model_id = r['id']
-            outlier_detect_results = detect_outlier_jobs(jobids, trained_model = model_id)[1]
-            outlier_results.append({'model_id': model_id, 'results': outlier_detect_results})
+            d = detect_outlier_jobs(jobids, trained_model = model_id)[1]
+            # make the results JSON serializable (sets aren't unfortunately)
+            outlier_detect_results = { k: (list(v[0]), list(v[1])) for k, v in d.items() }
+            outlier_results.append({'model_id': model_id, 'result_str': outlier_detect_results})
     else:
         # no trained model found. 
         # Can we run a detect_outlier_jobs on the exisiting job set?
         if len(jobids) < 4:
             logger.warning('{0} -- No trained model found, and too few jobs for outlier detection (need at least 4)'.format(jobids))
         else:
-            outlier_detect_results = detect_outlier_jobs(jobids)[1]
-            outlier_results.append({'model_id': None, 'results': outlier_detect_results})
+            d = detect_outlier_jobs(jobids)[1]
+            # make the results JSON serializable (sets aren't unfortunately)
+            outlier_detect_results = { k: (list(v[0]), list(v[1])) for k, v in d.items() }
+            outlier_results.append({'model_id': None, 'result_str': outlier_detect_results})
     analyses = { 'outlier_detection': outlier_results }
     num_analyses_runs = len(outlier_results)
 
