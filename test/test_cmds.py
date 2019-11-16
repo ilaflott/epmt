@@ -25,6 +25,7 @@ class EPMTCmds(unittest.TestCase):
         # That should clear the backlog of unprocessed and 
         # unanalyzed jobs
         from epmt_daemon import is_daemon_running, daemon_loop
+        from epmt_job import post_process_pending_jobs
         self.assertFalse(is_daemon_running())
         if settings.orm == 'sqlalchemy':
             # only sqlalchemy allows this option
