@@ -1283,11 +1283,14 @@ def analyze_comparable_jobs(jobids, check_comparable = True, keys = ('exp_name',
     logger.debug('analyzing jobs: {0}'.format(jobids))
     model_tag = {}
     for k in keys:
-        model_tag[k] = Job[jobids[0]].tags[k]
+        model_tag[k] = Job[jobids[0]].tags.get(k, '')
         # make sure all the jobids have the same value for the tag key
         if check_comparable:
             for j in jobids:
-                assert(jobids[j].tags[k] == model_tag[k])
+                v = jobids[j].tags.get(k, '')
+                if not k in jobids[j].tags:
+                    logger.warning('job {0} tags has no key -- {1}'.format(j, k))
+                assert(jobids[j].tags.get(k, '') == model_tag[k])
     logger.debug('Searching for trained models with tag: {0}'.format(model_tag))
     trained_models = get_refmodels(tag = model_tag)
     outlier_results = []
