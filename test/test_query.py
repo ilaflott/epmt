@@ -407,7 +407,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(eq.get_job_analyses('685000'), {})
         uj = eq.get_unanalyzed_jobs(['685000', '685003', '685016'])
         self.assertEqual(set(uj), set(['685000', '685003', '685016']))
-        eq.analyze_outstanding_jobs(['685000', '685003', '685016'])
+        eq.analyze_pending_jobs(['685000', '685003', '685016'])
         uj = eq.get_unanalyzed_jobs(['685000', '685003', '685016'])
         self.assertEqual(set(uj), set([]))
 

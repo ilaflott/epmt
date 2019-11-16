@@ -1228,9 +1228,9 @@ def get_job_annotations(jobid):
 def remove_job_annotations(jobid):
     return annotate_job(jobid, {}, True)
 
-def analyze_outstanding_jobs(jobs = [], analyses_filter = {}):
+def analyze_pending_jobs(jobs = [], analyses_filter = {}):
     """
-    Analyze all outstanding jobs. The jobs may or may not be
+    Analyze all pending jobs. The jobs may or may not be
     comparable. 
     
     jobs: Restrict applying the analyses to a subset specified by jobs.
@@ -1262,7 +1262,7 @@ def analyze_comparable_jobs(jobids, check_comparable = True, keys = ('exp_name',
     """
     Analyzes one or more jobs. The jobs must be comparable; a warning
     will be issued if they aren't (unless check_comparable is disabled).
-    You may want to use the higher-level function -- analyze_outstanding_jobs -- instead.
+    You may want to use the higher-level function -- analyze_pending_jobs -- instead.
 
     jobids: List of job ids
 

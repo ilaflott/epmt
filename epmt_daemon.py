@@ -122,12 +122,17 @@ def print_daemon_status(pidfile = PID_FILE):
     print('EPMT daemon running OK (pid: {0}). Stop it with "epmt daemon --stop"'.format(pid) if rc[0] else 'EPMT daemon is not running. You should probably remove the stale lock file ({0}).'.format(pidfile))
     return 0
 
-def daemon_loop():
+# if niters is set, then the daemon loop will end after 'niters' iterations
+# otherwise loop forever or until we get interrupted by a signal
+def daemon_loop(niters = 0):
     from time import sleep, time
-    from epmt_query import analyze_outstanding_jobs
-    from epmt_job import post_process_outstanding_jobs
+    from epmt_query import analyze_pending_jobs
+    from epmt_job import post_process_pending_jobs
     logger.debug('starting daemon loop..')
-    while True:
+    tot_pp_runs = 0
+    tot_ua_runs = 0
+    iters = 0
+    while (True):
         if (sig_count > 0):
             logger.warning('Terminating EPMT daemon gracefully..')
             from sys import exit
@@ -138,10 +143,16 @@ def daemon_loop():
         # pipeline hasn't run; these are different from jobs on whom
         # the analysis pipeline hasn't run)
         # The post-processing pipeline computes the process tree
-        num_pp_run = len(post_process_outstanding_jobs())
+        num_pp_run = len(post_process_pending_jobs())
+        tot_pp_runs += num_pp_run
         # now run the analyses pipelines (outlier detection, etc)
-        num_analyses_run = analyze_outstanding_jobs()
+        num_analyses_run = analyze_pending_jobs()
+        tot_ua_runs += num_analyses_run
         logger.debug('{0} jobs post-processed; {0} analyses filters run'.format(num_pp_run, num_analyses_run))
+        iters += 1
+        if niters and (iters > niters):
+            logger.debug('ending daemon loop, as requested iterations completed')
+            break
         _loop_time = (time() - _t1)
         delay = delay - _loop_time
         if delay > 0:
@@ -149,6 +160,7 @@ def daemon_loop():
             sleep(delay)
         else:
             logger.warning("daemon loop took {0} seconds. No sleep for me!".format(_loop_time))
+    return (tot_pp_runs, tot_ua_runs)
 
 def signal_handler(signum, frame):
     if sig_count > 0:
