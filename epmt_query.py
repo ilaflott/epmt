@@ -1298,7 +1298,7 @@ def analyze_comparable_jobs(jobids, check_comparable = True, keys = ('exp_name',
         logger.debug('found {0} trained models for job set'.format(len(trained_models)))
         for r in trained_models:
             model_id = r['id']
-            outlier_detect_results = detect_outlier_jobs(jobids, trained_model = model_id)
+            outlier_detect_results = detect_outlier_jobs(jobids, trained_model = model_id)[1]
             outlier_results.append({'model_id': model_id, 'results': outlier_detect_results})
     else:
         # no trained model found. 
@@ -1306,7 +1306,7 @@ def analyze_comparable_jobs(jobids, check_comparable = True, keys = ('exp_name',
         if len(jobids) < 4:
             logger.warning('{0} -- No trained model found, and too few jobs for outlier detection (need at least 4)'.format(jobids))
         else:
-            outlier_detect_results = detect_outlier_jobs(jobids)
+            outlier_detect_results = detect_outlier_jobs(jobids)[1]
             outlier_results.append({'model_id': None, 'results': outlier_detect_results})
     analyses = { 'outlier_detection': outlier_results }
     num_analyses_runs = len(outlier_results)

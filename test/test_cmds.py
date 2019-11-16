@@ -19,6 +19,8 @@ def setUpModule():
 #def tearDownModule():
 
 class EPMTCmds(unittest.TestCase):
+
+    @db_session
     def test_daemon(self):
         # We first make sure the DB has one more unanalyzed and
         # and unprocessed jobs. Then we run the daemon loop once.
@@ -33,17 +35,16 @@ class EPMTCmds(unittest.TestCase):
         with capture() as (out,err):
             epmt_submit(glob('sample/ppr-batch/1859/627919.tgz'), dry_run=False)
         settings.post_process_job_on_ingest = True
+        up_jobs = eq.get_unprocessed_jobs()
         if settings.orm == 'sqlalchemy':
             self.assertTrue(UnprocessedJob['627919'])
-        else:
-            self.assertEqual(post_process_pending_jobs(), [])
-        self.assertTrue(eq.get_unprocessed_jobs())
+            self.assertTrue(up_jobs)
         self.assertTrue(eq.get_unanalyzed_jobs())
         # a daemon loop should clear the backlog of unprocessed
         # and unanalyzed jobs
         daemon_loop(1)
-        self.assertFalse(eq.get_unanalyzed_jobs())
         self.assertFalse(eq.get_unprocessed_jobs())
+        self.assertFalse(eq.get_unanalyzed_jobs())
         # now mark all jobs unanalyzed so future tests aren't affected
         all_jobs = eq.get_jobs(fmt='terse')
         for j in all_jobs:
