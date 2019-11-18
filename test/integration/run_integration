@@ -9,6 +9,9 @@ dir=$(dirname $0)
 BATS="${dir}/libs/bats/bin/bats"
 test -x $BATS || die "Could not find bats in $BATS"
 
+# add directory containing EPMT to PATH
+export PATH="$dir/../..:${PATH}"
+
 case $1 in
   "") $BATS "$dir"/*.bats ;;
   */*) $BATS "$1" ;;
