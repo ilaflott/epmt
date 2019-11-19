@@ -33,5 +33,6 @@ bulk_insert = True
 # # outlier detection
 # outlier_thresholds = { 'modified_z_score': 2.5, 'iqr': [20,80], 'z_score': 3.0 }
 # outlier_features = ['duration', 'cpu_time', 'num_procs']
+# outlier_features_blacklist = ['user+system']
 #
 # post_process_job_on_ingest = True

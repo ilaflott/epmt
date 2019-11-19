@@ -124,6 +124,9 @@ def init_settings(settings):
     if not hasattr(settings, 'outlier_features'):
         logger.warning("missing settings.outlier_features")
         settings.outlier_features = ['duration', 'cpu_time', 'num_procs']
+    if not hasattr(settings, 'outlier_features_blacklist'):
+        logger.warning("missing settings.outlier_features_blacklist")
+        settings.outlier_features_blacklist = []
     if not hasattr(settings, 'bulk_insert'):
         logger.warning("missing settings.bulk_insert")
         settings.bulk_insert = False
