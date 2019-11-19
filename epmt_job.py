@@ -870,6 +870,10 @@ def post_process_pending_jobs():
        not been post-processed.
        It returns the list of jobids that were post-processed.
     '''
+    # we only support post-processing for SQLA at the moment
+    if settings.orm != 'sqlalchemy':
+        return []
+
     unproc_jobs = orm_findall(UnprocessedJob)
     did_process = []
     for u in unproc_jobs:
