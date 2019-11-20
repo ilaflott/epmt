@@ -102,7 +102,28 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
     This function will detects outliers among a set of input jobs
     
     INPUT:
-    jobs is either a pandas dataframe of job(s) or a list of job ids or a Pony Query object
+    jobs:     is either a pandas dataframe of job(s) or a list of job ids or 
+              a Pony Query object
+
+    trained_model: The ID of a reference model (optional). If not specified,
+              outlier detection will be done from within the jobs. Without
+              a trained model, you will need a minimum number of jobs (4)
+              for outlier detection to work.
+
+    features: is a list of metrics available in the jobs. If an empty 
+              list/None/'*' is specified, then it's assumed that the 
+              user wants outlier detection on all *available* features. 
+              If features is not specified, then the default 
+              outlier_features in settings will be used.
+
+    methods:  This is an advanced option to specify the function(s) to use
+              for outlier detection.
+
+    thresholds: Advanced option defining what it means to be an outlier.
+              This is ordered in the same order as 'methods', and has 
+              meaning in the context of the 'method' it applies to.
+
+    sanity_check: Warn if the jobs are not comparable. Enabled by default.
     
     OUTPUT:
       (df, partitions_dict)
