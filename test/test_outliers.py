@@ -41,7 +41,8 @@ class OutliersAPI(unittest.TestCase):
     def test_outlier_jobs(self):
         # with too few jobs and no trained model, outlier detection should fail
         too_few_jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='terse')[:3]
-        self.assertEqual(eod.detect_outlier_jobs(too_few_jobs), (None,None))
+        with self.assertRaises(RuntimeError):
+            eod.detect_outlier_jobs(too_few_jobs)
 
         jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm')
         (df, parts) = eod.detect_outlier_jobs(jobs)
@@ -137,6 +138,11 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_outlier_ops(self):
+        # with too few jobs and no trained model, outlier detection should fail
+        too_few_jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='terse')[:3]
+        with self.assertRaises(RuntimeError):
+            eod.detect_outlier_ops(too_few_jobs)
+
         jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm')
         (df, parts, _, _, _) = eod.detect_outlier_ops(jobs)
         self.assertEqual(df.shape, (20,5), "wrong shape of df from detect_outlier_ops")
@@ -157,6 +163,13 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(len(parts), 1)
         parts = { frozen_dict(loads(k)): v for k,v in parts.items() }
         self.assertEqual(parts[frozen_dict({"op_instance": "4", "op_sequence": "4", "op": "build"})], (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024']), set([u'kern-6656-20190614-192044-outlier'])))
+
+        # wildcard features
+        (df, _, _, _, _) = eod.detect_outlier_ops(jobs, features = '*')
+        self.assertEqual(df.shape, (20, 30))
+        # for each op compute number of features indicating it's an outlier
+        # and then test the result array
+        self.assertEqual([ df.iloc[i].values[2:].sum() for i in range(0, 20)], [1, 0, 11, 0, 0, 1, 11, 0, 0, 0, 12, 0, 0, 1, 6, 0, 0, 2, 7, 0])
 
 
     @db_session

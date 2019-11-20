@@ -5,7 +5,7 @@ import numpy as np
 import operator
 from logging import getLogger
 from json import dumps, loads
-from orm import db_session, ReferenceModel, orm_get
+from orm import db_session, ReferenceModel, orm_get, orm_col_len
 
 # the first epmt import must be epmt_query as it sets up logging
 import epmt_query as eq
@@ -173,9 +173,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
         if type(trained_model) == int:
             trained_model = orm_get(ReferenceModel, trained_model)
     else:
-        if len(jobs) < 4:
-            logger.warning('Too few jobs to do outlier detection. Need at least 4!')
-            return (None, None)
+        _err_col_len(jobs, 4, 'Too few jobs to do outlier detection. Need at least 4!')
 
     for m in methods:
         model_params[m] = trained_model.computed[m.__name__] if trained_model else {}
@@ -304,6 +302,8 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
                 logger.warning('Jobs have the following tags, not found in the model: {0}'.format(jobs_tags_set - model_tags_set))
             if (model_tags_set - jobs_tags_set):
                 logger.warning('Model has the following tags, not found in the jobs: {0}'.format(model_tags_set - jobs_tags_set))
+    else:
+        _err_col_len(jobs, 4, 'Too few jobs to do outlier detection. Need at least 4!')
     if not tags:
         tags = unique_job_tags
 
@@ -556,6 +556,16 @@ def _sanitize_features(f, df):
             logger.debug('skipping feature({0}) as type is not int/float'.format(c))
     logger.info('using features: {0}'.format(features))
     return features
+
+# Raise an exception if the length of a collection is less than
+# min_length
+def _err_col_len(c, min_length = 1, msg = None):
+    l = orm_col_len(c)
+    if l < min_length:
+        msg = msg or "length of collection is less than the minimum ({0})".format(min_length)
+        logger.warning(msg)
+        raise RuntimeError(msg)
+
 
 if (__name__ == "__main__"):
     np.random.seed(101)
