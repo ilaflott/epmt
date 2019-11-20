@@ -65,6 +65,7 @@ class ReferenceModel(with_metaclass(CommonMeta, Base)):
     tags = Column(JSON, index=True)
     op_tags = Column(JSON, index=True)
     computed = Column(JSON)
+    enabled = Column(Boolean, default=True)
     info_dict = Column(JSON)
     jobs = relationship('Job', back_populates='ref_models', secondary=refmodel_job_associations_table)
     @db_session

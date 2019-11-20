@@ -703,7 +703,7 @@ def _refmodel_scores(col, outlier_methods, features):
 def create_refmodel(jobs=[], tag={}, op_tags=[], 
                     outlier_methods=[modified_z_score], 
                     features=['duration', 'cpu_time', 'num_procs'], exact_tag_only=False,
-                    fmt='dict', sanity_check = True):
+                    fmt='dict', sanity_check = True, enabled=True):
     """
     This function creates a reference model and returns
     the ID of the newly-created model in the database
@@ -735,6 +735,9 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
     
     exact_tag_only: Default False. If set, all tag matches require
              exact dictionary match, and a superset match won't do.
+
+    enabled: Allow the trained model to be used for outlier detection.
+             Enabled is set to True by default.
     
     e.g,.
     
@@ -801,7 +804,7 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
     computed = scores
 
     # now save the ref model
-    r = ReferenceModel(jobs=jobs, tags=tag, op_tags=op_tags, computed=computed)
+    r = ReferenceModel(jobs=jobs, tags=tag, op_tags=op_tags, computed=computed, enabled=enabled)
     orm_commit()
     if fmt=='orm': 
         return r
@@ -826,6 +829,23 @@ def delete_refmodels(*ref_ids):
         ref_ids = ref_ids[0]
     ref_ids = [int(r) for r in ref_ids]
     return orm_delete_refmodels(ref_ids)
+
+
+def refmodel_set_status(ref_id, enabled):
+    """
+    Enable or disable a trained model.
+    """
+    r = ReferenceModel[ref_id]
+    r.enabled = enabled
+    return r
+
+def refmodel_get_status(ref_id):
+    """
+    Get the status (enabled/disabled) of a trained model.
+    """
+    return ReferenceModel[ref_id].enabled
+    
+
 
             
 # This is a low-level function that finds the unique process

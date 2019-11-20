@@ -452,6 +452,8 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(r1.tags, {'model_name': model_name})
         self.assertFalse(r1.op_tags)
         self.assertEqual(set([j.jobid for j in r1.jobs]), set(jobs))
+        eq.refmodel_set_status(r1.id, enabled=False)
+        self.assertFalse(ReferenceModel[r1.id].enabled)
         n = eq.delete_refmodels(r['id'])
         self.assertEqual(n, 1, 'wrong ref_model delete count')
 
