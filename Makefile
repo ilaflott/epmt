@@ -19,7 +19,7 @@ dist:
 	cp -Rp preset_settings epmt-install
 #	--hidden-import epmt_default_settings --exclude-module settings 
 	rm -f $(RELEASE); tar cvfz $(RELEASE) epmt-install
-	rm -rf epmt-install build epmt.spec
+	rm -rf epmt-install build
 
 dist-test:
 	rm -rf epmt-install-tests
