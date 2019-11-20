@@ -67,7 +67,7 @@ clean:
 	rm -rf __pycache__
 distclean: clean
 	rm -f settings.py test-$(RELEASE) $(RELEASE)
-	rm -rf epmt-install epmt-install-tests build epmt.spec
+	rm -rf epmt-install epmt-install-tests build
 # 
 # Simple python version testing with no database
 #
