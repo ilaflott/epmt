@@ -19,6 +19,51 @@ def setUpModule():
 #def tearDownModule():
 
 class EPMTCmds(unittest.TestCase):
+
+    @db_session
+    def test_daemon(self):
+        # We first make sure the DB has one more unanalyzed and
+        # and unprocessed jobs. Then we run the daemon loop once.
+        # That should clear the backlog of unprocessed and 
+        # unanalyzed jobs
+        from epmt_daemon import is_daemon_running, daemon_loop
+        from epmt_job import post_process_pending_jobs
+        self.assertFalse(is_daemon_running())
+        if settings.orm == 'sqlalchemy':
+            # only sqlalchemy allows this option
+            settings.post_process_job_on_ingest = False
+        with capture() as (out,err):
+            epmt_submit(glob('sample/ppr-batch/1859/627919.tgz'), dry_run=False)
+        settings.post_process_job_on_ingest = True
+        up_jobs = eq.get_unprocessed_jobs()
+        if settings.orm == 'sqlalchemy':
+            self.assertTrue(UnprocessedJob['627919'])
+            self.assertTrue(up_jobs)
+        self.assertTrue(eq.get_unanalyzed_jobs())
+        # a daemon loop should clear the backlog of unprocessed
+        # and unanalyzed jobs
+        daemon_loop(1)
+        self.assertFalse(eq.get_unprocessed_jobs())
+        self.assertFalse(eq.get_unanalyzed_jobs())
+        # now mark all jobs unanalyzed so future tests aren't affected
+        all_jobs = eq.get_jobs(fmt='terse')
+        for j in all_jobs:
+            eq.remove_job_analyses(j)
+        # from warnings import simplefilter
+        # simplefilter("ignore", ResourceWarning)
+        # rc = start_daemon()
+        # self.assertEqual(rc, 0)
+        # self.assertTrue(is_daemon_running())
+        # with capture() as (out,err):
+        #     print_daemon_status()
+        # self.assertIn('EPMT daemon running OK', out)
+        # rc = stop_daemon()
+        # self.assertEqual(rc, 0)
+        # self.assertFalse(is_daemon_running())
+        # with capture() as (out,err):
+        #     print_daemon_status()
+        # self.assertEqual('EPMT daemon is not running.', out)
+        
     def test_list_jobs(self):
         with capture() as (out,err):
             retval = epmt_list_jobs([])

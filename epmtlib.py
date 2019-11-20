@@ -32,6 +32,9 @@ def get_username():
 
 # if check is set, then we will bail if logging has already been initialized
 def set_logging(intlvl = 0, check = False):
+    import logging
+    import epmt_settings as settings
+
     if check and hasattr(set_logging, 'initialized'): return
     set_logging.initialized = True
     if intlvl == None:
@@ -47,10 +50,21 @@ def set_logging(intlvl = 0, check = False):
         level = INFO
     elif intlvl >= 2:
         level = DEBUG
-    basicConfig(level=level)
-    logger = getLogger()
-    logger.setLevel(level)
-    for handler in logger.handlers:
+
+    rootLogger = getLogger()
+    rootLogger.setLevel(level)
+    # basicConfig(filename='epmt.log', filemode='a', level=level)
+    logFormatter = logging.Formatter("[%(asctime)-19.19s, %(process)6d] %(levelname)-7.7s %(name)s:%(message)s")
+    fileHandler = logging.FileHandler(settings.logfile)
+    fileHandler.setFormatter(logFormatter)
+    rootLogger.addHandler(fileHandler)
+
+    consoleHandler = logging.StreamHandler()
+    consoleFormatter = logging.Formatter("%(levelname)s:%(name)s:%(message)s")
+    consoleHandler.setFormatter(consoleFormatter)
+    rootLogger.addHandler(consoleHandler)
+
+    for handler in rootLogger.handlers:
         handler.setLevel(level)
 
 def init_settings(settings):
@@ -83,6 +97,9 @@ def init_settings(settings):
     if not hasattr(settings, 'verbose'):
         logger.warning("missing settings.verbose")
         settings.verbose = 1
+    if not hasattr(settings, 'logfile'):
+        logger.warning("missing settings.logfile")
+        settings.verbose = 'epmt.log'
     if not hasattr(settings, 'stage_command'):
         logger.warning("missing settings.stage_command ")
         settings.stage_command = "cp"
@@ -107,6 +124,9 @@ def init_settings(settings):
     if not hasattr(settings, 'outlier_features'):
         logger.warning("missing settings.outlier_features")
         settings.outlier_features = ['duration', 'cpu_time', 'num_procs']
+    if not hasattr(settings, 'outlier_features_blacklist'):
+        logger.warning("missing settings.outlier_features_blacklist")
+        settings.outlier_features_blacklist = []
     if not hasattr(settings, 'bulk_insert'):
         logger.warning("missing settings.bulk_insert")
         settings.bulk_insert = False
@@ -558,3 +578,25 @@ def check_fix_metadata(raw_metadata):
     # mark the metadata as checked so we don't check it again unnecessarily
     metadata['checked'] = True
     return metadata
+
+def check_pid(pid):
+    """Check whether pid exists"""
+    if pid < 0:
+        return (False, 'Invalid PID: {0}'.format(pid))
+    from os import kill
+    try:
+        kill(pid, 0)
+    except OSError as err:
+        from errno import ESRCH, EPERM
+        if err.errno == ESRCH:
+            # ESRCH == No such process
+            return (False, 'No such process (PID: {0})'.format(pid))
+        elif err.errno == EPERM:
+            # EPERM clearly means there's a process but we cannot
+            # send a signal to it
+            return (True, 'Not authorized to send signals to it (EPERM)')
+        else:
+            # According to "man 2 kill" possible error values are
+            # (EINVAL, EPERM, ESRCH)
+            return (True, str(err.errno))
+    return (True,'')

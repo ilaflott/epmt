@@ -703,7 +703,7 @@ def _refmodel_scores(col, outlier_methods, features):
 def create_refmodel(jobs=[], tag={}, op_tags=[], 
                     outlier_methods=[modified_z_score], 
                     features=['duration', 'cpu_time', 'num_procs'], exact_tag_only=False,
-                    fmt='dict', sanity_check = True):
+                    fmt='dict', sanity_check = True, enabled=True):
     """
     This function creates a reference model and returns
     the ID of the newly-created model in the database
@@ -735,6 +735,9 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
     
     exact_tag_only: Default False. If set, all tag matches require
              exact dictionary match, and a superset match won't do.
+
+    enabled: Allow the trained model to be used for outlier detection.
+             Enabled is set to True by default.
     
     e.g,.
     
@@ -801,7 +804,7 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
     computed = scores
 
     # now save the ref model
-    r = ReferenceModel(jobs=jobs, tags=tag, op_tags=op_tags, computed=computed)
+    r = ReferenceModel(jobs=jobs, tags=tag, op_tags=op_tags, computed=computed, enabled=enabled)
     orm_commit()
     if fmt=='orm': 
         return r
@@ -826,6 +829,55 @@ def delete_refmodels(*ref_ids):
         ref_ids = ref_ids[0]
     ref_ids = [int(r) for r in ref_ids]
     return orm_delete_refmodels(ref_ids)
+
+
+def refmodel_set_status(ref_id, enabled):
+    """
+    Enable or disable a trained model.
+    """
+    r = ReferenceModel[ref_id]
+    r.enabled = enabled
+    return r
+
+def refmodel_get_status(ref_id):
+    """
+    Get the status (enabled/disabled) of a trained model.
+    """
+    return ReferenceModel[ref_id].enabled
+
+def refmodel_get_metrics(ref_id, active_only = False):
+    """
+    Get the set of metrics available in a trained model.
+    If 'active_only' is set then only the active metrics are returned.
+    """
+    r = ReferenceModel[ref_id]
+    metrics = set()
+    # iterate over the dicts stored for each method and do a union operation
+    for v in r.computed.values():
+        metrics |= set(v.keys())
+    if active_only:
+        active_metrics = (r.info_dict or {}).get('active_metrics', [])
+        if active_metrics:
+            # do an intersection
+            metrics &= set(active_metrics)
+    return metrics
+
+def refmodel_set_active_metrics(ref_id, metrics):
+    """
+    Set the active metrics for a trained model to specified list of metrics.
+    """
+    r = ReferenceModel[ref_id]
+    all_metrics = refmodel_get_metrics(ref_id, False)
+    metrics_set = set(metrics)
+    if (metrics_set - all_metrics):
+        logger.warning('Ignoring metrics that are not available in the trained model: {0}'.format(metrics_set - all_metrics))
+    active_metrics = list(metrics_set & all_metrics)
+    logger.info('Active metrics for model set to: '.format(active_metrics))
+    info_dict = dict.copy(r.info_dict or {})
+    info_dict['active_metrics'] = active_metrics
+    r.info_dict = info_dict
+    return active_metrics
+
 
             
 # This is a low-level function that finds the unique process
@@ -1228,6 +1280,103 @@ def get_job_annotations(jobid):
 def remove_job_annotations(jobid):
     return annotate_job(jobid, {}, True)
 
+def analyze_pending_jobs(jobs = [], analyses_filter = {}):
+    """
+    Analyze all pending jobs. The jobs may or may not be
+    comparable. 
+    
+    jobs: Restrict applying the analyses to a subset specified by jobs.
+          In the most common usage, you will leave jobs unset.
+
+    analyses_filter: This tag defines what constitutes an unanalyzed job
+
+    Returns: The total number of analyses algorithms executed
+    """
+    ua_jobs = get_unanalyzed_jobs(jobs = jobs, analyses_filter = analyses_filter)
+    num_analyses_run = 0
+    if ua_jobs:
+        logger.debug('{0} unanalyzed jobs: {1}'.format(len(ua_jobs), ua_jobs))
+        # partition the jobs into sets of comparable jobs based on their tags
+        comp_job_parts = comparable_job_partitions(ua_jobs)
+        logger.debug('{0} sets of comparable jobs: {1}'.format(len(comp_job_parts), comp_job_parts))
+        # iterate over the comparable jobs' sets
+        for j_part in comp_job_parts:
+            (_, jobids) = j_part
+            # we set check_comparable as False since we already know
+            # that the jobs are comparable -- don't waste time!
+            num_analyses_run += analyze_comparable_jobs(jobids, check_comparable = False)
+    return num_analyses_run
+
+
+
+@db_session
+def analyze_comparable_jobs(jobids, check_comparable = True, keys = ('exp_name', 'exp_component')):
+    """
+    Analyzes one or more jobs. The jobs must be comparable; a warning
+    will be issued if they aren't (unless check_comparable is disabled).
+    You may want to use the higher-level function -- analyze_pending_jobs -- instead.
+
+    jobids: List of job ids
+
+    keys: is a tuple of job tag keys that will be used to query for
+    trained models. If trained model(s) are found then outlier detection
+    is run on the jobs against the trained model(s).
+
+    It's possible no trained model is found, then we will do an outlier
+    detection on the job set (partition_jobs) assuming that's possible.
+
+    Returns: Number of analyses algorithms executed. This may be zero
+             if number of comparable jobs are too few and there are
+             no trained models.
+    """
+    from epmt_outliers import detect_outlier_jobs
+    if check_comparable:
+        _warn_incomparable_jobs(jobids)
+    logger.debug('analyzing jobs: {0}'.format(jobids))
+    model_tag = {}
+    for k in keys:
+        model_tag[k] = Job[jobids[0]].tags.get(k, '')
+        # make sure all the jobids have the same value for the tag key
+        if check_comparable:
+            for j in jobids:
+                v = jobids[j].tags.get(k, '')
+                if not k in jobids[j].tags:
+                    logger.warning('job {0} tags has no key -- {1}'.format(j, k))
+                assert(jobids[j].tags.get(k, '') == model_tag[k])
+    logger.debug('Searching for trained models with tag: {0}'.format(model_tag))
+    trained_models = get_refmodels(tag = model_tag)
+    outlier_results = []
+    # can we make the if/then more DNRY?
+    if trained_models:
+        logger.debug('found {0} trained models for job set'.format(len(trained_models)))
+        for r in trained_models:
+            model_id = r['id']
+            d = detect_outlier_jobs(jobids, trained_model = model_id)[1]
+            # make the results JSON serializable (sets aren't unfortunately)
+            outlier_detect_results = { k: (list(v[0]), list(v[1])) for k, v in d.items() }
+            outlier_results.append({'model_id': model_id, 'results': outlier_detect_results})
+    else:
+        # no trained model found. 
+        # Can we run a detect_outlier_jobs on the exisiting job set?
+        if len(jobids) < 4:
+            logger.warning('{0} -- No trained model found, and too few jobs for outlier detection (need at least 4)'.format(jobids))
+        else:
+            d = detect_outlier_jobs(jobids)[1]
+            # make the results JSON serializable (sets aren't unfortunately)
+            outlier_detect_results = { k: (list(v[0]), list(v[1])) for k, v in d.items() }
+            outlier_results.append({'model_id': None, 'results': outlier_detect_results})
+    analyses = { 'outlier_detection': outlier_results }
+    num_analyses_runs = len(outlier_results)
+
+    # finally mark the jobs as analyzed
+    for j in jobids:
+        set_job_analyses(j, analyses)
+    msg = 'analyzed {0}: '.format(jobids)
+    for k in analyses:
+        msg += '{0} runs of {1}; '.format(len(analyses[k]), k)
+    logger.info(msg)
+    return num_analyses_runs
+
 @db_session
 def set_job_analyses(jobid, analyses, replace=False):
     '''
@@ -1255,12 +1404,12 @@ def get_job_analyses(jobid):
     j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
     return j.analyses
 
-def get_unanalyzed_jobs(jobs = [], fmt='terse'):
+def get_unanalyzed_jobs(jobs = [], analyses_filter = {}, fmt='terse'):
     '''
     Returns the subset of jobs that have not had any analysis pipeline
     run on them.
     '''
-    return get_jobs(jobs, analyses = {}, fmt=fmt)
+    return get_jobs(jobs, analyses = analyses_filter, fmt=fmt)
 
 
 def remove_job_analyses(jobid):
@@ -1341,6 +1490,7 @@ def _warn_incomparable_jobs(jobs):
     if not are_jobs_comparable(jobs):
         msg = 'The jobs do not share identical tag values for "exp_name" and "exp_component"'
         from sys import stderr
+        logger.warning(msg)
         print('WARNING:', msg, file=stderr)
         for j in jobs:
             print('   ',j.jobid, j.tags.get('exp_name'), j.tags.get('exp_component'), file=stderr)

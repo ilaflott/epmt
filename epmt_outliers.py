@@ -5,7 +5,7 @@ import numpy as np
 import operator
 from logging import getLogger
 from json import dumps, loads
-from orm import db_session, ReferenceModel, orm_get
+from orm import db_session, ReferenceModel, orm_get, orm_col_len
 
 # the first epmt import must be epmt_query as it sets up logging
 import epmt_query as eq
@@ -102,7 +102,28 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
     This function will detects outliers among a set of input jobs
     
     INPUT:
-    jobs is either a pandas dataframe of job(s) or a list of job ids or a Pony Query object
+    jobs:     is either a pandas dataframe of job(s) or a list of job ids or 
+              a Pony Query object
+
+    trained_model: The ID of a reference model (optional). If not specified,
+              outlier detection will be done from within the jobs. Without
+              a trained model, you will need a minimum number of jobs (4)
+              for outlier detection to work.
+
+    features: is a list of metrics available in the jobs. If an empty 
+              list/None/'*' is specified, then it's assumed that the 
+              user wants outlier detection on all *available* features. 
+              If features is not specified, then the default 
+              outlier_features in settings will be used.
+
+    methods:  This is an advanced option to specify the function(s) to use
+              for outlier detection.
+
+    thresholds: Advanced option defining what it means to be an outlier.
+              This is ordered in the same order as 'methods', and has 
+              meaning in the context of the 'method' it applies to.
+
+    sanity_check: Warn if the jobs are not comparable. Enabled by default.
     
     OUTPUT:
       (df, partitions_dict)
@@ -151,13 +172,19 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
         logger.debug('using a trained model for detecting outliers')
         if type(trained_model) == int:
             trained_model = orm_get(ReferenceModel, trained_model)
+    else:
+        _err_col_len(jobs, 4, 'Too few jobs to do outlier detection. Need at least 4!')
 
     for m in methods:
         model_params[m] = trained_model.computed[m.__name__] if trained_model else {}
 
+    # sanitize features list
+    features = _sanitize_features(features, jobs)
+
     # initialize a df with all values set to False
     retval = pd.DataFrame(0, columns=features, index=jobs.index)
     for c in features:
+        # print('data-type for feature column {0} is {1}'.format(c, jobs[c].dtype))
         for m in methods:
             params = model_params[m].get(c, ())
             if params:
@@ -184,7 +211,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
 @db_session
 def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds=thresholds, sanity_check=True):
     """
-    jobs is a list of jobids or a Pony Query object
+    jobs is a list of jobids or an ORM query
     tags is a list of tags specified either as a string or a list of string/list of dicts
     If tags is not specified, then the list of jobs will be queried to get the
     superset of unique tags across the jobs.
@@ -251,9 +278,6 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
         eq._warn_incomparable_jobs(jobs)
 
     tags = tags_list(tags)
-    if features:
-        logger.debug('using features: ' + str(features))
-        
     jobs_tags_set = set()
     unique_job_tags = eq.job_proc_tags(jobs, fold=False)
     for t in unique_job_tags:
@@ -278,9 +302,13 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
                 logger.warning('Jobs have the following tags, not found in the model: {0}'.format(jobs_tags_set - model_tags_set))
             if (model_tags_set - jobs_tags_set):
                 logger.warning('Model has the following tags, not found in the jobs: {0}'.format(model_tags_set - jobs_tags_set))
+    else:
+        _err_col_len(jobs, 4, 'Too few jobs to do outlier detection. Need at least 4!')
     if not tags:
         tags = unique_job_tags
 
+    # if we have a trained model then we can only use the subset
+    # of 'tags' that is found in the trained model
     tags_to_use = []
     if trained_model:
         if tags == trained_model.op_tags:
@@ -306,6 +334,7 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
     if len(ops) == 0:
         logger.warning('no matching tags found in the tag set: {0}'.format(tags_to_use))
         return (None, {})
+    features = _sanitize_features(features, ops)
     retval = pd.DataFrame(0, columns=features, index=ops.index)
 
     # the dict below will be indexed by tag, and will store
@@ -509,7 +538,34 @@ def detect_rootcause_op(jobs, inp, tag, features = FEATURES,  methods = [modifie
         print('ref jobs have multiple distinct tags({0}) that are superset of this specified tag. Please specify an exact tag match'.format(unique_tags))
         return (False, None, None)
     return rca(ref_ops_df, inp_ops_df, features, methods)
-    
+
+
+# Sanitize feature list by removing blacklisted features
+# and allowing only features whose columns have int/float types
+def _sanitize_features(f, df):
+    if f in ([], '', '*', None):
+        logger.debug('using all available features in outlier detection')
+        f = set(df.columns.values) 
+    f = set(f) - set(settings.outlier_features_blacklist)
+    features = []
+    # only allow features that have int/float types
+    for c in f:
+        if df[c].dtype in ('int64', 'float64'):
+            features.append(c)
+        else:
+            logger.debug('skipping feature({0}) as type is not int/float'.format(c))
+    logger.info('using features: {0}'.format(features))
+    return features
+
+# Raise an exception if the length of a collection is less than
+# min_length
+def _err_col_len(c, min_length = 1, msg = None):
+    l = orm_col_len(c)
+    if l < min_length:
+        msg = msg or "length of collection is less than the minimum ({0})".format(min_length)
+        logger.warning(msg)
+        raise RuntimeError(msg)
+
 
 if (__name__ == "__main__"):
     np.random.seed(101)

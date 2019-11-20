@@ -71,7 +71,7 @@ distclean: clean
 # 
 # Simple python version testing with no database
 #
-check: check-python-shells check-unittests
+check: check-python-shells check-unittests check-integration-tests
 
 EPMT_TEST_ENV=PATH=${PWD}:${PATH} SLURM_JOB_USER=`whoami`
 
@@ -85,4 +85,8 @@ check-python-shells:
 check-unittests:
 	@echo; echo "Testing built-in unit tests..."
 	python3 -V
-	@env -i PATH=${PWD}:${PATH} python3 -m unittest -v -f test.test_lib test.test_settings test.test_anysh test.test_submit test.test_misc test.test_query test.test_outliers test.test_db_schema
+	@env -i PATH=${PWD}:${PATH} python3 -m unittest -v -f test.test_lib test.test_settings test.test_anysh test.test_submit test.test_cmds test.test_query test.test_outliers test.test_db_schema
+
+.PHONY: check-integration-tests
+check-integration-tests:
+	test/integration/run_integration

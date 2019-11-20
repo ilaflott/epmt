@@ -401,9 +401,16 @@ class QueryAPI(unittest.TestCase):
         r = eq.set_job_analyses('685000', {'rca': 1}, True)
         self.assertEqual(r, {'rca': 1})
         self.assertEqual(eq.get_job_analyses('685000'), {'rca': 1})
+        # get back to pristine state
         r = eq.remove_job_analyses('685000')
         self.assertEqual(r, {})
         self.assertEqual(eq.get_job_analyses('685000'), {})
+        uj = eq.get_unanalyzed_jobs(['685000', '685003', '685016'])
+        self.assertEqual(set(uj), set(['685000', '685003', '685016']))
+        eq.analyze_pending_jobs(['685000', '685003', '685016'])
+        uj = eq.get_unanalyzed_jobs(['685000', '685003', '685016'])
+        self.assertEqual(set(uj), set([]))
+
 
 
     @db_session
@@ -445,6 +452,8 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(r1.tags, {'model_name': model_name})
         self.assertFalse(r1.op_tags)
         self.assertEqual(set([j.jobid for j in r1.jobs]), set(jobs))
+        eq.refmodel_set_status(r1.id, enabled=False)
+        self.assertFalse(ReferenceModel[r1.id].enabled)
         n = eq.delete_refmodels(r['id'])
         self.assertEqual(n, 1, 'wrong ref_model delete count')
 

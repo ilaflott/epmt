@@ -864,11 +864,16 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 #             exit(1)
 #     exit(0)
 
-def post_process_outstanding_jobs():
+def post_process_pending_jobs():
     '''
-       This function will post-process all remaining outstanding jobs.
+       This function will post-process all pending jobs that have
+       not been post-processed.
        It returns the list of jobids that were post-processed.
     '''
+    # we only support post-processing for SQLA at the moment
+    if settings.orm != 'sqlalchemy':
+        return []
+
     unproc_jobs = orm_findall(UnprocessedJob)
     did_process = []
     for u in unproc_jobs:

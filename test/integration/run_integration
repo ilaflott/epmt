@@ -1,0 +1,19 @@
+#!/bin/bash -e
+
+function die {
+  echo $* >&2
+  exit 1
+}
+
+dir=$(dirname $0)
+BATS="${dir}/libs/bats/bin/bats"
+test -x $BATS || die "Could not find bats in $BATS"
+
+# add directory containing EPMT to PATH
+export PATH="$dir/../..:${PATH}"
+
+case $1 in
+  "") $BATS "$dir"/*.bats ;;
+  */*) $BATS "$1" ;;
+  *) $BATS "$dir"/"$1".bats ;;
+esac
