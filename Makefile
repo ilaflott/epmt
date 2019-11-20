@@ -11,9 +11,11 @@ PWD=$(shell pwd)
 build:
 	python -bb -m py_compile *.py orm/*.py orm/*/*.py test/*.py
 
-dist:
+.PHONY: dist build
+
+dist: 
 	rm -rf epmt-install
-	pyinstaller --hidden-import sqlalchemy.ext.baked --exclude-module settings --clean --distpath=epmt-install -s epmt
+	pyinstaller --clean --distpath=epmt-install epmt.spec
 	cp -Rp preset_settings epmt-install
 #	--hidden-import epmt_default_settings --exclude-module settings 
 	rm -f $(RELEASE); tar cvfz $(RELEASE) epmt-install

@@ -116,7 +116,13 @@ if (__name__ == "__main__"):
     list_parser = subparser.add_parser('list', help='Display all jobs in the database',
         description="Display all jobs in the database")
     list_parser.add_argument('epmt_cmd_args', nargs='*', help="A list of jobs to search for")
-    # Dummy Help for ./epmt help
+    # Notebook
+    notebook_parser = subparser.add_parser('notebook', help="Start iPython Notebook environment",
+                                           description="Perform programmatic, interactive analyses of EPMT data in iPython")
+    notebook_parser.add_argument('epmt_cmd_args', nargs='*',
+                                 help="Arguments to ipython notebook, first one **must** be preceded with double dash followed by a space, i.e. epmt notebook -- --ip 0.0.0.0 --allow-root, see epmt notebook -- --help for more info")
+
+# Dummy Help for ./epmt help
     help_parser = subparser.add_parser('help', help="Display this help with extended configuration information")
 
     # Print help without dump config

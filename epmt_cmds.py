@@ -885,6 +885,9 @@ def epmt_entrypoint(args):
     if args.command == 'list':
         from epmt_cmd_list import epmt_list
         return(epmt_list(args.epmt_cmd_args) == False)
+    if args.command == 'notebook':
+        from epmt_cmd_notebook import epmt_notebook
+        return(epmt_notebook(args.epmt_cmd_args) == False)
 
     logger.error("Unknown command, %s. See -h for options.",args.command)
     return(1)
