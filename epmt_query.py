@@ -844,7 +844,39 @@ def refmodel_get_status(ref_id):
     Get the status (enabled/disabled) of a trained model.
     """
     return ReferenceModel[ref_id].enabled
-    
+
+def refmodel_get_metrics(ref_id, active_only = False):
+    """
+    Get the set of metrics available in a trained model.
+    If 'active_only' is set then only the active metrics are returned.
+    """
+    r = ReferenceModel[ref_id]
+    metrics = set()
+    # iterate over the dicts stored for each method and do a union operation
+    for v in r.computed.values():
+        metrics |= set(v.keys())
+    if active_only:
+        active_metrics = (r.info_dict or {}).get('active_metrics', [])
+        if active_metrics:
+            # do an intersection
+            metrics &= set(active_metrics)
+    return metrics
+
+def refmodel_set_active_metrics(ref_id, metrics):
+    """
+    Set the active metrics for a trained model to specified list of metrics.
+    """
+    r = ReferenceModel[ref_id]
+    all_metrics = refmodel_get_metrics(ref_id, False)
+    metrics_set = set(metrics)
+    if (metrics_set - all_metrics):
+        logger.warning('Ignoring metrics that are not available in the trained model: {0}'.format(metrics_set - all_metrics))
+    active_metrics = list(metrics_set & all_metrics)
+    logger.info('Active metrics for model set to: '.format(active_metrics))
+    info_dict = dict.copy(r.info_dict or {})
+    info_dict['active_metrics'] = active_metrics
+    r.info_dict = info_dict
+    return active_metrics
 
 
             
