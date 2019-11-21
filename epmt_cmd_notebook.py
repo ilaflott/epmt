@@ -30,7 +30,7 @@ def epmt_notebook(arglist):
         from os import getcwd
         me = realpath(sys.argv[0])
         logger.debug("Using %s as binary" ,me)
-        args = [me]
+        args = []
         args.extend(["--notebook-dir="+getcwd(),
                      "--KernelManager.kernel_cmd=['"+me+"', 'notebook', 'kernel', '--', '-f', '{connection_file}']"])
         args.extend(all_args)
