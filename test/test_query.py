@@ -452,8 +452,26 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(r1.tags, {'model_name': model_name})
         self.assertFalse(r1.op_tags)
         self.assertEqual(set([j.jobid for j in r1.jobs]), set(jobs))
-        eq.refmodel_set_status(r1.id, enabled=False)
-        self.assertFalse(ReferenceModel[r1.id].enabled)
+
+        # model metrics: get/set
+        all_metrics = eq.refmodel_get_metrics(r1.id, False)
+        self.assertEqual(set(all_metrics), { 'duration', 'num_procs', 'cpu_time' })
+        eq.refmodel_set_active_metrics(r1.id, ['duration', 'cpu_time'])
+        # all metrics will be the same as before, but active metrics will change
+        all_metrics = eq.refmodel_get_metrics(r1.id, False)
+        self.assertEqual(set(all_metrics), { 'duration', 'num_procs', 'cpu_time' })
+        active_metrics = eq.refmodel_get_metrics(r1.id, True)
+        self.assertEqual(set(active_metrics), { 'duration', 'cpu_time' })
+        # restore the metrics for model
+        eq.refmodel_set_active_metrics(r1.id, ['duration', 'cpu_time', 'num_procs'])
+        active_metrics = eq.refmodel_get_metrics(r1.id, True)
+        self.assertEqual(set(active_metrics), { 'duration', 'num_procs', 'cpu_time' })
+
+        # check enabled
+        self.assertTrue(eq.refmodel_is_enabled(r1.id))
+        eq.refmodel_set_enabled(r1.id, enabled=False)
+        self.assertFalse(eq.refmodel_is_enabled(r1.id))
+        # delete model
         n = eq.delete_refmodels(r['id'])
         self.assertEqual(n, 1, 'wrong ref_model delete count')
 

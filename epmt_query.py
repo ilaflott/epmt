@@ -831,7 +831,7 @@ def delete_refmodels(*ref_ids):
     return orm_delete_refmodels(ref_ids)
 
 
-def refmodel_set_status(ref_id, enabled):
+def refmodel_set_enabled(ref_id, enabled = False):
     """
     Enable or disable a trained model.
     """
@@ -839,22 +839,32 @@ def refmodel_set_status(ref_id, enabled):
     r.enabled = enabled
     return r
 
-def refmodel_get_status(ref_id):
+def refmodel_is_enabled(ref_id):
     """
     Get the status (enabled/disabled) of a trained model.
     """
     return ReferenceModel[ref_id].enabled
 
-def refmodel_get_metrics(ref_id, active_only = False):
+def refmodel_get_metrics(model, active_only = False):
     """
     Get the set of metrics available in a trained model.
     If 'active_only' is set then only the active metrics are returned.
     """
-    r = ReferenceModel[ref_id]
+    r = ReferenceModel[model] if (type(model) == int) else model
     metrics = set()
     # iterate over the dicts stored for each method and do a union operation
+    # print(r.computed)
     for v in r.computed.values():
-        metrics |= set(v.keys())
+        # op models have the metrics further nested so here we do a try/catch
+        # first with the deeper nest and then one less. 
+        try:
+            m = []
+            for _v in v.values():
+                # print(_v)
+                m += _v.keys()
+        except:
+            m = v.keys()
+        metrics |= set(m)
     if active_only:
         active_metrics = (r.info_dict or {}).get('active_metrics', [])
         if active_metrics:

@@ -172,6 +172,8 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
         logger.debug('using a trained model for detecting outliers')
         if type(trained_model) == int:
             trained_model = orm_get(ReferenceModel, trained_model)
+        if not eq.refmodel_is_enabled(trained_model.id):
+            raise RuntimeError("Trained model is disabled. You will need to enable it using 'refmodel_set_status' and try again")
     else:
         _err_col_len(jobs, 4, 'Too few jobs to do outlier detection. Need at least 4!')
 
@@ -179,7 +181,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
         model_params[m] = trained_model.computed[m.__name__] if trained_model else {}
 
     # sanitize features list
-    features = _sanitize_features(features, jobs)
+    features = _sanitize_features(features, jobs, trained_model)
 
     # initialize a df with all values set to False
     retval = pd.DataFrame(0, columns=features, index=jobs.index)
@@ -289,6 +291,8 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
         logger.debug('using a trained model for detecting outliers')
         if type(trained_model) == int:
             trained_model = orm_get(ReferenceModel, trained_model)
+        if not eq.refmodel_is_enabled(trained_model.id):
+            raise RuntimeError("Trained model is disabled. You will need to enable it using 'refmodel_set_enabled' and try again")
         #logger.debug('Ref. model scores: {0}'.format(trained_model.computed))
         #logger.debug('Ref. model op_tags: {0}'.format(trained_model.op_tags))
         logger.debug('Ref model contains {0} op_tags'.format(len(trained_model.op_tags)))
@@ -334,7 +338,7 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
     if len(ops) == 0:
         logger.warning('no matching tags found in the tag set: {0}'.format(tags_to_use))
         return (None, {})
-    features = _sanitize_features(features, ops)
+    features = _sanitize_features(features, ops, trained_model)
     retval = pd.DataFrame(0, columns=features, index=ops.index)
 
     # the dict below will be indexed by tag, and will store
@@ -542,11 +546,26 @@ def detect_rootcause_op(jobs, inp, tag, features = FEATURES,  methods = [modifie
 
 # Sanitize feature list by removing blacklisted features
 # and allowing only features whose columns have int/float types
-def _sanitize_features(f, df):
+# f: feature list
+# df: jobs dataframe
+# model: reference model
+def _sanitize_features(f, df, model = None):
     if f in ([], '', '*', None):
         logger.debug('using all available features in outlier detection')
-        f = set(df.columns.values) 
-    f = set(f) - set(settings.outlier_features_blacklist)
+        f = set(df.columns.values)
+    else:
+        f = set(f) & set(df.columns.values)
+
+    if model is not None:
+        model_id = model.id if (type(model) != int) else model
+        model_metrics = eq.refmodel_get_metrics(model_id, active_only = True)
+        # print('model metrics: ', model_metrics)
+        # take the intersection set
+        f &= model_metrics
+
+    # remove blacklisted features
+    f -= set(settings.outlier_features_blacklist)
+
     features = []
     # only allow features that have int/float types
     for c in f:
@@ -554,7 +573,10 @@ def _sanitize_features(f, df):
             features.append(c)
         else:
             logger.debug('skipping feature({0}) as type is not int/float'.format(c))
+    if not features:
+        raise RuntimeError("Need a non-empty list of features for outlier detection")
     logger.info('using features: {0}'.format(features))
+    # print('features: {0}'.format(features))
     return features
 
 # Raise an exception if the length of a collection is less than

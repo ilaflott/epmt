@@ -108,7 +108,11 @@ def setup_db(settings,drop=False,create=True):
             return False
 
     logger.debug('Configuring scoped session..')
-    Session.configure(bind=engine, expire_on_commit=False, autoflush=True)
+    # hide useless warning when re-configuring a session
+    # sqlalchemy/orm/scoping.py:107: SAWarning: At least one scoped session is already present.  configure() can not affect sessions that have already been created.  "At least one scoped session is already present. "
+    from epmtlib import capture
+    with capture() as (out,err):
+         Session.configure(bind=engine, expire_on_commit=False, autoflush=True)
     db_setup_complete = True
     return True
 

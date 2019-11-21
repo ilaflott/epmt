@@ -80,10 +80,18 @@ class OutliersAPI(unittest.TestCase):
         # this way it won't later be classified as a outlier
         r = eq.create_refmodel(all_jobs, fmt='terse')
         (df, parts) = eod.detect_outlier_jobs(all_jobs, trained_model=r)
+        # make sure we used all the features
+        self.assertEqual(set(df.columns.values) & {'cpu_time', 'duration', 'num_procs'}, {'cpu_time', 'duration', 'num_procs'})
         # check there are no outliers
         self.assertEqual(len(df[df.duration > 0]), 0, "incorrect count of duration outliers")
         self.assertEqual(len(df[df.cpu_time > 0]), 0, "incorrect count of cpu_time outliers")
         self.assertEqual(len(df[df.num_procs > 0]), 0, "incorrect count of num_procs outliers")
+        # now let's limit the active metrics in model and make sure
+        # that outlier detection only uses the features enabled
+        eq.refmodel_set_active_metrics(r, ['duration', 'cpu_time'])
+        (df, _) = eod.detect_outlier_jobs(all_jobs, trained_model=r)
+        self.assertEqual(set(df.columns.values) & {'cpu_time', 'duration', 'num_procs'}, {'cpu_time', 'duration'})
+
 
     @db_session
     def test_outlier_ops_trained(self):
@@ -92,16 +100,19 @@ class OutliersAPI(unittest.TestCase):
         jobs_ex_outl = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm', fltr=fltr)
         r = eq.create_refmodel(jobs_ex_outl, fmt='terse', op_tags='*')
         features = ['rssmax', 'cpu_time', 'duration', 'num_procs']
+        # our trained model has only duration, cpu_time, num_procs as metrics
+        # so, rssmax will be discarded
         (df, parts, scores_df, sorted_tags, sorted_features) = eod.detect_outlier_ops(all_jobs, trained_model=r, features=features)
-        self.assertEqual(df.shape, (20,6))
+        self.assertEqual(df.shape, (20,5))
+        # make sure rssmax was discarded from the features
+        self.assertEqual(set(df.columns.values) & set(features), { 'cpu_time', 'duration', 'num_procs' })
         self.assertEqual(set(df[df.duration > 0]['jobid']), set([u'kern-6656-20190614-192044-outlier']))
         self.assertEqual(set(df[df.cpu_time > 0]['jobid']), set([u'kern-6656-20190614-192044-outlier']))
         self.assertEqual(set(df[df.num_procs > 0]['jobid']), set([]))
         df_cols = list(df.columns)
-        self.assertEqual(len(sorted_features), len(features))
+        self.assertEqual(set(sorted_features), { 'cpu_time', 'duration', 'num_procs' })
         # ensure feature order is right
-        self.assertEqual(sorted_features, ['cpu_time', 'duration', 'rssmax', 'num_procs'])
-        self.assertNotEqual(sorted_features, features)
+        self.assertEqual(sorted_features, ['cpu_time', 'duration', 'num_procs'])
         # ensure df has the right feature order
         self.assertEqual(df_cols[2:], sorted_features)
         # esnure scores_df has the right order
