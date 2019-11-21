@@ -6,18 +6,38 @@
 # Verify csv data following header against number of fields
 # compare following files header against masterHeader
 
+# Callstack
+# csvjoiner > Loop over files(parsefile > parseline) > 
+#   writeOut > verifyOut[file_len()]
+
+# Jobid is based on parent directory of csv files
+# Hostname is determined from csv file name
+#   Example:
+#   test/data/collate/goodSample_123/asus-papiex-549-0.csv
+#   Hostname: `asus` 
+#   Jobid: `goodSample_123`
+
+
 from __future__ import print_function
 from __future__ import unicode_literals
 from sys import argv, version_info
 from re import compile
-from os import chdir, getcwd, path
+from os import getcwd, path
 from glob import glob
 from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
 logger = getLogger(__name__)  # you can use other name
 from epmtlib import set_logging
 
+# file - Single CSV File to parse for comment,header and data
+# masterHeader - Current MasterHeader for comparison against file
+# headerFound - State, used to keep track of when header is found for data appending
+# headerDelimCount - State, Regex count of header columns
+# delim - Delimiter specified from csvjoiner used in parseline
+# commentDelim - Delimiter specified from csvjoiner used in parseline
+# Returns: tuple(comments list, masterHeader string, datas list)
 def parseFile(file, masterHeader, headerFound, headerDelimCount, delim, commentDelim):
-    """ Take file and paramaters for parsing return tuple of csv data"""
+    """ Take file and paramaters for parsing return tuple of csv data
+    to be passed to writeOut then verifyOut"""
     fileLines = []
     comment = ""
     comments = []
@@ -26,12 +46,11 @@ def parseFile(file, masterHeader, headerFound, headerDelimCount, delim, commentD
     line = ""
     data = ""
     hostFlag = False
-
     try:
         with open(file) as fp:
             fileLines += fp.read().splitlines()
-    except Exception as E:
-        logger.error("No such file ".format(file))
+    except EnvironmentError:
+        logger.error("No such file {}".format(file))
         raise SystemError
     for line in fileLines:
         line = line.rstrip('\r\n')
@@ -40,10 +59,10 @@ def parseFile(file, masterHeader, headerFound, headerDelimCount, delim, commentD
         except SystemError as E:
             raise SystemError
         if(comment is not None):
-            #logger.debug("Found Comment {}".format(comment))
+            logger.debug("Found Comment \n{}".format(comment))
             comments.append(comment)
         if(data is not None):
-            #logger.debug("Found Data {}".format(data))
+            logger.debug("Found Data \n{}".format(data))
             datas.append(data)
     return (comments, masterHeader, datas)
 
@@ -80,6 +99,7 @@ def parseLine(infile, line, masterHeader, headerDelimCount,
         headerDelimCount = len(regexDelim.findall(header))
         if not masterHeader:
             masterHeader = header
+            logger.debug("Master Header set:\n{}".format(masterHeader))
             return (None, header, None, headerDelimCount, headerFound,
                     masterHeader, hostFlag)
         else:
@@ -112,6 +132,20 @@ def parseLine(infile, line, masterHeader, headerDelimCount,
             raise SystemError
 
 
+#
+# Here All Aggrigated data is written to an output file in the pwd
+#
+# outfile - csv name to write to pwd 
+#   ex: asus-collated-papiex-2-0.csv
+
+# comments - Aggrigated list of comments 
+#   ex: ['comment1','comment2','...']
+
+# masterHeader - String holding header to be written 
+#   ex:"tags,hostname,exename,path,args,exitcode,pid,..."
+
+# dataList - Aggrigated list of csv data
+#   ex:[",asus,sleep,/bin/sleep,1,0,26577,0,26576,26497"]
 def writeOut(outfile, comments, masterHeader, dataList):
     """ Write our output file"""
     try:
@@ -126,13 +160,17 @@ def writeOut(outfile, comments, masterHeader, dataList):
         # write data
             for item in dataList:
                 f.write("%s\n" % item)
-    except FileNotFoundError as E:
+    except EnvironmentError: # parent of IOError, OSError
         logger.error("Bad output file {}".format(outfile))
         raise SystemError
 
-# Outfile could be 
+# Count lines in input directory compare result with length of output file lines
 def verifyOut(indir, outfile):
-    """ Check line count """
+    """ VerifyOut will take a input directory, count the csv files and compare
+        the length against the outfile.
+        
+        Return: True if line count matches
+        """
     outdir = getcwd()
     # Directory Given
     if(type(indir) == str):
@@ -154,24 +192,26 @@ def verifyOut(indir, outfile):
     for file in fileList:
         lines += file_len(file)
     headers2Remove = len(fileList)
-    # Total lines - headers except 1
     result = lines - (headers2Remove - 1)
     if(result > outputLines):
         logger.warning("Output File smaller than planned, off by {}".format((result - outputLines)))
         logger.warning("Lines in files {}".format(str(lines)))
         logger.warning("Files(headers removed - 1) {}".format(str(headers2Remove)))
         logger.warning("Output Lines: {}".format(str(outputLines)))
+        return False
     elif(result < outputLines):
         logger.warning("Output File larger than planned, off by {}".format((outputLines - result)))
         logger.warning("Lines in files {}".format(str(lines)))
         logger.warning("Files(headers removed - 1) {}".format(str(headers2Remove)))
         logger.warning("Output Lines: {}".format(str(outputLines)))
+        return False
     elif(result == outputLines):
-        logger.debug("Output: {} \t{} Lines".format(outfile, result))
-        logger.debug("{} Input files \t\t\t\t\t\t{} Lines".format(len(fileList),outputLines))
+        logger.debug("Input: {} Lines {} Files".format(outputLines,len(fileList),))
+        logger.debug("Output: {} Lines File: {}".format(result,outfile))
         return True
 
-
+# fname: file name to count lines of
+# Returns number of lines
 def file_len(fname):
     """Helper function for counting file lines"""
     with open(fname) as f:
@@ -181,30 +221,20 @@ def file_len(fname):
     return i + 1
 
 
-# Jobid is based on parent directory
-# Hostname is determined from csv file name
-# csv should be in the format of 
-# test/data/collate/goodSample_123/asus-papiex-549-0.csv
-# Where `asus` is the hostname and `goodSample_123` is the jobid
+# indir - String location of CSV Files to collate
+# outfile - string file name for output
+# delim - CSV Delimiter character defaults to comma
+# comment - CSV Comment character defaults to hashtag
+# debug - Defaults to intlvl=2, set "false" to disable debug
 def csvjoiner(indir,
               outfile="",
-              delim=',', comment='#', debug="", escaped=['\n', '\a', '\b']):
-    """ main function for orchestrating """
+              delim=',', comment='#', debug=""):
+    """ CSVJoiner will collate the csv files within the indir
+        The resulting collated file can be designated with outfile paramater. """
     logger = getLogger(__name__)
     set_logging(intlvl=2, check=True)
-    if (debug.lower() == "true"):
-        pass
-    elif (debug.lower() == "header"):
-        # HeaderDebug = True
-        pass 
-    elif (debug.lower() == "data"):
-        pass # DataDebug = True
-    elif (debug.lower() == "comment"):
-        pass # CommentDebug = True
-    elif (debug.lower() == "false"):
-        logger = getLogger(__name__)
+    if (debug.lower() == "false"):
         set_logging(intlvl=0,check=False)
-        pass
     elif (debug != "false"):
         print("""\nUnknown debug option.  
         Please use:\ndebug=True full debug details\n
@@ -212,11 +242,9 @@ def csvjoiner(indir,
     cwd = getcwd()
     # Comments Outer
     commentsList = []
-
     # Header
     masterHeader = ""
     headerFound = False
-
     # Data
     dataList = []
     numFields = 0
@@ -227,7 +255,6 @@ def csvjoiner(indir,
 # String (Directory) Mode ##################################
     if(type(indir) == str):
         logger.info("Collate in Directory {}".format(indir))
-
         fileList = glob(indir+"/*.csv")
         #logger.debug("Filelist:{}".format(fileList))
         if(len(fileList) == 0):
@@ -241,10 +268,9 @@ def csvjoiner(indir,
             host = h[0]
         else:
             logger.error('Hostname missing from header and file does not have hyphen ')
-            return False, ""
+            return False, None
         if outfile is "":
-            logger.debug("indir:{}\nhost:{} jobid:{}".format(indir,host,jobid))
-            
+            logger.debug("indir: {} host: {} jobid: {}".format(indir,host,jobid))
             outfile = host + "-collated" + "-papiex-" + jobid + "-0.csv"
             logger.info("Output File set as {}".format(str(outfile)))
     # Now that outfile is known check for it
@@ -270,7 +296,7 @@ def csvjoiner(indir,
             if len(host)<1:
                 host = "unknown"
             # Generate outfile name
-            logger.debug("indir:{}\nhost:{} jobid:{}".format(indir,host,jobid))
+            logger.debug("indir:{} host:{} jobid:{}".format(indir,host,jobid))
             if(outfile is ""):
                 outfile = host + "-collated" + "-papiex-" + jobid + "-0.csv"
             else:
@@ -304,10 +330,11 @@ def csvjoiner(indir,
         # Append lists
         commentsList += comments
         dataList += data
-
     writeOut(outfile, commentsList, masterHeader, dataList)
-    verifyOut(indir, outfile)
-    return True, outfile
+    if verifyOut(indir, outfile):
+        return True, outfile
+    else:
+        return False, None
 
 
 if __name__ == '__main__':
