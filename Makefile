@@ -17,6 +17,7 @@ dist:
 	rm -rf epmt-install
 	pyinstaller --clean --distpath=epmt-install epmt.spec
 	cp -Rp preset_settings epmt-install
+	cp -Rp notebooks epmt-install
 #	--hidden-import epmt_default_settings --exclude-module settings 
 	rm -f $(RELEASE); tar cvfz $(RELEASE) epmt-install
 	rm -rf epmt-install build
