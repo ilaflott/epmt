@@ -1,2 +1,0 @@
-pony==0.7.6
-psycopg2-binary==2.7.5
