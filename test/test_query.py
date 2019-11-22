@@ -456,6 +456,8 @@ class QueryAPI(unittest.TestCase):
         # model metrics: get/set
         all_metrics = eq.refmodel_get_metrics(r1.id, False)
         self.assertEqual(set(all_metrics), { 'duration', 'num_procs', 'cpu_time' })
+        active_metrics = eq.refmodel_get_metrics(r1.id, True)
+        self.assertEqual(set(active_metrics), { 'duration', 'num_procs', 'cpu_time' })
         eq.refmodel_set_active_metrics(r1.id, ['duration', 'cpu_time'])
         # all metrics will be the same as before, but active metrics will change
         all_metrics = eq.refmodel_get_metrics(r1.id, False)
@@ -474,6 +476,13 @@ class QueryAPI(unittest.TestCase):
         # delete model
         n = eq.delete_refmodels(r['id'])
         self.assertEqual(n, 1, 'wrong ref_model delete count')
+        # wildcard features
+        with capture() as (out, err):
+            r = eq.create_refmodel(jobs, tag='model_name:'+model_name, features='*')
+        all_features =  {'duration', 'syscr', 'systemtime', 'PERF_COUNT_SW_CPU_CLOCK', 'cpu_time', 'delayacct_blkio_time', 'time_waiting', 'write_bytes', 'inblock', 'minflt', 'invol_ctxsw', 'syscw', 'wchar', 'num_threads', 'processor', 'cancelled_write_bytes', 'rssmax', 'rchar', 'outblock', 'num_procs', 'time_oncpu', 'rdtsc_duration', 'usertime', 'timeslices', 'guest_time', 'vol_ctxsw', 'majflt', 'read_bytes', 'exitcode'}
+        self.assertEqual(eq.refmodel_get_metrics(r['id'], False), all_features) # all metrics
+        self.assertEqual(eq.refmodel_get_metrics(r['id'], True), all_features)  # active metrics
+        eq.delete_refmodels(r['id'])
 
     @db_session
     def test_ops_dm_calc(self):

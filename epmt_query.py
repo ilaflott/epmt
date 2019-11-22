@@ -730,8 +730,11 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
              will at present be set to modified_z_score.
     
     features: List of fields of each job that should be used
-             for outlier detection. 
-             Defaults to: ['duration', 'cpu_time', 'num_procs']
+             for outlier detection. If passed an empty list
+             or a wildcard('*') it will be interpreted as the user
+             wanting to use all available metrics for outlier
+             detection.
+             Defaults to: settings.outlier_features
     
     exact_tag_only: Default False. If set, all tag matches require
              exact dictionary match, and a superset match won't do.
@@ -771,8 +774,12 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
     #    jobs = list(jobs)
     #if type(jobs) == list and isString(jobs[0]):
     #    jobs = Job.select(lambda j: j.jobid in jobs)
+    
     jobs_orm = orm_jobs_col(jobs)
+    jobs_df = conv_jobs(jobs_orm, fmt='pandas')
     jobs = jobs_orm[:]
+    from epmt_outliers import _sanitize_features
+    features = _sanitize_features(features, jobs_df)
 
     if sanity_check:
         _warn_incomparable_jobs(jobs)
