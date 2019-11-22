@@ -7,11 +7,18 @@ import os.path
 from PyInstaller.utils.hooks import collect_submodules
 from IPython import extensions as IPython_extensions
 
-hidden = collect_submodules('notebook',filter=lambda name: 'handlers' in name)
+hidden = collect_submodules('notebook',filter=lambda name: name.endswith('handlers') and ".tests." not in name)
 uniq = set(hidden)
 hidden = list(uniq)
+# Without this, we get no tree view
 hidden.append('notebook.tree')
+# Whats a notebook without pandas
+hidden.append('pandas')
+# Add default plotting engine
+hidden.append('matplotlib')
+# Required for IPython kernel
 hidden.append('ipykernel.datapub')
+# Required for EPMT
 hidden.append('sqlalchemy.ext.baked')
 print("Hidden modules: ",hidden)
 
