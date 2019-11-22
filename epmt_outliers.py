@@ -99,7 +99,11 @@ def partition_jobs_by_ops(jobs, tags=[], features=FEATURES, methods=[modified_z_
 @db_session
 def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds = thresholds, sanity_check=True):
     """
-    This function will detects outliers among a set of input jobs
+    This function will detects outlier jobs among a set of input jobs.
+    This should be used as the first tool in outlier detection. If you
+    would like to dig deeper into the operations that are outliers,
+    then use `detect_outlier_ops`, which will take appreciably longer
+    than this function.
     
     INPUT:
     jobs:     is either a pandas dataframe of job(s) or a list of job ids or 
@@ -213,6 +217,12 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
 @db_session
 def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds=thresholds, sanity_check=True):
     """
+    This function detects outlier *operations* across a set of *jobs*.
+    You should be using this function only if you want to figure out
+    which operations are outlier. If you only want to figure out the
+    jobs that were outliers, it is recommended you use `detect_outlier_jobs`,
+    since that runs considerably faster than `detect_outlier_ops`.
+
     jobs is a list of jobids or an ORM query
     tags is a list of tags specified either as a string or a list of string/list of dicts
     If tags is not specified, then the list of jobs will be queried to get the

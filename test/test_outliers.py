@@ -80,7 +80,7 @@ class OutliersAPI(unittest.TestCase):
         # this way it won't later be classified as a outlier
         r = eq.create_refmodel(all_jobs, fmt='terse')
         (df, parts) = eod.detect_outlier_jobs(all_jobs, trained_model=r)
-        # make sure we used all the features
+        # make sure we used default the features
         self.assertEqual(set(df.columns.values) & {'cpu_time', 'duration', 'num_procs'}, {'cpu_time', 'duration', 'num_procs'})
         # check there are no outliers
         self.assertEqual(len(df[df.duration > 0]), 0, "incorrect count of duration outliers")
@@ -91,6 +91,17 @@ class OutliersAPI(unittest.TestCase):
         eq.refmodel_set_active_metrics(r, ['duration', 'cpu_time'])
         (df, _) = eod.detect_outlier_jobs(all_jobs, trained_model=r)
         self.assertEqual(set(df.columns.values) & {'cpu_time', 'duration', 'num_procs'}, {'cpu_time', 'duration'})
+        # wildcard features
+        all_features =  {'duration', 'syscr', 'systemtime', 'PERF_COUNT_SW_CPU_CLOCK', 'cpu_time', 'delayacct_blkio_time', 'time_waiting', 'write_bytes', 'inblock', 'minflt', 'invol_ctxsw', 'syscw', 'wchar', 'num_threads', 'processor', 'cancelled_write_bytes', 'rssmax', 'rchar', 'outblock', 'num_procs', 'time_oncpu', 'rdtsc_duration', 'usertime', 'timeslices', 'guest_time', 'vol_ctxsw', 'majflt', 'read_bytes', 'exitcode'}
+        r = eq.create_refmodel(all_jobs, features='*',  fmt='terse')
+        (df, _) = eod.detect_outlier_jobs(all_jobs, trained_model=r)
+        # since we called eod.detect_outlier_jobs without wildcard features
+        # the EOD will use the default features
+        self.assertEqual(set(df.columns.values) & all_features, {'cpu_time', 'duration', 'num_procs'})
+        # now let's use wildcard in the outlier detection
+        (df, _) = eod.detect_outlier_jobs(all_jobs, features='*', trained_model=r)
+        # now check that we used *all* the features
+        self.assertEqual(set(df.columns.values) & all_features, all_features)
 
 
     @db_session
