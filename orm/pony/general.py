@@ -370,10 +370,10 @@ def _attribute_filter(qs, attr, target, exact_match = False):
             qs = qs.filter(lambda j: getattr(j, attr)[k] == v)
     return qs
 
-def orm_get_refmodels(tag = {}, fltr=None, limit=0, order='', exact_tag_only=False):
+def orm_get_refmodels(name = None, tag = {}, fltr=None, limit=0, order='', exact_tag_only=False):
     from .models import ReferenceModel
 
-    qs = ReferenceModel.select()
+    qs = ReferenceModel.select() if (name is None) else ReferenceModel.select().filter(name = name)
 
     # filter using tag if set
     qs = _tag_filter(qs, tag, exact_tag_only)

@@ -68,6 +68,7 @@ class ReferenceModel(with_metaclass(CommonMeta, Base)):
     enabled = Column(Boolean, default=True)
     info_dict = Column(JSON)
     jobs = relationship('Job', back_populates='ref_models', secondary=refmodel_job_associations_table)
+    name = Column(String, index=True, unique=True)
     @db_session
     def __repr__(self):
         return "ReferenceModel[%d]" % (self.id)

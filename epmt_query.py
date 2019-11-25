@@ -633,10 +633,12 @@ def rank_proc_tags_keys(jobs, order = 'cardinality', exclude = []):
 
 
 @db_session
-def get_refmodels(tag = {}, fltr=None, limit=0, order=None, exact_tag_only=False, merge_nested_fields=True, fmt='dict'):
+def get_refmodels(name=None, tag = {}, fltr=None, limit=0, order=None, exact_tag_only=False, merge_nested_fields=True, fmt='dict'):
     """
-    This function returns reference models filtered using tag and fltr
-
+    This function returns reference models filtered using name / tag / fltr
+    
+    name  : query reference models by name. Usually if you query by name
+            you wouldn't need to use tag/fltr/limit/order.
     tag   : refers to a single dict of key/value pairs or a string
     fltr  : a lambda function or a string containing a pony expression
     limit : used to limit the number of output items, 0 means no limit
@@ -645,7 +647,7 @@ def get_refmodels(tag = {}, fltr=None, limit=0, order=None, exact_tag_only=False
             the full dictionary must match for a successful match. Default False.
     merge_nested_fields: used to hoist attributes from the 'computed'
             fields in the reference model, so they appear as first-class fields.
-    fmt   : one of 'orm', 'pandas', 'dict'. Default is 'dict'
+    fmt   : one of 'orm', 'pandas', 'dict' or 'terse'. Default is 'dict'
 
     EXAMPLE:
       get_refmodels(tag = 'exp_name:ESM4;exp_component:ice_1x1', fmt='pandas')
@@ -655,7 +657,7 @@ def get_refmodels(tag = {}, fltr=None, limit=0, order=None, exact_tag_only=False
     if type(tag) == str:
         tag = tag_from_string(tag)
 
-    qs = orm_get_refmodels(tag, fltr, limit, order, exact_tag_only)
+    qs = orm_get_refmodels(name, tag, fltr, limit, order, exact_tag_only)
 
     if fmt == 'orm':
         return qs
@@ -700,7 +702,7 @@ def _refmodel_scores(col, outlier_methods, features):
     return ret
 #
 @db_session
-def create_refmodel(jobs=[], tag={}, op_tags=[], 
+def create_refmodel(jobs=[], name=None, tag={}, op_tags=[], 
                     outlier_methods=[modified_z_score], 
                     features=['duration', 'cpu_time', 'num_procs'], exact_tag_only=False,
                     fmt='dict', sanity_check = True, enabled=True):
@@ -710,6 +712,9 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
     
     
     jobs:     points to a list of Jobs (or pony JobSet) or jobids
+
+    name:     An optional string that serves to identify the model
+              that will be created. 
     
     tag:      A string or dict consisting of key/value pairs. This
               tag is saved for the refmodel, and may be used
@@ -811,7 +816,7 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
     computed = scores
 
     # now save the ref model
-    r = ReferenceModel(jobs=jobs, tags=tag, op_tags=op_tags, computed=computed, enabled=enabled)
+    r = ReferenceModel(jobs=jobs, name=name, tags=tag, op_tags=op_tags, computed=computed, enabled=enabled)
     orm_commit()
     if fmt=='orm': 
         return r

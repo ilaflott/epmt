@@ -470,10 +470,10 @@ def _analyses_filter(qs, analyses):
     from .models import Job
     return _attribute_filter(qs, 'analyses', analyses, model = Job, conv_to_str = True)
 
-def orm_get_refmodels(tag = {}, fltr=None, limit=0, order=None, exact_tag_only=False):
+def orm_get_refmodels(name = None, tag = {}, fltr=None, limit=0, order=None, exact_tag_only=False):
     from .models import ReferenceModel
 
-    qs = Session.query(ReferenceModel)
+    qs = Session.query(ReferenceModel).filter_by(name=name) if (name is not None) else Session.query(ReferenceModel)
 
     qs = _tag_filter(qs, tag, exact_tag_only, ReferenceModel)
 

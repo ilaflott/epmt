@@ -484,6 +484,16 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(eq.refmodel_get_metrics(r['id'], True), all_features)  # active metrics
         eq.delete_refmodels(r['id'])
 
+        # named reference models
+        with capture() as (out, err):
+            r1 = eq.create_refmodel(jobs, name='test_model')
+            r2 = eq.create_refmodel(jobs)
+        self.assertEqual(r1['name'], 'test_model')
+        self.assertEqual([r1['id']], eq.get_refmodels(name = 'test_model', fmt='terse'))
+        self.assertFalse(eq.get_refmodels(name = 'no_such_model'))
+        eq.delete_refmodels(r1['id'], r2['id'])
+
+
     @db_session
     def test_ops_dm_calc(self):
         jobs = eq.get_jobs(['685000', '685003', '685016'], fmt='orm')

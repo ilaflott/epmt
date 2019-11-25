@@ -170,6 +170,7 @@ class ReferenceModel(db.Entity):
     computed = Optional(Json)
     enabled = Required(bool, default=True)
     jobs = Set('Job')
+    name = Optional(str,unique=True)
 
 class UnprocessedJob(db.Entity):
     pass
