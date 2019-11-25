@@ -20,7 +20,7 @@
 
 from __future__ import print_function
 from __future__ import unicode_literals
-from sys import argv, version_info
+from sys import argv, version_info, exit
 from re import compile
 from os import getcwd, path
 from glob import glob
@@ -52,18 +52,15 @@ def parseFile(file, masterHeader, headerFound, headerDelimCount, delim, commentD
             fileLines += fp.read().splitlines()
     except EnvironmentError:
         logger.error("No such file {}".format(file))
-        raise SystemError
+        raise 
     for line in fileLines:
         line = line.rstrip('\r\n')
-        try:
-            comment, header, data, headerDelimCount, headerFound, masterHeader, hostFlag = parseLine(file, line, masterHeader, headerDelimCount, headerFound, delim, commentDelim, hostFlag)
-        except SystemError:
-            raise SystemError
+        comment, header, data, headerDelimCount, headerFound, masterHeader, hostFlag = parseLine(file, line, masterHeader, headerDelimCount, headerFound, delim, commentDelim, hostFlag)
         if(comment is not None):
-            logger.debug("Found Comment \n{}".format(comment))
+            logger.debug("Found comment \n{}".format(comment))
             comments.append(comment)
         if(data is not None):
-            logger.debug("Found Data \n{}".format(data))
+            logger.debug("Found data \n{}".format(data))
             datas.append(data)
     return (comments, masterHeader, datas)
 
@@ -100,13 +97,13 @@ def parseLine(infile, line, masterHeader, headerDelimCount,
         headerDelimCount = len(regexDelim.findall(header))
         if not masterHeader:
             masterHeader = header
-            logger.debug("Master Header set:\n{}".format(masterHeader))
+            logger.debug("Master header set:\n{}".format(masterHeader))
             return (None, header, None, headerDelimCount, headerFound,
                     masterHeader, hostFlag)
         else:
             if header != masterHeader:
-                logger.warning("File {} Header Does Not Match Master".format(infile))
-                logger.warning("Bad Job possible, stopping")
+                logger.warning("File {} header does not match master".format(infile))
+                logger.warning("Likely a corrupted job.. stopping")
                 raise SystemError
             elif header == masterHeader:
                 return (None, header, None, headerDelimCount, headerFound,
@@ -120,16 +117,15 @@ def parseLine(infile, line, masterHeader, headerDelimCount,
                 host = fn[0]
                 line = line + ',' + host
             else:
-                logger.warning("{} Filename missing host before -papiex".format(str(fn[0])))
-                helpDoc()
+                logger.warning("{} filename missing host before -papiex".format(str(fn[0])))
                 raise SystemError
         lineDelimCount = len(regexDelim.findall(line))
         if (lineDelimCount == headerDelimCount):
             return (None, None, line, headerDelimCount, headerFound, masterHeader, hostFlag)
         else:
-            logger.warning("File {} Data does not match header".format(infile))
+            logger.warning("File {} data does not match header".format(infile))
             logger.warning("Header: {} delimiters, row has {} delimiters".format(str(headerDelimCount), str(lineDelimCount)))
-            logger.warning("Bad Job possible")
+            logger.warning("Corrupted job likely")
             raise SystemError
 
 
@@ -163,7 +159,7 @@ def writeOut(outfile, comments, masterHeader, dataList):
                 f.write("%s\n" % item)
     except EnvironmentError:  # parent of IOError, OSError
         logger.error("Bad output file {}".format(outfile))
-        raise SystemError
+        raise
 
 
 # Count lines in input directory compare result with length of output file lines
@@ -195,20 +191,20 @@ def verifyOut(indir, outfile):
     headers2Remove = len(fileList)
     result = lines - (headers2Remove - 1)
     if(result > outputLines):
-        logger.warning("Output File smaller than planned, off by {}".format((result - outputLines)))
+        logger.warning("Output file smaller than expected, off by {}".format((result - outputLines)))
         logger.warning("Lines in files {}".format(str(lines)))
         logger.warning("Files(headers removed - 1) {}".format(str(headers2Remove)))
         logger.warning("Output Lines: {}".format(str(outputLines)))
         return False
     elif(result < outputLines):
-        logger.warning("Output File larger than planned, off by {}".format((outputLines - result)))
+        logger.warning("Output file larger than expected, off by {}".format((outputLines - result)))
         logger.warning("Lines in files {}".format(str(lines)))
         logger.warning("Files(headers removed - 1) {}".format(str(headers2Remove)))
-        logger.warning("Output Lines: {}".format(str(outputLines)))
+        logger.warning("Output lines: {}".format(str(outputLines)))
         return False
     elif(result == outputLines):
-        logger.debug("Input: {} Lines {} Files".format(outputLines, len(fileList),))
-        logger.debug("Output: {} Lines File: {}".format(result, outfile))
+        logger.debug("Input: {} lines {} files".format(outputLines, len(fileList),))
+        logger.debug("Output: {} lines file: {}".format(result, outfile))
         return True
 
 
@@ -230,19 +226,20 @@ def file_len(fname):
 # debug - Defaults to intlvl=2, set "false" to disable debug
 def csvjoiner(indir,
               outfile="",
-              delim=',', comment='#', debug=""):
+              delim=',', comment='#', debug=0):
     """ CSVJoiner will collate the csv files within the indir
         The resulting collated file can be designated with outfile paramater. """
-    logger = getLogger(__name__)
+    logger = getLogger("csvjoiner")
+    set_logging(intlvl=debug, check=True)
     #set_logging(intlvl=2, check=True)
-    if (debug.lower() == "true"):
-        set_logging(intlvl=2, check=False)  # Since debug paramater is specified check false
-    elif (debug.lower() == "false"):
-        set_logging(intlvl=0, check=False)  # Since debug paramater is specified check false
-    elif (debug != "false"):
-        print("""\nUnknown debug option.
-        Please use:\ndebug=True full debug details\n
-        debug=header\ndebug=data\ndebug=comment\n\n""")
+    # if (debug.lower() == "true"):
+    #     set_logging(intlvl=2, check=False)  # Since debug paramater is specified check false
+    # elif (debug.lower() == "false"):
+    #     set_logging(intlvl=0, check=False)  # Since debug paramater is specified check false
+    # elif (debug != "false"):
+    #     print("""\nUnknown debug option.
+    #     Please use:\ndebug=True full debug details\n
+    #     debug=header\ndebug=data\ndebug=comment\n\n""")
     # Comments Outer
     commentsList = []
     # Header
@@ -257,7 +254,7 @@ def csvjoiner(indir,
             indir = str(indir.encode('ascii'))
 # String (Directory) Mode ##################################
     if(type(indir) == str):
-        logger.info("Collate in Directory {}".format(indir))
+        logger.info("Collate in directory {}".format(indir))
         fileList = glob(indir + "/*.csv")
         # logger.debug("Filelist:{}".format(fileList))
         if(len(fileList) == 0):
@@ -275,12 +272,12 @@ def csvjoiner(indir,
         if outfile is "":
             logger.debug("indir: {} host: {} jobid: {}".format(indir, host, jobid))
             outfile = host + "-collated" + "-papiex-" + jobid + "-0.csv"
-            logger.info("Output File set as {}".format(str(outfile)))
+            logger.info("Output file set as {}".format(str(outfile)))
     # Now that outfile is known check for it
 
 # List Mode #########################################
     if(type(indir) == list):
-        logger.info("Collater in List mode(List arguments Detected)")
+        logger.info("Collater in list mode(list arguments detected)")
         fileList = indir
         for test in fileList:
             if(path.isfile(test) is False):
@@ -309,9 +306,8 @@ def csvjoiner(indir,
                     return False, None
         except IndexError:
             logger.error("CSV name not formatted properly(jobid or host?)")
-            helpDoc()
             return False, None
-        logger.info("Output File:{}".format(str(outfile)))
+        logger.info("Output file:{}".format(str(outfile)))
     if (path.isfile(outfile)):
         logger.error("Output {} already exists".format(outfile))
         return False, None
@@ -320,13 +316,10 @@ def csvjoiner(indir,
         return False, None
     # iterate each file building result
     for file in fileList:
-        logger.debug("Collating File:{}".format(file))
-        try:
-            comments, masterHeader, data = parseFile(file, masterHeader,
+        logger.debug("Collating file:{}".format(file))
+        comments, masterHeader, data = parseFile(file, masterHeader,
                                                      headerFound,
                                                      numFields, delim, commentDelim)
-        except SystemError:
-            raise SystemError
         # Reset for next file
         headerFound = False
         numFields = 0
@@ -341,54 +334,15 @@ def csvjoiner(indir,
 
 
 if __name__ == '__main__':
-    debug = "False"
-    outfile = ""
-
-    def helpDoc():
-        """Print Help Information"""
-        print("""Usage:\tDirectory\n\tconcat input dir/ [outFile=resulting_Csv.csv] [debug=True]\n\tOR List
-\tconcat inputfile.csv inputfile2.csv [inputfile3.csv inputfileN.csv] [outFile=resulting_Csv.csv] [debug=True]
-\nIf Specifying csv list parent directory of csv must have underscore followed by jobid in directory name
-
-epmt_concat.py [outfile=results.csv] inputdirectory/ [debug=True] 
-epmt_concat.py [outfile=results.csv] csvfile.csv csvfile2.csv [debug=True] 
-epmt_concat.py [outfile=results.csv] dir/dir/csvfile.csv dir/csvfile2.csv [debug=True] 
-epmt_concat.py [outfile=results.csv] dir/*.csv [debug=True] 
-epmt_concat.py -h OR --help
-
-inputdirectory - This directory contains job csv files and has job id after a underscore ex CM4_piControl_C_atmos_00050101
-\tex: atmos_00050101
-inputfile.csv - this file should have a name preceded by host then hyphen host-details.csv
-\tex: pp201-papiex-300-0.csv\n
-<debug>=Debug header, data and comments
-----------------------------------------
-debug=header will display header parsing related debug information
-debug=data will display csv data related debug information
-debug=comment will display comment related debug information
-\n<outfile>=resulting collated file
-""")
-    # Find debug arg and set debug variable+
-    for arg in argv:
-        if arg.find("-h") != -1 or arg.find("--help") != -1:
-            helpDoc()
-            quit(0)
-        if arg.find("debug") != -1:
-            # Unicode to str for py2
-            debug = str(argv[argv.index(arg)].split("=")[1])
-            del argv[argv.index(arg)]
-        if arg.find("outfile") != -1:
-            # Unicode to str for py2
-            outfile = str(argv[argv.index(arg)].split("=")[1])
-            del argv[argv.index(arg)]
-    # Single directory
-    if(len(argv) == 2):
-        try:
-            csvjoiner(debug=debug, indir=str(argv[1]), outfile=outfile)
-        except SystemError as E:
-            quit(1)
-    # List of files : list mode
-    if(len(argv) > 2):
-        csvjoiner(debug=debug, indir=argv[1:], outfile=outfile)
-    if(len(argv) == 1):
-        helpDoc()
-        quit(0)
+    from argparse import ArgumentParser
+    parser = ArgumentParser(description="Concatenate CSV files")
+    parser.add_argument('files', nargs='+', metavar='FILE',
+                    help='Two or more CSV files to concatenate OR a directory containing CSV files')
+    parser.add_argument('-v', '--verbose', action="count", default=0, help="increase verbosity")
+    parser.add_argument('-o', '--output-file', help="output file name. Without this option the file will be automatically named based on the input file names", default='')
+    args = parser.parse_args()
+    print(args)
+    if len(args.files) == 1:
+        csvjoiner(debug=args.verbose, indir=args.files[0], outfile=args.output_file)
+    else:
+        csvjoiner(debug=args.verbose, indir=args.files, outfile=args.output_file)
