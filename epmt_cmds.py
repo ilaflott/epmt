@@ -736,9 +736,7 @@ def stage_job(dir,collate=True,compress_and_tar=True):
         if collate:
             from epmt_concat import csvjoiner
             logger.debug("csvjoiner(%s)",dir)
-            hack_dir = getcwd()
-            status, collated_file = csvjoiner(dir,debug="false")
-            chdir(hack_dir)
+            status, collated_file = csvjoiner(dir,debug=0)
             if status == False:
                 return False
             if status == True and collated_file and len(collated_file) > 0:
