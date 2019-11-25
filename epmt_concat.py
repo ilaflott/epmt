@@ -341,7 +341,7 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--verbose', action="count", default=0, help="increase verbosity")
     parser.add_argument('-o', '--output-file', help="output file name. Without this option the file will be automatically named based on the input file names", default='')
     args = parser.parse_args()
-    print(args)
+    # print(args)
     if len(args.files) == 1:
         csvjoiner(debug=args.verbose, indir=args.files[0], outfile=args.output_file)
     else:
