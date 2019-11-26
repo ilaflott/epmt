@@ -16,7 +16,7 @@ teardown() {
 }
 
 @test "epmt_concat with valid input dir" {
-  run epmt_concat.py sample/csv/
+  run epmt_concat.py test/data/csv/
   assert_success
   run test -f pp053-collated-papiex-csv-0.csv
   assert_success
@@ -25,7 +25,7 @@ teardown() {
 }
 
 @test "epmt_concat with valid input files" {
-  run epmt_concat.py sample/csv/*.csv
+  run epmt_concat.py test/data/csv/*.csv
   assert_success
   run test -f pp053-collated-papiex-csv-0.csv
   assert_success
@@ -45,7 +45,7 @@ teardown() {
 }
 
 @test "epmt_concat with corrupted csv" {
-  run epmt_concat.py sample/corrupted_csv/
+  run epmt_concat.py test/data/corrupted_csv/
   assert_failure
-  assert_output --partial "ERROR:epmt_concat:Error concatenating files: Different number of elements in header and data in sample/corrupted_csv/pp053-papiex-615503-0.csv"
+  assert_output --partial "ERROR:epmt_concat:Error concatenating files: Different number of elements in header and data in test/data/corrupted_csv/pp053-papiex-615503-0.csv"
 }
