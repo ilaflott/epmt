@@ -19,7 +19,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (1,3,0)
+_version = (2,1,0)
 
 def version():
     return _version
