@@ -5,7 +5,7 @@ FROM giovtorres/docker-centos7-slurm:latest as slurm
 
 RUN yum install -y tcsh
 
-ARG release=2.0.0
+ARG release=2.1.0
 ARG settings=settings_slurm_test.py
 ARG destdir=/opt/epmt
 

@@ -6,7 +6,7 @@ RUN yum install -y make tcsh
 RUN yum clean all
 RUN rm -rf /var/cache/yum
 
-ARG release=2.0.0
+ARG release=2.1.0
 ARG settings=settings_sqlite_inmem_sqlalchemy.py
 ARG destdir=/opt/epmt
 
