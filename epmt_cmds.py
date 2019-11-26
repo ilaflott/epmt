@@ -839,7 +839,10 @@ def epmt_entrypoint(args):
 
     # Here it's up to each command to validate what it is looking for
     # and error out appropriately
-
+    if args.command == 'shell':
+        from code import interact
+        interact(local=locals())
+        return 0
     if args.command == 'check':
         # fake a job id so that epmt_check doesn't fail because of a missing job id
         environ['SLURM_JOB_ID'] = '1'
