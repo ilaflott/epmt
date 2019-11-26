@@ -752,7 +752,7 @@ def stage_job(dir,collate=True,compress_and_tar=True):
                 return_code = forkexecwait(cmd, shell=True)
                 if return_code != 0:
                     return False
-                cmd = "cp -p "+collated_file+" "+newdir
+                cmd = "mv "+collated_file+" "+newdir
                 logger.debug(cmd)
                 return_code = forkexecwait(cmd, shell=True)
                 if return_code != 0:
