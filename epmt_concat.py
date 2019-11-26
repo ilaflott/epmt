@@ -268,8 +268,8 @@ def csvjoiner(indir,
         # logger.debug("Filelist:{}".format(fileList))
         if(len(fileList) == 0):
             msg = "{} has no CSV files to concatenate".format(indir)
-            logger.error(msg)
-            return False, msg
+            logger.warning(msg)
+            return True, msg
         elif(len(fileList) < 2):
             logger.info("{} has only {} files".format(indir, len(fileList)))
         jobid = path.basename(path.normpath(indir))
