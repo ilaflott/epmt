@@ -8,7 +8,7 @@
 
 # Callstack
 # csvjoiner > Loop over files(parsefile > parseline) >
-#   writeOut > verifyOut[file_len()]
+#   writeCSV > verifyOut[file_len()]
 
 # Jobid is based on parent directory of csv files
 # Hostname is determined from csv file name
@@ -25,8 +25,11 @@ from re import compile
 from os import getcwd, path
 from glob import glob
 from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
-logger = getLogger(__name__)  # you can use other name
+logger = getLogger('epmt_concat')  # you can use other name
 from epmtlib import set_logging
+
+class InvalidFileFormat(RuntimeError):
+    pass
 
 
 # file - Single CSV File to parse for comment,header and data
@@ -38,7 +41,7 @@ from epmtlib import set_logging
 # Returns: tuple(comments list, masterHeader string, datas list)
 def parseFile(file, masterHeader, headerFound, headerDelimCount, delim, commentDelim):
     """ Take file and paramaters for parsing return tuple of csv data
-    to be passed to writeOut then verifyOut"""
+    to be passed to writeCSV then verifyOut"""
     fileLines = []
     comment = ""
     comments = []
@@ -52,7 +55,7 @@ def parseFile(file, masterHeader, headerFound, headerDelimCount, delim, commentD
             fileLines += fp.read().splitlines()
     except EnvironmentError:
         logger.error("No such file {}".format(file))
-        raise 
+        raise
     for line in fileLines:
         line = line.rstrip('\r\n')
         comment, header, data, headerDelimCount, headerFound, masterHeader, hostFlag = parseLine(file, line, masterHeader, headerDelimCount, headerFound, delim, commentDelim, hostFlag)
@@ -102,9 +105,10 @@ def parseLine(infile, line, masterHeader, headerDelimCount,
                     masterHeader, hostFlag)
         else:
             if header != masterHeader:
-                logger.warning("File {} header does not match master".format(infile))
-                logger.warning("Likely a corrupted job.. stopping")
-                raise SystemError
+                msg = "File {} header does not match master".format(infile)
+                logger.error(msg)
+                logger.error("Likely a corrupted job.. stopping")
+                raise InvalidFileFormat(msg)
             elif header == masterHeader:
                 return (None, header, None, headerDelimCount, headerFound,
                         masterHeader, hostFlag)
@@ -118,15 +122,15 @@ def parseLine(infile, line, masterHeader, headerDelimCount,
                 line = line + ',' + host
             else:
                 logger.warning("{} filename missing host before -papiex".format(str(fn[0])))
-                raise SystemError
+                raise ValueError("Invalid filename -- missing host")
         lineDelimCount = len(regexDelim.findall(line))
         if (lineDelimCount == headerDelimCount):
             return (None, None, line, headerDelimCount, headerFound, masterHeader, hostFlag)
         else:
-            logger.warning("File {} data does not match header".format(infile))
-            logger.warning("Header: {} delimiters, row has {} delimiters".format(str(headerDelimCount), str(lineDelimCount)))
-            logger.warning("Corrupted job likely")
-            raise SystemError
+            msg = "Different number of elements in header and data in {0}".format(infile)
+            logger.error(msg)
+            logger.error("Header: {} delimiters, row has {} delimiters".format(str(headerDelimCount), str(lineDelimCount)))
+            raise InvalidFileFormat(msg)
 
 
 #
@@ -143,8 +147,9 @@ def parseLine(infile, line, masterHeader, headerDelimCount,
 
 # dataList - Aggrigated list of csv data
 #   ex:[",asus,sleep,/bin/sleep,1,0,26577,0,26576,26497"]
-def writeOut(outfile, comments, masterHeader, dataList):
+def writeCSV(outfile, comments, masterHeader, dataList):
     """ Write our output file"""
+    logger = getLogger('writeCSV')
     try:
         logger.info("Writing file({})".format(outfile))
         # write comments
@@ -158,7 +163,7 @@ def writeOut(outfile, comments, masterHeader, dataList):
             for item in dataList:
                 f.write("%s\n" % item)
     except EnvironmentError:  # parent of IOError, OSError
-        logger.error("Bad output file {}".format(outfile))
+        logger.error("Error writing output file {}".format(outfile))
         raise
 
 
@@ -255,11 +260,16 @@ def csvjoiner(indir,
 # String (Directory) Mode ##################################
     if(type(indir) == str):
         logger.info("Collate in directory {}".format(indir))
+        if not path.isdir(indir):
+            msg = "{} does not exist or is not a directory".format(indir)
+            logger.error(msg)
+            return False, msg
         fileList = glob(indir + "/*.csv")
         # logger.debug("Filelist:{}".format(fileList))
         if(len(fileList) == 0):
-            logger.info("{} has no CSV Files".format(indir))
-            return True, ""
+            msg = "{} has no CSV files to concatenate".format(indir)
+            logger.error(msg)
+            return False, msg
         elif(len(fileList) < 2):
             logger.info("{} has only {} files".format(indir, len(fileList)))
         jobid = path.basename(path.normpath(indir))
@@ -280,8 +290,8 @@ def csvjoiner(indir,
         logger.info("Collater in list mode(list arguments detected)")
         fileList = indir
         for test in fileList:
-            if(path.isfile(test) is False):
-                logger.error(test + " is not a csv file")
+            if(not path.isfile(test)):
+                logger.error(test + " does not exist or is not a file")
                 return False, None
         if(len(fileList) != len(set(fileList))):
             logger.error("List has duplicates")
@@ -326,7 +336,7 @@ def csvjoiner(indir,
         # Append lists
         commentsList += comments
         dataList += data
-    writeOut(outfile, commentsList, masterHeader, dataList)
+    writeCSV(outfile, commentsList, masterHeader, dataList)
     if verifyOut(indir, outfile):
         return True, outfile
     else:
@@ -335,14 +345,16 @@ def csvjoiner(indir,
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
-    parser = ArgumentParser(description="Concatenate CSV files")
+    parser = ArgumentParser(description="Concatenate CSV files. It returns 0 on success and < 0 on error")
     parser.add_argument('files', nargs='+', metavar='FILE',
                     help='Two or more CSV files to concatenate OR a directory containing CSV files')
     parser.add_argument('-v', '--verbose', action="count", default=0, help="increase verbosity")
     parser.add_argument('-o', '--output-file', help="output file name. Without this option the file will be automatically named based on the input file names", default='')
     args = parser.parse_args()
-    # print(args)
-    if len(args.files) == 1:
-        csvjoiner(debug=args.verbose, indir=args.files[0], outfile=args.output_file)
-    else:
-        csvjoiner(debug=args.verbose, indir=args.files, outfile=args.output_file)
+    try:
+        retval = csvjoiner(debug=args.verbose, indir=(args.files[0] if (len(args.files) == 1) else args.files), outfile=args.output_file)
+    except Exception as e:
+        # an exception occured 
+        retval = (False, str(e))
+        logger.error("Error concatenating files: {0}".format(str(e)))
+    exit(0 if retval[0] else -1)
