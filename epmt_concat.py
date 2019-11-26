@@ -263,13 +263,13 @@ def csvjoiner(indir,
         if not path.isdir(indir):
             msg = "{} does not exist or is not a directory".format(indir)
             logger.error(msg)
-            return False, msg
+            return False, None
         fileList = glob(indir + "/*.csv")
         # logger.debug("Filelist:{}".format(fileList))
         if(len(fileList) == 0):
             msg = "{} has no CSV files to concatenate".format(indir)
             logger.warning(msg)
-            return True, msg
+            return True, ""
         elif(len(fileList) < 2):
             logger.info("{} has only {} files".format(indir, len(fileList)))
         jobid = path.basename(path.normpath(indir))
