@@ -37,7 +37,7 @@ docker-test-dist: $(RELEASE) test-$(RELEASE)
 	docker build -f Dockerfiles/Dockerfile.centos-7-epmt-test -t centos-7-epmt-test --build-arg release=$(VERSION) .
 	docker run --rm -it centos-7-epmt-test
 
-docker-dist-slurm:
+docker-dist-slurm: $(RELEASE)
 	docker build -f Dockerfiles/Dockerfile.slurm-centos-7 -t centos7-epmt-papiex-slurm-test --build-arg release=$(VERSION) .
 
 slurm-start: docker-dist-slurm
