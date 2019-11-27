@@ -176,7 +176,7 @@ def verifyOut(indir, outfile):
         """
     # Directory Given
     if(type(indir) == str):
-        fileList = glob(indir + "*.csv")
+        fileList = sorted(glob(indir + "*.csv"))
         # Check for output in list of files
         if indir + outfile in fileList:
             fileList.remove(indir + outfile)
@@ -264,8 +264,8 @@ def csvjoiner(indir,
             msg = "{} does not exist or is not a directory".format(indir)
             logger.error(msg)
             return False, None
-        fileList = glob(indir + "/*.csv")
-        # logger.debug("Filelist:{}".format(fileList))
+        fileList = sorted(glob(indir + "/*.csv"))
+        logger.debug("Filelist:{}".format(fileList))
         if(len(fileList) == 0):
             msg = "{} has no CSV files to concatenate".format(indir)
             logger.warning(msg)
