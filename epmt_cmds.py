@@ -845,12 +845,18 @@ def epmt_entrypoint(args):
         return 0
     if args.command == 'unittest':
         import unittest
-        # FIX: make module list DNRY
-        import test.test_lib,test.test_settings,test.test_anysh,test.test_submit,test.test_cmds,test.test_query,test.test_outliers,test.test_db_schema
-        for m in [test.test_lib,test.test_settings,test.test_anysh,test.test_submit,test.test_cmds,test.test_query,test.test_outliers,test.test_db_schema]:
-            suite = unittest.TestLoader().loadTestsFromModule(m)
-            print(m.__name__)
-            unittest.TextTestRunner().run(suite)
+        from importlib import import_module
+        TEST_MODULES = ['test.test_lib','test.test_settings','test.test_anysh','test.test_submit','test.test_cmds','test.test_query','test.test_outliers','test.test_db_schema' ]
+        for m in TEST_MODULES:
+            mod = import_module(m)
+            suite = unittest.TestLoader().loadTestsFromModule(mod)
+            print('\n\nRunning', m)
+            result = unittest.TextTestRunner(verbosity=2).run(suite)
+            if not result.wasSuccessful():
+                from sys import stderr
+                print('\n\nOne (or more) unit tests FAILED', file=stderr)
+                return -1
+        print('All tests successfully PASSED')
         return 0
             
     if args.command == 'check':

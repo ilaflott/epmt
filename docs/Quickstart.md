@@ -10,7 +10,7 @@ $ tar xvf epmt-x.y.z.tgz
 $ cd epmt-install/epmt
 $ cp ../preset_settings/settings_sqlite_inmem_sqlalchemy.py settings.py
 $ ./epmt -V
-2.1.0
+EPMT 2.1.0
 
 
 # unit testing (optional)
