@@ -33,7 +33,7 @@ class EPMTCmds(unittest.TestCase):
             # only sqlalchemy allows this option
             settings.post_process_job_on_ingest = False
         with capture() as (out,err):
-            epmt_submit(glob('sample/ppr-batch/1859/627919.tgz'), dry_run=False)
+            epmt_submit(glob('test/data/daemon/627919.tgz'), dry_run=False)
         settings.post_process_job_on_ingest = True
         up_jobs = eq.get_unprocessed_jobs()
         if settings.orm == 'sqlalchemy':

@@ -845,8 +845,9 @@ def epmt_entrypoint(args):
         return 0
     if args.command == 'unittest':
         import unittest
-        import test.test_lib,test.test_settings,test.test_submit,test.test_cmds,test.test_query,test.test_outliers,test.test_db_schema
-        for m in [test.test_lib,test.test_settings,test.test_submit,test.test_cmds,test.test_query,test.test_outliers,test.test_db_schema]:
+        # FIX: make module list DNRY
+        import test.test_lib,test.test_settings,test.test_anysh,test.test_submit,test.test_cmds,test.test_query,test.test_outliers,test.test_db_schema
+        for m in [test.test_lib,test.test_settings,test.test_anysh,test.test_submit,test.test_cmds,test.test_query,test.test_outliers,test.test_db_schema]:
             suite = unittest.TestLoader().loadTestsFromModule(m)
             print(m.__name__)
             unittest.TextTestRunner().run(suite)
