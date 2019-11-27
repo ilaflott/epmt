@@ -7,6 +7,6 @@ load 'libs/bats-assert/load'
 }
 
 @test "epmt submit" {
-  run epmt submit sample/ppr-batch/1889/692500.tgz             
+  run epmt submit test/data/submit/692500.tgz
   assert_output --partial "Imported successfully - job: 692500 processes: 6486"
 }
