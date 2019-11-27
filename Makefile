@@ -18,7 +18,10 @@ dist:
 	pyinstaller --clean --distpath=epmt-install epmt.spec
 	cp -Rp preset_settings epmt-install
 	cp -Rp notebooks epmt-install
-#	--hidden-import epmt_default_settings --exclude-module settings 
+	mkdir epmt-install/examples
+	cp epmt-example.sh epmt-example.csh epmt-install/examples
+	mkdir epmt-install/slurm
+	cp SLURM/slurm_task_*log_epmt.sh epmt-install/slurm
 	rm -f $(RELEASE); tar cvfz $(RELEASE) epmt-install
 	rm -rf epmt-install build
 
@@ -48,14 +51,14 @@ slurm-stop:
 
 docker-test-dist-slurm: slurm-start
 	docker exec centos7-slurm epmt check
-	docker exec centos7-slurm srun -n1 /opt/epmt/examples/epmt-example.sh
-	docker exec centos7-slurm srun -n1 /opt/epmt/examples/epmt-example.csh
-	docker exec centos7-slurm srun -n1 --task-prolog=/opt/epmt/slurm/slurm_task_prolog_epmt.sh --task-epilog=/opt/epmt/slurm/slurm_task_epilog_epmt.sh hostname
-	docker exec centos7-slurm srun -n1 --task-prolog=/opt/epmt/slurm/slurm_task_prolog_epmt.sh --task-epilog=/opt/epmt/slurm/slurm_task_epilog_epmt.sh sleep 1
+	docker exec centos7-slurm srun -n1 /opt/epmt/epmt-install/examples/epmt-example.sh
+	docker exec centos7-slurm srun -n1 /opt/epmt/epmt-install/examples/epmt-example.csh
+	docker exec centos7-slurm srun -n1 --task-prolog=/opt/epmt/epmt-install/slurm/slurm_task_prolog_epmt.sh --task-epilog=/opt/epmt/epmt-install/slurm/slurm_task_epilog_epmt.sh hostname
+	docker exec centos7-slurm srun -n1 --task-prolog=/opt/epmt/epmt-install/slurm/slurm_task_prolog_epmt.sh --task-epilog=/opt/epmt/epmt-install/slurm/slurm_task_epilog_epmt.sh sleep 1
 	ls 2.tgz 3.tgz 4.tgz 5.tgz
 	docker exec centos7-slurm epmt submit 2.tgz 3.tgz 4.tgz 5.tgz
-	docker exec centos7-slurm sed -i '$$s;$$;\nTaskProlog=/opt/epmt/slurm/slurm_task_prolog_epmt.sh\n;' /etc/slurm/slurm.conf
-	docker exec centos7-slurm sed -i '$$s;$$;\nTaskEpilog=/opt/epmt/slurm/slurm_task_epilog_epmt.sh\n;' /etc/slurm/slurm.conf
+	docker exec centos7-slurm sed -i '$$s;$$;\nTaskProlog=/opt/epmt/epmt-install/slurm/slurm_task_prolog_epmt.sh\n;' /etc/slurm/slurm.conf
+	docker exec centos7-slurm sed -i '$$s;$$;\nTaskEpilog=/opt/epmt/epmt-install/slurm/slurm_task_epilog_epmt.sh\n;' /etc/slurm/slurm.conf
 	docker exec centos7-slurm killall -s SIGHUP slurmctld slurmd
 	docker exec centos7-slurm srun -n1 hostname
 	docker exec centos7-slurm srun -n1 sleep 1
