@@ -1,13 +1,60 @@
 # EPMT Release Quickstart
 
 ## Download
-You should have been provided links to three compressed tar files, consisting of *papiex*, *epmt* and *tests*.
+You should have been provided link to the release tar EPMT-2.1.0.tgz 
+as well as an installer script (epmt-installer). Download both of
+them and place them in a folder.
+
+
+## Install
+
+### Automatic install using epmt-installer
+
+Just launch the installer and point it to the release tar.
+
+```
+$ ./epmt-installer ./EPMT-2.1.0.tgz 
+
+Using release: /home/tushar/src/EPMT/EPMT-2.1.0.tgz
+
+Enter full path to an empty install directory [/home/tushar/src/EPMT/epmt-2.1.0]: 
+Install directory: /home/tushar/src/EPMT/epmt-2.1.0
+Press ENTER to continue, Ctrl-C to abort: 
+Extracting release..
+Installing settings.py
+EPMT 2.1.0
+
+Installation successful.
+EPMT 2.1.0 installed in: /home/tushar/src/EPMT/epmt-2.1.0
+
+Please add /home/tushar/src/EPMT/epmt-2.1.0/epmt-install/epmt to PATH:
+
+For Bash:
+export "PATH=/home/tushar/src/EPMT/epmt-2.1.0/epmt-install/epmt:$PATH"
+
+Or, for C shell/tcsh:
+setenv PATH "/home/tushar/src/EPMT/epmt-2.1.0/epmt-install/epmt:$PATH"
+```
+
+Once the installer finishes successfully, you should follow the printed
+instructions and update your shell startup file. Then logout and login
+to update your PATH.
+
+
+
+### Manual Install
+
+It is recommended that you do the automatic install using
+epmt-installer. If you like, you may instead follow the
+manual install instructions:
+
+Untar the release tar (EPMT-2.1.0.tgz), you will get three files
 
  - papiex-epmt-x.y.z.tgz 
  - epmt-x.y.z.tgz        
  - test-epmt-x.y.z.tgz   
  
-Download each of the above and decide on locations for the installation. Then set the environment variables below to those locations as well as the version.
+Then set the environment variables below:
 
 ```
 EPMT_VERSION=2.1.0
@@ -15,9 +62,7 @@ EPMT_PREFIX=/path/to/install
 EPMT_DOWNLOAD=/path/to/download
 ```
 
-## Installation
-
-Perform the installation:
+Now perform the following steps:
 
 ```
 mkdir -p $EPMT_PREFIX
@@ -31,7 +76,7 @@ $EPMT_PREFIX/epmt-install/epmt/epmt -V
 
 ***IMPORTANT***
 
-***The below instructions uses a SqlLite database with an on-disk data store, which is scalable only to a few thousand jobs. You may use `settings_pg_localhost_sqlalchemy.py` to set up a connection to a PostGres database instance, which is the recommended configuration. `settings_sqlite_inmem_sqlalchemy.py` is also available for ephemeral testing.***
+***The below instructions uses a SQLite database with an on-disk data store, which is scalable only to a few thousand jobs. You may use `settings_pg_localhost_sqlalchemy.py` to set up a connection to a PostGres database instance, which is the recommended configuration. `settings_sqlite_inmem_sqlalchemy.py` is also available for ephemeral testing.***
 
 Modify install, output and stage paths, and possibly the database connection string, in your copied `settings.py` file.
 
