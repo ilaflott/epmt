@@ -154,16 +154,14 @@ TaskEpilog=EPMT_PREFIX/epmt-install/slurm/slurm_task_epilog_epmt.sh
 ## Testing (Optional)
 
 ### Run integration tests
+
 ```
-$EPMT_PREFIX/test/integration/run_integration 
+$ cd $EPMT_PREFIX/epmt-install/epmt
+$ test/integration/run_integration 
  ✓ epmt version
  ✓ epmt submit
  - epmt_concat -h (skipped)
- - epmt_concat with valid input dir (skipped)
- - epmt_concat with valid input files (skipped)
- - epmt_concat with non-existent directory (skipped)
- - epmt_concat with non-existent files (skipped)
- - epmt_concat with corrupted csv (skipped)
+ ...
  ✓ no daemon running
  ✓ start epmt daemon
  ✓ stop epmt daemon
@@ -172,7 +170,8 @@ $EPMT_PREFIX/test/integration/run_integration
 ```
 
 ### Run unit tests
+
 ```
+$ cd $EPMT_PREFIX/epmt-install/epmt
 $ epmt unittest
 ```
-
