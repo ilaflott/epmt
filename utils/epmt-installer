@@ -1,0 +1,46 @@
+#!/bin/bash
+
+function die() {
+  echo $* >&2
+  exit 1
+}
+
+usage="usage: `basename $0` [/path/to/release/tar]"
+
+release=${1:-"`ls $PWD/EPMT-*.tgz`"}
+[ -f "$release" ] || die "Could not find release tar.\n$usage"
+echo "Using release: $release"
+release_file=$(basename $release)
+version=$(echo $release_file | cut -f2 -d-|cut -f1-3 -d.)
+
+default_install="$PWD/epmt-$version"
+echo;echo -n "Enter full path to an empty install directory [$default_install]: "
+read EPMT_PREFIX
+[ "$EPMT_PREFIX" != "" ] || EPMT_PREFIX="$default_install"
+
+echo "Install directory: $EPMT_PREFIX"
+echo -n "Press ENTER to continue, Ctrl-C to abort: "
+read discard
+
+mkdir -p "$EPMT_PREFIX"
+existing_files=$(ls $EPMT_PREFIX)
+[ -z "$existing_files" ] || die "$EPMT_PREFIX is not empty. Please ensure the install directory ($EPMT_PREFIX) is empty and try again."
+
+(cd "$EPMT_PREFIX"; echo "Extracting release.."; tar xf "$release")
+(cd "$EPMT_PREFIX"; for f in *.tgz; do tar xf $f; rm -f $f; done)
+(cd "$EPMT_PREFIX"; cp epmt-install/preset_settings/settings_sqlite_localfile_sqlalchemy.py epmt-install/epmt/settings.py)
+$EPMT_PREFIX/epmt-install/epmt/epmt -V || die "Installation failed."
+cat <<EOT
+
+Installation successful.
+EPMT $version installed in: $EPMT_PREFIX
+
+Please add $EPMT_PREFIX/epmt-install/epmt to PATH:
+
+For Bash:
+export "PATH=$EPMT_PREFIX/epmt-install/epmt:\$PATH"
+
+Or, for C shell/tcsh:
+setenv PATH "$EPMT_PREFIX/epmt-install/epmt:\$PATH"
+EOT
+
