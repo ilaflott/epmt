@@ -52,7 +52,7 @@ EPMT $version installed in: $EPMT_PREFIX
 Please add $EPMT_PREFIX/epmt-install/epmt to PATH:
 
 For Bash:
-export "PATH=$EPMT_PREFIX/epmt-install/epmt:\$PATH"
+export PATH="$EPMT_PREFIX/epmt-install/epmt:\$PATH"
 
 Or, for C shell/tcsh:
 setenv PATH "$EPMT_PREFIX/epmt-install/epmt:\$PATH"

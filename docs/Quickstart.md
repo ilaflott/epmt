@@ -30,7 +30,7 @@ EPMT 2.1.0 installed in: /home/tushar/src/EPMT/epmt-2.1.0
 Please add /home/tushar/src/EPMT/epmt-2.1.0/epmt-install/epmt to PATH:
 
 For Bash:
-export "PATH=/home/tushar/src/EPMT/epmt-2.1.0/epmt-install/epmt:$PATH"
+export PATH="/home/tushar/src/EPMT/epmt-2.1.0/epmt-install/epmt:$PATH"
 
 Or, for C shell/tcsh:
 setenv PATH "/home/tushar/src/EPMT/epmt-2.1.0/epmt-install/epmt:$PATH"
@@ -153,6 +153,20 @@ TaskEpilog=EPMT_PREFIX/epmt-install/slurm/slurm_task_epilog_epmt.sh
 
 ## Testing (Optional)
 
+***IMPORTANT***
+***Note that the test results can be affected by (and will modify!)
+the contents of the existing database. So, we strongly suggest saving
+your current `settings.py` and copying over an in-memory sqlite settings
+template before running the tests below.***
+
+Saving your existing `settings.py` and using an in-memory sqlite
+template for the tests:
+
+```
+$ mv $EPMT_PREFIX/epmt-install/epmt/settings.py $EPMT_PREFIX/epmt-install/epmt/settings.py.backup
+$ cp $EPMT_PREFIX/epmt-install/preset_settings/settings_sqlite_inmem_sqlalchemy.py $EPMT_PREFIX/epmt-install/epmt/settings.py
+```
+
 ### Run integration tests
 
 ```
@@ -172,6 +186,11 @@ $ test/integration/run_integration
 ### Run unit tests
 
 ```
-$ cd $EPMT_PREFIX/epmt-install/epmt
 $ epmt unittest
+```
+
+Tip: Don't forget to restore your `settings.py` file after the tests!
+
+```
+$ mv $EPMT_PREFIX/epmt-install/epmt/settings.py.backup $EPMT_PREFIX/epmt-install/epmt/settings.py
 ```
