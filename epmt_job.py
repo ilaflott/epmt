@@ -526,8 +526,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 
 # Fields used in this function
     jobid = metadata['job_pl_id']
-    # FIX: Remove  metadata['job_username'] if we no longer have older data
-    username = metadata.get('job_pl_username', metadata['job_username'])
+    username = metadata['job_pl_username']
     start_ts = metadata['job_pl_start_ts']
     stop_ts = metadata['job_el_stop_ts']
     submit_ts = metadata['job_pl_submit_ts']

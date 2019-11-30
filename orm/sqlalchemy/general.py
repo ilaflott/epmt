@@ -39,6 +39,7 @@ def db_session(func):
             completed = True
         except Exception as e:
             logger.warning('\nAn exception occurred; rolling back session..')
+            logger.warning(e, exc_info=True)
             # import traceback, sys
             # print('-'*60)
             # traceback.print_exc(file=sys.stdout)
