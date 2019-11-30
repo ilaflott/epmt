@@ -1,7 +1,7 @@
 # This must be run from one directory above
 # ./papiex-oss.git
 # ./epmt.git
-FROM giovtorres/docker-centos7-slurm:latest as slurm
+FROM giovtorres/docker-centos7-slurm:19.05.1 as slurm
 
 RUN yum install -y tcsh
 
