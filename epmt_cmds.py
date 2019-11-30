@@ -365,7 +365,7 @@ def setup_vars():
             jid = environ.get(e)
             if jid and len(jid) > 0:
                 return jid
-        logger.warning("No key of %s was found in environment",settings.jobid_env_list)
+        logger.error("No key of %s was found in environment",settings.jobid_env_list)
         return False
 
     jobid = get_jobid()
@@ -535,7 +535,7 @@ def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run
     return cmd
 
 def epmt_run(cmdline, wrapit=False, dry_run=False, debug=False):
-    logger.debug("epmt_run(%s, %s, %s, %s, %s)", cmdline, str(wrapit), str(dry_run), str(debug))
+    # logger.debug("epmt_run(%s, %s, %s, %s, %s)", cmdline, str(wrapit), str(dry_run), str(debug))
 
     if not cmdline:
         logger.error("No command given")

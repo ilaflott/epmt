@@ -540,19 +540,18 @@ def check_fix_metadata(raw_metadata):
 
     metadata = dict.copy(raw_metadata)
     # Augment metadata where needed
-    if not ('job_username' in metadata):
-        username = get_batch_envvar("JOB_USER",raw_metadata['job_pl_env'])
-        if username is False:
-            username = get_batch_envvar("USER",raw_metadata['job_pl_env'])
-            if username is False:
-                username = raw_metadata.get('job_username')
-                if username == None:
-                    username = False
-        if username is False or len(username) < 1:
-            print(raw_metadata['job_pl_env'])
-            logger.error("No job username found in metadata or environment")
-            return False
-        metadata['job_username'] = username
+
+    # job_pl_username will ALWAYS be present so the code below
+    # is no longer needed
+    
+    # if (not ('job_pl_username' in metadata)) and (not ('job_username' in metadata)):
+    #     username = get_batch_envvar("JOB_USER",raw_metadata['job_pl_env']) or get_batch_envvar("USER",raw_metadata['job_pl_env'])
+    #     if username is False or len(username) < 1:
+    #         print(raw_metadata['job_pl_env'])
+    #         logger.error("No job username found in metadata or environment")
+    #         return False
+    #     metadata['job_pl_username'] = username
+    #     # metadata['job_username'] = username
 
     if not ('job_jobname' in metadata):
         jobname = get_batch_envvar("JOB_NAME",raw_metadata['job_pl_env'])
