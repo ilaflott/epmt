@@ -1,9 +1,10 @@
 # Copy this file and edit it as follows:
 # cp preset_settings/settings_xxxxxxx.py settings.py
 # Then feel free to edit the file to suit you.
+from pathlib import Path
 
 orm = 'sqlalchemy'
-db_params = { 'url': 'sqlite:///db.sqlite', 'echo': False }
+db_params = { 'url': 'sqlite:///{HOME}/EPMT_DB.sqlite'.format(HOME=str(Path.home())), 'echo': False }
 bulk_insert = True
 
 # You can alter the settings below to override defaults

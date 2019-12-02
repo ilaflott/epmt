@@ -3,7 +3,7 @@
 # Then feel free to edit the file to suit you.
 
 orm = 'pony'
-db_params = { 'url': 'sqlite:///db.sqlite3' }
+db_params = db_params = { 'url': 'sqlite:///{HOME}/EPMT_DB.sqlite'.format(HOME=str(Path.home())) }
 
 # You can alter the settings below to override defaults
 #
