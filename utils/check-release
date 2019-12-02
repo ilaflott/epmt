@@ -1,0 +1,52 @@
+#!/bin/bash -e
+
+# This script thoroughly tests an EPMT release
+# usage:
+#
+#  utils/check-release 
+#  - or -
+#  utils/check-release /path/to/EPMT-*.tgz
+
+STAGE="/tmp/EPMT-release-test"
+
+function die() {
+  echo $* >&2
+  exit 1
+}
+
+release=${1:-$(ls -1rt EPMT-*.tgz| tail -n1)}
+release_file=$(basename "$release")
+test -n "$release" || die "Could not find a release to test. Looking for EPMT-*.tgz"
+test -f "$release" || die "$release does not exist or is not readable"
+
+echo "Testing release: $release"
+echo "Staging area: $STAGE"
+echo "Wiping clean staging area and recreating it.."; rm -rf "$STAGE"
+mkdir -p "$STAGE"
+
+script_dir="$(dirname $0)"
+echo "copying epmt-installer and $release to staging area"
+cp -v "$script_dir/epmt-installer" "$STAGE"/
+cp -v "$release" "$STAGE"/
+
+echo "Changing directory to: $STAGE (staging area)"
+cd $STAGE/
+pwd
+echo "Running epmt-installer.."
+echo -e "\n\n" | ./epmt-installer "$release_file"
+EPMT_PREFIX=$(ls -d /tmp/EPMT-release-test/epmt-*|grep -v installer)
+echo "EPMT_PREFIX=$EPMT_PREFIX"
+echo "Prepending $EPMT_PREFIX/epmt-install/epmt to PATH"
+export PATH="$EPMT_PREFIX/epmt-install/epmt:$PATH"
+echo "epmt: $(which epmt)"
+epmt -V
+
+echo "Running epmt check"
+epmt check
+rm -f db.sqlite
+
+echo;echo "Running integration tests"
+(cd $EPMT_PREFIX/epmt-install/epmt; test/integration/run_integration; rm -f db.sqlite)
+
+echo;echo "Running unit tests"
+epmt unittest; rm -f db.sqlite
