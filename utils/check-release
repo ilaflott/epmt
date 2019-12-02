@@ -9,9 +9,37 @@
 
 STAGE="/tmp/EPMT-release-test"
 
+skip_unittests=0
+case $1 in
+  --no-unit-tests) skip_unittests=1; shift;;
+  --help|help|-h|--h) echo "usage: check-release [--no-unit-tests] [/path/to/EPMT-*.tgz]"; exit 0;;
+esac
+
 function die() {
   echo $* >&2
   exit 1
+}
+
+wait_file() {
+  local file="$1"; shift
+  local wait_seconds="${1:-10}"; shift # 10 seconds as default timeout
+
+  until test $((wait_seconds--)) -eq 0 -o -f "$file" ; do sleep 1; done
+
+  ((++wait_seconds))
+}
+
+verify_staged_file() {
+  local tgz="$1"
+  local cmd="$2"
+  wait_file $tgz 10 || die "$tgz not found"
+  test -f $tgz && test -s $tgz
+  tar tvf $tgz
+  tar xf $tgz
+  test -s job_metadata
+  test -s *-collated-papiex-*-*.csv
+  rm -f job_metadata *-collated-papiex-*-*.csv
+  echo "$cmd PASSED"
 }
 
 release=${1:-$(ls -1rt EPMT-*.tgz| tail -n1)}
@@ -36,17 +64,51 @@ echo "Running epmt-installer.."
 echo -e "\n\n" | ./epmt-installer "$release_file"
 EPMT_PREFIX=$(ls -d /tmp/EPMT-release-test/epmt-*|grep -v installer)
 echo "EPMT_PREFIX=$EPMT_PREFIX"
-echo "Prepending $EPMT_PREFIX/epmt-install/epmt to PATH"
+# echo "Prepending $EPMT_PREFIX/epmt-install/epmt to PATH"
 export PATH="$EPMT_PREFIX/epmt-install/epmt:$PATH"
 echo "epmt: $(which epmt)"
 epmt -V
 
-echo "Running epmt check"
-epmt check
-rm -f db.sqlite
+# cleanup on exit or interrupt
+function cleanup() {
+  echo;echo "Stopping SLURM test container.."
+  docker stop centos7-slurm-release-test
+}
 
-echo;echo "Running integration tests"
-(cd $EPMT_PREFIX/epmt-install/epmt; test/integration/run_integration; rm -f db.sqlite)
+echo;echo "Starting SLURM test container.."
+trap cleanup EXIT INT QUIT HUP TERM
+docker run --name centos7-slurm-release-test --rm -dt -h ernie -v $PWD:$PWD:z -w $PWD --privileged -e PATH="$EPMT_PREFIX/epmt-install/epmt:/usr/local/bin:/bin:/usr/bin:/sbin:/usr/sbin" giovtorres/docker-centos7-slurm:19.05.1 tail -f /dev/null
+sleep 2
+echo;echo "Installing tcsh.."; docker exec centos7-slurm-release-test yum install -y -q tcsh
+docker exec centos7-slurm-release-test epmt -V
+docker exec centos7-slurm-release-test epmt check
 
-echo;echo "Running unit tests"
-epmt unittest; rm -f db.sqlite
+echo;echo "Testing sbatch with epmt-example.?sh"
+docker exec centos7-slurm-release-test sbatch "$EPMT_PREFIX/epmt-install/epmt/epmt-example.sh"
+verify_staged_file 2.tgz "sbatch epmt-example.sh"
+docker exec centos7-slurm-release-test sbatch "$EPMT_PREFIX/epmt-install/epmt/epmt-example.csh"
+verify_staged_file 3.tgz "sbatch epmt-example.csh"
+
+echo;echo "Testing srun --task-prolog/task-epilog"
+docker exec centos7-slurm-release-test srun -n1 --task-prolog="$EPMT_PREFIX/epmt-install/slurm/slurm_task_prolog_epmt.sh" --task-epilog="$EPMT_PREFIX/epmt-install/slurm/slurm_task_epilog_epmt.sh" sleep 1
+verify_staged_file 4.tgz "srun --task-prolog/task-epilog sleep 1"
+
+echo;echo "Testing auto-instrumentation by adding prolog/epilog to slurm.conf"
+docker exec centos7-slurm-release-test bash -c "echo TaskProlog=$EPMT_PREFIX/epmt-install/slurm/slurm_task_prolog_epmt.sh >> /etc/slurm/slurm.conf"
+docker exec centos7-slurm-release-test bash -c "echo TaskEpilog=$EPMT_PREFIX/epmt-install/slurm/slurm_task_epilog_epmt.sh >> /etc/slurm/slurm.conf"
+docker exec centos7-slurm-release-test scontrol reconfigure
+echo -e "#!/bin/tcsh\nsleep 1\n" > uninstr.csh
+docker exec centos7-slurm-release-test sbatch uninstr.csh
+verify_staged_file 5.tgz "sbatch with auto-instrument using prolog/epilog"
+
+echo;echo "Running integration tests (in SLURM container)"
+docker exec centos7-slurm-release-test bash -c "cd $EPMT_PREFIX/epmt-install/epmt; test/integration/run_integration"
+
+if [ $skip_unittests -eq 1 ]; then
+  echo;echo "skipping unit tests as invoked with --no-unit-tests option"
+else
+  echo;echo "Running unit tests (in SLURM container)"
+  docker exec centos7-slurm-release-test epmt unittest
+fi
+
+exit 0

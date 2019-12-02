@@ -48,6 +48,7 @@ echo "Fixing paths in slurm scripts"
 $EPMT_PREFIX/epmt-install/epmt/epmt -V || die "Installation failed."
 cat <<EOT
 
+***********************************************************************
 Installation successful.
 EPMT $version installed in: $EPMT_PREFIX
 
@@ -58,5 +59,7 @@ export PATH="$EPMT_PREFIX/epmt-install/epmt:\$PATH"
 
 Or, for C shell/tcsh:
 setenv PATH "$EPMT_PREFIX/epmt-install/epmt:\$PATH"
+***********************************************************************
+
 EOT
 
