@@ -67,7 +67,7 @@ docker-test-dist-slurm: slurm-start
 	docker stop centos7-slurm
 
 clean:
-	find . -name "*~" -o -name "*.pyc" -o -name core -exec rm -f {} \; 
+	find . -name "*~" -o -name "*.pyc" -o -name epmt.log -o -name core -exec rm -f {} \; 
 	rm -rf __pycache__
 distclean: clean
 	rm -f settings.py test-$(RELEASE) $(RELEASE)
