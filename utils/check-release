@@ -61,13 +61,13 @@ echo "Changing directory to: $STAGE (staging area)"
 cd $STAGE/
 pwd
 echo; echo "Running epmt-installer.."
-echo -e "\n\n" | ./epmt-installer "$release_file"
+echo -e "\n\n" | ./epmt-installer "$release_file" || die "epmt-installer FAILED"
 EPMT_PREFIX=$(ls -d /tmp/EPMT-release-test/epmt-*|grep -v installer)
 echo "EPMT_PREFIX=$EPMT_PREFIX"
 # echo "Prepending $EPMT_PREFIX/epmt-install/epmt to PATH"
 export PATH="$EPMT_PREFIX/epmt-install/epmt:$PATH"
 echo "epmt: $(which epmt)"
-epmt -V
+epmt -V || die "Could not execute EPMT"
 
 # cleanup on exit or interrupt
 function cleanup() {

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 # usage:
 #  epmt-installer (assumes installer is in the current directory)
