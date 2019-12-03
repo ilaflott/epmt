@@ -60,7 +60,7 @@ cp -v "$release" "$STAGE"/
 echo "Changing directory to: $STAGE (staging area)"
 cd $STAGE/
 pwd
-echo "Running epmt-installer.."
+echo; echo "Running epmt-installer.."
 echo -e "\n\n" | ./epmt-installer "$release_file"
 EPMT_PREFIX=$(ls -d /tmp/EPMT-release-test/epmt-*|grep -v installer)
 echo "EPMT_PREFIX=$EPMT_PREFIX"

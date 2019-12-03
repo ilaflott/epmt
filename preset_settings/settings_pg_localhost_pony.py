@@ -15,7 +15,7 @@ db_params = { 'url': 'postgresql://postgres:example@localhost:5432/EPMT' }
 # verbose = 1
 # input_pattern = "*-papiex-*-[0-9]*.csv"
 # install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-oss-install/"
-# logfile = 'epmt.log'
+# logfile = path.dirname(path.abspath(__file__)) + '/epmt.log'
 #
 # blacklist for environment filter (in addition to all keys with
 # leading underscores)
