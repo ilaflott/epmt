@@ -927,7 +927,7 @@ def __unique_proc_tags_for_job(job, exclude=[], fold=True):
 
 
 @db_session
-def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict'):
+def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict', op_duration_method = "sum"):
     '''
     Returns a list of "Operations", where each Operation is either
     an object or a dict, depending on 'fmt'. An operation represents a collection
@@ -957,6 +957,15 @@ def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict'):
           will be combined into a single high-level operation. In this case
           the returned value will a list with a single operation.
           The main use of this is to merge the execution intervals and proc_sums.
+
+    op_duration_method: One of "sum", "sum-minus-overlap" or "finish-minus-start"
+                  sum: signifies a dumb sum of process durations
+                  sum-minus-overlap: expensive computation that ensures overlapping
+                       processes are not double-counted.
+                  finish-minus-start: operation duration is calculated as the
+                       difference of the last process to finish and the first
+                       process to start. 
+                  Defaults to "sum"
 
     EXAMPLES:
           To get the ops as a list of dicts for two distinct tags, do:
@@ -1027,11 +1036,11 @@ def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict'):
         # Operation will pass the list of tags to get_procs
         # and the entire set of processes will be considered
         # as one operation
-        ops = [Operation(jobs, _tags, exact_tag_only)]
+        ops = [Operation(jobs, _tags, exact_tag_only, op_duration_method = op_duration_method)]
     else:
         ops = []
         for t in _tags:
-            op = Operation(jobs, t, exact_tag_only)
+            op = Operation(jobs, t, exact_tag_only, op_duration_method = op_duration_method)
             if op: ops.append(op)
 
     if fmt == 'dict':
@@ -1039,7 +1048,7 @@ def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict'):
     return ops
 
 @db_session
-def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=False, fmt='pandas'):
+def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=False, fmt='pandas', op_duration_method = "sum"):
     """
     Aggregates metrics across processes for one or or more operations.
     The returned output is of the form:
@@ -1064,7 +1073,17 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=F
     
     fmt:          One of 'dict' or 'pandas'. Defaults to 'pandas'
 
+    op_duration_method: One of "sum", "sum-minus-overlap" or "finish-minus-start"
+                  sum: signifies a dumb sum of process durations
+                  sum-minus-overlap: expensive computation that ensures overlapping
+                       processes are not double-counted.
+                  finish-minus-start: operation duration is calculated as the
+                       difference of the last process to finish and the first
+                       process to start. 
+                  Defaults to "sum"
     """
+    if op_duration_method not in ("sum", "sum-minus-overlap", "finish-minus-start"):
+        raise ValueError('op_duration_method must be one of ("sum", "sum-minus-overlap", "finish-minus-start")')
     _empty_collection_check(jobs)
     jobs = orm_jobs_col(jobs).order_by(Job.start)
 
@@ -1095,20 +1114,30 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=F
                 concat_threads_sums = func.array_to_string(func.array_agg(Process.threads_sums), '@@@')
             else:
                 concat_threads_sums = func.group_concat(Process.threads_sums, '@@@')
-            procs_grp_by_job = orm_get_procs(jobs, t, None, None, 0, None, [], exact_tags_only, [Process.jobid, func.count(Process.id), func.sum(Process.cpu_time), func.sum(Process.numtids), concat_threads_sums]).group_by(Process.jobid).order_by(Process.jobid)
+            procs_grp_by_job = orm_get_procs(jobs, t, None, None, 0, None, [], exact_tags_only, [Process.jobid, func.count(Process.id), func.min(Process.start), func.max(Process.end), func.sum(Process.duration), func.sum(Process.cpu_time), func.sum(Process.numtids), concat_threads_sums]).group_by(Process.jobid).order_by(Process.jobid)
         else:
             # Pony ORM
             procs = get_procs(jobs, tags = t, exact_tag_only = exact_tags_only, fmt='orm')
-            procs_grp_by_job = select((p.job, count(p.id), sum(p.cpu_time), sum(p.numtids), group_concat(p.threads_sums, sep='@@@')) for p in procs)
+            procs_grp_by_job = select((p.job, count(p.id), min(p.start), max(p.end), sum(p.duration), sum(p.cpu_time), sum(p.numtids), group_concat(p.threads_sums, sep='@@@')) for p in procs)
 
         for row in procs_grp_by_job:
-            (j, nprocs, excl_cpu, ntids, threads_sums_str) = row
-            # now duration calculation requires us to account for
-            # overlapping processes in an operation (since one may
-            # background and wait). 
-            # So we use Operation to correctly compute duration
-            op = Operation(j, t, exact_tags_only)
-            duration = round(op.duration,1)
+            (j, nprocs, start, end, duration, excl_cpu, ntids, threads_sums_str) = row
+            if op_duration_method == "finish-minus-start":
+                duration = (end - start).total_seconds() * 1e6
+            elif op_duration_method == "sum-minus-overlap":
+                # duration calculation requires us to account for
+                # overlapping processes in an operation (since one may
+                # background and wait). 
+                # So we use Operation to correctly compute duration
+                # This is an expensive computation:
+                # O(NlogN) complexity, where N is the num. of processes
+                op = Operation(j, t, exact_tags_only, op_duration_method = "sum-minus-overlap")
+                duration = round(op.duration,1)
+            elif op_duration_method == "sum":
+                # nop since we already computed that in 'duration' using the ORM
+                pass
+            else:
+                raise ValueError("Do not know how to handle op_duration_method: {}".format(op_duration_method))
             # convert from giant string to array of strings where each list
             # list element is a json of a threads_sums dict
             _l1 = threads_sums_str.split('@@@')
