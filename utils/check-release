@@ -102,13 +102,13 @@ docker exec centos7-slurm-release-test sbatch uninstr.csh
 verify_staged_file 5.tgz "sbatch with auto-instrument using prolog/epilog"
 
 echo;echo "Running integration tests (in SLURM container)"
-docker exec centos7-slurm-release-test bash -c "cd $EPMT_PREFIX/epmt-install/epmt; test/integration/run_integration"
+docker exec centos7-slurm-release-test bash -c "rm -f /root/EPMT_DB.*; cd $EPMT_PREFIX/epmt-install/epmt; test/integration/run_integration"
 
 if [ $skip_unittests -eq 1 ]; then
   echo;echo "skipping unit tests as invoked with --no-unit-tests option"
 else
   echo;echo "Running unit tests (in SLURM container)"
-  docker exec centos7-slurm-release-test epmt unittest
+  docker exec centos7-slurm-release-test bash -c "rm -f /root/EPMT_DB.*; epmt unittest"
 fi
 
 exit 0
