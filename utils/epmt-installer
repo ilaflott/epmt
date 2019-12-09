@@ -13,7 +13,7 @@ function die() {
 }
 
 
-release=${1:-"`ls $PWD/EPMT-*.tgz`"}
+release=${1:-"`ls $PWD/EPMT-release-*.tgz`"}
 # get the full path
 case "$release" in
   /*) ;;
@@ -23,7 +23,7 @@ esac
 
 echo "Using release: $release"
 release_file=$(basename $release)
-version=$(echo $release_file | cut -f2 -d-|cut -f1-3 -d.)
+version=$(echo $release_file | sed -e 's/EPMT-release//' | cut -f2 -d-|cut -f1-3 -d.)
 
 default_install="$PWD/epmt-$version"
 echo;echo -n "Enter full path to an empty install directory [$default_install]: "
