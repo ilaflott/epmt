@@ -1,17 +1,17 @@
+OS_TARGET=centos-6
 VERSION=2.1.0
 RELEASE=epmt-$(VERSION).tgz
 SHELL=/bin/bash
 PWD=$(shell pwd)
 
-.PHONY: default build \\
+.PHONY: default \\
 	epmt-build epmt-test \\
 	clean distclean \\
-	check check-python-native check-python-driver check-python-2.6 check-python-2.7 check-python-3
+	check check-python-native check-python-driver check-python-2.6 check-python-2.7 check-python-3 \\
+	dist build
 
 build:
-	python -bb -m py_compile *.py orm/*.py orm/*/*.py test/*.py
-
-.PHONY: dist build
+	python -O -bb -m py_compile *.py orm/*.py orm/*/*.py test/*.py
 
 dist: 
 	rm -rf epmt-install
@@ -32,39 +32,39 @@ dist-test:
 	rm -f test-$(RELEASE); tar cvfz test-$(RELEASE) epmt-install-tests
 	rm -rf epmt-install-tests
 
-$(RELEASE) test-$(RELEASE) docker-dist: 
-	docker build -f Dockerfiles/Dockerfile.centos-7-epmt-build -t centos-7-epmt-build .
-	docker run -i --tty --rm --volume=$(PWD):$(PWD):z -w $(PWD) centos-7-epmt-build make distclean dist dist-test
+docker-dist $(RELEASE) test-$(RELEASE): 
+	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build -t $(OS_TARGET)-epmt-build .
+	docker run -i --tty --rm --volume=$(PWD):$(PWD):z -w $(PWD) $(OS_TARGET)-epmt-build make distclean dist dist-test
 
 docker-test-dist: $(RELEASE) test-$(RELEASE)
-	docker build -f Dockerfiles/Dockerfile.centos-7-epmt-test -t centos-7-epmt-test --build-arg release=$(VERSION) .
-	docker run --rm -it centos-7-epmt-test
+	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test -t $(OS_TARGET)-epmt-test --build-arg release=$(VERSION) .
+	docker run --rm -it $(OS_TARGET)-epmt-test
 
 docker-dist-slurm: $(RELEASE)
-	docker build -f Dockerfiles/Dockerfile.slurm-centos-7 -t centos7-epmt-papiex-slurm-test --build-arg release=$(VERSION) .
+	docker build -f Dockerfiles/Dockerfile.slurm-$(OS_TARGET) -t $(OS_TARGET)-epmt-papiex-slurm-test --build-arg release=$(VERSION) .
 
 slurm-start: docker-dist-slurm
-	docker run --name centos7-slurm --privileged -dt --rm --volume=$(PWD):$(PWD):z -w $(PWD) -h ernie centos7-epmt-papiex-slurm-test tail -f /dev/null
+	docker run --name $(OS_TARGET)-slurm --privileged -dt --rm --volume=$(PWD):$(PWD):z -w $(PWD) -h ernie $(OS_TARGET)-epmt-papiex-slurm-test tail -f /dev/null
 
 slurm-stop:
-	docker stop centos7-slurm
+	docker stop $(OS_TARGET)-slurm
 
 docker-test-dist-slurm: slurm-start
-	docker exec centos7-slurm epmt check
-	docker exec centos7-slurm srun -n1 /opt/epmt/epmt-install/examples/epmt-example.sh
-	docker exec centos7-slurm srun -n1 /opt/epmt/epmt-install/examples/epmt-example.csh
-	docker exec centos7-slurm srun -n1 --task-prolog=/opt/epmt/epmt-install/slurm/slurm_task_prolog_epmt.sh --task-epilog=/opt/epmt/epmt-install/slurm/slurm_task_epilog_epmt.sh hostname
-	docker exec centos7-slurm srun -n1 --task-prolog=/opt/epmt/epmt-install/slurm/slurm_task_prolog_epmt.sh --task-epilog=/opt/epmt/epmt-install/slurm/slurm_task_epilog_epmt.sh sleep 1
+	docker exec $(OS_TARGET)-slurm epmt check
+	docker exec $(OS_TARGET)-slurm srun -n1 /opt/epmt/epmt-install/examples/epmt-example.sh
+	docker exec $(OS_TARGET)-slurm srun -n1 /opt/epmt/epmt-install/examples/epmt-example.csh
+	docker exec $(OS_TARGET)-slurm srun -n1 --task-prolog=/opt/epmt/epmt-install/slurm/slurm_task_prolog_epmt.sh --task-epilog=/opt/epmt/epmt-install/slurm/slurm_task_epilog_epmt.sh hostname
+	docker exec $(OS_TARGET)-slurm srun -n1 --task-prolog=/opt/epmt/epmt-install/slurm/slurm_task_prolog_epmt.sh --task-epilog=/opt/epmt/epmt-install/slurm/slurm_task_epilog_epmt.sh sleep 1
 	ls 2.tgz 3.tgz 4.tgz 5.tgz
-	docker exec centos7-slurm epmt submit 2.tgz 3.tgz 4.tgz 5.tgz
-	docker exec centos7-slurm sed -i '$$s;$$;\nTaskProlog=/opt/epmt/epmt-install/slurm/slurm_task_prolog_epmt.sh\n;' /etc/slurm/slurm.conf
-	docker exec centos7-slurm sed -i '$$s;$$;\nTaskEpilog=/opt/epmt/epmt-install/slurm/slurm_task_epilog_epmt.sh\n;' /etc/slurm/slurm.conf
-	docker exec centos7-slurm killall -s SIGHUP slurmctld slurmd
-	docker exec centos7-slurm srun -n1 hostname
-	docker exec centos7-slurm srun -n1 sleep 1
+	docker exec $(OS_TARGET)-slurm epmt submit 2.tgz 3.tgz 4.tgz 5.tgz
+	docker exec $(OS_TARGET)-slurm sed -i '$$s;$$;\nTaskProlog=/opt/epmt/epmt-install/slurm/slurm_task_prolog_epmt.sh\n;' /etc/slurm/slurm.conf
+	docker exec $(OS_TARGET)-slurm sed -i '$$s;$$;\nTaskEpilog=/opt/epmt/epmt-install/slurm/slurm_task_epilog_epmt.sh\n;' /etc/slurm/slurm.conf
+	docker exec $(OS_TARGET)-slurm killall -s SIGHUP slurmctld slurmd
+	docker exec $(OS_TARGET)-slurm srun -n1 hostname
+	docker exec $(OS_TARGET)-slurm srun -n1 sleep 1
 	ls 6.tgz 7.tgz
-	docker exec centos7-slurm epmt submit 6.tgz 7.tgz
-	docker stop centos7-slurm
+	docker exec $(OS_TARGET)-slurm epmt submit 6.tgz 7.tgz
+	docker stop $(OS_TARGET)-slurm
 
 clean:
 	find . -name "*~" -o -name "*.pyc" -o -name epmt.log -o -name core -exec rm -f {} \; 
