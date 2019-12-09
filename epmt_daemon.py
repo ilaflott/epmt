@@ -148,7 +148,7 @@ def daemon_loop(niters = 0):
         # now run the analyses pipelines (outlier detection, etc)
         num_analyses_run = analyze_pending_jobs()
         tot_ua_runs += num_analyses_run
-        logger.debug('{0} jobs post-processed; {0} analyses filters run'.format(num_pp_run, num_analyses_run))
+        logger.debug('{0} jobs post-processed; {1} analyses filters run'.format(num_pp_run, num_analyses_run))
         iters += 1
         if niters and (iters > niters):
             logger.debug('ending daemon loop, as requested iterations completed')

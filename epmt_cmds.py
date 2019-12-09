@@ -242,7 +242,7 @@ def verify_stage_command():
         open(inp, 'a').close()
         run_shell_cmd(stage_cmd, inp, dest)
         if not path.exists(target):
-            raise("could not create output in {1}".format(dest))
+            raise("could not create output in {0}".format(dest))
     except Exception as e:
         print(str(e), file=stderr)
         PrintFail()

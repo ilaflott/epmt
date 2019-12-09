@@ -10,21 +10,10 @@ if (__name__ == "__main__"):
 
     from sys import version_info, argv
     from epmt_cmds import epmt_entrypoint, dump_config
-    # Handle crappy python 2.6 installations
-    try:
-        import argparse
-    except ImportError:
-        print >> stderr,"WARNING: system argparse not found, using our own."
-        print >> stderr,"WARNING: This python/OS is likely vulnerable to exploits!"
-        import argparse26 as argparse
-    
-    # Handle crappy stringIO implementation for dump_config
-    if(version_info < (3, 0)):
-        from io import BytesIO
-        config_string_file = BytesIO()
-    else:
-        from io import StringIO
-        config_string_file = StringIO()
+    import argparse
+    from io import StringIO
+    config_string_file = StringIO()
+
     # Display help when errors occur without dump_config
     class DefaultHelpParser(argparse.ArgumentParser):
         def error(self, message):
@@ -165,5 +154,5 @@ if (__name__ == "__main__"):
     exit(retval)
 
 else:
-    print >> stderr,"ERROR: This module cannot be imported."
+    print("ERROR: This module cannot be imported.",file=stderr)
     exit(1)

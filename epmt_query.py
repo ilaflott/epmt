@@ -17,8 +17,8 @@ set_logging(settings.verbose if hasattr(settings, 'verbose') else 0, check=True)
 from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key, stringify_dicts, version, version_str
 from epmt_stat import modified_z_score
 
-init_settings(settings)
-setup_db(settings)
+init_settings(settings) # type: ignore
+setup_db(settings) # type: ignore
 
 PROC_SUMS_FIELD_IN_JOB='proc_sums'
 THREAD_SUMS_FIELD_IN_PROC='threads_sums'
@@ -144,7 +144,7 @@ def timeline(jobs, limit=0, fltr='', when=None, hosts=[], fmt='pandas'):
     """
     return get_procs(jobs, fmt=fmt, order=(Process.start), limit=limit, fltr=fltr, when=when, hosts=hosts)
 
-@db_session
+@db_session 
 def get_roots(jobs, fmt='dict'):
     '''
     Returns the root (top-level) processes of a job (or job collection)
@@ -894,7 +894,7 @@ def refmodel_set_active_metrics(ref_id, metrics):
     if (metrics_set - all_metrics):
         logger.warning('Ignoring metrics that are not available in the trained model: {0}'.format(metrics_set - all_metrics))
     active_metrics = list(metrics_set & all_metrics)
-    logger.info('Active metrics for model set to: '.format(active_metrics))
+    logger.info('Active metrics for model set to: %s',str(active_metrics))
     info_dict = dict.copy(r.info_dict or {})
     info_dict['active_metrics'] = active_metrics
     r.info_dict = info_dict
