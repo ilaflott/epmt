@@ -1,27 +1,34 @@
 #!/bin/bash
 
+usage="$0 [--no-build] [centos-6|centos-7]"
+
 function die() {
   echo $* >&2
   exit 1
 }
 
+no_build=0
+case $1 in
+  --no-build) echo "Using existing tar files; not building anything new"; no_build=1;shift;;
+esac
+
+if [ "$1" != "" ]; then
+  target="$1"
+else
+  target=$(grep OS_TARGET Makefile| head -n 1| cut -f2 -d=); [ "$target" != "" ] || die "could not determine target"
+fi
+
 version=$(grep VERSION Makefile| head -n 1| cut -f2 -d=); [ "$version" != "" ] || die "could not determine version"
-target=$(grep OS_TARGET Makefile| head -n 1| cut -f2 -d=); [ "$target" != "" ] || die "could not determine target"
 release_tar="EPMT-release-$version-$target.tgz"
 
 [ ! -f $release_tar ] || die "Release file $release_tar already exists. Please remove it and try again"
-
-no_build=0
-case $1 in
-  --no-build) echo "Using existing tar files; not building anything new"; no_build=1;;
-esac
 
 
 echo "Making EPMT release $version for $target..."
 
 if [ $no_build -eq 0 ]; then
     echo " - building epmt and epmt-test tarball"
-    make docker-dist > /dev/null
+    make OS_TARGET="$target" docker-dist > /dev/null
 fi
 epmt_tar=$(ls epmt-$version.tgz); [ -f "$epmt_tar" ] || die "Could not find epmt-$version.tgz"
 epmt_test_tar=$(ls test-epmt-$version.tgz); [ -f "$epmt_test_tar" ] || die "Could not find test-epmt-$version.tgz"
@@ -29,7 +36,7 @@ echo " - using $epmt_tar and $epmt_test_tar"
 
 if [ $no_build -eq 0 ]; then
     echo " - building papiex tarball"
-    (cd ../papiex-oss; make docker-dist > /dev/null; cp -v papiex-epmt-*.tgz ../epmt/papiex-epmt-$version.tgz)
+    (cd ../papiex-oss; rm -f papiex-epmt-*.tgz;  make OS_TARGET="$target" docker-dist > /dev/null; cp -v papiex-epmt-*.tgz ../epmt/papiex-epmt-$version.tgz)
 fi
 papiex_tar=$(ls papiex-epmt-$version.tgz); [ -f "$papiex_tar" ] || die "Could not find papiex-epmt-$version.tgz"
 echo " - found $papiex_tar"

@@ -7,8 +7,8 @@ PWD=$(shell pwd)
 .PHONY: default \\
 	epmt-build epmt-test \\
 	clean distclean \\
-	check check-python-native check-python-driver check-python-2.6 check-python-2.7 check-python-3 \\
-	dist build
+	check check-python-native check-python-driver check-python-2.6 check-python-2.7 check-python-3 check-integration-tests \\
+	dist build release
 
 build:
 	python -O -bb -m py_compile *.py orm/*.py orm/*/*.py test/*.py
@@ -66,6 +66,9 @@ docker-test-dist-slurm: slurm-start
 	docker exec $(OS_TARGET)-slurm epmt submit 6.tgz 7.tgz
 	docker stop $(OS_TARGET)-slurm
 
+release:
+	utils/mk-release $(OS_TARGET)
+
 clean:
 	find . -name "*~" -o -name "*.pyc" -o -name epmt.log -o -name core -exec rm -f {} \; 
 	rm -rf __pycache__
@@ -91,6 +94,5 @@ check-unittests:
 	python3 -V
 	@env -i PATH=${PWD}:${PATH} python3 -m unittest -v -f test.test_lib test.test_settings test.test_anysh test.test_submit test.test_cmds test.test_query test.test_outliers test.test_db_schema
 
-.PHONY: check-integration-tests
 check-integration-tests:
 	test/integration/run_integration
