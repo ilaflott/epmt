@@ -1,6 +1,7 @@
 OS_TARGET=centos-6
 VERSION=2.1.0
 RELEASE=epmt-$(VERSION).tgz
+EPMT_RELEASE = EPMT-release-$(VERSION)-$(OS_TARGET).tgz
 SHELL=/bin/bash
 PWD=$(shell pwd)
 
@@ -66,8 +67,25 @@ docker-test-dist-slurm: slurm-start
 	docker exec $(OS_TARGET)-slurm epmt submit 6.tgz 7.tgz
 	docker stop $(OS_TARGET)-slurm
 
-release:
-	utils/mk-release $(OS_TARGET)
+
+release6:
+	$(MAKE) OS_TARGET=centos-6 release
+
+release7:
+	$(MAKE) OS_TARGET=centos-7 release
+
+release:  
+	@if [ -f $(EPMT_RELEASE) ]; then echo "$(EPMT_RELEASE) already exists. Please remove it and try again"; exit 1; fi
+	@echo "Making EPMT release $(VERSION) for $(OS_TARGET)..."
+	@echo " - building epmt and epmt-test tarball.."
+	@$(MAKE) docker-dist > /dev/null
+	@ls epmt-$(VERSION).tgz test-epmt-$(VERSION).tgz
+	@echo " - building papiex tarball"
+	cd ../papiex-oss; rm -f papiex-epmt-*.tgz;  make OS_TARGET=$(OS_TARGET) docker-dist > /dev/null; cp -v papiex-epmt-*.tgz ../epmt/papiex-epmt-$(VERSION).tgz
+	@ls papiex-epmt-$(VERSION).tgz
+	@echo "Assembling release tarball"
+	tar -czf $(EPMT_RELEASE) epmt-$(VERSION).tgz test-epmt-$(VERSION).tgz papiex-epmt-$(VERSION).tgz
+	@echo "Release prepared: $(EPMT_RELEASE)"
 
 clean:
 	find . -name "*~" -o -name "*.pyc" -o -name epmt.log -o -name core -exec rm -f {} \; 
