@@ -313,21 +313,27 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(int(top.duration.values[0]), 7005558348)
 
         df = eq.op_metrics(['685000', '685016'], tags='op_sequence:89')
+        # pylint: disable=no-member
         self.assertEqual([int(f) for f in list(df.duration.values)], [6463542235, 7008334182])
         df = eq.op_metrics(['685000', '685016'], tags='op_sequence:89', op_duration_method = "sum-minus-overlap")
+        # pylint: disable=no-member
         self.assertEqual([int(f) for f in list(df.duration.values)], [6460188134, 7005558348])
         df = eq.op_metrics(['685000', '685016'], tags='op_sequence:89', op_duration_method = "finish-minus-start")
+        # pylint: disable=no-member
         self.assertEqual([int(f) for f in list(df.duration.values)], [6460188134, 7005558348])
 
         df = eq.op_metrics(['685000', '685003', '685016'])
         self.assertEqual(df.shape,(573,32), 'wrong op_metrics shape when no tag specified')
+        # pylint: disable=no-member
         self.assertEqual([int(x) for x in df.cpu_time.values][:10], [1207637., 1268652., 1225636., 1263656., 1315618., 1261654., 1209636., 1246659., 1205634., 1265656.])
 
         df = eq.op_metrics(['685000', '685003', '685016'], tags=['op:hsmget', 'op:mv'])
         self.assertEqual(df.shape, (6,32), 'wrong op_metrics shape with tags specified')
+        # pylint: disable=no-member
         self.assertEqual([int(x) for x in df.cpu_time.values], [53934101, 31337553, 123305670, 2799492, 20996147, 6496944])
         # self.assertEqual([int(x) for x in df.duration.values], [6375786656, 6471901800, 6672575160, 8551396, 69194108, 17359881])
         # self.assertEqual([int(x) for x in df.duration.values], [6378342472, 6474000335, 6674198021, 67199129, 133578518, 287555579])
+        # pylint: disable=no-member
         self.assertEqual(list(df.tags.values), [{'op': 'hsmget'}, {'op': 'hsmget'}, {'op': 'hsmget'}, {'op': 'mv'}, {'op': 'mv'}, {'op': 'mv'}])
 
     @db_session
@@ -335,10 +341,12 @@ class QueryAPI(unittest.TestCase):
         df = eq.op_metrics(['685000', '685003', '685016'], group_by_tag=True)
         self.assertEqual(df.shape,(459,30), 'wrong op_metrics grouped shape when no tag specified')
         self.assertEqual(list(df['tags'].values[:10]), [{u'op_instance': u'11', u'op_sequence': u'66', u'op': u'cp'}, {u'op_instance': u'15', u'op_sequence': u'79', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'247', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'251', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'255', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'259', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'263', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'267', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'271', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'30', u'op': u'cp'}], 'wrong tags ordering in grouped op_metrics')
+        # pylint: disable=no-member
         self.assertEqual(list(df.cpu_time.values)[:10], [2476289.0, 2489292.0, 472905.0, 462906.0, 461906.0, 465903.0, 471904.0, 485902.0, 472905.0, 2577272.0])
 
         df = eq.op_metrics(['685000', '685003', '685016'], tags=['op:hsmget', 'op:mv'], group_by_tag=True)
         self.assertEqual(df.shape, (2,30), 'wrong op_metrics shape with tags specified')
+        # pylint: disable=no-member
         self.assertEqual(list(df.tags.values), [{u'op': u'hsmget'}, {u'op': u'mv'}])
         self.assertEqual(list(df['cpu_time'].values), [208577324.0, 30292583.0])
 

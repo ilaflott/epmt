@@ -254,9 +254,9 @@ def csvjoiner(indir,
     dataList = []
     numFields = 0
     commentDelim = comment
-    if(version_info < (3, 0)):
-        if(isinstance(indir, basestring)):
-            indir = str(indir.encode('ascii'))
+    # if(version_info < (3, 0)):
+    #     if(isinstance(indir, basestring)):
+    #         indir = str(indir.encode('ascii'))
 # String (Directory) Mode ##################################
     if(type(indir) == str):
         logger.info("Collate in directory {}".format(indir))

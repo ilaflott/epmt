@@ -65,7 +65,7 @@ class Operation(dict):
             logger.debug('computing op processes..')
             self._processes = get_procs(jobs = self.jobs, tags = self.tags, exact_tag_only = self.exact_tag_only, fmt='orm')
             if len(self._processes[:]) == 0:
-                logger.warning("No processes found for operation -- {0}".format(tags))
+                logger.warning("No processes found for operation -- {0}".format(self.tags))
             # else:
             #     logger.debug('computing op start/end times..')
             #     self.start = min(p.start for p in self.processes)

@@ -208,6 +208,7 @@ def tag_from_string(s, delim = ';', sep = ':', tag_default_value = '1'):
     if type(s) in (dict, TrackedDict): return s
     if not s: return (None if s == None else {})
 
+    logger = getLogger(__name__)
     tag = {}
     for t in s.split(delim):
         t = t.strip()

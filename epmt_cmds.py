@@ -100,17 +100,17 @@ def PrintWarning():
     print("\t" + bcolors.WARNING + "Pass" + bcolors.ENDC)
 
 def verify_install_prefix():
-    str = settings.install_prefix
-    print("settings.install_prefix =",str, end='')
+    install_prefix = settings.install_prefix
+    print("settings.install_prefix =",install_prefix, end='')
     retval = True
 # Check for bad stuff and shortcut
-    if "*" in str or "?" in str:
-        logger.error("Found wildcards in value!",str)
+    if "*" in install_prefix or "?" in install_prefix:
+        logger.error("Found wildcards in install_prefix: {}".format(install_prefix))
         PrintFail()
         return False
     for e in [ "lib/libpapiex.so","lib/libmonitor.so",
                "lib/libpapi.so","lib/libpfm.so","bin/papi_command_line" ]:
-        cmd = "ls -l "+str+e+">/dev/null 2>&1"
+        cmd = "ls -l "+install_prefix+e+">/dev/null 2>&1"
         logger.info("\t"+cmd)
         return_code = forkexecwait(cmd, shell=True)
         if return_code != 0:
@@ -124,12 +124,12 @@ def verify_install_prefix():
     return retval
     
 def verify_epmt_output_prefix():
-    str = settings.epmt_output_prefix
-    print("settings.epmt_output_prefix =",str, end='')
+    opf = settings.epmt_output_prefix
+    print("settings.epmt_output_prefix =",opf, end='')
     retval = True
 # Check for bad stuff and shortcut
-    if "*" in str or "?" in str:
-        logger.error("Found wildcards in value!",str)
+    if "*" in opf or "?" in opf:
+        logger.error("Found wildcards in value: %s",opf)
         PrintFail()
         return False
 # Print and create dir
@@ -137,19 +137,19 @@ def verify_epmt_output_prefix():
         logger.info("\tmkdir -p "+str2)
         return(create_job_dir(str2))
 # Test create (or if it exists)
-    if testdir(str) == False:
+    if testdir(opf) == False:
         retval = False
 # Test make a subdir
-    if testdir(str+"tmp") == False:
+    if testdir(opf+"tmp") == False:
         retval = False
 # Test to make sure we can access it
-    cmd = "ls -lR "+str+" >/dev/null"    
+    cmd = "ls -lR "+opf+" >/dev/null"    
     logger.info("\t"+cmd)
     return_code = forkexecwait(cmd, shell=True)
     if return_code != 0:
         retval = False
 # Remove the created tmp dir
-    cmd = "rm -rf "+str+"tmp"
+    cmd = "rm -rf "+opf+"tmp"
     logger.info("\t"+cmd)
     return_code = forkexecwait(cmd, shell=True)
     if return_code != 0:
@@ -269,7 +269,7 @@ def verify_papiex():
     if retval == True:
         files = glob(global_datadir+"job_metadata")
         if len(files) != 1:
-            logger.error("%s matched %d job_metadata files instead of 1",global_datadir+job_metadata,len(files))
+            logger.error("%s matched %d job_metadata files instead of 1",global_datadir+"job_metadata",len(files))
             retval = False
 
     if retval == True:
@@ -428,7 +428,7 @@ def epmt_dump_metadata(filelist):
             logger.error("%s does not exist!",file)
             return False
 
-        tar = compressed_tar(file)
+        err,tar = compressed_tar(file)
         if tar:
             try:
                 info = tar.getmember("./job_metadata")

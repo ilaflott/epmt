@@ -807,6 +807,7 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
         for t in op_tags:
             # serialize the tag so we can use it as a key
             stag = dumps(t, sort_keys=True)
+            # pylint: disable=no-member
             scores[stag] = _refmodel_scores(ops_df[ops_df.tags == t], outlier_methods, features)
     else:
         # full jobs, no ops

@@ -125,6 +125,8 @@ def print_daemon_status(pidfile = PID_FILE):
 # if niters is set, then the daemon loop will end after 'niters' iterations
 # otherwise loop forever or until we get interrupted by a signal
 def daemon_loop(niters = 0):
+    global sig_count
+    sig_count = 0
     from time import sleep, time
     from epmt_query import analyze_pending_jobs
     from epmt_job import post_process_pending_jobs
@@ -163,6 +165,7 @@ def daemon_loop(niters = 0):
     return (tot_pp_runs, tot_ua_runs)
 
 def signal_handler(signum, frame):
+    global sig_count
     if sig_count > 0:
         # logger.warning('Received multiple signals to terminate. Terminating now!')
         from sys import exit

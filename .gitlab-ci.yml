@@ -26,4 +26,5 @@ build:python3:
     - (cd /usr/src && echo "downloading python" && curl -o Python-3.7.4.tgz https://www.python.org/ftp/python/3.7.4/Python-3.7.4.tgz && tar xzf Python-3.7.4.tgz && cd Python-3.7.4 && echo "building python3" && ./configure --quiet --prefix=/usr --enable-shared --enable-optimizations --enable-loadable-sqlite-extensions && make --silent install > /dev/null)
     - ldconfig && yum clean all && rm -rf /usr/src /var/cache/yum
     - python3 -V && pip3 install -r requirements.txt.py3 && python3 -m py_compile epmt *.py orm/*/*.py
+    - echo "Checking code with pylint.." && python3 -m pylint -E *.py orm/*.py orm/*/*.py test/*.py
     - test/run --no-compose

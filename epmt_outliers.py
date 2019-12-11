@@ -371,7 +371,7 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
         t = dumps(tag, sort_keys=True)
         logger.debug('Processing tag: {0}'.format(tag))
         # select only those rows with matching tag
-        rows = ops[ops.tags == tag]
+        rows = ops[ops.tags == tag] # pylint: disable=no-member
         # logger.debug('input: \n{0}\n'.format(rows[['tags']+features]))
         tags_max[t] = []
         for c in features:

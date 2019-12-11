@@ -273,7 +273,7 @@ def orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only):
 
 def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, hosts, annotations, analyses, exact_tag_only):
     from .models import Job, Host
-    from epmtlib import tags_list, isString
+    from epmtlib import tags_list, isString, tag_from_string
     from datetime import datetime
 
     if fltr:
