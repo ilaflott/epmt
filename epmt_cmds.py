@@ -13,7 +13,6 @@ import errno
 from shutil import rmtree
 import fnmatch
 import pickle
-from tzlocal import get_localzone
 from logging import getLogger, basicConfig, DEBUG, INFO, WARNING, ERROR
 logger = getLogger(__name__)  # you can use other name
 import epmt_settings as settings
@@ -303,6 +302,7 @@ def epmt_check():
 #
 
 def create_start_job_metadata(jobid, submit_ts, from_batch=[]):
+    from tzlocal import get_localzone
     # use timezone info if available, otherwise use naive datetime objects
     try:
         ts=datetime.now(tz=get_localzone())
@@ -323,6 +323,7 @@ def create_start_job_metadata(jobid, submit_ts, from_batch=[]):
     return metadata
 
 def merge_stop_job_metadata(metadata, exitcode, reason, from_batch=[]):
+    from tzlocal import get_localzone
     # use timezone info if available, otherwise use naive datetime objects
     try:
         ts=datetime.now(tz=get_localzone())

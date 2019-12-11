@@ -1,5 +1,5 @@
 OS_TARGET=centos-6
-VERSION=2.1.0
+VERSION=$(shell python3 -m epmtlib)
 RELEASE=epmt-$(VERSION).tgz
 EPMT_RELEASE = EPMT-release-$(VERSION)-$(OS_TARGET).tgz
 SHELL=/bin/bash
