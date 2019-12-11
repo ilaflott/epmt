@@ -4,6 +4,7 @@ attrs==19.3.0
 backcall==0.1.0
 bleach==3.1.0
 cffi==1.12.3
+cycler==0.10.0
 decorator==4.4.1
 defusedxml==0.6.0
 docutils==0.15.2
@@ -22,10 +23,12 @@ jupyter==1.0.0
 jupyter-client==5.3.4
 jupyter-console==6.0.0
 jupyter-core==4.6.1
+kiwisolver==1.1.0
 lazy-object-proxy==1.4.3
 lockfile==0.12.2
 Mako==1.1.0
 MarkupSafe==1.1.1
+matplotlib==3.1.2
 mccabe==0.6.1
 mistune==0.8.4
 more-itertools==7.2.0
@@ -47,6 +50,7 @@ ptyprocess==0.6.0
 pycparser==2.19
 Pygments==2.4.2
 pylint==2.4.4
+pyparsing==2.4.5
 pyrsistent==0.15.5
 python-daemon==2.2.4
 python-dateutil==2.8.0
