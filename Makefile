@@ -9,7 +9,7 @@ PWD=$(shell pwd)
 	epmt-build epmt-test \\
 	clean distclean \\
 	check check-python-native check-python-driver check-python-2.6 check-python-2.7 check-python-3 check-integration-tests \\
-	dist build release
+	dist build release release6 release7 release-all
 
 build:
 	python -O -bb -m py_compile *.py orm/*.py orm/*/*.py test/*.py
@@ -86,6 +86,10 @@ release:
 	@echo "Assembling release tarball"
 	tar -czf $(EPMT_RELEASE) epmt-$(VERSION).tgz test-epmt-$(VERSION).tgz papiex-epmt-$(VERSION).tgz
 	@echo "Release prepared: $(EPMT_RELEASE)"
+
+release-all:
+	$(MAKE) release6 && utils/check-release
+	$(MAKE) release7 && utils/check-release
 
 clean:
 	find . -name "*~" -o -name "*.pyc" -o -name epmt.log -o -name core -exec rm -f {} \; 
