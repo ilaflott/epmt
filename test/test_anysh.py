@@ -19,7 +19,7 @@ def remove_stale_files():
 # These will be used in both tests
 # One can embed them in the class, but referring to them with
 # a class prefix is ugly
-jobid = '1111'
+jobid = '1011'
 tuser = 'testuser'
 
 @timing
@@ -39,6 +39,7 @@ class EPMTShell(unittest.TestCase):
 
     def test_run_auto(self):
         from epmt_cmds import epmt_run
+        remove_stale_files()
         with capture() as (out,err):
             results = epmt_run(['sleep 1'],wrapit=True,dry_run=False,debug=False)
             self.assertEqual(0, results)

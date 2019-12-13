@@ -39,6 +39,11 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_outlier_jobs(self):
+        # with too few jobs and no trained model, outlier detection should fail
+        too_few_jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='terse')[:3]
+        with self.assertRaises(RuntimeError):
+            eod.detect_outlier_jobs(too_few_jobs)
+
         jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm')
         (df, parts) = eod.detect_outlier_jobs(jobs)
         self.assertEqual(len(df[df.duration > 0]), 1)
@@ -48,6 +53,15 @@ class OutliersAPI(unittest.TestCase):
         self.assertTrue('outlier' in df[df.cpu_time > 0]['jobid'].values[0], "wrong cpu_time outlier")
         self.assertEqual(len(parts), 3, "wrong number of items in partition dictionary")
         self.assertEqual(parts['duration'], (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-194024', u'kern-6656-20190614-191138']), set([u'kern-6656-20190614-192044-outlier'])))
+        # now test with wildcard features
+        (df, _) = eod.detect_outlier_jobs(jobs, features='*')
+        self.assertEqual(df.shape, (4,30))
+        self.assertEqual(sum(list(df.iloc[0].values)[1:]), 0) # not an outlier by any feature
+        self.assertEqual(sum(list(df.iloc[1].values)[1:]), 0) # not an outlier by any feature
+        self.assertEqual(sum(list(df.iloc[2].values)[1:]), 11) # 11 features marked this as an outlier
+        self.assertEqual(sum(list(df.iloc[3].values)[1:]), 0) # not an outlier by any feature
+
+
 
     @db_session
     def test_outlier_jobs_trained(self):
@@ -66,10 +80,29 @@ class OutliersAPI(unittest.TestCase):
         # this way it won't later be classified as a outlier
         r = eq.create_refmodel(all_jobs, fmt='terse')
         (df, parts) = eod.detect_outlier_jobs(all_jobs, trained_model=r)
+        # make sure we used default the features
+        self.assertEqual(set(df.columns.values) & {'cpu_time', 'duration', 'num_procs'}, {'cpu_time', 'duration', 'num_procs'})
         # check there are no outliers
         self.assertEqual(len(df[df.duration > 0]), 0, "incorrect count of duration outliers")
         self.assertEqual(len(df[df.cpu_time > 0]), 0, "incorrect count of cpu_time outliers")
         self.assertEqual(len(df[df.num_procs > 0]), 0, "incorrect count of num_procs outliers")
+        # now let's limit the active metrics in model and make sure
+        # that outlier detection only uses the features enabled
+        eq.refmodel_set_active_metrics(r, ['duration', 'cpu_time'])
+        (df, _) = eod.detect_outlier_jobs(all_jobs, trained_model=r)
+        self.assertEqual(set(df.columns.values) & {'cpu_time', 'duration', 'num_procs'}, {'cpu_time', 'duration'})
+        # wildcard features
+        all_features =  {'duration', 'syscr', 'systemtime', 'PERF_COUNT_SW_CPU_CLOCK', 'cpu_time', 'delayacct_blkio_time', 'time_waiting', 'write_bytes', 'inblock', 'minflt', 'invol_ctxsw', 'syscw', 'wchar', 'num_threads', 'processor', 'cancelled_write_bytes', 'rssmax', 'rchar', 'outblock', 'num_procs', 'time_oncpu', 'rdtsc_duration', 'usertime', 'timeslices', 'guest_time', 'vol_ctxsw', 'majflt', 'read_bytes', 'exitcode'}
+        r = eq.create_refmodel(all_jobs, features='*',  fmt='terse')
+        (df, _) = eod.detect_outlier_jobs(all_jobs, trained_model=r)
+        # since we called eod.detect_outlier_jobs without wildcard features
+        # the EOD will use the default features
+        self.assertEqual(set(df.columns.values) & all_features, {'cpu_time', 'duration', 'num_procs'})
+        # now let's use wildcard in the outlier detection
+        (df, _) = eod.detect_outlier_jobs(all_jobs, features='*', trained_model=r)
+        # now check that we used *all* the features
+        self.assertEqual(set(df.columns.values) & all_features, all_features)
+
 
     @db_session
     def test_outlier_ops_trained(self):
@@ -78,16 +111,19 @@ class OutliersAPI(unittest.TestCase):
         jobs_ex_outl = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm', fltr=fltr)
         r = eq.create_refmodel(jobs_ex_outl, fmt='terse', op_tags='*')
         features = ['rssmax', 'cpu_time', 'duration', 'num_procs']
+        # our trained model has only duration, cpu_time, num_procs as metrics
+        # so, rssmax will be discarded
         (df, parts, scores_df, sorted_tags, sorted_features) = eod.detect_outlier_ops(all_jobs, trained_model=r, features=features)
-        self.assertEqual(df.shape, (20,6))
+        self.assertEqual(df.shape, (20,5))
+        # make sure rssmax was discarded from the features
+        self.assertEqual(set(df.columns.values) & set(features), { 'cpu_time', 'duration', 'num_procs' })
         self.assertEqual(set(df[df.duration > 0]['jobid']), set([u'kern-6656-20190614-192044-outlier']))
         self.assertEqual(set(df[df.cpu_time > 0]['jobid']), set([u'kern-6656-20190614-192044-outlier']))
         self.assertEqual(set(df[df.num_procs > 0]['jobid']), set([]))
         df_cols = list(df.columns)
-        self.assertEqual(len(sorted_features), len(features))
+        self.assertEqual(set(sorted_features), { 'cpu_time', 'duration', 'num_procs' })
         # ensure feature order is right
-        self.assertEqual(sorted_features, ['cpu_time', 'duration', 'rssmax', 'num_procs'])
-        self.assertNotEqual(sorted_features, features)
+        self.assertEqual(sorted_features, ['cpu_time', 'duration', 'num_procs'])
         # ensure df has the right feature order
         self.assertEqual(df_cols[2:], sorted_features)
         # esnure scores_df has the right order
@@ -124,6 +160,11 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_outlier_ops(self):
+        # with too few jobs and no trained model, outlier detection should fail
+        too_few_jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='terse')[:3]
+        with self.assertRaises(RuntimeError):
+            eod.detect_outlier_ops(too_few_jobs)
+
         jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm')
         (df, parts, _, _, _) = eod.detect_outlier_ops(jobs)
         self.assertEqual(df.shape, (20,5), "wrong shape of df from detect_outlier_ops")
@@ -144,6 +185,13 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(len(parts), 1)
         parts = { frozen_dict(loads(k)): v for k,v in parts.items() }
         self.assertEqual(parts[frozen_dict({"op_instance": "4", "op_sequence": "4", "op": "build"})], (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024']), set([u'kern-6656-20190614-192044-outlier'])))
+
+        # wildcard features
+        (df, _, _, _, _) = eod.detect_outlier_ops(jobs, features = '*')
+        self.assertEqual(df.shape, (20, 30))
+        # for each op compute number of features indicating it's an outlier
+        # and then test the result array
+        self.assertEqual([ df.iloc[i].values[2:].sum() for i in range(0, 20)], [1, 0, 11, 0, 0, 1, 11, 0, 0, 0, 12, 0, 0, 1, 6, 0, 0, 2, 7, 0])
 
 
     @db_session
@@ -196,7 +244,7 @@ class OutliersAPI(unittest.TestCase):
         self.assertTrue(res, 'detect_rootcause_op returned False')
         self.assertEqual(list(df.columns.values), ['cpu_time', 'duration', 'num_procs'], 'wrong order of features returned by RCA')
         self.assertEqual(df.shape, (12,3), "wrong dataframe format")
-        self.assertEqual([int(x) for x in list(df.loc['modified_z_score_ratio'])], [379, 41, 0], "wrong madz score ratios")
+        self.assertEqual([int(x) for x in list(df.loc['modified_z_score_ratio'])], [379, 56, 0])
 
     @db_session
     def test_trained_model(self):

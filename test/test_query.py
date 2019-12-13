@@ -285,11 +285,18 @@ class QueryAPI(unittest.TestCase):
     @db_session
     def test_op(self):
         op = Operation(['685000'], {'op': 'timavg'})
-        self.assertEqual((op.tags, op.duration, op.num_runs()), ({'op': 'timavg'},21033390.000000004, 11))
+        self.assertEqual((op.tags, op.duration), ({'op': 'timavg'},41388496.0))
+        self.assertEqual(op.proc_sums, {'syscr': 127808, 'guest_time': 0, 'inblock': 0, 'processor': 0, 'rchar': 5356358342, 'cancelled_write_bytes': 45056, 'outblock': 5139208, 'timeslices': 2661, 'PERF_COUNT_SW_CPU_CLOCK': 17547070414, 'wchar': 5262916589, 'rssmax': 7854752, 'numtids': 62, 'duration': 41388496.0, 'read_bytes': 0, 'time_waiting': 35814116, 'delayacct_blkio_time': 0, 'invol_ctxsw': 1884, 'majflt': 0, 'syscw': 80433, 'minflt': 92584, 'cpu_time': 17951212.0, 'vol_ctxsw': 714, 'time_oncpu': 17984466575, 'rdtsc_duration': 153196621348, 'user+system': 17951212, 'systemtime': 4074354, 'num_procs': 57, 'write_bytes': 2631274496, 'usertime': 13876858 })
+        op = Operation(['685000'], {'op': 'timavg'}, op_duration_method = "sum-minus-overlap")
+        self.assertEqual((op.tags, op.duration, op.num_runs()), ({'op': 'timavg'},21033390.0, 11))
         self.assertEqual(op.proc_sums, {'syscr': 127808, 'guest_time': 0, 'inblock': 0, 'processor': 0, 'rchar': 5356358342, 'cancelled_write_bytes': 45056, 'outblock': 5139208, 'timeslices': 2661, 'PERF_COUNT_SW_CPU_CLOCK': 17547070414, 'wchar': 5262916589, 'rssmax': 7854752, 'numtids': 62, 'duration': 21033390.0, 'read_bytes': 0, 'time_waiting': 35814116, 'delayacct_blkio_time': 0, 'invol_ctxsw': 1884, 'majflt': 0, 'syscw': 80433, 'minflt': 92584, 'cpu_time': 17951212.0, 'vol_ctxsw': 714, 'time_oncpu': 17984466575, 'rdtsc_duration': 153196621348, 'user+system': 17951212, 'systemtime': 4074354, 'num_procs': 57, 'write_bytes': 2631274496, 'usertime': 13876858 })
-        self.assertEqual(set(op.to_dict().keys()), {'jobs', 'proc_sums', 'num_runs', 'duration', 'tags', 'contiguous', 'processes', 'intervals', 'exact_tag_only'})
+        op = Operation(['685000'], {'op': 'timavg'}, op_duration_method = "finish-minus-start")
+        self.assertEqual((op.tags, op.duration), ({'op': 'timavg'},51278054.0))
+        self.assertEqual(op.proc_sums, {'syscr': 127808, 'guest_time': 0, 'inblock': 0, 'processor': 0, 'rchar': 5356358342, 'cancelled_write_bytes': 45056, 'outblock': 5139208, 'timeslices': 2661, 'PERF_COUNT_SW_CPU_CLOCK': 17547070414, 'wchar': 5262916589, 'rssmax': 7854752, 'numtids': 62, 'duration': 51278054.0, 'read_bytes': 0, 'time_waiting': 35814116, 'delayacct_blkio_time': 0, 'invol_ctxsw': 1884, 'majflt': 0, 'syscw': 80433, 'minflt': 92584, 'cpu_time': 17951212.0, 'vol_ctxsw': 714, 'time_oncpu': 17984466575, 'rdtsc_duration': 153196621348, 'user+system': 17951212, 'systemtime': 4074354, 'num_procs': 57, 'write_bytes': 2631274496, 'usertime': 13876858 })
+        self.assertEqual(set(op.to_dict().keys()), {'jobs', 'proc_sums', 'duration', 'tags', 'processes',  'exact_tag_only', 'start', 'finish', 'op_duration_method'})
+        self.assertEqual(set(op.to_dict(full = True).keys()), {'jobs', 'proc_sums', 'duration', 'tags', 'processes',  'exact_tag_only', 'start', 'finish', 'intervals', 'num_runs', 'contiguous', 'op_duration_method'})
         op = Operation(['685000', '685003'], {'op': 'timavg'})
-        self.assertEqual(op.proc_sums, {'syscw': 89297, 'PERF_COUNT_SW_CPU_CLOCK': 29297709455, 'time_oncpu': 32531383700, 'usertime': 25906808, 'time_waiting': 81086345, 'timeslices': 8001, 'cancelled_write_bytes': 262144, 'outblock': 5665088, 'guest_time': 0, 'minflt': 647328, 'invol_ctxsw': 3996, 'processor': 0, 'rssmax': 10901764, 'read_bytes': 7303168, 'rdtsc_duration': 244679507379, 'inblock': 14264, 'majflt': 18, 'num_procs': 428, 'write_bytes': 2900525056, 'delayacct_blkio_time': 0, 'duration': 36053215.0, 'syscr': 206204, 'rchar': 8118076508, 'cpu_time': 32325636.0, 'systemtime': 6418828, 'wchar': 5805294586, 'vol_ctxsw': 3571, 'user+system': 32325636, 'numtids': 433})
+        self.assertEqual(op.proc_sums, {'syscw': 89297, 'PERF_COUNT_SW_CPU_CLOCK': 29297709455, 'time_oncpu': 32531383700, 'usertime': 25906808, 'time_waiting': 81086345, 'timeslices': 8001, 'cancelled_write_bytes': 262144, 'outblock': 5665088, 'guest_time': 0, 'minflt': 647328, 'invol_ctxsw': 3996, 'processor': 0, 'rssmax': 10901764, 'read_bytes': 7303168, 'rdtsc_duration': 244679507379, 'inblock': 14264, 'majflt': 18, 'num_procs': 428, 'write_bytes': 2900525056, 'delayacct_blkio_time': 0, 'duration': 67847274.0, 'syscr': 206204, 'rchar': 8118076508, 'cpu_time': 32325636.0, 'systemtime': 6418828, 'wchar': 5805294586, 'vol_ctxsw': 3571, 'user+system': 32325636, 'numtids': 433})
 
     @db_session
     def test_op_metrics(self):
@@ -299,17 +306,34 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(df.shape, (178,32), "wrong dataframe shape for op_metrics")
         top = df[['job', 'tags', 'duration']].sort_values('duration', axis=0, ascending=False)[:1]
         self.assertEqual(top.tags.values[0], {u'op_instance': u'2', u'op_sequence': u'89', u'op': u'dmput'})
+        self.assertEqual(int(top.duration.values[0]), 7008334182)
+
+        df = eq.op_metrics(['685000', '685016'], op_duration_method = "sum-minus-overlap")
+        top = df[['job', 'tags', 'duration']].sort_values('duration', axis=0, ascending=False)[:1]
         self.assertEqual(int(top.duration.values[0]), 7005558348)
+
         df = eq.op_metrics(['685000', '685016'], tags='op_sequence:89')
+        # pylint: disable=no-member
+        self.assertEqual([int(f) for f in list(df.duration.values)], [6463542235, 7008334182])
+        df = eq.op_metrics(['685000', '685016'], tags='op_sequence:89', op_duration_method = "sum-minus-overlap")
+        # pylint: disable=no-member
+        self.assertEqual([int(f) for f in list(df.duration.values)], [6460188134, 7005558348])
+        df = eq.op_metrics(['685000', '685016'], tags='op_sequence:89', op_duration_method = "finish-minus-start")
+        # pylint: disable=no-member
         self.assertEqual([int(f) for f in list(df.duration.values)], [6460188134, 7005558348])
 
         df = eq.op_metrics(['685000', '685003', '685016'])
         self.assertEqual(df.shape,(573,32), 'wrong op_metrics shape when no tag specified')
+        # pylint: disable=no-member
         self.assertEqual([int(x) for x in df.cpu_time.values][:10], [1207637., 1268652., 1225636., 1263656., 1315618., 1261654., 1209636., 1246659., 1205634., 1265656.])
 
         df = eq.op_metrics(['685000', '685003', '685016'], tags=['op:hsmget', 'op:mv'])
         self.assertEqual(df.shape, (6,32), 'wrong op_metrics shape with tags specified')
-        self.assertEqual([int(x) for x in df.duration.values], [6375786656, 6471901800, 6672575160, 8551396, 69194108, 17359881])
+        # pylint: disable=no-member
+        self.assertEqual([int(x) for x in df.cpu_time.values], [53934101, 31337553, 123305670, 2799492, 20996147, 6496944])
+        # self.assertEqual([int(x) for x in df.duration.values], [6375786656, 6471901800, 6672575160, 8551396, 69194108, 17359881])
+        # self.assertEqual([int(x) for x in df.duration.values], [6378342472, 6474000335, 6674198021, 67199129, 133578518, 287555579])
+        # pylint: disable=no-member
         self.assertEqual(list(df.tags.values), [{'op': 'hsmget'}, {'op': 'hsmget'}, {'op': 'hsmget'}, {'op': 'mv'}, {'op': 'mv'}, {'op': 'mv'}])
 
     @db_session
@@ -317,10 +341,12 @@ class QueryAPI(unittest.TestCase):
         df = eq.op_metrics(['685000', '685003', '685016'], group_by_tag=True)
         self.assertEqual(df.shape,(459,30), 'wrong op_metrics grouped shape when no tag specified')
         self.assertEqual(list(df['tags'].values[:10]), [{u'op_instance': u'11', u'op_sequence': u'66', u'op': u'cp'}, {u'op_instance': u'15', u'op_sequence': u'79', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'247', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'251', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'255', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'259', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'263', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'267', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'271', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'30', u'op': u'cp'}], 'wrong tags ordering in grouped op_metrics')
+        # pylint: disable=no-member
         self.assertEqual(list(df.cpu_time.values)[:10], [2476289.0, 2489292.0, 472905.0, 462906.0, 461906.0, 465903.0, 471904.0, 485902.0, 472905.0, 2577272.0])
 
         df = eq.op_metrics(['685000', '685003', '685016'], tags=['op:hsmget', 'op:mv'], group_by_tag=True)
         self.assertEqual(df.shape, (2,30), 'wrong op_metrics shape with tags specified')
+        # pylint: disable=no-member
         self.assertEqual(list(df.tags.values), [{u'op': u'hsmget'}, {u'op': u'mv'}])
         self.assertEqual(list(df['cpu_time'].values), [208577324.0, 30292583.0])
 
@@ -328,8 +354,13 @@ class QueryAPI(unittest.TestCase):
     def test_ops(self):
         ops = eq.get_ops(['685000', '685003'], tags = ['op:timavg', 'op:ncks'])
         self.assertEqual([type(op) for op in ops], [dict, dict])
-        self.assertEqual((ops[0]['duration'], ops[1]['duration']), (36053215.00000002, 4773814.999999999))
         self.assertEqual((ops[0]['proc_sums']['num_procs'], ops[1]['proc_sums']['num_procs']), (428, 190))
+        self.assertEqual((ops[0]['proc_sums']['cpu_time'], ops[1]['proc_sums']['cpu_time']), (32325636.0, 6484854.0))
+        self.assertEqual((ops[0]['duration'], ops[1]['duration']), (67847274.0, 4787122.0))
+        ops = eq.get_ops(['685000', '685003'], tags = ['op:timavg', 'op:ncks'], op_duration_method="sum-minus-overlap")
+        self.assertEqual((ops[0]['duration'], ops[1]['duration']), (36053215.0, 4773815.0))
+        ops = eq.get_ops(['685000', '685003'], tags = ['op:timavg', 'op:ncks'], op_duration_method="finish-minus-start")
+        self.assertEqual((ops[0]['duration'], ops[1]['duration']), (232727177.0, 131928185.0))
 
         ops = eq.get_ops(['685000', '685003'], tags = ['op:timavg', 'op:ncks'], combine = True, fmt='orm')
         self.assertEqual(len(ops), 1)
@@ -338,7 +369,6 @@ class QueryAPI(unittest.TestCase):
         ops = eq.get_ops(['685000', '685003'], tags = 'op', combine=True)
         self.assertEqual(len(ops), 1)
         op = ops[0]
-        self.assertEqual((op['num_runs'], op['duration']), (1, 6621567736.0))
         self.assertEqual((op['proc_sums']['num_procs'], op['proc_sums']['numtids']), (7111, 7544))
         ops2 = eq.get_ops(['685000', '685003'], tags = '', combine=True)
         self.assertEqual(ops2, ops)
@@ -401,9 +431,16 @@ class QueryAPI(unittest.TestCase):
         r = eq.set_job_analyses('685000', {'rca': 1}, True)
         self.assertEqual(r, {'rca': 1})
         self.assertEqual(eq.get_job_analyses('685000'), {'rca': 1})
+        # get back to pristine state
         r = eq.remove_job_analyses('685000')
         self.assertEqual(r, {})
         self.assertEqual(eq.get_job_analyses('685000'), {})
+        uj = eq.get_unanalyzed_jobs(['685000', '685003', '685016'])
+        self.assertEqual(set(uj), set(['685000', '685003', '685016']))
+        eq.analyze_pending_jobs(['685000', '685003', '685016'])
+        uj = eq.get_unanalyzed_jobs(['685000', '685003', '685016'])
+        self.assertEqual(set(uj), set([]))
+
 
 
     @db_session
@@ -445,8 +482,47 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(r1.tags, {'model_name': model_name})
         self.assertFalse(r1.op_tags)
         self.assertEqual(set([j.jobid for j in r1.jobs]), set(jobs))
+
+        # model metrics: get/set
+        all_metrics = eq.refmodel_get_metrics(r1.id, False)
+        self.assertEqual(set(all_metrics), { 'duration', 'num_procs', 'cpu_time' })
+        active_metrics = eq.refmodel_get_metrics(r1.id, True)
+        self.assertEqual(set(active_metrics), { 'duration', 'num_procs', 'cpu_time' })
+        eq.refmodel_set_active_metrics(r1.id, ['duration', 'cpu_time'])
+        # all metrics will be the same as before, but active metrics will change
+        all_metrics = eq.refmodel_get_metrics(r1.id, False)
+        self.assertEqual(set(all_metrics), { 'duration', 'num_procs', 'cpu_time' })
+        active_metrics = eq.refmodel_get_metrics(r1.id, True)
+        self.assertEqual(set(active_metrics), { 'duration', 'cpu_time' })
+        # restore the metrics for model
+        eq.refmodel_set_active_metrics(r1.id, ['duration', 'cpu_time', 'num_procs'])
+        active_metrics = eq.refmodel_get_metrics(r1.id, True)
+        self.assertEqual(set(active_metrics), { 'duration', 'num_procs', 'cpu_time' })
+
+        # check enabled
+        self.assertTrue(eq.refmodel_is_enabled(r1.id))
+        eq.refmodel_set_enabled(r1.id, enabled=False)
+        self.assertFalse(eq.refmodel_is_enabled(r1.id))
+        # delete model
         n = eq.delete_refmodels(r['id'])
         self.assertEqual(n, 1, 'wrong ref_model delete count')
+        # wildcard features
+        with capture() as (out, err):
+            r = eq.create_refmodel(jobs, tag='model_name:'+model_name, features='*')
+        all_features =  {'duration', 'syscr', 'systemtime', 'PERF_COUNT_SW_CPU_CLOCK', 'cpu_time', 'delayacct_blkio_time', 'time_waiting', 'write_bytes', 'inblock', 'minflt', 'invol_ctxsw', 'syscw', 'wchar', 'num_threads', 'processor', 'cancelled_write_bytes', 'rssmax', 'rchar', 'outblock', 'num_procs', 'time_oncpu', 'rdtsc_duration', 'usertime', 'timeslices', 'guest_time', 'vol_ctxsw', 'majflt', 'read_bytes', 'exitcode'}
+        self.assertEqual(eq.refmodel_get_metrics(r['id'], False), all_features) # all metrics
+        self.assertEqual(eq.refmodel_get_metrics(r['id'], True), all_features)  # active metrics
+        eq.delete_refmodels(r['id'])
+
+        # named reference models
+        with capture() as (out, err):
+            r1 = eq.create_refmodel(jobs, name='test_model')
+            r2 = eq.create_refmodel(jobs)
+        self.assertEqual(r1['name'], 'test_model')
+        self.assertEqual([r1['id']], eq.get_refmodels(name = 'test_model', fmt='terse'))
+        self.assertFalse(eq.get_refmodels(name = 'no_such_model'))
+        eq.delete_refmodels(r1['id'], r2['id'])
+
 
     @db_session
     def test_ops_dm_calc(self):

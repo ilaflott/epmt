@@ -1,18 +1,18 @@
 # This must be run from one directory above
 # ./papiex-oss.git
 # ./epmt.git
-FROM giovtorres/docker-centos7-slurm:latest as slurm
+FROM giovtorres/docker-centos7-slurm:19.05.1 as slurm
 
 RUN yum install -y tcsh
 
-ARG release=2.0.0
+ARG release=2.1.0
 ARG settings=settings_slurm_test.py
 ARG destdir=/opt/epmt
 
 ADD papiex-epmt-${release}.tgz ${destdir}
 ADD epmt-${release}.tgz ${destdir}
 COPY preset_settings/${settings} ${destdir}/epmt-install/epmt/settings.py
-ADD epmt-example.sh epmt-example.csh ${destdir}/examples/
+#ADD epmt-example.sh epmt-example.csh ${destdir}/examples/
 ENV PATH="${destdir}/epmt-install/epmt:${PATH}"
 ENV USER="root"
 
@@ -21,7 +21,7 @@ RUN cat /usr/local/bin/docker-entrypoint.sh >> /tmp/pep.sh && mv /tmp/pep.sh /us
 
 # SLURM integration
 # Should edit install path here in prolog/epilog
-COPY SLURM/slurm_task_prolog_epmt.sh SLURM/slurm_task_epilog_epmt.sh ${destdir}/slurm/
+# COPY SLURM/slurm_task_prolog_epmt.sh SLURM/slurm_task_epilog_epmt.sh ${destdir}/slurm/
 RUN sed -i 's;dDebug=3;dDebug=0;' /etc/slurm/slurm.conf
 
 

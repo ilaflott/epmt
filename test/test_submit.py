@@ -44,7 +44,7 @@ class EPMTSubmit(unittest.TestCase):
     @db_session
     def test_unprocessed_jobs(self):
         from orm import UnprocessedJob, orm_commit
-        from epmt_job import post_process_outstanding_jobs, post_process_job
+        from epmt_job import post_process_pending_jobs, post_process_job
         with self.assertRaises(Exception):
              u = UnprocessedJob['685003']
         if settings.orm == 'sqlalchemy':
@@ -59,11 +59,11 @@ class EPMTSubmit(unittest.TestCase):
             self.assertFalse(j.proc_sums)
             self.assertTrue(UnprocessedJob['685003'])
             self.assertEqual(eq.get_unprocessed_jobs(), [u'685003'])
-            # now let's post-process all outstanding jobs
-            u_jobs = post_process_outstanding_jobs()
+            # now let's post-process all pending jobs
+            u_jobs = post_process_pending_jobs()
             self.assertIn('685003', u_jobs)
         else:
-            self.assertEqual(post_process_outstanding_jobs(), [])
+            self.assertEqual(post_process_pending_jobs(), [])
         self.assertFalse(post_process_job(j))
         self.assertEqual(eq.get_unprocessed_jobs(), [])
         self.assertFalse(orm_get(UnprocessedJob, '685003'))

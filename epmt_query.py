@@ -17,8 +17,8 @@ set_logging(settings.verbose if hasattr(settings, 'verbose') else 0, check=True)
 from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key, stringify_dicts, version, version_str
 from epmt_stat import modified_z_score
 
-init_settings(settings)
-setup_db(settings)
+init_settings(settings) # type: ignore
+setup_db(settings) # type: ignore
 
 PROC_SUMS_FIELD_IN_JOB='proc_sums'
 THREAD_SUMS_FIELD_IN_PROC='threads_sums'
@@ -144,7 +144,7 @@ def timeline(jobs, limit=0, fltr='', when=None, hosts=[], fmt='pandas'):
     """
     return get_procs(jobs, fmt=fmt, order=(Process.start), limit=limit, fltr=fltr, when=when, hosts=hosts)
 
-@db_session
+@db_session 
 def get_roots(jobs, fmt='dict'):
     '''
     Returns the root (top-level) processes of a job (or job collection)
@@ -633,10 +633,12 @@ def rank_proc_tags_keys(jobs, order = 'cardinality', exclude = []):
 
 
 @db_session
-def get_refmodels(tag = {}, fltr=None, limit=0, order=None, exact_tag_only=False, merge_nested_fields=True, fmt='dict'):
+def get_refmodels(name=None, tag = {}, fltr=None, limit=0, order=None, exact_tag_only=False, merge_nested_fields=True, fmt='dict'):
     """
-    This function returns reference models filtered using tag and fltr
-
+    This function returns reference models filtered using name / tag / fltr
+    
+    name  : query reference models by name. Usually if you query by name
+            you wouldn't need to use tag/fltr/limit/order.
     tag   : refers to a single dict of key/value pairs or a string
     fltr  : a lambda function or a string containing a pony expression
     limit : used to limit the number of output items, 0 means no limit
@@ -645,7 +647,7 @@ def get_refmodels(tag = {}, fltr=None, limit=0, order=None, exact_tag_only=False
             the full dictionary must match for a successful match. Default False.
     merge_nested_fields: used to hoist attributes from the 'computed'
             fields in the reference model, so they appear as first-class fields.
-    fmt   : one of 'orm', 'pandas', 'dict'. Default is 'dict'
+    fmt   : one of 'orm', 'pandas', 'dict' or 'terse'. Default is 'dict'
 
     EXAMPLE:
       get_refmodels(tag = 'exp_name:ESM4;exp_component:ice_1x1', fmt='pandas')
@@ -655,7 +657,7 @@ def get_refmodels(tag = {}, fltr=None, limit=0, order=None, exact_tag_only=False
     if type(tag) == str:
         tag = tag_from_string(tag)
 
-    qs = orm_get_refmodels(tag, fltr, limit, order, exact_tag_only)
+    qs = orm_get_refmodels(name, tag, fltr, limit, order, exact_tag_only)
 
     if fmt == 'orm':
         return qs
@@ -700,16 +702,19 @@ def _refmodel_scores(col, outlier_methods, features):
     return ret
 #
 @db_session
-def create_refmodel(jobs=[], tag={}, op_tags=[], 
+def create_refmodel(jobs=[], name=None, tag={}, op_tags=[], 
                     outlier_methods=[modified_z_score], 
                     features=['duration', 'cpu_time', 'num_procs'], exact_tag_only=False,
-                    fmt='dict', sanity_check = True):
+                    fmt='dict', sanity_check = True, enabled=True):
     """
     This function creates a reference model and returns
     the ID of the newly-created model in the database
     
     
     jobs:     points to a list of Jobs (or pony JobSet) or jobids
+
+    name:     An optional string that serves to identify the model
+              that will be created. 
     
     tag:      A string or dict consisting of key/value pairs. This
               tag is saved for the refmodel, and may be used
@@ -730,11 +735,17 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
              will at present be set to modified_z_score.
     
     features: List of fields of each job that should be used
-             for outlier detection. 
-             Defaults to: ['duration', 'cpu_time', 'num_procs']
+             for outlier detection. If passed an empty list
+             or a wildcard('*') it will be interpreted as the user
+             wanting to use all available metrics for outlier
+             detection.
+             Defaults to: settings.outlier_features
     
     exact_tag_only: Default False. If set, all tag matches require
              exact dictionary match, and a superset match won't do.
+
+    enabled: Allow the trained model to be used for outlier detection.
+             Enabled is set to True by default.
     
     e.g,.
     
@@ -768,8 +779,12 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
     #    jobs = list(jobs)
     #if type(jobs) == list and isString(jobs[0]):
     #    jobs = Job.select(lambda j: j.jobid in jobs)
+    
     jobs_orm = orm_jobs_col(jobs)
+    jobs_df = conv_jobs(jobs_orm, fmt='pandas')
     jobs = jobs_orm[:]
+    from epmt_outliers import _sanitize_features
+    features = _sanitize_features(features, jobs_df)
 
     if sanity_check:
         _warn_incomparable_jobs(jobs)
@@ -792,6 +807,7 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
         for t in op_tags:
             # serialize the tag so we can use it as a key
             stag = dumps(t, sort_keys=True)
+            # pylint: disable=no-member
             scores[stag] = _refmodel_scores(ops_df[ops_df.tags == t], outlier_methods, features)
     else:
         # full jobs, no ops
@@ -801,7 +817,7 @@ def create_refmodel(jobs=[], tag={}, op_tags=[],
     computed = scores
 
     # now save the ref model
-    r = ReferenceModel(jobs=jobs, tags=tag, op_tags=op_tags, computed=computed)
+    r = ReferenceModel(jobs=jobs, name=name, tags=tag, op_tags=op_tags, computed=computed, enabled=enabled)
     orm_commit()
     if fmt=='orm': 
         return r
@@ -826,6 +842,65 @@ def delete_refmodels(*ref_ids):
         ref_ids = ref_ids[0]
     ref_ids = [int(r) for r in ref_ids]
     return orm_delete_refmodels(ref_ids)
+
+
+def refmodel_set_enabled(ref_id, enabled = False):
+    """
+    Enable or disable a trained model.
+    """
+    r = ReferenceModel[ref_id]
+    r.enabled = enabled
+    return r
+
+def refmodel_is_enabled(ref_id):
+    """
+    Get the status (enabled/disabled) of a trained model.
+    """
+    return ReferenceModel[ref_id].enabled
+
+def refmodel_get_metrics(model, active_only = False):
+    """
+    Get the set of metrics available in a trained model.
+    If 'active_only' is set then only the active metrics are returned.
+    """
+    r = ReferenceModel[model] if (type(model) == int) else model
+    metrics = set()
+    # iterate over the dicts stored for each method and do a union operation
+    # print(r.computed)
+    for v in r.computed.values():
+        # op models have the metrics further nested so here we do a try/catch
+        # first with the deeper nest and then one less. 
+        try:
+            m = []
+            for _v in v.values():
+                # print(_v)
+                m += _v.keys()
+        except:
+            m = v.keys()
+        metrics |= set(m)
+    if active_only:
+        active_metrics = (r.info_dict or {}).get('active_metrics', [])
+        if active_metrics:
+            # do an intersection
+            metrics &= set(active_metrics)
+    return metrics
+
+def refmodel_set_active_metrics(ref_id, metrics):
+    """
+    Set the active metrics for a trained model to specified list of metrics.
+    """
+    r = ReferenceModel[ref_id]
+    all_metrics = refmodel_get_metrics(ref_id, False)
+    metrics_set = set(metrics)
+    if (metrics_set - all_metrics):
+        logger.warning('Ignoring metrics that are not available in the trained model: {0}'.format(metrics_set - all_metrics))
+    active_metrics = list(metrics_set & all_metrics)
+    logger.info('Active metrics for model set to: %s',str(active_metrics))
+    info_dict = dict.copy(r.info_dict or {})
+    info_dict['active_metrics'] = active_metrics
+    r.info_dict = info_dict
+    return active_metrics
+
 
             
 # This is a low-level function that finds the unique process
@@ -853,7 +928,7 @@ def __unique_proc_tags_for_job(job, exclude=[], fold=True):
 
 
 @db_session
-def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict'):
+def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict', op_duration_method = "sum"):
     '''
     Returns a list of "Operations", where each Operation is either
     an object or a dict, depending on 'fmt'. An operation represents a collection
@@ -883,6 +958,15 @@ def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict'):
           will be combined into a single high-level operation. In this case
           the returned value will a list with a single operation.
           The main use of this is to merge the execution intervals and proc_sums.
+
+    op_duration_method: One of "sum", "sum-minus-overlap" or "finish-minus-start"
+                  sum: signifies a dumb sum of process durations
+                  sum-minus-overlap: expensive computation that ensures overlapping
+                       processes are not double-counted.
+                  finish-minus-start: operation duration is calculated as the
+                       difference of the last process to finish and the first
+                       process to start. 
+                  Defaults to "sum"
 
     EXAMPLES:
           To get the ops as a list of dicts for two distinct tags, do:
@@ -953,11 +1037,11 @@ def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict'):
         # Operation will pass the list of tags to get_procs
         # and the entire set of processes will be considered
         # as one operation
-        ops = [Operation(jobs, _tags, exact_tag_only)]
+        ops = [Operation(jobs, _tags, exact_tag_only, op_duration_method = op_duration_method)]
     else:
         ops = []
         for t in _tags:
-            op = Operation(jobs, t, exact_tag_only)
+            op = Operation(jobs, t, exact_tag_only, op_duration_method = op_duration_method)
             if op: ops.append(op)
 
     if fmt == 'dict':
@@ -965,7 +1049,7 @@ def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict'):
     return ops
 
 @db_session
-def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=False, fmt='pandas'):
+def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=False, fmt='pandas', op_duration_method = "sum"):
     """
     Aggregates metrics across processes for one or or more operations.
     The returned output is of the form:
@@ -990,7 +1074,17 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=F
     
     fmt:          One of 'dict' or 'pandas'. Defaults to 'pandas'
 
+    op_duration_method: One of "sum", "sum-minus-overlap" or "finish-minus-start"
+                  sum: signifies a dumb sum of process durations
+                  sum-minus-overlap: expensive computation that ensures overlapping
+                       processes are not double-counted.
+                  finish-minus-start: operation duration is calculated as the
+                       difference of the last process to finish and the first
+                       process to start. 
+                  Defaults to "sum"
     """
+    if op_duration_method not in ("sum", "sum-minus-overlap", "finish-minus-start"):
+        raise ValueError('op_duration_method must be one of ("sum", "sum-minus-overlap", "finish-minus-start")')
     _empty_collection_check(jobs)
     jobs = orm_jobs_col(jobs).order_by(Job.start)
 
@@ -1021,20 +1115,30 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=F
                 concat_threads_sums = func.array_to_string(func.array_agg(Process.threads_sums), '@@@')
             else:
                 concat_threads_sums = func.group_concat(Process.threads_sums, '@@@')
-            procs_grp_by_job = orm_get_procs(jobs, t, None, None, 0, None, [], exact_tags_only, [Process.jobid, func.count(Process.id), func.sum(Process.cpu_time), func.sum(Process.numtids), concat_threads_sums]).group_by(Process.jobid).order_by(Process.jobid)
+            procs_grp_by_job = orm_get_procs(jobs, t, None, None, 0, None, [], exact_tags_only, [Process.jobid, func.count(Process.id), func.min(Process.start), func.max(Process.end), func.sum(Process.duration), func.sum(Process.cpu_time), func.sum(Process.numtids), concat_threads_sums]).group_by(Process.jobid).order_by(Process.jobid)
         else:
             # Pony ORM
             procs = get_procs(jobs, tags = t, exact_tag_only = exact_tags_only, fmt='orm')
-            procs_grp_by_job = select((p.job, count(p.id), sum(p.cpu_time), sum(p.numtids), group_concat(p.threads_sums, sep='@@@')) for p in procs)
+            procs_grp_by_job = select((p.job, count(p.id), min(p.start), max(p.end), sum(p.duration), sum(p.cpu_time), sum(p.numtids), group_concat(p.threads_sums, sep='@@@')) for p in procs)
 
         for row in procs_grp_by_job:
-            (j, nprocs, excl_cpu, ntids, threads_sums_str) = row
-            # now duration calculation requires us to account for
-            # overlapping processes in an operation (since one may
-            # background and wait). 
-            # So we use Operation to correctly compute duration
-            op = Operation(j, t, exact_tags_only)
-            duration = round(op.duration,1)
+            (j, nprocs, start, end, duration, excl_cpu, ntids, threads_sums_str) = row
+            if op_duration_method == "finish-minus-start":
+                duration = (end - start).total_seconds() * 1e6
+            elif op_duration_method == "sum-minus-overlap":
+                # duration calculation requires us to account for
+                # overlapping processes in an operation (since one may
+                # background and wait). 
+                # So we use Operation to correctly compute duration
+                # This is an expensive computation:
+                # O(NlogN) complexity, where N is the num. of processes
+                op = Operation(j, t, exact_tags_only, op_duration_method = "sum-minus-overlap")
+                duration = round(op.duration,1)
+            elif op_duration_method == "sum":
+                # nop since we already computed that in 'duration' using the ORM
+                pass
+            else:
+                raise ValueError("Do not know how to handle op_duration_method: {}".format(op_duration_method))
             # convert from giant string to array of strings where each list
             # list element is a json of a threads_sums dict
             _l1 = threads_sums_str.split('@@@')
@@ -1228,6 +1332,103 @@ def get_job_annotations(jobid):
 def remove_job_annotations(jobid):
     return annotate_job(jobid, {}, True)
 
+def analyze_pending_jobs(jobs = [], analyses_filter = {}):
+    """
+    Analyze all pending jobs. The jobs may or may not be
+    comparable. 
+    
+    jobs: Restrict applying the analyses to a subset specified by jobs.
+          In the most common usage, you will leave jobs unset.
+
+    analyses_filter: This tag defines what constitutes an unanalyzed job
+
+    Returns: The total number of analyses algorithms executed
+    """
+    ua_jobs = get_unanalyzed_jobs(jobs = jobs, analyses_filter = analyses_filter)
+    num_analyses_run = 0
+    if ua_jobs:
+        logger.debug('{0} unanalyzed jobs: {1}'.format(len(ua_jobs), ua_jobs))
+        # partition the jobs into sets of comparable jobs based on their tags
+        comp_job_parts = comparable_job_partitions(ua_jobs)
+        logger.debug('{0} sets of comparable jobs: {1}'.format(len(comp_job_parts), comp_job_parts))
+        # iterate over the comparable jobs' sets
+        for j_part in comp_job_parts:
+            (_, jobids) = j_part
+            # we set check_comparable as False since we already know
+            # that the jobs are comparable -- don't waste time!
+            num_analyses_run += analyze_comparable_jobs(jobids, check_comparable = False)
+    return num_analyses_run
+
+
+
+@db_session
+def analyze_comparable_jobs(jobids, check_comparable = True, keys = ('exp_name', 'exp_component')):
+    """
+    Analyzes one or more jobs. The jobs must be comparable; a warning
+    will be issued if they aren't (unless check_comparable is disabled).
+    You may want to use the higher-level function -- analyze_pending_jobs -- instead.
+
+    jobids: List of job ids
+
+    keys: is a tuple of job tag keys that will be used to query for
+    trained models. If trained model(s) are found then outlier detection
+    is run on the jobs against the trained model(s).
+
+    It's possible no trained model is found, then we will do an outlier
+    detection on the job set (partition_jobs) assuming that's possible.
+
+    Returns: Number of analyses algorithms executed. This may be zero
+             if number of comparable jobs are too few and there are
+             no trained models.
+    """
+    from epmt_outliers import detect_outlier_jobs
+    if check_comparable:
+        _warn_incomparable_jobs(jobids)
+    logger.debug('analyzing jobs: {0}'.format(jobids))
+    model_tag = {}
+    for k in keys:
+        model_tag[k] = Job[jobids[0]].tags.get(k, '')
+        # make sure all the jobids have the same value for the tag key
+        if check_comparable:
+            for j in jobids:
+                v = jobids[j].tags.get(k, '')
+                if not k in jobids[j].tags:
+                    logger.warning('job {0} tags has no key -- {1}'.format(j, k))
+                assert(jobids[j].tags.get(k, '') == model_tag[k])
+    logger.debug('Searching for trained models with tag: {0}'.format(model_tag))
+    trained_models = get_refmodels(tag = model_tag)
+    outlier_results = []
+    # can we make the if/then more DNRY?
+    if trained_models:
+        logger.debug('found {0} trained models for job set'.format(len(trained_models)))
+        for r in trained_models:
+            model_id = r['id']
+            d = detect_outlier_jobs(jobids, trained_model = model_id)[1]
+            # make the results JSON serializable (sets aren't unfortunately)
+            outlier_detect_results = { k: (list(v[0]), list(v[1])) for k, v in d.items() }
+            outlier_results.append({'model_id': model_id, 'results': outlier_detect_results})
+    else:
+        # no trained model found. 
+        # Can we run a detect_outlier_jobs on the exisiting job set?
+        if len(jobids) < 4:
+            logger.warning('{0} -- No trained model found, and too few jobs for outlier detection (need at least 4)'.format(jobids))
+        else:
+            d = detect_outlier_jobs(jobids)[1]
+            # make the results JSON serializable (sets aren't unfortunately)
+            outlier_detect_results = { k: (list(v[0]), list(v[1])) for k, v in d.items() }
+            outlier_results.append({'model_id': None, 'results': outlier_detect_results})
+    analyses = { 'outlier_detection': outlier_results }
+    num_analyses_runs = len(outlier_results)
+
+    # finally mark the jobs as analyzed
+    for j in jobids:
+        set_job_analyses(j, analyses)
+    msg = 'analyzed {0}: '.format(jobids)
+    for k in analyses:
+        msg += '{0} runs of {1}; '.format(len(analyses[k]), k)
+    logger.info(msg)
+    return num_analyses_runs
+
 @db_session
 def set_job_analyses(jobid, analyses, replace=False):
     '''
@@ -1255,12 +1456,12 @@ def get_job_analyses(jobid):
     j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
     return j.analyses
 
-def get_unanalyzed_jobs(jobs = [], fmt='terse'):
+def get_unanalyzed_jobs(jobs = [], analyses_filter = {}, fmt='terse'):
     '''
     Returns the subset of jobs that have not had any analysis pipeline
     run on them.
     '''
-    return get_jobs(jobs, analyses = {}, fmt=fmt)
+    return get_jobs(jobs, analyses = analyses_filter, fmt=fmt)
 
 
 def remove_job_analyses(jobid):
@@ -1341,6 +1542,7 @@ def _warn_incomparable_jobs(jobs):
     if not are_jobs_comparable(jobs):
         msg = 'The jobs do not share identical tag values for "exp_name" and "exp_component"'
         from sys import stderr
+        logger.warning(msg)
         print('WARNING:', msg, file=stderr)
         for j in jobs:
             print('   ',j.jobid, j.tags.get('exp_name'), j.tags.get('exp_component'), file=stderr)

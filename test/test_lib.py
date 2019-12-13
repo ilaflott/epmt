@@ -30,6 +30,11 @@ class EPMTLib(unittest.TestCase):
         db_params = _url2params(url)
         self.assertEqual(db_params, { 'provider': 'sqlite', 'filename': ':memory:', 'create_db': True })
 
+    def test_merge_intervals(self):
+        from epmtlib import merge_intervals
+        merged = merge_intervals([[-25, -14], [-21, -16], [-20, -15], [-10, -7], [-8, -5], [-6, -3], [2, 4], [2, 3], [3, 6], [12, 15], [13, 18], [14, 17], [22, 27], [25, 30], [26, 29]])
+        self.assertEqual(merged, [[-25, -14], [-10, -3], [2, 6], [12, 18], [22, 30]])
+
 
 if __name__ == '__main__':
     unittest.main()

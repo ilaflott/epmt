@@ -21,6 +21,7 @@ verbose = 0
 profile = False
 input_pattern = "*-papiex-*-[0-9]*.csv"
 install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-oss-install/"
+logfile = path.dirname(path.abspath(__file__)) + '/epmt.log'
 
 # blacklist for environment filter (in addition to all keys with
 # leading underscores)
@@ -34,12 +35,15 @@ all_tags_field = 'all_proc_tags'
 
 # outlier detection
 outlier_thresholds = { 'modified_z_score': 2.5, 'iqr': [20,80], 'z_score': 3.0 }
+# default features to use if no features specified
 outlier_features = ['duration', 'cpu_time', 'num_procs']
+# user+system gives trouble in detect_outlier_ops because of the '+'
+outlier_features_blacklist = ['user+system']
 
 # we expect the settings below to be overriden in settings.py
 # depending on the template of your choice
 orm = 'sqlalchemy'
-# db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
+db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
 bulk_insert = True
 
 # we should normally always post-process on ingestion

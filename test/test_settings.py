@@ -14,15 +14,19 @@ class EPMTSettings(unittest.TestCase):
 
     def test_default_settings(self):
         default_settings_file = 'epmt_default_settings.py'
-        self.assertTrue(path.exists(default_settings_file) and (path.getsize(default_settings_file) > 0))
+        # the test below will fail when we use pyinstaller so let's skip it
+        # it's anyhow covered in the tests below
+        # self.assertTrue(path.exists(default_settings_file) and (path.getsize(default_settings_file) > 0))
         try:
             import epmt_default_settings as defaults
         except:
             self.assertTrue(False, "default settings import failed")
         self.assertEqual(defaults.orm, 'sqlalchemy')
         # default settings shouldn't have db_params set. 
-        with self.assertRaises(AttributeError):
-            defaults.db_params
+        # with self.assertRaises(AttributeError):
+        #     defaults.db_params # pylint: disable=no-member
+        # default settings uses in-memory sqlite
+        self.assertEqual(defaults.db_params, { 'url': 'sqlite:///:memory:', 'echo': False })
 
     def test_epmt_settings(self):
         self.assertTrue(path.exists('settings.py') and (path.getsize('settings.py') > 0))

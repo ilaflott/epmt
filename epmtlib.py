@@ -5,7 +5,6 @@ from os import environ, unlink, devnull, getuid
 from contextlib import contextmanager
 from subprocess import call
 from json import dumps, loads
-from pony.orm.ormtypes import TrackedDict
 from pwd import getpwuid
 
 try:
@@ -19,19 +18,23 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (1,3,0)
+_version = (2,1,2)
 
 def version():
     return _version
 
-def version_str():
-    return "EPMT " + ".".join([str(i) for i in _version])
+def version_str(terse = False):
+    v = ".".join([str(i) for i in _version])
+    return v if terse else "EPMT {0}".format(v)
 
 def get_username():
     return getpwuid( getuid() )[ 0 ]
 
 # if check is set, then we will bail if logging has already been initialized
 def set_logging(intlvl = 0, check = False):
+    import logging
+    import epmt_settings as settings
+
     if check and hasattr(set_logging, 'initialized'): return
     set_logging.initialized = True
     if intlvl == None:
@@ -47,10 +50,21 @@ def set_logging(intlvl = 0, check = False):
         level = INFO
     elif intlvl >= 2:
         level = DEBUG
-    basicConfig(level=level)
-    logger = getLogger()
-    logger.setLevel(level)
-    for handler in logger.handlers:
+
+    rootLogger = getLogger()
+    rootLogger.setLevel(level)
+    # basicConfig(filename='epmt.log', filemode='a', level=level)
+    logFormatter = logging.Formatter("[%(asctime)-19.19s, %(process)6d] %(levelname)-7.7s %(name)s:%(message)s")
+    fileHandler = logging.FileHandler(settings.logfile)
+    fileHandler.setFormatter(logFormatter)
+    rootLogger.addHandler(fileHandler)
+
+    consoleHandler = logging.StreamHandler()
+    consoleFormatter = logging.Formatter("%(levelname)s:%(name)s:%(message)s")
+    consoleHandler.setFormatter(consoleFormatter)
+    rootLogger.addHandler(consoleHandler)
+
+    for handler in rootLogger.handlers:
         handler.setLevel(level)
 
 def init_settings(settings):
@@ -83,6 +97,9 @@ def init_settings(settings):
     if not hasattr(settings, 'verbose'):
         logger.warning("missing settings.verbose")
         settings.verbose = 1
+    if not hasattr(settings, 'logfile'):
+        logger.warning("missing settings.logfile")
+        settings.verbose = 'epmt.log'
     if not hasattr(settings, 'stage_command'):
         logger.warning("missing settings.stage_command ")
         settings.stage_command = "cp"
@@ -107,6 +124,9 @@ def init_settings(settings):
     if not hasattr(settings, 'outlier_features'):
         logger.warning("missing settings.outlier_features")
         settings.outlier_features = ['duration', 'cpu_time', 'num_procs']
+    if not hasattr(settings, 'outlier_features_blacklist'):
+        logger.warning("missing settings.outlier_features_blacklist")
+        settings.outlier_features_blacklist = []
     if not hasattr(settings, 'bulk_insert'):
         logger.warning("missing settings.bulk_insert")
         settings.bulk_insert = False
@@ -185,9 +205,11 @@ def capture():
 # Note, both key and values will be strings and no attempt will be made to
 # guess the type for integer/floats
 def tag_from_string(s, delim = ';', sep = ':', tag_default_value = '1'):
+    from pony.orm.ormtypes import TrackedDict
     if type(s) in (dict, TrackedDict): return s
     if not s: return (None if s == None else {})
 
+    logger = getLogger(__name__)
     tag = {}
     for t in s.split(delim):
         t = t.strip()
@@ -211,6 +233,7 @@ def tag_from_string(s, delim = ';', sep = ':', tag_default_value = '1'):
 # the input can be a list of strings or a single string.
 # each string will be converted to a dict
 def tags_list(tags):
+    from pony.orm.ormtypes import TrackedDict
     # do we have a single tag in string or dict form? 
     if isString(tags):
         tags = [tag_from_string(tags)]
@@ -520,19 +543,16 @@ def check_fix_metadata(raw_metadata):
 
     metadata = dict.copy(raw_metadata)
     # Augment metadata where needed
-    if not ('job_username' in metadata):
-        username = get_batch_envvar("JOB_USER",raw_metadata['job_pl_env'])
-        if username is False:
-            username = get_batch_envvar("USER",raw_metadata['job_pl_env'])
-            if username is False:
-                username = raw_metadata.get('job_username')
-                if username == None:
-                    username = False
+
+    # job_pl_username will ALWAYS be present in new data, but
+    # we have older data, so we retain the clause below:
+    if not('job_pl_username' in metadata):
+        username = get_batch_envvar("JOB_USER",raw_metadata['job_pl_env']) or get_batch_envvar("USER",raw_metadata['job_pl_env'])
         if username is False or len(username) < 1:
             print(raw_metadata['job_pl_env'])
             logger.error("No job username found in metadata or environment")
             return False
-        metadata['job_username'] = username
+        metadata['job_pl_username'] = username
 
     if not ('job_jobname' in metadata):
         jobname = get_batch_envvar("JOB_NAME",raw_metadata['job_pl_env'])
@@ -558,3 +578,28 @@ def check_fix_metadata(raw_metadata):
     # mark the metadata as checked so we don't check it again unnecessarily
     metadata['checked'] = True
     return metadata
+
+def check_pid(pid):
+    """Check whether pid exists"""
+    if pid < 0:
+        return (False, 'Invalid PID: {0}'.format(pid))
+    from os import kill
+    try:
+        kill(pid, 0)
+    except OSError as err:
+        from errno import ESRCH, EPERM
+        if err.errno == ESRCH:
+            # ESRCH == No such process
+            return (False, 'No such process (PID: {0})'.format(pid))
+        elif err.errno == EPERM:
+            # EPERM clearly means there's a process but we cannot
+            # send a signal to it
+            return (True, 'Not authorized to send signals to it (EPERM)')
+        else:
+            # According to "man 2 kill" possible error values are
+            # (EINVAL, EPERM, ESRCH)
+            return (True, str(err.errno))
+    return (True,'')
+
+if __name__ == "__main__":
+    print(version_str(True))

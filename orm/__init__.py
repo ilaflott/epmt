@@ -21,3 +21,12 @@ def orm_db_provider():
 
 def orm_drop_db():
     return setup_db(settings, drop=True)
+
+# return the length of a collection
+# For most collections, the len function suffices. However,
+# for ORM queries under SQLA, we need to use the count method.
+def orm_col_len(c):
+    try:
+        return len(c)
+    except:
+        return c.count()

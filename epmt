@@ -10,21 +10,10 @@ if (__name__ == "__main__"):
 
     from sys import version_info, argv
     from epmt_cmds import epmt_entrypoint, dump_config
-    # Handle crappy python 2.6 installations
-    try:
-        import argparse
-    except ImportError:
-        print >> stderr,"WARNING: system argparse not found, using our own."
-        print >> stderr,"WARNING: This python/OS is likely vulnerable to exploits!"
-        import argparse26 as argparse
-    
-    # Handle crappy stringIO implementation for dump_config
-    if(version_info < (3, 0)):
-        from io import BytesIO
-        config_string_file = BytesIO()
-    else:
-        from io import StringIO
-        config_string_file = StringIO()
+    import argparse
+    from io import StringIO
+    config_string_file = StringIO()
+
     # Display help when errors occur without dump_config
     class DefaultHelpParser(argparse.ArgumentParser):
         def error(self, message):
@@ -84,6 +73,19 @@ if (__name__ == "__main__"):
     stop_parser = subparser.add_parser('stop', help="Stop EPMT logging",
         description = "Stop will append to the metadata log file with the environment variables at stop time.")
     stop_parser.set_defaults(epmt_cmd_args=None)
+    # Daemon
+    daemon_parser = subparser.add_parser('daemon', help="Run the EPMT daemon",
+        description = "daemon runs an EPMT daemon that will periodically check and process jobs")
+    daemon_parser.add_argument('-s', '--start',action='store_true',help="Start the EPMT daemon")
+    daemon_parser.add_argument('-S', '--stop',action='store_true',help="Stop the EPMT daemon")
+    daemon_parser.add_argument('-D', '--foreground',action='store_true',help="Start the daemon in foreground")
+    daemon_parser.set_defaults(start_daemon=False, stop_daemon=False, foreground=False)
+    # shell
+    shell_parser = subparser.add_parser('shell', help = "Run an interactive Python shell",
+       description = "shell runs an interactive python shell")
+    # unittest
+    unit_test_parser = subparser.add_parser('unittest', help="Run EPMT unit test suite",
+        description = "runs unit tests")
     # drop
     drop_parser = subparser.add_parser('drop', help="Drop the entire database. Caution!! This action is irreversible.")
     drop_parser.add_argument('-f', '--force', action='store_true',help="Do not prompt to confirm")
@@ -116,7 +118,13 @@ if (__name__ == "__main__"):
     list_parser = subparser.add_parser('list', help='Display all jobs in the database',
         description="Display all jobs in the database")
     list_parser.add_argument('epmt_cmd_args', nargs='*', help="A list of jobs to search for")
-    # Dummy Help for ./epmt help
+    # Notebook
+    notebook_parser = subparser.add_parser('notebook', help="Start iPython Notebook environment",
+                                           description="Perform programmatic, interactive analyses of EPMT data in iPython")
+    notebook_parser.add_argument('epmt_cmd_args', nargs='*',
+                                 help="Arguments to ipython notebook, first one **must** be preceded with double dash followed by a space, i.e. epmt notebook -- --ip 0.0.0.0 --allow-root, see epmt notebook -- --help for more info")
+
+# Dummy Help for ./epmt help
     help_parser = subparser.add_parser('help', help="Display this help with extended configuration information")
 
     # Print help without dump config
@@ -146,5 +154,5 @@ if (__name__ == "__main__"):
     exit(retval)
 
 else:
-    print >> stderr,"ERROR: This module cannot be imported."
+    print("ERROR: This module cannot be imported.",file=stderr)
     exit(1)

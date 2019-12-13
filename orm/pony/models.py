@@ -168,7 +168,9 @@ class ReferenceModel(db.Entity):
     tags = Optional(Json)
     op_tags = Optional(Json)
     computed = Optional(Json)
+    enabled = Required(bool, default=True)
     jobs = Set('Job')
+    name = Optional(str,unique=True)
 
 class UnprocessedJob(db.Entity):
     pass

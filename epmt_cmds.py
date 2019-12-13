@@ -13,7 +13,6 @@ import errno
 from shutil import rmtree
 import fnmatch
 import pickle
-from tzlocal import get_localzone
 from logging import getLogger, basicConfig, DEBUG, INFO, WARNING, ERROR
 logger = getLogger(__name__)  # you can use other name
 import epmt_settings as settings
@@ -58,7 +57,12 @@ def read_job_metadata_direct(file):
         data = pickle.load(file)
     except UnicodeDecodeError:
         # python3 gives problems unpickling stuff pickled using python2
+        logger.debug("doing special unpickling for job metadata pickled using python2")
         data = conv_dict_byte2str(pickle.load(file, encoding='bytes'))
+    except Exception as e:
+        logger.error("Error unpickling job metadata file: {}".format(e))
+        logger.error(e, exc_info=True)
+        raise
     logger.debug("Unpickled ")
     return data
 
@@ -100,17 +104,17 @@ def PrintWarning():
     print("\t" + bcolors.WARNING + "Pass" + bcolors.ENDC)
 
 def verify_install_prefix():
-    str = settings.install_prefix
-    print("settings.install_prefix =",str, end='')
+    install_prefix = settings.install_prefix
+    print("settings.install_prefix =",install_prefix, end='')
     retval = True
 # Check for bad stuff and shortcut
-    if "*" in str or "?" in str:
-        logger.error("Found wildcards in value!",str)
+    if "*" in install_prefix or "?" in install_prefix:
+        logger.error("Found wildcards in install_prefix: {}".format(install_prefix))
         PrintFail()
         return False
     for e in [ "lib/libpapiex.so","lib/libmonitor.so",
                "lib/libpapi.so","lib/libpfm.so","bin/papi_command_line" ]:
-        cmd = "ls -l "+str+e+">/dev/null 2>&1"
+        cmd = "ls -l "+install_prefix+e+">/dev/null 2>&1"
         logger.info("\t"+cmd)
         return_code = forkexecwait(cmd, shell=True)
         if return_code != 0:
@@ -124,12 +128,12 @@ def verify_install_prefix():
     return retval
     
 def verify_epmt_output_prefix():
-    str = settings.epmt_output_prefix
-    print("settings.epmt_output_prefix =",str, end='')
+    opf = settings.epmt_output_prefix
+    print("settings.epmt_output_prefix =",opf, end='')
     retval = True
 # Check for bad stuff and shortcut
-    if "*" in str or "?" in str:
-        logger.error("Found wildcards in value!",str)
+    if "*" in opf or "?" in opf:
+        logger.error("Found wildcards in value: %s",opf)
         PrintFail()
         return False
 # Print and create dir
@@ -137,19 +141,19 @@ def verify_epmt_output_prefix():
         logger.info("\tmkdir -p "+str2)
         return(create_job_dir(str2))
 # Test create (or if it exists)
-    if testdir(str) == False:
+    if testdir(opf) == False:
         retval = False
 # Test make a subdir
-    if testdir(str+"tmp") == False:
+    if testdir(opf+"tmp") == False:
         retval = False
 # Test to make sure we can access it
-    cmd = "ls -lR "+str+" >/dev/null"    
+    cmd = "ls -lR "+opf+" >/dev/null"    
     logger.info("\t"+cmd)
     return_code = forkexecwait(cmd, shell=True)
     if return_code != 0:
         retval = False
 # Remove the created tmp dir
-    cmd = "rm -rf "+str+"tmp"
+    cmd = "rm -rf "+opf+"tmp"
     logger.info("\t"+cmd)
     return_code = forkexecwait(cmd, shell=True)
     if return_code != 0:
@@ -242,7 +246,7 @@ def verify_stage_command():
         open(inp, 'a').close()
         run_shell_cmd(stage_cmd, inp, dest)
         if not path.exists(target):
-            raise("could not create output in {1}".format(dest))
+            raise("could not create output in {0}".format(dest))
     except Exception as e:
         print(str(e), file=stderr)
         PrintFail()
@@ -269,7 +273,7 @@ def verify_papiex():
     if retval == True:
         files = glob(global_datadir+"job_metadata")
         if len(files) != 1:
-            logger.error("%s matched %d job_metadata files instead of 1",global_datadir+job_metadata,len(files))
+            logger.error("%s matched %d job_metadata files instead of 1",global_datadir+"job_metadata",len(files))
             retval = False
 
     if retval == True:
@@ -303,9 +307,11 @@ def epmt_check():
 #
 
 def create_start_job_metadata(jobid, submit_ts, from_batch=[]):
+    # from tzlocal import get_localzone
     # use timezone info if available, otherwise use naive datetime objects
     try:
-        ts=datetime.now(tz=get_localzone())
+        # ts=datetime.now(tz=get_localzone())
+        ts=datetime.now().astimezone()
     except:
         ts=datetime.now()
     metadata = {}
@@ -323,9 +329,11 @@ def create_start_job_metadata(jobid, submit_ts, from_batch=[]):
     return metadata
 
 def merge_stop_job_metadata(metadata, exitcode, reason, from_batch=[]):
+    # from tzlocal import get_localzone
     # use timezone info if available, otherwise use naive datetime objects
     try:
-        ts=datetime.now(tz=get_localzone())
+        # ts=datetime.now(tz=get_localzone())
+        ts=datetime.now().astimezone()
     except:
         ts=datetime.now()
     stop_env=dict_filter(environ, vars(settings).get('env_blacklist',None))
@@ -365,7 +373,7 @@ def setup_vars():
             jid = environ.get(e)
             if jid and len(jid) > 0:
                 return jid
-        logger.warning("No key of %s was found in environment",settings.jobid_env_list)
+        logger.error("No key of %s was found in environment",settings.jobid_env_list)
         return False
 
     jobid = get_jobid()
@@ -428,7 +436,7 @@ def epmt_dump_metadata(filelist):
             logger.error("%s does not exist!",file)
             return False
 
-        tar = compressed_tar(file)
+        err,tar = compressed_tar(file)
         if tar:
             try:
                 info = tar.getmember("./job_metadata")
@@ -535,7 +543,7 @@ def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run
     return cmd
 
 def epmt_run(cmdline, wrapit=False, dry_run=False, debug=False):
-    logger.debug("epmt_run(%s, %s, %s, %s, %s)", cmdline, str(wrapit), str(dry_run), str(debug))
+    # logger.debug("epmt_run(%s, %s, %s, %s, %s)", cmdline, str(wrapit), str(dry_run), str(debug))
 
     if not cmdline:
         logger.error("No command given")
@@ -736,9 +744,7 @@ def stage_job(dir,collate=True,compress_and_tar=True):
         if collate:
             from epmt_concat import csvjoiner
             logger.debug("csvjoiner(%s)",dir)
-            hack_dir = getcwd()
-            status, collated_file = csvjoiner(dir,debug="false")
-            chdir(hack_dir)
+            status, collated_file = csvjoiner(dir,debug=0)
             if status == False:
                 return False
             if status == True and collated_file and len(collated_file) > 0:
@@ -754,7 +760,7 @@ def stage_job(dir,collate=True,compress_and_tar=True):
                 return_code = forkexecwait(cmd, shell=True)
                 if return_code != 0:
                     return False
-                cmd = "cp -p "+collated_file+" "+newdir
+                cmd = "mv "+collated_file+" "+newdir
                 logger.debug(cmd)
                 return_code = forkexecwait(cmd, shell=True)
                 if return_code != 0:
@@ -849,12 +855,41 @@ def epmt_entrypoint(args):
 
     # Here it's up to each command to validate what it is looking for
     # and error out appropriately
-
+    if args.command == 'shell':
+        from code import interact
+        interact(local=locals())
+        return 0
+    if args.command == 'unittest':
+        import unittest
+        from importlib import import_module
+        script_dir = path.dirname(path.realpath(__file__))
+        logger.info("Changing directory to: {}".format(script_dir))
+        chdir(script_dir)
+        TEST_MODULES = ['test.test_lib','test.test_settings','test.test_anysh','test.test_submit','test.test_cmds','test.test_query','test.test_outliers','test.test_db_schema' ]
+        for m in TEST_MODULES:
+            mod = import_module(m)
+            suite = unittest.TestLoader().loadTestsFromModule(mod)
+            print('\n\nRunning', m)
+            result = unittest.TextTestRunner(verbosity=2).run(suite)
+            if not result.wasSuccessful():
+                from sys import stderr
+                print('\n\nOne (or more) unit tests FAILED', file=stderr)
+                return -1
+        print('All tests successfully PASSED')
+        return 0
+            
     if args.command == 'check':
         # fake a job id so that epmt_check doesn't fail because of a missing job id
         environ['SLURM_JOB_ID'] = '1'
         return(0 if epmt_check() else 1)
-
+    if args.command == 'daemon':
+        from epmt_daemon import start_daemon, stop_daemon, daemon_loop, print_daemon_status
+        if args.start or args.foreground:
+            return daemon_loop() if args.foreground else start_daemon()
+        elif args.stop:
+            return stop_daemon()
+        else:
+            return print_daemon_status()
     # submit does the drop on its own, so here we handle
     if args.command == 'drop':
         if (not(args.force)):
@@ -893,6 +928,9 @@ def epmt_entrypoint(args):
     if args.command == 'list':
         from epmt_cmd_list import epmt_list
         return(epmt_list(args.epmt_cmd_args) == False)
+    if args.command == 'notebook':
+        from epmt_cmd_notebook import epmt_notebook
+        return(epmt_notebook(args.epmt_cmd_args) == False)
 
     logger.error("Unknown command, %s. See -h for options.",args.command)
     return(1)

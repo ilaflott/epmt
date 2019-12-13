@@ -273,7 +273,7 @@ def orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only):
 
 def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, hosts, annotations, analyses, exact_tag_only):
     from .models import Job, Host
-    from epmtlib import tags_list, isString
+    from epmtlib import tags_list, isString, tag_from_string
     from datetime import datetime
 
     if fltr:
@@ -370,10 +370,10 @@ def _attribute_filter(qs, attr, target, exact_match = False):
             qs = qs.filter(lambda j: getattr(j, attr)[k] == v)
     return qs
 
-def orm_get_refmodels(tag = {}, fltr=None, limit=0, order='', exact_tag_only=False):
+def orm_get_refmodels(name = None, tag = {}, fltr=None, limit=0, order='', exact_tag_only=False):
     from .models import ReferenceModel
 
-    qs = ReferenceModel.select()
+    qs = ReferenceModel.select() if (name is None) else ReferenceModel.select().filter(name = name)
 
     # filter using tag if set
     qs = _tag_filter(qs, tag, exact_tag_only)

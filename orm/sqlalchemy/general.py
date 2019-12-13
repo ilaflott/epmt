@@ -39,6 +39,7 @@ def db_session(func):
             completed = True
         except Exception as e:
             logger.warning('\nAn exception occurred; rolling back session..')
+            logger.warning(e, exc_info=True)
             # import traceback, sys
             # print('-'*60)
             # traceback.print_exc(file=sys.stdout)
@@ -108,7 +109,11 @@ def setup_db(settings,drop=False,create=True):
             return False
 
     logger.debug('Configuring scoped session..')
-    Session.configure(bind=engine, expire_on_commit=False, autoflush=True)
+    # hide useless warning when re-configuring a session
+    # sqlalchemy/orm/scoping.py:107: SAWarning: At least one scoped session is already present.  configure() can not affect sessions that have already been created.  "At least one scoped session is already present. "
+    from epmtlib import capture
+    with capture() as (out,err):
+         Session.configure(bind=engine, expire_on_commit=False, autoflush=True)
     db_setup_complete = True
     return True
 
@@ -466,10 +471,10 @@ def _analyses_filter(qs, analyses):
     from .models import Job
     return _attribute_filter(qs, 'analyses', analyses, model = Job, conv_to_str = True)
 
-def orm_get_refmodels(tag = {}, fltr=None, limit=0, order=None, exact_tag_only=False):
+def orm_get_refmodels(name = None, tag = {}, fltr=None, limit=0, order=None, exact_tag_only=False):
     from .models import ReferenceModel
 
-    qs = Session.query(ReferenceModel)
+    qs = Session.query(ReferenceModel).filter_by(name=name) if (name is not None) else Session.query(ReferenceModel)
 
     qs = _tag_filter(qs, tag, exact_tag_only, ReferenceModel)
 

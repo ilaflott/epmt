@@ -3,7 +3,7 @@
 # Then feel free to edit the file to suit you.
 
 orm = 'pony'
-db_params = { 'url': 'sqlite:///db.sqlite3' }
+db_params = db_params = { 'url': 'sqlite:///{HOME}/EPMT_DB.sqlite'.format(HOME=str(Path.home())) }
 
 # You can alter the settings below to override defaults
 #
@@ -15,6 +15,7 @@ db_params = { 'url': 'sqlite:///db.sqlite3' }
 # verbose = 1
 # input_pattern = "*-papiex-*-[0-9]*.csv"
 # install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-oss-install/"
+# logfile = path.dirname(path.abspath(__file__)) + '/epmt.log'
 #
 # blacklist for environment filter (in addition to all keys with
 # leading underscores)
@@ -30,6 +31,7 @@ db_params = { 'url': 'sqlite:///db.sqlite3' }
 # # outlier detection
 # outlier_thresholds = { 'modified_z_score': 2.5, 'iqr': [20,80], 'z_score': 3.0 }
 # outlier_features = ['duration', 'cpu_time', 'num_procs']
+# outlier_features_blacklist = ['user+system']
 #
 # post_process_job_on_ingest = True
 #
