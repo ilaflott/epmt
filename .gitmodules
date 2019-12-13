@@ -1,4 +1,4 @@
 [submodule "dash"]
 	path = dash
-	url = git@gitlab-mm:minimal-metrics-llc/epmt/epmt-dash.git
+	url = git@gitlab.com:minimal-metrics-llc/epmt/epmt-dash.git
 	branch = multi_page
