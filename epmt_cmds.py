@@ -57,7 +57,12 @@ def read_job_metadata_direct(file):
         data = pickle.load(file)
     except UnicodeDecodeError:
         # python3 gives problems unpickling stuff pickled using python2
+        logger.debug("doing special unpickling for job metadata pickled using python2")
         data = conv_dict_byte2str(pickle.load(file, encoding='bytes'))
+    except Exception as e:
+        logger.error("Error unpickling job metadata file: {}".format(e))
+        logger.error(e, exc_info=True)
+        raise
     logger.debug("Unpickled ")
     return data
 
@@ -302,10 +307,11 @@ def epmt_check():
 #
 
 def create_start_job_metadata(jobid, submit_ts, from_batch=[]):
-    from tzlocal import get_localzone
+    # from tzlocal import get_localzone
     # use timezone info if available, otherwise use naive datetime objects
     try:
-        ts=datetime.now(tz=get_localzone())
+        # ts=datetime.now(tz=get_localzone())
+        ts=datetime.now().astimezone()
     except:
         ts=datetime.now()
     metadata = {}
@@ -323,10 +329,11 @@ def create_start_job_metadata(jobid, submit_ts, from_batch=[]):
     return metadata
 
 def merge_stop_job_metadata(metadata, exitcode, reason, from_batch=[]):
-    from tzlocal import get_localzone
+    # from tzlocal import get_localzone
     # use timezone info if available, otherwise use naive datetime objects
     try:
-        ts=datetime.now(tz=get_localzone())
+        # ts=datetime.now(tz=get_localzone())
+        ts=datetime.now().astimezone()
     except:
         ts=datetime.now()
     stop_env=dict_filter(environ, vars(settings).get('env_blacklist',None))
