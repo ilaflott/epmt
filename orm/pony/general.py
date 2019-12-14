@@ -376,7 +376,8 @@ def orm_get_refmodels(name = None, tag = {}, fltr=None, limit=0, order='', exact
     qs = ReferenceModel.select() if (name is None) else ReferenceModel.select().filter(name = name)
 
     # filter using tag if set
-    qs = _tag_filter(qs, tag, exact_tag_only)
+    if tag:
+        qs = _tag_filter(qs, tag, exact_tag_only)
 
     # if fltr is a lambda function or a string apply it
     if fltr:

@@ -1,6 +1,7 @@
 # Copy this file and edit it as follows:
 # cp preset_settings/settings_xxxxxxx.py settings.py
 # Then feel free to edit the file to suit you.
+from pathlib import Path
 
 orm = 'pony'
 db_params = db_params = { 'url': 'sqlite:///{HOME}/EPMT_DB.sqlite'.format(HOME=str(Path.home())) }

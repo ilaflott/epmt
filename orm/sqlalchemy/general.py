@@ -476,7 +476,8 @@ def orm_get_refmodels(name = None, tag = {}, fltr=None, limit=0, order=None, exa
 
     qs = Session.query(ReferenceModel).filter_by(name=name) if (name is not None) else Session.query(ReferenceModel)
 
-    qs = _tag_filter(qs, tag, exact_tag_only, ReferenceModel)
+    if tag:
+        qs = _tag_filter(qs, tag, exact_tag_only, ReferenceModel)
 
     # if fltr is a lambda function or a string apply it
     if not (fltr is None):
