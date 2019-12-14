@@ -475,6 +475,7 @@ class QueryAPI(unittest.TestCase):
             r = eq.create_refmodel(jobs, tag='model_name:'+model_name)
         self.assertIn('WARNING: The jobs do not share identical tag values', err.getvalue())
         self.assertEqual(r['tags'], {'model_name': model_name})
+        self.assertTrue(eq.get_refmodels())
         rq = eq.get_refmodels(tag='model_name:'+model_name, fmt='orm')
         self.assertEqual(rq.count(), 1)
         r1 = rq.first()
