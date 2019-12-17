@@ -1,4 +1,0 @@
-[submodule "ui"]
-	path = ui
-	url = git@gitlab.com:minimal-metrics-llc/epmt/epmt-dash.git
-	branch = multi_page
