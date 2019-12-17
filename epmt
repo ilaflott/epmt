@@ -83,6 +83,9 @@ if (__name__ == "__main__"):
     # shell
     shell_parser = subparser.add_parser('shell', help = "Run an interactive Python shell",
        description = "shell runs an interactive python shell")
+    # ui
+    gui_parser = subparser.add_parser('gui', help = "Run the EPMT dashboard GUI",
+       description = "gui a web-based dashboard accessible at: http://localhost:8050")
     # unittest
     unit_test_parser = subparser.add_parser('unittest', help="Run EPMT unit test suite",
         description = "runs unit tests")
