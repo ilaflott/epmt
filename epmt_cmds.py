@@ -851,6 +851,12 @@ def epmt_entrypoint(args):
         from code import interact
         interact(local=locals())
         return 0
+    if args.command == 'gui':
+        from ui.index import init_app
+        init_app()
+        from ui.app import app
+        app.run_server(debug=False, host='0.0.0.0')
+        return 0
     if args.command == 'unittest':
         import unittest
         from importlib import import_module

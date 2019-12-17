@@ -28,10 +28,13 @@ db_setup_complete = False
 def db_session(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        if thr_data.session is None:
+        if not hasattr(thr_data, 'session') or (thr_data.session is None):
             thr_data.session = Session()  # (this is now a scoped session)
         session = thr_data.session
-        thr_data.nestlevel += 1
+        if hasattr(thr_data, 'nestlevel'):
+            thr_data.nestlevel += 1
+        else:
+            thr_data.nestlevel = 1
         completed = False
         retval = None
         try:
