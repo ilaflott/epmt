@@ -249,7 +249,7 @@ recent_jobs_page = html.Div([
                         # ','.join([str(n+1) for n in range((job_df.shape[0]//DEFAULT_ROWS_PER_PAGE))]),
                         dbc.Col([
                             "[ ",
-                            job_df.shape[0],
+                            html.Div(id='num-jobs-total', style={'display':'inline'}, children='0'),
                             " Jobs Total ]"
                         ], width='auto'),
                             ])

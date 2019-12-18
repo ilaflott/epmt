@@ -116,16 +116,20 @@ def run_analysis(run_analysis_btn, sel_jobs, job_data, selected_model):
                 if model['tags'] == model_tags:
                     logger.debug("Found a matching model {}".format(model))
             # Detect outliers/Run analysis
-            #from jobs import detect_outlier_jobs
-            from epmt_outliers import detect_outlier_jobs
-            from epmt_query import get_refmodels
+            from os import environ
+            if environ.get("MOCK_EPMT"):
+                import epmt_mock as eq
+                from epmt_mock import eod
+            else:
+                import epmt_query as eq
+                import epmt_outliers as eod
             logger.debug("Model Selected is {}".format(selected_model))
             if selected_model == 'None':
                 hackmodel = None
             else:
-                hackmodel = get_refmodels(name=selected_model)[0]['id']
+                hackmodel = eq.get_refmodels(name=selected_model)[0]['id']
             try:
-                analysis = detect_outlier_jobs([j[0] for j in selected_rows], trained_model=hackmodel)
+                analysis = eod.detect_outlier_jobs([j[0] for j in selected_rows], trained_model=hackmodel)
                 analysis_simplified = "Duration Outliers: " + str(analysis[1]['duration'][1]) +\
                 " CPU Time Outliers: " + str(analysis[1]['cpu_time'][1]) +\
                 " Number of Processes Outliers: " + str(analysis[1]['num_procs'][1])
@@ -415,7 +419,8 @@ def strfdelta(tdelta, fmt="{hours}:{minutes}:{seconds}"):
      Output('table-multicol-sorting', 'columns'),
      Output('table-multicol-sorting', "page_size"),
      Output('table-multicol-sorting', "page_count"),
-     Output('table-multicol-sorting', "style_data_conditional")],
+     Output('table-multicol-sorting', "style_data_conditional"),
+     Output('num-jobs-total', 'children')],
     [Input('raw-switch', 'value'),
      Input(component_id='searchdf', component_property='value'),
      Input(component_id='jobs-date-picker', component_property='end_date'),
@@ -585,7 +590,8 @@ def update_output(raw_toggle, search_value, end, rows_per_page, page_current, so
             {"name": i, "id": i} for i in alt.columns ],# if i is not 'tags'],  # hide tags if raw_toggle false
         int(rows_per_page),  # Custom page size
         num_pages,  # Custom Page count
-        [] if raw_toggle else custom_highlights   # Custom Highlighting on matching job tags
+        [] if raw_toggle else custom_highlights,   # Custom Highlighting on matching job tags
+        int(orig.shape[0])
     ]
 
 ######################## /Index Callbacks ########################
