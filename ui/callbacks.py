@@ -349,7 +349,7 @@ def f(job_data, sel_jobs):
                 if model['tags'] == model_tags:
                 # if dumps(model['tags']) == model_tags:
                     logger.debug("Found a matching model {}".format(model))
-                    drdn_options.append({'label': model['name'] + " Tags:" + dumps(model['tags']) + " Created on:" + str(model['date created']),
+                    drdn_options.append({'label': model['name'] + " Created on:" + str(model['date created']),
                                     'value': model['name']})
                     drdn_value = model['name']
             if len(drdn_options) > 1:

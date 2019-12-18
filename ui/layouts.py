@@ -226,16 +226,17 @@ recent_jobs_page = html.Div([
                                             {'label': "No Model", 'value': "None"}
                                         ],
                                         value="None",
-                                        #style={'display': 'block', 'width': '100%'}
-                                    ), width="11"),
+                                        #style={'height': '35px', 'width': '1065px'}
+                                        
+                                    )),
                                     dbc.Col([
                             dcc.Dropdown(
                                 id='row-count-dropdown',
                                 options=[
-                                    {'label': '5 Rows', 'value': '5'},
-                                    {'label': '30 Rows', 'value': '30'},
-                                    {'label': '50 Rows', 'value': '50'},
-                                    {'label': '1000 Rows', 'value': '1000'}
+                                    {'label': '5 Rows Per Page', 'value': '5'},
+                                    {'label': '30 Rows Per Page', 'value': '30'},
+                                    {'label': '50 Rows Per Page', 'value': '50'},
+                                    {'label': '1000 Rows Per Page', 'value': '1000'}
                                 ],
                                 clearable=False,
                                 searchable=False,
@@ -255,7 +256,7 @@ recent_jobs_page = html.Div([
                             ])
                         ]),
                         ]),
-                    ])
+                    ],fluid=True)
 
 
                 ], className="subpage"),
