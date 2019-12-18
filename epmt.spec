@@ -4,7 +4,7 @@ block_cipher = None
 
 from glob import glob
 import os.path
-from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_submodules, collect_data_files
 from IPython import extensions as IPython_extensions
 
 hidden = collect_submodules('notebook',filter=lambda name: name.endswith('handlers') and ".tests." not in name)
@@ -31,13 +31,18 @@ files = glob(os.path.join(IPython_extensions_path,"*.py"))
 for f in files:
     fn = "IPython/extensions/" + os.path.basename(f)
     ipe_extra_datas.append((f, '.'))
-print("Extra data: ",ipe_extra_datas)
+
+dash_extra_datas = collect_data_files('dash_html_components') + collect_data_files('dash_core_components') + collect_data_files('dash_daq') + collect_data_files('dash_table') + collect_data_files('dash_renderer') + collect_data_files('dash_bootstrap_components')
+
+extra_datas = ipe_extra_datas + dash_extra_datas
+
+print("Extra data: ",extra_datas)
 
 
 a = Analysis(['epmt'],
              pathex=['/Users/philipmucci/Work/epmt.git'],
              binaries=[],
-             datas=ipe_extra_datas,
+             datas=extra_datas,
              hiddenimports=hidden,
              hookspath=[],
              runtime_hooks=[],

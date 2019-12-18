@@ -1,0 +1,13 @@
+version: '3.1'
+
+services:
+  dash:
+    image: epmt-interface:latest
+    restart: always
+    environment:
+      ENV PYTHONUNBUFFERED: 0
+    volumes:
+      - ./:/home/dash
+      - ./sample:/home/dash/sample
+    ports:
+      - 8050:8050

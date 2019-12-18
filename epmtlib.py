@@ -18,7 +18,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (2,1,2)
+_version = (2,2,6)
 
 def version():
     return _version
@@ -66,6 +66,11 @@ def set_logging(intlvl = 0, check = False):
 
     for handler in rootLogger.handlers:
         handler.setLevel(level)
+
+    # matplotlib generates a ton of debug messages
+    mpl_logger = logging.getLogger('matplotlib') 
+    mpl_logger.setLevel(logging.WARNING) 
+
 
 def init_settings(settings):
     logger = getLogger(__name__)
