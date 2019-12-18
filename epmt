@@ -153,11 +153,19 @@ if (__name__ == "__main__"):
         retval = epmt_entrypoint(args)
     except Exception as e:
         retval = -1
+        # print('An exception occured (stack backtrace follows below): ', file=stderr)
+        # from logging import getLogger
+        # logger = getLogger(__name__)
+        # logger.error(e, exc_info=True)
         print('\n\nAn exception occurred; the full stack backtrace is reproduced below: ', file=stderr)
+        # sometimes even traceback gives unicode exceptions, so best to be safe
+        # try:
         import traceback
         print('-'*60, file=stderr)
         traceback.print_exc(file=stderr)
         print('-'*60, file=stderr)
+        # except:
+        #     pass
 
     exit(retval)
 
