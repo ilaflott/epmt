@@ -7,7 +7,11 @@ logger = getLogger(__name__)  # you can use other name
 
 
 def make_refs(name='', jobs=None, tags={}):
-    import epmt_query as eq
+    from os import environ
+    if environ.get("MOCK_EPMT"):
+        import ui.epmt_mock as eq
+    else:
+        import epmt_query as eq
     # eq.create_refmodel(jobs=['625133','693118','696085'], name='Sample', tag={'exp_name':'ESM4_historical_D151','exp_component': 'atmos_cmip'})
     try:
         nm = eq.create_refmodel(jobs=jobs, name=name, tag=tags)
@@ -18,7 +22,11 @@ def make_refs(name='', jobs=None, tags={}):
 
 
 def get_refs():
-    import epmt_query as eq
+    from os import environ
+    if environ.get("MOCK_EPMT"):
+        import ui.epmt_mock as eq
+    else:
+        import epmt_query as eq
     m = eq.get_refmodels()
     return [[nm['id'], nm['name'], nm['created_at'], nm['tags'], nm['jobs'], ['duration', 'cpu_time', 'num_procs'], nm['enabled']] for nm in m]
 
@@ -27,8 +35,17 @@ def get_refs():
 # ref_gen does data cleanup and conversions for displaying reference models
 class ref_gen:
     def __init__(self):
-        #references = make_refs(2)
-        self.df = pd.DataFrame(get_refs(), columns=['id',
+        from os import environ
+        if environ.get("MOCK_EPMT"):
+            logger.info("Using Mock data")
+            model_data = []
+            for n in range(3):
+                model_data.append(make_refs(n)[0])
+        else:
+            import epmt_query as eq
+            import epmt_outliers as eod
+            model_data = get_refs()
+        self.df = pd.DataFrame(model_data, columns=['id',
                                'name', 'date created', 'tags', 'jobs', 'features', 'active'])
         # self.df['active'] = np.where(self.df['active'], 'Yes', 'No')
         # Reorder

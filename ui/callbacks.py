@@ -192,6 +192,7 @@ def update_output(save_model_btn, delete_model_btn, toggle_model_btn, edit_model
     jobs_drpdn_value = 'No'
 
     ref_df = refs.ref_df
+    return_models = ref_df.to_dict('records')
     from .components import recent_button
     recentbtn = recent_button(
         {'save_model': save_model_btn,
@@ -213,7 +214,7 @@ def update_output(save_model_btn, delete_model_btn, toggle_model_btn, edit_model
                 if not (str(j[1]) == str(n) and str(j[2]) == str(c)):
                     logger.info(
                         "Bad job set, Name Comparison{} Component Comparison{}".format(str(j[1]) == str(n), str(j[2]) == str(c)))
-                    return ["Jobs are incompatible", ref_df.to_dict('records'),
+                    return ["Jobs are incompatible", return_models,
                             edit_div_display_none, jobs_drpdn_options, jobs_drpdn_value]
             logger.info("Selected jobs {}".format(selected_rows))
             # Generate new refs for each of selected jobs
@@ -222,7 +223,7 @@ def update_output(save_model_btn, delete_model_btn, toggle_model_btn, edit_model
             from .refs import make_refs
             refa = make_refs(name=model_name_input, jobs=[str(a) for a,b,c in selected_rows], tags={"exp_name":n,"exp_component":c})
             if refa is None:
-                return ["Failed creating Reference Model", ref_df.to_dict('records'),
+                return ["Failed creating Reference Model", return_models,
                             edit_div_display_none, jobs_drpdn_options, jobs_drpdn_value]
             refa = pd.DataFrame(
                 refa, columns=['id', 'name', 'date created', 'tags', 'jobs', 'features', 'active'])
@@ -239,7 +240,7 @@ def update_output(save_model_btn, delete_model_btn, toggle_model_btn, edit_model
                 inplace=False
             )
             return [model_name_input + " model created", refs.ref_df.to_dict('records'), edit_div_display_none, jobs_drpdn_options, jobs_drpdn_value]
-        return ["", ref_df.to_dict('records'),
+        return ["", return_models,
                 edit_div_display_none, jobs_drpdn_options, jobs_drpdn_value]
 
 # Delete Model
@@ -251,7 +252,7 @@ def update_output(save_model_btn, delete_model_btn, toggle_model_btn, edit_model
                 refs.ref_df = ref_df[ref_df.name != n[1]]
                 from epmt_query import delete_refmodels
                 delete_refmodels(n[0])
-        return [selected_rows, ref_df.to_dict('records'),
+        return [selected_rows, return_models,
                 edit_div_display_none, jobs_drpdn_options, jobs_drpdn_value]
 # Toggle Active Status
     if recentbtn is 'toggle_model':
@@ -264,7 +265,7 @@ def update_output(save_model_btn, delete_model_btn, toggle_model_btn, edit_model
                             'active'] = ~ref_df[ref_df.name == selected_refs].active
             logger.info(
                 "post-invert active {}".format(refs.ref_df[ref_df.name == selected_refs].active))
-        return [selected_rows, ref_df.to_dict('records'),
+        return [selected_rows, return_models,
                 edit_div_display_none, jobs_drpdn_options, jobs_drpdn_value]
 # Edit Model
     if recentbtn is 'edit_model':
@@ -314,7 +315,7 @@ def update_output(save_model_btn, delete_model_btn, toggle_model_btn, edit_model
                 ascending = False,  # Boolean eval.
                 inplace=False
             )
-    return [selected_rows, ref_df.to_dict('records'),
+    return [selected_rows, return_models,
             edit_div_display_none, jobs_drpdn_options, jobs_drpdn_value]
 
 

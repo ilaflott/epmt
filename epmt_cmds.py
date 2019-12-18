@@ -862,7 +862,7 @@ def epmt_entrypoint(args):
         from ui.index import init_app
         init_app()
         from ui.app import app
-        app.run_server(debug=True, host='0.0.0.0')
+        app.run_server(debug=False, host='0.0.0.0')
         return 0
     if args.command == 'unittest':
         import unittest

@@ -394,3 +394,18 @@ def _old_make_refs(x, name='', jobs=None, tags={}):
         refs.append(deepcopy([jname, ref_date, tags, ref_jobs,
                      features, ref_active]))                       # Append each ref to refs list
     return refs
+
+def create_refmodel(jobs=None, name=None, tag=None):
+    get_ref = {'tags': tag if tag else {},
+                'updated_at': None,
+                'created_at': datetime.datetime(2019, 11, 26, 22, 53, 42, 447548),
+                'info_dict': None,
+                'id': 1,
+                'name': "Sample Model" + str(name)  if name else "Sample Ref Model",
+                'op_tags': [],
+                'enabled': True,
+                'jobs': jobs if jobs else ['685000', '685003', '685016'],
+                'modified_z_score': {'duration': [1.6944, 6615525773.0, 155282456.0],
+                                    'num_procs': [3.0253, 3480.0, 68.0],
+                                    'cpu_time': [10.8055, 113135329.0, 19597296.0]}}
+    return get_ref
