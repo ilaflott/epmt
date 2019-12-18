@@ -61,7 +61,6 @@ def read_job_metadata_direct(file):
         data = conv_dict_byte2str(pickle.load(file, encoding='bytes'))
     except Exception as e:
         logger.error("Error unpickling job metadata file: {}".format(e))
-        logger.error(e, exc_info=True)
         raise
     logger.debug("Unpickled ")
     return data

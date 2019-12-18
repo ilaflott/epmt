@@ -153,7 +153,12 @@ if (__name__ == "__main__"):
         retval = epmt_entrypoint(args)
     except Exception as e:
         retval = -1
-        print('\n'+str(e)+'\n', file=stderr)
+        print('\n\nAn exception occurred; the full stack backtrace is reproduced below: ', file=stderr)
+        import traceback
+        print('-'*60, file=stderr)
+        traceback.print_exc(file=stderr)
+        print('-'*60, file=stderr)
+
     exit(retval)
 
 else:
