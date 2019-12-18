@@ -12,10 +12,9 @@ logger = getLogger(__name__)  # you can use other name
 # Job_gen does data cleanup and conversions for displaying
 class job_gen:
     def __init__(self, limit=60, offset=0):
-        import epmt_query as eq
         from os import environ
         if environ.get("MOCK_EPMT"):
-            import epmt_mock as eq
+            import ui.epmt_mock as eq
         else:
             import epmt_query as eq
         sample = eq.get_jobs(fmt='dict', limit=limit, offset=offset)

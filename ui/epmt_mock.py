@@ -309,6 +309,7 @@ def comparable_job_partitions(jobs, matching_keys = ['exp_name', 'exp_component'
 
     # Typically jobids are only passed
     # I need to get the jobids name and component
+    from .jobs import job_gen
     alt = job_gen().df[job_gen().df['job id'].isin(jobs)].reset_index()
     tags_df = pd.DataFrame.from_dict(alt['tags'].tolist())
     # Only Display Specific tags from dash_config

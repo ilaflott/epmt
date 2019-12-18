@@ -280,10 +280,14 @@ def update_output(save_model_btn, delete_model_btn, toggle_model_btn, edit_model
             job_df = job_gen().df
             # Get Comparable jobs with tags 
             #from jobs import comparable_job_partitions
-            from epmt_query import comparable_job_partitions
+            from os import environ
+            if environ.get("MOCK_EPMT"):
+                import epmt_mock as eq
+            else:
+                import epmt_query as eq
             logger.info("Seeking comparable jobs for {}".format(ref_jobs_li))
             # Pass in all jobs for now then filter out what we need
-            comparable_jobs = comparable_job_partitions(job_df['job id'].tolist())
+            comparable_jobs = eq.comparable_job_partitions(job_df['job id'].tolist())
             logger.debug("Comparable jobs returns {}".format(comparable_jobs))
             # grab tag and find other jobs
             logger.debug("Tags are: {}".format(ref_data[sel_refs[0]]['tags']))
@@ -559,8 +563,12 @@ def update_output(raw_toggle, search_value, end, rows_per_page, page_current, so
     custom_highlights = []
     if len_jobs>0:
         #from jobs import comparable_job_partitions
-        from epmt_query import comparable_job_partitions
-        comparable_jobs = comparable_job_partitions(alt['job id'].tolist())
+        from os import environ
+        if environ.get("MOCK_EPMT"):
+            import ui.epmt_mock as eq
+        else:
+            import epmt_query as eq
+        comparable_jobs = eq.comparable_job_partitions(alt['job id'].tolist())
         # Generate contrasting colors from length of comparable sets
         from .components import list_of_contrast
         cont_colors = list_of_contrast(len(comparable_jobs), start = (200, 200, 120))

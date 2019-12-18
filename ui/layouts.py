@@ -388,7 +388,7 @@ recent_jobs_page = html.Div([
 
 
         ])
-    ]),
+    ], className='custom-tabs-container'),
     Footer()
 ], className="page")
 
