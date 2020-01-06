@@ -655,7 +655,7 @@ def compressed_tar(input):
     try:
         tar = tarfile.open(input, flags)
     except Exception as e:
-        logger.error(str(e))
+        logger.error('error in processing compressed tar: ' + str(e))
         return True,None
     
     return False,tar
