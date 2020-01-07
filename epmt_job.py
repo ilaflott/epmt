@@ -122,14 +122,16 @@ def get_process_df(df):
         # advance row pointer
         row += thr_count
             
-def load_process_from_pandas(df, h, j, u, settings, profile):
+def load_process_from_pandas(df, host, j, u, settings, profile):
     from pandas import Timestamp
     logger = getLogger(__name__)  # you can use other name
 
     # fallback to the host read from the filename if we don't have a hostname column
-    _t = time.time()
-    host = lookup_or_create_host(df['hostname'][0] if 'hostname' in df.columns else h)
-    profile.load_process.host_lookup += time.time() - _t
+    # _t = time.time()
+    # host = h
+    # host = lookup_or_create_host(df['hostname'][0] if 'hostname' in df.columns else h)
+    # host = lookup_or_create_host(h)
+    # profile.load_process.host_lookup += time.time() - _t
 
     _t = time.time()
     try:
@@ -618,13 +620,13 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     read_csv_time = 0
     tar_extract_time = 0
     profile = dotdict()
-    profile.load_process = dotdict({'init': 0, 'host_lookup': 0, 'misc': 0, 'proc_tags': 0, 'thread_sums': 0, 'to_json': 0})
+    profile.load_process = dotdict({'init': 0, 'misc': 0, 'proc_tags': 0, 'thread_sums': 0, 'to_json': 0})
 
     for hostname, files in filedict.items():
         logger.debug("Processing host %s",hostname)
         # we only need to a lookup_or_create_host if papiex doesn't
         # have a hostname column
-        # h = lookup_or_create_host(hostname)
+        h = lookup_or_create_host(hostname) if hostname else None
         cntmax = len(files)
         cnt = 0
         nrecs = 0
@@ -661,15 +663,23 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 logger.error("Something wrong with file %s, readcsv returned empty, skipping...",f)
                 continue
 
+            # in case we cannot figure out the hostname from the file, we
+            # will use the papiex data. To reduce the expense of host lookups
+            # we want to do this only once per job. This mechanism assumes
+            # all the processes for a job reside on the same host
+            if not(h) and 'hostname' in collated_df:
+                 h = lookup_or_create_host(collated_df['hostname'][0])
+
 # Make Process/Thread/Metrics objects in DB
             # there are 1 or more process dataframes in the collated df
             # let's iterate over them
             _df_process_start_ts = time.time()
+            
             for df in get_process_df(collated_df):
                 # we provide the hostname argument as a fallback in case
                 # the papiex data doesn't have a hostname column
                 _load_process_from_df_start_ts = time.time()
-                p = load_process_from_pandas(df, hostname, j, u, settings, profile)
+                p = load_process_from_pandas(df, h, j, u, settings, profile)
                 load_process_from_df_time += time.time() - _load_process_from_df_start_ts
                 if not p:
                     logger.error("Failed loading from pandas, file %s!",f);
