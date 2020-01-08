@@ -105,32 +105,45 @@ def lookup_or_create_user(username):
 # This is a generator function that will yield
 # the next process dataframe from the collated file dataframe.
 # It uses the numtids field to figure out where the process dataframe ends
-def get_process_df(df):
-    row = 0
-    nrows = df.shape[0]
-    while (row < nrows):
-        try:
-            thr_count = int(df['numtids'][row])
-        except Exception as e:
-            logger.error("%s", e)
-            logger.error("invalid or no value set for numtids in dataframe at index %d", row)
-            return
-        if (thr_count < 1):
-            logger.error('invalid value({0}) set for numtids in dataframe at index {1}'.format(thr_count, row))
-            return
-        # now yield a dataframe from df[row ... row+thr_count]
-        # make sure the yielded dataframe has it's index reset to 0
-        yield df[row:row+thr_count].reset_index(drop=True)
-        # advance row pointer
-        row += thr_count
+# def get_process_df(df):
+#     row = 0
+#     nrows = df.shape[0]
+#     while (row < nrows):
+#         try:
+#             thr_count = int(df['numtids'][row])
+#         except Exception as e:
+#             logger.error("%s", e)
+#             logger.error("invalid or no value set for numtids in dataframe at index %d", row)
+#             return
+#         if (thr_count < 1):
+#             logger.error('invalid value({0}) set for numtids in dataframe at index {1}'.format(thr_count, row))
+#             return
+#         # now yield a dataframe from df[row ... row+thr_count]
+#         # make sure the yielded dataframe has it's index reset to 0
+#         yield df[row:row+thr_count].reset_index(drop=True)
+#         # advance row pointer
+#         row += thr_count
 
 
-def get_proc_rows(csvfile):
+def get_proc_rows(csvfile, skiprows = 0):
+    if skiprows > 0:
+        err_msg = 'Do not know how to handle a non-zero value for skiprows while reading CSV file'
+        logger.error(err_msg)
+        raise ValueError(err_msg)
+
     reader = csv.DictReader(csvfile, escapechar='\\')
     # ordinarily the line below would not be a good idea,
     # however, we are dealing with small CSV files so a gulp
     # of the entire dataset isn't expensive 
     rows = list(reader)
+
+    # use int as the default type for non-empty, non-string entities
+    non_numeric_keys = set(['exename', 'path', 'args', 'tags', 'hostname'])
+    for r in rows:
+        for k in r.keys():
+            if (not (k in non_numeric_keys)) and r[k]:
+                r[k] = int(r[k])
+
     nrows = len(rows)
     row_num = 0
     while (row_num < nrows):
@@ -201,6 +214,8 @@ def load_process_from_pandas(proc, host, j, u, settings, profile):
     p.exitcode = int(proc[0]['exitcode'])
     p.numtids = len(proc)
     try:
+        # FIX: Is it safe to assume that thread 0 has the lowest start time
+        # and the highest end time?
         earliest_thread_start = Timestamp(int(proc[0]['start']), unit='us')
         latest_thread_finish = Timestamp(int(proc[0]['end']), unit='us')
         p.start = earliest_thread_start.to_pydatetime().replace(tzinfo = pytz.utc)
@@ -227,10 +242,12 @@ def load_process_from_pandas(proc, host, j, u, settings, profile):
     #
     # We pass metric_sums as a python dictionary to Pony so we can do
     # complex queries in Pony using metrics in the 'metric_sums' dict.
-    #_t = time.time()
+    _t = time.time()
     #p.threads_df = df.to_json(orient='split')
-    #profile.load_process.to_json += time.time() - _t
-    p.threads_df = proc
+    p.threads_df = {'columns': list(proc[0].keys()), 'data':[]}
+    for thr in proc:
+        p.threads_df['data'].append(list(thr.values()))
+    profile.load_process.to_json += time.time() - _t
 
 
     _t = time.time()
@@ -245,7 +262,6 @@ def load_process_from_pandas(proc, host, j, u, settings, profile):
     # saving the json to the database:
     # exception:    raise TypeError(repr(o) + " is not JSON serializable")
     # So, instead we use this workaround:
-    # _t = time.time()
     # df_summed = df.drop(labels=settings.skip_for_thread_sums+settings.per_process_fields, axis=1).sum(axis=0)
     # if sys.version_info > (3,0):
     #     json_ms = df_summed.to_json()
@@ -258,11 +274,19 @@ def load_process_from_pandas(proc, host, j, u, settings, profile):
     # # in a Query
     # # TODO: can this be removed?
     # thread_metric_sums['user+system'] = thread_metric_sums.get('usertime', 0) + thread_metric_sums.get('systemtime', 0)
-    # p.threads_sums = thread_metric_sums
-    # p.cpu_time = float(thread_metric_sums['user+system'])
-    # profile.load_process.thread_sums += time.time() - _t
-    p.threads_sums = {}  # remove this!!!
-    p.cpu_time = 0  # remove this!!!
+
+    _t = time.time()
+    fields = set(proc[0].keys()) - set(settings.skip_for_thread_sums) - set(settings.per_process_fields)
+    thread_metric_sums = {k: 0 for k in fields }
+
+    for thr in proc:
+        for k in fields:
+            thread_metric_sums[k] += thr[k]
+
+    p.threads_sums = thread_metric_sums
+
+    p.cpu_time = float(thread_metric_sums['usertime'] + thread_metric_sums['systemtime'])
+    profile.load_process.thread_sums += time.time() - _t
 
     return p
     
@@ -679,8 +703,8 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 #
 # We need rows to skip
 # oldproctag (after comment char) is outdated as a process tag but kept for posterities sake
-            rows,oldproctag = extract_tags_from_comment_line(f,tarfile=tarfile)
-            logger.debug("%s had %d comment rows, oldproctags %s",f,rows,oldproctag)
+            skiprows,oldproctag = extract_tags_from_comment_line(f,tarfile=tarfile)
+            logger.debug("%s had %d comment rows, oldproctags %s",f,skiprows,oldproctag)
 
             if tarfile:
                 info = tarfile.getmember(f)
@@ -690,7 +714,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 
             csv_file = StringIO(flo.read().decode('utf8'))
                 
-            from pandas import read_csv
+            # from pandas import read_csv
             # collated_df = read_csv(flo,
             #                        sep=",",
             #                        #dtype=dtype_dic, 
@@ -712,13 +736,16 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             # there are 1 or more process dataframes in the collated df
             # let's iterate over them
             _df_process_start_ts = time.time()
-            
-            for (proc, _, nrows) in get_proc_rows(csv_file):
+           
+            # we ignore the second value returned by get_proc_rows
+            # (rownum). The third is just a fixed value (number of
+            # rows in csv). 
+            for (proc, _, nrows) in get_proc_rows(csv_file, skiprows):
                 _load_process_from_df_start_ts = time.time()
                 p = load_process_from_pandas(proc, h, j, u, settings, profile)
                 load_process_from_df_time += time.time() - _load_process_from_df_start_ts
                 if not p:
-                    logger.error("Failed loading from pandas, file %s!",f);
+                    logger.error("Failed loading process, file %s!",f);
                     continue
 # If using old version of papiex, process tags are in the comment field
                 _proc_tag_start_ts = time.time()
@@ -777,12 +804,12 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 
 #    stdout.write('\b')            # erase the last written char
     logger.debug('file I/O time took: %2.5f sec', file_io_time)
-    logger.debug('process df ops took: %2.5f sec', df_process_time)
-    logger.debug('  - load process from df took: %2.5f sec', load_process_from_df_time)
+    logger.debug('process load ops took: %2.5f sec', df_process_time)
+    logger.debug('  - load process from dictlist took: %2.5f sec', load_process_from_df_time)
     logger.debug('    - {0}'.format([ "%s: %2.5f sec" % (k, v)  for (k,v) in profile.load_process.items()]))
     logger.debug('  - tag processing took: %2.5f sec', proc_tag_process_time)
     logger.debug('  - proc misc. processing took: %2.5f sec', proc_misc_time)
-    logger.debug('  - get_process_df (from collated df) took: %2.5f sec', df_process_time - load_process_from_df_time - proc_tag_process_time - proc_misc_time)
+    logger.debug('  - get_proc_rows took: %2.5f sec', df_process_time - load_process_from_df_time - proc_tag_process_time - proc_misc_time)
 
     if filedict:
         if not didsomething:
