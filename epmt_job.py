@@ -14,6 +14,8 @@ from datetime import datetime, timedelta
 from functools import reduce
 import time
 import pytz
+import csv
+from io import StringIO
 
 logger = getLogger(__name__)  # you can use other name
 import epmt_settings as settings
@@ -121,8 +123,40 @@ def get_process_df(df):
         yield df[row:row+thr_count].reset_index(drop=True)
         # advance row pointer
         row += thr_count
-            
-def load_process_from_pandas(df, host, j, u, settings, profile):
+
+
+def get_proc_rows(csvfile):
+    reader = csv.DictReader(csvfile, escapechar='\\')
+    # ordinarily the line below would not be a good idea,
+    # however, we are dealing with small CSV files so a gulp
+    # of the entire dataset isn't expensive 
+    rows = list(reader)
+    nrows = len(rows)
+    row_num = 0
+    while (row_num < nrows):
+        row = rows[row_num]
+        try:
+            thr_count = int(row['numtids'])
+        except Exception as e:
+            logger.error("%s", e)
+            logger.error("invalid or no value set for numtids in dataframe at index %d", row_num)
+            return
+        if (thr_count < 1):
+            logger.error('invalid value({0}) set for numtids in dataframe at index {1}'.format(thr_count, row_num))
+            return
+        # now yield a dataframe from df[row ... row+thr_count]
+        # make sure the yielded dataframe has it's index reset to 0
+        yield (rows[row_num:row_num+thr_count], row_num, nrows)
+        # advance row pointer
+        row_num += thr_count
+
+
+# 'proc' is a list of dicts, where each list item is a 
+# a dictionary containing data for a single thread
+# The first list item (thread 0) is special in that it has values for fields pertaining
+# to the process such as 'exename', 'args', etc. The other threads
+# may not have process fields set.
+def load_process_from_pandas(proc, host, j, u, settings, profile):
     from pandas import Timestamp
     logger = getLogger(__name__)  # you can use other name
 
@@ -140,19 +174,19 @@ def load_process_from_pandas(df, host, j, u, settings, profile):
             # of objects
             p = dotdict({'host_id': host.name, 'jobid': j.jobid, 'user_id': u.name})
             for key in ('exename', 'args', 'path'):
-                p[key] = df[key][0]
+                p[key] = proc[0][key]
             for key in ('pid', 'ppid', 'pgid', 'sid', 'generation'):
-                p[key] = int(df[key][0])
+                p[key] = int(proc[0][key])
         else:
             p = orm_create(Process, 
-                           exename=df['exename'][0],
-                           args=df['args'][0],
-                           path=df['path'][0],
-                           pid=int(df['pid'][0]),
-                           ppid=int(df['ppid'][0]),
-                           pgid=int(df['pgid'][0]),
-                           sid=int(df['sid'][0]),
-                           gen=int(df['generation'][0]),
+                           exename=proc[0]['exename'],
+                           args=proc[0]['args'],
+                           path=proc[0]['path'],
+                           pid=int(proc[0]['pid']),
+                           ppid=int(proc[0]['ppid']),
+                           pgid=int(proc[0]['pgid']),
+                           sid=int(proc[0]['sid']),
+                           gen=int(proc[0]['generation']),
                            host=host,
                            job=j,
                            user=u)
@@ -164,12 +198,11 @@ def load_process_from_pandas(df, host, j, u, settings, profile):
     profile.load_process.init += time.time() - _t
 
     _t = time.time()
-    if 'exitcode' in df.columns:
-        p.exitcode = int(df['exitcode'][0])
-    p.numtids = df.shape[0]
+    p.exitcode = int(proc[0]['exitcode'])
+    p.numtids = len(proc)
     try:
-        earliest_thread_start = Timestamp(df['start'].min(), unit='us')
-        latest_thread_finish = Timestamp(df['end'].max(), unit='us')
+        earliest_thread_start = Timestamp(int(proc[0]['start']), unit='us')
+        latest_thread_finish = Timestamp(int(proc[0]['end']), unit='us')
         p.start = earliest_thread_start.to_pydatetime().replace(tzinfo = pytz.utc)
         p.end = latest_thread_finish.to_pydatetime().replace(tzinfo = pytz.utc)
         p.duration = float((latest_thread_finish - earliest_thread_start).total_seconds())*float(1000000)
@@ -194,13 +227,14 @@ def load_process_from_pandas(df, host, j, u, settings, profile):
     #
     # We pass metric_sums as a python dictionary to Pony so we can do
     # complex queries in Pony using metrics in the 'metric_sums' dict.
-    _t = time.time()
-    p.threads_df = df.to_json(orient='split')
-    profile.load_process.to_json += time.time() - _t
+    #_t = time.time()
+    #p.threads_df = df.to_json(orient='split')
+    #profile.load_process.to_json += time.time() - _t
+    p.threads_df = proc
 
 
     _t = time.time()
-    tags = df['tags'][0] if 'tags' in df.columns else None
+    tags = proc[0].get('tags')
     if tags:
         p.tags = tag_from_string(tags)
     profile.load_process.proc_tags += time.time() - _t
@@ -211,22 +245,24 @@ def load_process_from_pandas(df, host, j, u, settings, profile):
     # saving the json to the database:
     # exception:    raise TypeError(repr(o) + " is not JSON serializable")
     # So, instead we use this workaround:
-    _t = time.time()
-    df_summed = df.drop(labels=settings.skip_for_thread_sums+settings.per_process_fields, axis=1).sum(axis=0)
-    if sys.version_info > (3,0):
-        json_ms = df_summed.to_json()
-        thread_metric_sums = loads(json_ms)
-    else:
-        thread_metric_sums = df_summed.to_dict()
+    # _t = time.time()
+    # df_summed = df.drop(labels=settings.skip_for_thread_sums+settings.per_process_fields, axis=1).sum(axis=0)
+    # if sys.version_info > (3,0):
+    #     json_ms = df_summed.to_json()
+    #     thread_metric_sums = loads(json_ms)
+    # else:
+    #     thread_metric_sums = df_summed.to_dict()
 
-    # we add a composite metric comprising of user+system time as this
-    # is needed in queries, and Pony doesn't allow operations on json fields
-    # in a Query
-    # TODO: can this be removed?
-    thread_metric_sums['user+system'] = thread_metric_sums.get('usertime', 0) + thread_metric_sums.get('systemtime', 0)
-    p.threads_sums = thread_metric_sums
-    p.cpu_time = float(thread_metric_sums['user+system'])
-    profile.load_process.thread_sums += time.time() - _t
+    # # we add a composite metric comprising of user+system time as this
+    # # is needed in queries, and Pony doesn't allow operations on json fields
+    # # in a Query
+    # # TODO: can this be removed?
+    # thread_metric_sums['user+system'] = thread_metric_sums.get('usertime', 0) + thread_metric_sums.get('systemtime', 0)
+    # p.threads_sums = thread_metric_sums
+    # p.cpu_time = float(thread_metric_sums['user+system'])
+    # profile.load_process.thread_sums += time.time() - _t
+    p.threads_sums = {}  # remove this!!!
+    p.cpu_time = 0  # remove this!!!
 
     return p
     
@@ -651,35 +687,35 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 flo = tarfile.extractfile(info)
             else:
                 flo = f
+
+            csv_file = StringIO(flo.read().decode('utf8'))
                 
             from pandas import read_csv
-            collated_df = read_csv(flo,
-                                   sep=",",
-                                   #dtype=dtype_dic, 
-                                   converters=conv_dic,
-                                   skiprows=rows, escapechar='\\')
+            # collated_df = read_csv(flo,
+            #                        sep=",",
+            #                        #dtype=dtype_dic, 
+            #                        converters=conv_dic,
+            #                        skiprows=rows, escapechar='\\')
             file_io_time += time.time() - _file_io_start_ts
-            if collated_df.empty:
-                logger.error("Something wrong with file %s, readcsv returned empty, skipping...",f)
-                continue
+            # if collated_df.empty:
+            #     logger.error("Something wrong with file %s, readcsv returned empty, skipping...",f)
+            #     continue
 
             # in case we cannot figure out the hostname from the file, we
             # will use the papiex data. To reduce the expense of host lookups
             # we want to do this only once per job. This mechanism assumes
             # all the processes for a job reside on the same host
-            if not(h) and 'hostname' in collated_df:
-                 h = lookup_or_create_host(collated_df['hostname'][0])
+            # if not(h) and 'hostname' in collated_df:
+            #      h = lookup_or_create_host(collated_df['hostname'][0])
 
 # Make Process/Thread/Metrics objects in DB
             # there are 1 or more process dataframes in the collated df
             # let's iterate over them
             _df_process_start_ts = time.time()
             
-            for df in get_process_df(collated_df):
-                # we provide the hostname argument as a fallback in case
-                # the papiex data doesn't have a hostname column
+            for (proc, _, nrows) in get_proc_rows(csv_file):
                 _load_process_from_df_start_ts = time.time()
-                p = load_process_from_pandas(df, h, j, u, settings, profile)
+                p = load_process_from_pandas(proc, h, j, u, settings, profile)
                 load_process_from_df_time += time.time() - _load_process_from_df_start_ts
                 if not p:
                     logger.error("Failed loading from pandas, file %s!",f);
@@ -721,15 +757,15 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 cnt += 1
                 nrecs += p.numtids
                 csvt = datetime.now() - csv
-                if ((nrecs % 1000) == 0) or \
-                   ((cntmax==1) and (nrecs == collated_df.shape[0])) or \
-                   ((cntmax > 1) and (fileno == cntmax)) :
+                if (((nrecs % 1000) == 0) or \
+                    ((cntmax==1) and (nrecs == nrows)) or \
+                    ((cntmax > 1) and (fileno == cntmax))):
                     if cntmax > 1:
                         # many small files each with a single process
                         logger.info("Did %d (%d/%d files)...%.2f/sec",nrecs,fileno, cntmax,nrecs/csvt.total_seconds())
                     else:
                         # collated file
-                        logger.info("Did %d (%d in file)...%.2f/sec",nrecs,collated_df.shape[0],nrecs/csvt.total_seconds())
+                        logger.info("Did %d (%d in file)...%.2f/sec",nrecs,nrows,nrecs/csvt.total_seconds())
                     # break
                 proc_misc_time += time.time() - _t
 
