@@ -244,9 +244,10 @@ def load_process_from_pandas(proc, host, j, u, settings, profile):
     # complex queries in Pony using metrics in the 'metric_sums' dict.
     _t = time.time()
     #p.threads_df = df.to_json(orient='split')
-    p.threads_df = {'columns': list(proc[0].keys()), 'data':[]}
-    for thr in proc:
-        p.threads_df['data'].append(list(thr.values()))
+    #p.threads_df = {'columns': list(proc[0].keys()), 'data':[]}
+    #for thr in proc:
+    #    p.threads_df['data'].append(list(thr.values()))
+    p.threads_df = proc
     profile.load_process.to_json += time.time() - _t
 
 

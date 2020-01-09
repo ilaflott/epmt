@@ -556,7 +556,8 @@ def get_thread_metrics(*processes):
         else:
             # user supplied process objects directly
             p = proc
-        df = pd.read_json(p.threads_df, orient='split')
+        # df = pd.read_json(p.threads_df, orient='split')
+        df = pd.DataFrame(p.threads_df)
         # add a synthetic column set to the primary key of the process
         df['process_pk'] = p.id
 
