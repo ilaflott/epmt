@@ -421,7 +421,7 @@ def _create_process_tree(pid_map):
 # build them by using the data in the database/ORM.
 # 
 @timing
-def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, job_just_created = False):
+def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, update_unprocessed_jobs_table = True):
     logger = getLogger(__name__)  # you can use other name
     if type(j) == str:
         j = Job[j]
@@ -533,7 +533,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, job_j
 
     # now mark the job as processed if it was previously marked otherwise
     # for now, only sqlalchemy supports post-processing in a separate phase
-    # 'job_just_created' is used to speed up operations if the 
+    # update_unprocessed_jobs_table option is used to speed up operations if the 
     # job has been just created. In this case, we know the job doesn't
     # already exist in the UnprocessedJobs table. This saves us a lookup
     # which ordinarily should've been cheap, but because we haven't yet 
@@ -544,7 +544,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, job_j
     # has already happened. Note this optimization doesn't really save any
     # time. It just fixes the profiling accounting and makes the commit
     # time appear under the commit head, and not in post processing
-    if not job_just_created:
+    if update_unprocessed_jobs_table:
         if settings.orm == 'sqlalchemy':
             _t6 = time.time()
             u = orm_get(UnprocessedJob, pk=j.jobid)
@@ -552,7 +552,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, job_j
                 orm_delete(u)
                 logger.info('  marking job as processed in database')
                 orm_commit()
-            logger.debug('  checking/marking job processed took: %2.5f sec', time.time() - _t6)
+            logger.debug('  checking/updating unprocessed jobs table (includes implicit commit) took: %2.5f sec', time.time() - _t6)
     return True
 
 
@@ -877,9 +877,9 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             # such as j.processes work after the processes were
             # bulk-inserted.
             orm_commit()
-            post_process_job(j, all_tags, None, None, True)
+            post_process_job(j, all_tags, None, None, False)
         else:
-            post_process_job(j, all_tags, all_procs, pid_map, True)
+            post_process_job(j, all_tags, all_procs, pid_map, False)
         # logger.debug('post process job took: %2.5f sec', time.time() - _post_process_start_ts)
     else:
         orm_create(UnprocessedJob, jobid=j.jobid)
