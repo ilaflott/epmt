@@ -18,7 +18,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (2,2,7)
+_version = (3,0,1)
 
 def version():
     return _version
@@ -140,6 +140,9 @@ def init_settings(settings):
     if not hasattr(settings, 'post_process_job_on_ingest'):
         logger.warning("missing settings.post_process_job_on_ingest")
         settings.post_process_job_on_ingest = True
+    if not hasattr(settings, 'lazy_compute_process_tree'):
+        logger.warning("missing settings.lazy_compute_process_tree")
+        settings.lazy_compute_process_tree = True
     if ((settings.orm != 'sqlalchemy') and (not(settings.post_process_job_on_ingest))):
         err_msg += '\n - post_process_job_on_ingest set as False is only permitted with sqlalchemy'
     if not hasattr(settings, 'db_params'):

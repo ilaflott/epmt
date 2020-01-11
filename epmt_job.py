@@ -412,6 +412,63 @@ def _create_process_tree(pid_map):
     return desc_map
 
 
+# High-level function to create and persist a process tree
+# It will also compute and save process inclusive_cpu_times.
+# You should be using this function instead of directly calling
+# _create_process_tree.
+# 'all_procs' and 'pid_map' are optional and if supplied
+# will reduce processing time.
+@db_session
+def mk_process_tree(j, all_procs = None, pid_map = None):
+    if type(j) == str:
+        j = Job[j]
+    info_dict = j.info_dict.copy()
+    if info_dict.get('process_tree'):
+        # logger.debug('Process tree already exists. Skipping mk_process_tree')
+        return
+    logger.info('computing process tree for job %s', j.jobid)
+    if all_procs is None:
+        _all_procs_t0 = time.time()
+        all_procs = []
+        for p in j.processes:
+            all_procs.append(p)
+        logger.debug('  re-populating %d processes took: %2.5f sec', len(all_procs), time.time() - _all_procs_t0)
+
+    if (pid_map is None):
+        _pid_t0 = time.time()
+        pid_map = {}
+        for p in all_procs:
+            # We shouldn't be seeing a pid repeat in a job. 
+            # Theoretically it's posssible but it would complicate the pid map a bit
+            # assert(p.pid not in pid_map)
+            pid_map[p.pid] = p
+        logger.debug("  recreating pid_map took: %2.5f sec", time.time() - _pid_t0)
+
+    _t1 = time.time()
+    desc_map = _create_process_tree(pid_map)
+    _t2 = time.time()
+    # make sure the inane ORM can understand that we are
+    # updating info_dict
+    info_dict.update({ 'process_tree': 1 })
+    j.info_dict = info_dict
+
+    logger.debug('  process tree took: %2.5f sec', _t2 - _t1)
+    # computing process inclusive times
+    for proc in all_procs:
+        if settings.bulk_insert:
+            # in bulk inserts, we cannnot rely on process.descendants to be
+            # available, so we use a descendants map created during the
+            # process tree creation step
+            proc_descendants = desc_map.get(proc.id, set())
+            proc.inclusive_cpu_time = float(proc.cpu_time + sum([p.cpu_time for p in proc_descendants]))
+        else:
+            proc.inclusive_cpu_time = float(proc.cpu_time + orm_sum_attribute(proc.descendants, 'cpu_time'))
+    _t3 = time.time()
+    logger.debug('  proc inclusive. cpu times computation took: %2.5f sec', _t3 - _t2)
+    orm_commit()
+    logger.debug('  commit time : %2.5f sec', time.time() - _t3)
+    return
+
 # This method will compute sums across processes/threads of a job,
 # and do post-processing on tags. It will also call _create_process_tree
 # to create process tree.
@@ -459,49 +516,31 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
             all_procs.append(p)
         logger.debug('  re-populating %d processes took: %2.5f sec', len(all_procs), time.time() - _all_procs_t0)
 
-    if (pid_map is None):
-        _pid_t0 = time.time()
-        _populate_all_procs = False
-        pid_map = {}
-        for p in all_procs:
-            pid_map[p.pid] = p
-        logger.debug("  recreating pid_map took: %2.5f sec", time.time() - _pid_t0)
-
     # Add all processes to job and compute process totals to add to
     # job.proc_sums field
     nthreads = 0
     threads_sums_across_procs = {}
     if all_procs:
-        _t1 = time.time()
-        desc_map = _create_process_tree(pid_map)
+        logger.info("  computing thread sums across job processes..")
         _t2 = time.time()
-        logger.debug('  process tree took: %2.5f sec', _t2 - _t1)
-        # computing process inclusive times
-        logger.info("  computing aggregates across job processes..")
         hosts = set()
         for proc in all_procs:
             if settings.bulk_insert:
-                # in bulk inserts, we cannnot rely on process.dependants to be
-                # available, so we use a descendants map created during the
-                # process tree creation step
-                proc_descendants = desc_map.get(proc.id, set())
-                proc.inclusive_cpu_time = float(proc.cpu_time + sum([p.cpu_time for p in proc_descendants]))
                 hosts.add(proc.host_id)
             else:
-                proc.inclusive_cpu_time = float(proc.cpu_time + orm_sum_attribute(proc.descendants, 'cpu_time'))
                 hosts.add(proc.host)
             nthreads += proc.numtids
             threads_sums_across_procs = sum_dicts(threads_sums_across_procs, proc.threads_sums)
         logger.info("  job contains %d processes (%d threads)",len(all_procs), nthreads)
         _t3 = time.time()
-        logger.debug('  proc incl. cpu times and thread sums calc. took: %2.5f sec', _t3 - _t2)
+        logger.debug('  thread sums calculation took: %2.5f sec', _t3 - _t2)
         if settings.bulk_insert:
             t = Base.metadata.tables['host_job_associations']
             thr_data.engine.execute(t.insert(), [ { 'jobid': j.jobid, 'hostname': h } for h in hosts])
         else:
             j.hosts = list(hosts)
         _t4 = time.time()
-        logger.debug('  adding hosts to job took: %2.5f sec', _t4 - _t3)
+        logger.debug('  adding %d host(s) to job took: %2.5f sec', len(hosts), _t4 - _t3)
 
         # we MUST NOT add all_procs to j.processes below
         # as we already associated the process with the job
@@ -520,6 +559,8 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     _t5 = time.time()
     logger.debug('  proc_sums calculation took: %2.5f sec', _t5 - _t4)
 
+    if not settings.lazy_compute_process_tree:
+        mk_process_tree(j, all_procs)
 
     # The calculation below has been moved to before post-processing
     #
@@ -775,6 +816,9 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 proc_tag_process_time += time.time() - _proc_tag_start_ts
 
                 _t = time.time()
+                # We shouldn't be seeing a pid repeat in a job. 
+                # Theoretically it's posssible but it would complicate the pid map a bit
+                # assert(p.pid not in pid_map)
                 pid_map[p.pid] = p
                 all_procs.append(p)
 # Compute duration of job

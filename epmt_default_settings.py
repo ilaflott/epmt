@@ -51,3 +51,9 @@ bulk_insert = True
 # post_process_job_on_ingest = False is only supported for sqlalchemy.
 # DO NOT disable the option below unless you know what you're doing
 post_process_job_on_ingest = True
+
+# to save post-processing compute cycles we only compute
+# the process tree (parent/child, ancestor/descendant relations)
+# when first needed. This also means the the process.inclusive_cpu_time
+# will be unavailable until the process tree is computed.
+lazy_compute_process_tree = True

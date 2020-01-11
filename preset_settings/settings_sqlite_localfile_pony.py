@@ -38,3 +38,9 @@ db_params = db_params = { 'url': 'sqlite:///{HOME}/EPMT_DB.sqlite'.format(HOME=s
 #
 # Pony doesn't support bulk inserts
 bulk_insert = False
+
+# to save post-processing compute cycles we only compute
+# the process tree (parent/child, ancestor/descendant relations)
+# when first needed. This also means the the process.inclusive_cpu_time
+# will be unavailable until the process tree is computed.
+# lazy_compute_process_tree = True
