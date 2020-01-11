@@ -419,8 +419,9 @@ def _create_process_tree(pid_map):
 # The function is tolerant to missing datastructures for all_tags
 # all_procs and pid_map. If any of them are missing, it will 
 # build them by using the data in the database/ORM.
+# 
 @timing
-def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
+def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, job_just_created = False):
     logger = getLogger(__name__)  # you can use other name
     if type(j) == str:
         j = Job[j]
@@ -493,7 +494,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
             threads_sums_across_procs = sum_dicts(threads_sums_across_procs, proc.threads_sums)
         logger.info("  job contains %d processes (%d threads)",len(all_procs), nthreads)
         _t3 = time.time()
-        logger.debug('  thread sums calculation took: %2.5f sec', _t3 - _t2)
+        logger.debug('  proc incl. cpu times and thread sums calc. took: %2.5f sec', _t3 - _t2)
         if settings.bulk_insert:
             t = Base.metadata.tables['host_job_associations']
             thr_data.engine.execute(t.insert(), [ { 'jobid': j.jobid, 'hostname': h } for h in hosts])
@@ -509,10 +510,10 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
         # duplicate bindings.
         # orm_add_to_collection(j.processes, all_procs)
 
+    _t4 = time.time()
     proc_sums['num_procs'] = len(all_procs)
     proc_sums['num_threads'] = nthreads
     # merge the threads sums across all processes in the job.proc_sums dict
-    _t4 = time.time()
     for (k, v) in threads_sums_across_procs.items():
         proc_sums[k] = v
     j.proc_sums = proc_sums
@@ -532,12 +533,26 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
 
     # now mark the job as processed if it was previously marked otherwise
     # for now, only sqlalchemy supports post-processing in a separate phase
-    if settings.orm == 'sqlalchemy':
-        u = orm_get(UnprocessedJob, j.jobid)
-        if u:
-            orm_delete(u)
-            logger.info('  marking job as processed in database')
-            orm_commit()
+    # 'job_just_created' is used to speed up operations if the 
+    # job has been just created. In this case, we know the job doesn't
+    # already exist in the UnprocessedJobs table. This saves us a lookup
+    # which ordinarily should've been cheap, but because we haven't yet 
+    # done a commit/flush to the DB, the lookup appears as expensive and
+    # makes the overall post-processing function appear costly, even though
+    # it's just the cost of the db commit/flush
+    # For delayed post-processing, the lookup isn't expensive as the commit
+    # has already happened. Note this optimization doesn't really save any
+    # time. It just fixes the profiling accounting and makes the commit
+    # time appear under the commit head, and not in post processing
+    if not job_just_created:
+        if settings.orm == 'sqlalchemy':
+            _t6 = time.time()
+            u = orm_get(UnprocessedJob, pk=j.jobid)
+            if u:
+                orm_delete(u)
+                logger.info('  marking job as processed in database')
+                orm_commit()
+            logger.debug('  checking/marking job processed took: %2.5f sec', time.time() - _t6)
     return True
 
 
@@ -862,9 +877,9 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             # such as j.processes work after the processes were
             # bulk-inserted.
             orm_commit()
-            post_process_job(j, all_tags)
+            post_process_job(j, all_tags, None, None, True)
         else:
-            post_process_job(j, all_tags, all_procs, pid_map)
+            post_process_job(j, all_tags, all_procs, pid_map, True)
         # logger.debug('post process job took: %2.5f sec', time.time() - _post_process_start_ts)
     else:
         orm_create(UnprocessedJob, jobid=j.jobid)
