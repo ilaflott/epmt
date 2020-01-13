@@ -411,6 +411,8 @@ def _create_process_tree(pid_map):
         thr_data.engine.execute(t.insert(), r)
     return desc_map
 
+def is_process_tree_computed(j):
+    return bool(j.info_dict.get('process_tree'))
 
 # High-level function to create and persist a process tree
 # It will also compute and save process inclusive_cpu_times.

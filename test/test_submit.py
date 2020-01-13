@@ -80,7 +80,37 @@ class EPMTSubmit(unittest.TestCase):
             epmt_submit(glob(datafiles), dry_run=False)
         # restore logging level
         set_logging(-1)
-        
+
+    def check_lazy_compute(self, j, lazy_eval):
+        from epmt_job import is_process_tree_computed, mk_process_tree
+        is_pt_computed = is_process_tree_computed(j)
+        p = eq.get_procs(j, limit=1, fmt='orm')[0]
+        if lazy_eval:
+            self.assertFalse(is_pt_computed)
+            self.assertIsNone(p.parent)
+            self.assertFalse(p.children)
+            self.assertIsNone(p.inclusive_cpu_time)
+            mk_process_tree(j)
+            self.assertTrue(p.inclusive_cpu_time)
+            self.assertTrue(p.parent or p.children)
+            self.assertTrue(is_process_tree_computed(j))
+        else:
+            self.assertTrue(is_pt_computed)
+            self.assertTrue(p.inclusive_cpu_time)
+            self.assertTrue(p.parent or p.children)
+            self.assertTrue(is_process_tree_computed(j))
+
+
+    @db_session
+    def test_lazy_compute_process_tree(self):
+        orig_lazy_eval = settings.lazy_compute_process_tree
+        self.check_lazy_compute(Job['685000'], orig_lazy_eval)
+        datafiles='test/data/submit/804268.tgz'
+        settings.lazy_compute_process_tree = not(orig_lazy_eval) # toggle setting
+        with capture() as (out,err):
+            epmt_submit(glob(datafiles), dry_run=False)
+        self.check_lazy_compute(Job['804268'], not(orig_lazy_eval))
+        settings.lazy_compute_process_tree = orig_lazy_eval # restore old setting
 
 if __name__ == '__main__':
     unittest.main()
