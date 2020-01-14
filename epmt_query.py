@@ -151,6 +151,7 @@ def get_roots(jobs, fmt='dict'):
     A top-level process is defined as a process with no parent in the
     set of processes that constitute the job.
     '''
+    compute_process_trees(jobs)
     return get_procs(jobs, order=Process.start, fltr=((Process.parent == None) if settings.orm == 'sqlalchemy' else 'p.parent == None'), fmt=fmt)
 
 @db_session
@@ -209,6 +210,7 @@ def op_roots(jobs, tag, fmt='dict'):
     """
     _empty_collection_check(jobs)
     jobs = orm_jobs_col(jobs)
+    compute_process_trees(jobs)
     if not tag:
         logger.error('You must specify a tag (string or dict)')
         return None
@@ -556,7 +558,8 @@ def get_thread_metrics(*processes):
         else:
             # user supplied process objects directly
             p = proc
-        df = pd.read_json(p.threads_df, orient='split')
+        # df = pd.read_json(p.threads_df, orient='split')
+        df = pd.DataFrame(p.threads_df)
         # add a synthetic column set to the primary key of the process
         df['process_pk'] = p.id
 
@@ -1553,3 +1556,15 @@ def _empty_collection_check(col):
         msg = 'You need to specify a non-empty collection as a parameter'
         logger.warning(msg)
         raise ValueError(msg)
+
+def compute_process_trees(jobs):
+    '''
+    Compute process trees for specified jobs.
+
+    It is safe to call this function on jobs that already have process trees
+    computed as they will just be skipped.
+    '''
+    from epmt_job import mk_process_tree
+    jobs = orm_jobs_col(jobs)
+    for j in jobs:
+        mk_process_tree(j)

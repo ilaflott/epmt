@@ -35,3 +35,9 @@ bulk_insert = True
 # outlier_features_blacklist = ['user+system']
 #
 # post_process_job_on_ingest = True
+
+# to save post-processing compute cycles we only compute
+# the process tree (parent/child, ancestor/descendant relations)
+# when first needed. This also means the the process.inclusive_cpu_time
+# will be unavailable until the process tree is computed.
+# lazy_compute_process_tree = True

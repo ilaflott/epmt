@@ -47,10 +47,10 @@ class QueryAPI(unittest.TestCase):
         df = eq.get_jobs(JOBS_LIST, fmt='pandas')
         # sqlalchemy has 4 fewer fields, which we eventually want to remove from
         # the job model
-        self.assertIn(df.shape, ((3,45), (3,49)))
+        self.assertIn(df.shape, ((3,44), (3,48)))
         # pony has some extra fields we don't care about and will probably remove:
         # 'account', 'jobscriptname', 'sessionid', 'queue'
-        self.assertEqual(set(df.columns.values) - set(['account', 'jobscriptname', 'sessionid', 'queue']), set(['PERF_COUNT_SW_CPU_CLOCK', 'all_proc_tags', 'analyses', 'annotations', 'cancelled_write_bytes', 'cpu_time', 'created_at', 'delayacct_blkio_time', 'duration', 'end', 'env_changes_dict', 'env_dict', 'exitcode', 'guest_time', 'inblock', 'info_dict', 'invol_ctxsw', 'jobid', 'jobname', 'majflt', 'minflt', 'num_procs', 'num_threads', 'outblock', 'processor', 'rchar', 'rdtsc_duration', 'read_bytes', 'rssmax', 'start', 'submit', 'syscr', 'syscw', 'systemtime', 'tags', 'time_oncpu', 'time_waiting', 'timeslices', 'updated_at', 'user', 'user+system', 'usertime', 'vol_ctxsw', 'wchar', 'write_bytes']))
+        self.assertEqual(set(df.columns.values) - set(['account', 'jobscriptname', 'sessionid', 'queue']), set(['PERF_COUNT_SW_CPU_CLOCK', 'all_proc_tags', 'analyses', 'annotations', 'cancelled_write_bytes', 'cpu_time', 'created_at', 'delayacct_blkio_time', 'duration', 'end', 'env_changes_dict', 'env_dict', 'exitcode', 'guest_time', 'inblock', 'info_dict', 'invol_ctxsw', 'jobid', 'jobname', 'majflt', 'minflt', 'num_procs', 'num_threads', 'outblock', 'processor', 'rchar', 'rdtsc_duration', 'read_bytes', 'rssmax', 'start', 'submit', 'syscr', 'syscw', 'systemtime', 'tags', 'time_oncpu', 'time_waiting', 'timeslices', 'updated_at', 'user', 'usertime', 'vol_ctxsw', 'wchar', 'write_bytes']))
         df = eq.get_jobs('685016', fmt='pandas')
         self.assertEqual(df['jobid'][0], '685016', "cannot specify job as a single job id string")
         self.assertEqual(df.shape[0],1, "wrong selection of jobs when specified as a string")
@@ -138,7 +138,7 @@ class QueryAPI(unittest.TestCase):
         procs = eq.get_procs(['685016', '685000'], fmt='orm')
         self.assertEqual(procs.count(), 6892, 'wrong count of processes in ORM format')
         df = eq.get_procs(JOBS_LIST, fmt='pandas', limit=10)
-        self.assertEqual(df.shape, (10,50))
+        self.assertEqual(df.shape, (10,49))
         procs_limit = eq.get_procs(fmt='terse')
         self.assertEqual(len(procs_limit), 10000)
         procs_unlimited = eq.get_procs(fmt='orm')
@@ -172,7 +172,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(int(procs.first().duration), 7005558348, 'wrong order when using orm with filter and order')
 
         df = eq.get_procs(JOBS_LIST, limit=5, order=desc(Process.cpu_time), fmt='pandas')
-        self.assertEqual(df.shape, (5,50), "incorrect dataframe shape")
+        self.assertEqual(df.shape, (5,49), "incorrect dataframe shape")
         self.assertEqual('685016', df.loc[0,'job'], "ordering of processes wrong in dataframe")
 
         ## Tags
@@ -286,24 +286,24 @@ class QueryAPI(unittest.TestCase):
     def test_op(self):
         op = Operation(['685000'], {'op': 'timavg'})
         self.assertEqual((op.tags, op.duration), ({'op': 'timavg'},41388496.0))
-        self.assertEqual(op.proc_sums, {'syscr': 127808, 'guest_time': 0, 'inblock': 0, 'processor': 0, 'rchar': 5356358342, 'cancelled_write_bytes': 45056, 'outblock': 5139208, 'timeslices': 2661, 'PERF_COUNT_SW_CPU_CLOCK': 17547070414, 'wchar': 5262916589, 'rssmax': 7854752, 'numtids': 62, 'duration': 41388496.0, 'read_bytes': 0, 'time_waiting': 35814116, 'delayacct_blkio_time': 0, 'invol_ctxsw': 1884, 'majflt': 0, 'syscw': 80433, 'minflt': 92584, 'cpu_time': 17951212.0, 'vol_ctxsw': 714, 'time_oncpu': 17984466575, 'rdtsc_duration': 153196621348, 'user+system': 17951212, 'systemtime': 4074354, 'num_procs': 57, 'write_bytes': 2631274496, 'usertime': 13876858 })
+        self.assertEqual(op.proc_sums, {'syscr': 127808, 'guest_time': 0, 'inblock': 0, 'processor': 0, 'rchar': 5356358342, 'cancelled_write_bytes': 45056, 'outblock': 5139208, 'timeslices': 2661, 'PERF_COUNT_SW_CPU_CLOCK': 17547070414, 'wchar': 5262916589, 'rssmax': 7854752, 'numtids': 62, 'duration': 41388496.0, 'read_bytes': 0, 'time_waiting': 35814116, 'delayacct_blkio_time': 0, 'invol_ctxsw': 1884, 'majflt': 0, 'syscw': 80433, 'minflt': 92584, 'cpu_time': 17951212.0, 'vol_ctxsw': 714, 'time_oncpu': 17984466575, 'rdtsc_duration': 153196621348, 'systemtime': 4074354, 'num_procs': 57, 'write_bytes': 2631274496, 'usertime': 13876858 })
         op = Operation(['685000'], {'op': 'timavg'}, op_duration_method = "sum-minus-overlap")
         self.assertEqual((op.tags, op.duration, op.num_runs()), ({'op': 'timavg'},21033390.0, 11))
-        self.assertEqual(op.proc_sums, {'syscr': 127808, 'guest_time': 0, 'inblock': 0, 'processor': 0, 'rchar': 5356358342, 'cancelled_write_bytes': 45056, 'outblock': 5139208, 'timeslices': 2661, 'PERF_COUNT_SW_CPU_CLOCK': 17547070414, 'wchar': 5262916589, 'rssmax': 7854752, 'numtids': 62, 'duration': 21033390.0, 'read_bytes': 0, 'time_waiting': 35814116, 'delayacct_blkio_time': 0, 'invol_ctxsw': 1884, 'majflt': 0, 'syscw': 80433, 'minflt': 92584, 'cpu_time': 17951212.0, 'vol_ctxsw': 714, 'time_oncpu': 17984466575, 'rdtsc_duration': 153196621348, 'user+system': 17951212, 'systemtime': 4074354, 'num_procs': 57, 'write_bytes': 2631274496, 'usertime': 13876858 })
+        self.assertEqual(op.proc_sums, {'syscr': 127808, 'guest_time': 0, 'inblock': 0, 'processor': 0, 'rchar': 5356358342, 'cancelled_write_bytes': 45056, 'outblock': 5139208, 'timeslices': 2661, 'PERF_COUNT_SW_CPU_CLOCK': 17547070414, 'wchar': 5262916589, 'rssmax': 7854752, 'numtids': 62, 'duration': 21033390.0, 'read_bytes': 0, 'time_waiting': 35814116, 'delayacct_blkio_time': 0, 'invol_ctxsw': 1884, 'majflt': 0, 'syscw': 80433, 'minflt': 92584, 'cpu_time': 17951212.0, 'vol_ctxsw': 714, 'time_oncpu': 17984466575, 'rdtsc_duration': 153196621348, 'systemtime': 4074354, 'num_procs': 57, 'write_bytes': 2631274496, 'usertime': 13876858 })
         op = Operation(['685000'], {'op': 'timavg'}, op_duration_method = "finish-minus-start")
         self.assertEqual((op.tags, op.duration), ({'op': 'timavg'},51278054.0))
-        self.assertEqual(op.proc_sums, {'syscr': 127808, 'guest_time': 0, 'inblock': 0, 'processor': 0, 'rchar': 5356358342, 'cancelled_write_bytes': 45056, 'outblock': 5139208, 'timeslices': 2661, 'PERF_COUNT_SW_CPU_CLOCK': 17547070414, 'wchar': 5262916589, 'rssmax': 7854752, 'numtids': 62, 'duration': 51278054.0, 'read_bytes': 0, 'time_waiting': 35814116, 'delayacct_blkio_time': 0, 'invol_ctxsw': 1884, 'majflt': 0, 'syscw': 80433, 'minflt': 92584, 'cpu_time': 17951212.0, 'vol_ctxsw': 714, 'time_oncpu': 17984466575, 'rdtsc_duration': 153196621348, 'user+system': 17951212, 'systemtime': 4074354, 'num_procs': 57, 'write_bytes': 2631274496, 'usertime': 13876858 })
+        self.assertEqual(op.proc_sums, {'syscr': 127808, 'guest_time': 0, 'inblock': 0, 'processor': 0, 'rchar': 5356358342, 'cancelled_write_bytes': 45056, 'outblock': 5139208, 'timeslices': 2661, 'PERF_COUNT_SW_CPU_CLOCK': 17547070414, 'wchar': 5262916589, 'rssmax': 7854752, 'numtids': 62, 'duration': 51278054.0, 'read_bytes': 0, 'time_waiting': 35814116, 'delayacct_blkio_time': 0, 'invol_ctxsw': 1884, 'majflt': 0, 'syscw': 80433, 'minflt': 92584, 'cpu_time': 17951212.0, 'vol_ctxsw': 714, 'time_oncpu': 17984466575, 'rdtsc_duration': 153196621348, 'systemtime': 4074354, 'num_procs': 57, 'write_bytes': 2631274496, 'usertime': 13876858 })
         self.assertEqual(set(op.to_dict().keys()), {'jobs', 'proc_sums', 'duration', 'tags', 'processes',  'exact_tag_only', 'start', 'finish', 'op_duration_method'})
         self.assertEqual(set(op.to_dict(full = True).keys()), {'jobs', 'proc_sums', 'duration', 'tags', 'processes',  'exact_tag_only', 'start', 'finish', 'intervals', 'num_runs', 'contiguous', 'op_duration_method'})
         op = Operation(['685000', '685003'], {'op': 'timavg'})
-        self.assertEqual(op.proc_sums, {'syscw': 89297, 'PERF_COUNT_SW_CPU_CLOCK': 29297709455, 'time_oncpu': 32531383700, 'usertime': 25906808, 'time_waiting': 81086345, 'timeslices': 8001, 'cancelled_write_bytes': 262144, 'outblock': 5665088, 'guest_time': 0, 'minflt': 647328, 'invol_ctxsw': 3996, 'processor': 0, 'rssmax': 10901764, 'read_bytes': 7303168, 'rdtsc_duration': 244679507379, 'inblock': 14264, 'majflt': 18, 'num_procs': 428, 'write_bytes': 2900525056, 'delayacct_blkio_time': 0, 'duration': 67847274.0, 'syscr': 206204, 'rchar': 8118076508, 'cpu_time': 32325636.0, 'systemtime': 6418828, 'wchar': 5805294586, 'vol_ctxsw': 3571, 'user+system': 32325636, 'numtids': 433})
+        self.assertEqual(op.proc_sums, {'syscw': 89297, 'PERF_COUNT_SW_CPU_CLOCK': 29297709455, 'time_oncpu': 32531383700, 'usertime': 25906808, 'time_waiting': 81086345, 'timeslices': 8001, 'cancelled_write_bytes': 262144, 'outblock': 5665088, 'guest_time': 0, 'minflt': 647328, 'invol_ctxsw': 3996, 'processor': 0, 'rssmax': 10901764, 'read_bytes': 7303168, 'rdtsc_duration': 244679507379, 'inblock': 14264, 'majflt': 18, 'num_procs': 428, 'write_bytes': 2900525056, 'delayacct_blkio_time': 0, 'duration': 67847274.0, 'syscr': 206204, 'rchar': 8118076508, 'cpu_time': 32325636.0, 'systemtime': 6418828, 'wchar': 5805294586, 'vol_ctxsw': 3571, 'numtids': 433})
 
     @db_session
     def test_op_metrics(self):
         with self.assertRaises(ValueError):
             eq.op_metrics([])
         df = eq.op_metrics(['685000', '685016'])
-        self.assertEqual(df.shape, (178,32), "wrong dataframe shape for op_metrics")
+        self.assertEqual(df.shape, (178,31), "wrong dataframe shape for op_metrics")
         top = df[['job', 'tags', 'duration']].sort_values('duration', axis=0, ascending=False)[:1]
         self.assertEqual(top.tags.values[0], {u'op_instance': u'2', u'op_sequence': u'89', u'op': u'dmput'})
         self.assertEqual(int(top.duration.values[0]), 7008334182)
@@ -323,12 +323,12 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual([int(f) for f in list(df.duration.values)], [6460188134, 7005558348])
 
         df = eq.op_metrics(['685000', '685003', '685016'])
-        self.assertEqual(df.shape,(573,32), 'wrong op_metrics shape when no tag specified')
+        self.assertEqual(df.shape,(573,31), 'wrong op_metrics shape when no tag specified')
         # pylint: disable=no-member
         self.assertEqual([int(x) for x in df.cpu_time.values][:10], [1207637., 1268652., 1225636., 1263656., 1315618., 1261654., 1209636., 1246659., 1205634., 1265656.])
 
         df = eq.op_metrics(['685000', '685003', '685016'], tags=['op:hsmget', 'op:mv'])
-        self.assertEqual(df.shape, (6,32), 'wrong op_metrics shape with tags specified')
+        self.assertEqual(df.shape, (6,31), 'wrong op_metrics shape with tags specified')
         # pylint: disable=no-member
         self.assertEqual([int(x) for x in df.cpu_time.values], [53934101, 31337553, 123305670, 2799492, 20996147, 6496944])
         # self.assertEqual([int(x) for x in df.duration.values], [6375786656, 6471901800, 6672575160, 8551396, 69194108, 17359881])
@@ -339,13 +339,13 @@ class QueryAPI(unittest.TestCase):
     @db_session
     def test_op_metrics_grouped(self):
         df = eq.op_metrics(['685000', '685003', '685016'], group_by_tag=True)
-        self.assertEqual(df.shape,(459,30), 'wrong op_metrics grouped shape when no tag specified')
+        self.assertEqual(df.shape,(459,29), 'wrong op_metrics grouped shape when no tag specified')
         self.assertEqual(list(df['tags'].values[:10]), [{u'op_instance': u'11', u'op_sequence': u'66', u'op': u'cp'}, {u'op_instance': u'15', u'op_sequence': u'79', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'247', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'251', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'255', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'259', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'263', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'267', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'271', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'30', u'op': u'cp'}], 'wrong tags ordering in grouped op_metrics')
         # pylint: disable=no-member
         self.assertEqual(list(df.cpu_time.values)[:10], [2476289.0, 2489292.0, 472905.0, 462906.0, 461906.0, 465903.0, 471904.0, 485902.0, 472905.0, 2577272.0])
 
         df = eq.op_metrics(['685000', '685003', '685016'], tags=['op:hsmget', 'op:mv'], group_by_tag=True)
-        self.assertEqual(df.shape, (2,30), 'wrong op_metrics shape with tags specified')
+        self.assertEqual(df.shape, (2,29), 'wrong op_metrics shape with tags specified')
         # pylint: disable=no-member
         self.assertEqual(list(df.tags.values), [{u'op': u'hsmget'}, {u'op': u'mv'}])
         self.assertEqual(list(df['cpu_time'].values), [208577324.0, 30292583.0])
@@ -381,7 +381,7 @@ class QueryAPI(unittest.TestCase):
         p = eq.root('685016', fmt='orm')
         self.assertEqual(p.pid, 122181)
         df = eq.root('685016', fmt='pandas')
-        self.assertEqual(df.shape, (1,50))
+        self.assertEqual(df.shape, (1,49))
         self.assertEqual(df.loc[0,'pid'], 122181)
 
     @db_session
@@ -452,7 +452,7 @@ class QueryAPI(unittest.TestCase):
         #l = eq.select((p.job.jobid, p.pid) for p in op_root_procs)[:]
         #self.assertEqual(l, [(u'685000', 6226), (u'685000', 10042), (u'685000', 10046), (u'685000', 10058), (u'685000', 10065), (u'685000', 10066), (u'685003', 29079), (u'685003', 31184), (u'685003', 31185), (u'685003', 31191), (u'685003', 31198), (u'685003', 31199), (u'685016', 122259), (u'685016', 128848), (u'685016', 128849), (u'685016', 128855), (u'685016', 128862), (u'685016', 128863)])
         df = eq.op_roots(['685000', '685003', '685016'], 'op_sequence:1', fmt='pandas')
-        self.assertEqual(df.shape, (18,50))
+        self.assertEqual(df.shape, (18,49))
         self.assertEqual(list(df['pid'].values), [6226, 10042, 10046, 10058, 10065, 10066, 29079, 31184, 31185, 31191, 31198, 31199, 122259, 128848, 128849, 128855, 128862, 128863])
 
     @db_session
@@ -531,7 +531,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(jobs.count(), 3)
         (perc, df, j_cpu) = eq.dm_calc(jobs)
         self.assertEqual(perc, 43.16)
-        self.assertEqual(df.shape, (6, 30))
+        self.assertEqual(df.shape, (6, 29))
         self.assertEqual(df['cpu_time'].sum(), 273510353.0)
         self.assertEqual(j_cpu, 633756327.0)
 
@@ -541,7 +541,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(jobs.count(), 3)
         (dm_percent, df, all_jobs_cpu_time, agg_df) = eq.dm_calc_iter(jobs) 
         self.assertEqual(dm_percent, 43.157, 'wrong dm percent')
-        self.assertEqual(df.shape, (17, 31))
+        self.assertEqual(df.shape, (17, 30))
         self.assertEqual(all_jobs_cpu_time, 633756327.0, 'wrong job cpu time sum')
         self.assertEqual(agg_df.shape, (3, 4))
         self.assertEqual(list(agg_df['dm_cpu_time'].values), [69603181.0, 61358737.0, 142548435.0])

@@ -655,7 +655,7 @@ def compressed_tar(input):
     try:
         tar = tarfile.open(input, flags)
     except Exception as e:
-        logger.error(str(e))
+        logger.error('error in processing compressed tar: ' + str(e))
         return True,None
     
     return False,tar
@@ -667,7 +667,6 @@ def compressed_tar(input):
 # Check for Experiment related variables
 #    metadata = check_and_add_workflowdb_envvars(metadata,total_env)
 
-@timing
 def submit_to_db(input, pattern, dry_run=True, drop=False):
     logger.info("submit_to_db(%s,%s,dry_run=%s,drop=%s)",input,pattern,str(dry_run),str(drop))
 
@@ -859,9 +858,8 @@ def epmt_entrypoint(args):
         interact(local=locals())
         return 0
     if args.command == 'gui':
-        from ui.index import init_app
+        from ui import init_app, app
         init_app()
-        from ui.app import app
         app.run_server(debug=False, host='0.0.0.0')
         return 0
     if args.command == 'unittest':

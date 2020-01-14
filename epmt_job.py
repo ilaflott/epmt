@@ -14,6 +14,8 @@ from datetime import datetime, timedelta
 from functools import reduce
 import time
 import pytz
+import csv
+from io import StringIO
 
 logger = getLogger(__name__)  # you can use other name
 import epmt_settings as settings
@@ -103,54 +105,101 @@ def lookup_or_create_user(username):
 # This is a generator function that will yield
 # the next process dataframe from the collated file dataframe.
 # It uses the numtids field to figure out where the process dataframe ends
-def _get_process_df(df):
-    row = 0
-    nrows = df.shape[0]
-    while (row < nrows):
+# def get_process_df(df):
+#     row = 0
+#     nrows = df.shape[0]
+#     while (row < nrows):
+#         try:
+#             thr_count = int(df['numtids'][row])
+#         except Exception as e:
+#             logger.error("%s", e)
+#             logger.error("invalid or no value set for numtids in dataframe at index %d", row)
+#             return
+#         if (thr_count < 1):
+#             logger.error('invalid value({0}) set for numtids in dataframe at index {1}'.format(thr_count, row))
+#             return
+#         # now yield a dataframe from df[row ... row+thr_count]
+#         # make sure the yielded dataframe has it's index reset to 0
+#         yield df[row:row+thr_count].reset_index(drop=True)
+#         # advance row pointer
+#         row += thr_count
+
+
+def get_proc_rows(csvfile, skiprows = 0):
+    if skiprows > 0:
+        err_msg = 'Do not know how to handle a non-zero value for skiprows while reading CSV file'
+        logger.error(err_msg)
+        raise ValueError(err_msg)
+
+    reader = csv.DictReader(csvfile, escapechar='\\')
+    # ordinarily the line below would not be a good idea,
+    # however, we are dealing with small CSV files so a gulp
+    # of the entire dataset isn't expensive 
+    rows = list(reader)
+
+    # use int as the default type for non-empty, non-string entities
+    non_numeric_keys = set(['exename', 'path', 'args', 'tags', 'hostname'])
+    for r in rows:
+        for k in r.keys():
+            if (not (k in non_numeric_keys)) and r[k]:
+                r[k] = int(r[k])
+
+    nrows = len(rows)
+    row_num = 0
+    while (row_num < nrows):
+        row = rows[row_num]
         try:
-            thr_count = int(df['numtids'][row])
+            thr_count = int(row['numtids'])
         except Exception as e:
             logger.error("%s", e)
-            logger.error("invalid or no value set for numtids in dataframe at index %d", row)
+            logger.error("invalid or no value set for numtids in dataframe at index %d", row_num)
             return
         if (thr_count < 1):
-            logger.error('invalid value({0}) set for numtids in dataframe at index {1}'.format(thr_count, row))
+            logger.error('invalid value({0}) set for numtids in dataframe at index {1}'.format(thr_count, row_num))
             return
         # now yield a dataframe from df[row ... row+thr_count]
         # make sure the yielded dataframe has it's index reset to 0
-        yield df[row:row+thr_count].reset_index(drop=True)
+        yield (rows[row_num:row_num+thr_count], row_num, nrows)
         # advance row pointer
-        row += thr_count
-            
-def load_process_from_pandas(df, h, j, u, settings):
+        row_num += thr_count
+
+
+# 'proc' is a list of dicts, where each list item is a 
+# a dictionary containing data for a single thread
+# The first list item (thread 0) is special in that it has values for fields pertaining
+# to the process such as 'exename', 'args', etc. The other threads
+# may not have process fields set.
+def load_process_from_pandas(proc, host, j, u, settings, profile):
     from pandas import Timestamp
     logger = getLogger(__name__)  # you can use other name
 
     # fallback to the host read from the filename if we don't have a hostname column
     # _t = time.time()
-    host = lookup_or_create_host(df['hostname'][0] if 'hostname' in df.columns else h)
+    # host = h
+    # host = lookup_or_create_host(df['hostname'][0] if 'hostname' in df.columns else h)
+    # host = lookup_or_create_host(h)
     # profile.load_process.host_lookup += time.time() - _t
 
-    # _t = time.time()
+    _t = time.time()
     try:
         if settings.bulk_insert:
             # we use dotdict as thin-wrapper around dict so we can use the dot syntax
             # of objects
             p = dotdict({'host_id': host.name, 'jobid': j.jobid, 'user_id': u.name})
             for key in ('exename', 'args', 'path'):
-                p[key] = df[key][0]
+                p[key] = proc[0][key]
             for key in ('pid', 'ppid', 'pgid', 'sid', 'generation'):
-                p[key] = int(df[key][0])
+                p[key] = int(proc[0][key])
         else:
             p = orm_create(Process, 
-                           exename=df['exename'][0],
-                           args=df['args'][0],
-                           path=df['path'][0],
-                           pid=int(df['pid'][0]),
-                           ppid=int(df['ppid'][0]),
-                           pgid=int(df['pgid'][0]),
-                           sid=int(df['sid'][0]),
-                           gen=int(df['generation'][0]),
+                           exename=proc[0]['exename'],
+                           args=proc[0]['args'],
+                           path=proc[0]['path'],
+                           pid=int(proc[0]['pid']),
+                           ppid=int(proc[0]['ppid']),
+                           pgid=int(proc[0]['pgid']),
+                           sid=int(proc[0]['sid']),
+                           gen=int(proc[0]['generation']),
                            host=host,
                            job=j,
                            user=u)
@@ -159,22 +208,23 @@ def load_process_from_pandas(df, h, j, u, settings):
         logger.error("%s",e)
         logger.error("Corrupted CSV or invalid input type");
         raise ValueError('Corrupted CSV or invalid input type')
-    # profile.load_process.init += time.time() - _t
+    profile.load_process.init += time.time() - _t
 
-    # _t = time.time()
-    if 'exitcode' in df.columns:
-        p.exitcode = int(df['exitcode'][0])
-    p.numtids = df.shape[0]
+    _t = time.time()
+    p.exitcode = int(proc[0]['exitcode'])
+    p.numtids = len(proc)
     try:
-        earliest_thread_start = Timestamp(df['start'].min(), unit='us')
-        latest_thread_finish = Timestamp(df['end'].max(), unit='us')
+        # FIX: Is it safe to assume that thread 0 has the lowest start time
+        # and the highest end time?
+        earliest_thread_start = Timestamp(int(proc[0]['start']), unit='us')
+        latest_thread_finish = Timestamp(int(proc[0]['end']), unit='us')
         p.start = earliest_thread_start.to_pydatetime().replace(tzinfo = pytz.utc)
         p.end = latest_thread_finish.to_pydatetime().replace(tzinfo = pytz.utc)
         p.duration = float((latest_thread_finish - earliest_thread_start).total_seconds())*float(1000000)
     except Exception as e:
         logger.error("%s",e)
         logger.error("missing or invalid value for thread start/end time");
-    # profile.load_process.misc += time.time() - _t
+    profile.load_process.misc += time.time() - _t
 
     # We have coupled the operation below with a later df.drop to save time.
     # remove per-process fields from the threads dataframe
@@ -192,16 +242,20 @@ def load_process_from_pandas(df, h, j, u, settings):
     #
     # We pass metric_sums as a python dictionary to Pony so we can do
     # complex queries in Pony using metrics in the 'metric_sums' dict.
-    # _t = time.time()
-    p.threads_df = df.to_json(orient='split')
-    # profile.load_process.to_json += time.time() - _t
+    _t = time.time()
+    #p.threads_df = df.to_json(orient='split')
+    #p.threads_df = {'columns': list(proc[0].keys()), 'data':[]}
+    #for thr in proc:
+    #    p.threads_df['data'].append(list(thr.values()))
+    p.threads_df = proc
+    profile.load_process.to_json += time.time() - _t
 
 
-    # t = time.time()
-    tags = df['tags'][0] if 'tags' in df.columns else None
+    _t = time.time()
+    tags = proc[0].get('tags')
     if tags:
         p.tags = tag_from_string(tags)
-    # profile.load_process.proc_tags += time.time() - _t
+    profile.load_process.proc_tags += time.time() - _t
 
     # compute sums for each column, but skip ones that we know should not be summed
     # we then convert the pandas series of sums to a Python dict
@@ -209,22 +263,31 @@ def load_process_from_pandas(df, h, j, u, settings):
     # saving the json to the database:
     # exception:    raise TypeError(repr(o) + " is not JSON serializable")
     # So, instead we use this workaround:
-    # _t = time.time()
-    df_summed = df.drop(labels=settings.skip_for_thread_sums+settings.per_process_fields, axis=1).sum(axis=0)
-    if sys.version_info > (3,0):
-        json_ms = df_summed.to_json()
-        thread_metric_sums = loads(json_ms)
-    else:
-        thread_metric_sums = df_summed.to_dict()
+    # df_summed = df.drop(labels=settings.skip_for_thread_sums+settings.per_process_fields, axis=1).sum(axis=0)
+    # if sys.version_info > (3,0):
+    #     json_ms = df_summed.to_json()
+    #     thread_metric_sums = loads(json_ms)
+    # else:
+    #     thread_metric_sums = df_summed.to_dict()
 
-    # we add a composite metric comprising of user+system time as this
-    # is needed in queries, and Pony doesn't allow operations on json fields
-    # in a Query
-    # TODO: can this be removed?
-    thread_metric_sums['user+system'] = thread_metric_sums.get('usertime', 0) + thread_metric_sums.get('systemtime', 0)
+    # # we add a composite metric comprising of user+system time as this
+    # # is needed in queries, and Pony doesn't allow operations on json fields
+    # # in a Query
+    # # TODO: can this be removed?
+    # thread_metric_sums['user+system'] = thread_metric_sums.get('usertime', 0) + thread_metric_sums.get('systemtime', 0)
+
+    _t = time.time()
+    fields = set(proc[0].keys()) - set(settings.skip_for_thread_sums) - set(settings.per_process_fields)
+    thread_metric_sums = {k: 0 for k in fields }
+
+    for thr in proc:
+        for k in fields:
+            thread_metric_sums[k] += thr[k]
+
     p.threads_sums = thread_metric_sums
-    p.cpu_time = float(thread_metric_sums['user+system'])
-    # profile.load_process.thread_sums += time.time() - _t
+
+    p.cpu_time = float(thread_metric_sums['usertime'] + thread_metric_sums['systemtime'])
+    profile.load_process.thread_sums += time.time() - _t
 
     return p
     
@@ -321,7 +384,7 @@ def _proc_ancestors(pid_map, proc, ancestor_pid, relations = None, descendant_ma
 
 def _create_process_tree(pid_map):
     logger = getLogger(__name__)  # you can use other name
-    logger.info("creating process tree..")
+    logger.info("  creating process tree..")
     for (pid, proc) in pid_map.items():
         ppid = proc.ppid
         if ppid in pid_map:
@@ -332,7 +395,7 @@ def _create_process_tree(pid_map):
             # If we uncomment it, then on sqlalchemy, each
             # parent will have duplicate nodes for each child.
             # orm_add_to_collection(parent.children, proc)
-    logger.debug('process tree: creating ancestor/descendant relations..')
+    logger.debug('    creating ancestor/descendant relations..')
 
     r = [] if settings.bulk_insert else None
     # descendants map
@@ -343,11 +406,70 @@ def _create_process_tree(pid_map):
 
     # r will only be non-empty if we are doing bulk-inserts
     if r:
-        logger.debug("doing bulk insert of ancestor/descendant relations")
+        logger.debug("    doing bulk insert of ancestor/descendant relations")
         t = Base.metadata.tables['ancestor_descendant_associations']
         thr_data.engine.execute(t.insert(), r)
     return desc_map
 
+def is_process_tree_computed(j):
+    return bool(j.info_dict.get('process_tree'))
+
+# High-level function to create and persist a process tree
+# It will also compute and save process inclusive_cpu_times.
+# You should be using this function instead of directly calling
+# _create_process_tree.
+# 'all_procs' and 'pid_map' are optional and if supplied
+# will reduce processing time.
+@db_session
+def mk_process_tree(j, all_procs = None, pid_map = None):
+    if type(j) == str:
+        j = Job[j]
+    info_dict = j.info_dict.copy()
+    if info_dict.get('process_tree'):
+        # logger.debug('Process tree already exists. Skipping mk_process_tree')
+        return
+    logger.info('computing process tree for job %s', j.jobid)
+    if all_procs is None:
+        _all_procs_t0 = time.time()
+        all_procs = []
+        for p in j.processes:
+            all_procs.append(p)
+        logger.debug('  re-populating %d processes took: %2.5f sec', len(all_procs), time.time() - _all_procs_t0)
+
+    if (pid_map is None):
+        _pid_t0 = time.time()
+        pid_map = {}
+        for p in all_procs:
+            # We shouldn't be seeing a pid repeat in a job. 
+            # Theoretically it's posssible but it would complicate the pid map a bit
+            # assert(p.pid not in pid_map)
+            pid_map[p.pid] = p
+        logger.debug("  recreating pid_map took: %2.5f sec", time.time() - _pid_t0)
+
+    _t1 = time.time()
+    desc_map = _create_process_tree(pid_map)
+    _t2 = time.time()
+    # make sure the inane ORM can understand that we are
+    # updating info_dict
+    info_dict.update({ 'process_tree': 1 })
+    j.info_dict = info_dict
+
+    logger.debug('  process tree took: %2.5f sec', _t2 - _t1)
+    # computing process inclusive times
+    for proc in all_procs:
+        if settings.bulk_insert:
+            # in bulk inserts, we cannnot rely on process.descendants to be
+            # available, so we use a descendants map created during the
+            # process tree creation step
+            proc_descendants = desc_map.get(proc.id, set())
+            proc.inclusive_cpu_time = float(proc.cpu_time + sum([p.cpu_time for p in proc_descendants]))
+        else:
+            proc.inclusive_cpu_time = float(proc.cpu_time + orm_sum_attribute(proc.descendants, 'cpu_time'))
+    _t3 = time.time()
+    logger.debug('  proc inclusive. cpu times computation took: %2.5f sec', _t3 - _t2)
+    orm_commit()
+    logger.debug('  commit time : %2.5f sec', time.time() - _t3)
+    return
 
 # This method will compute sums across processes/threads of a job,
 # and do post-processing on tags. It will also call _create_process_tree
@@ -356,8 +478,9 @@ def _create_process_tree(pid_map):
 # The function is tolerant to missing datastructures for all_tags
 # all_procs and pid_map. If any of them are missing, it will 
 # build them by using the data in the database/ORM.
+# 
 @timing
-def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
+def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, update_unprocessed_jobs_table = True):
     logger = getLogger(__name__)  # you can use other name
     if type(j) == str:
         j = Job[j]
@@ -370,7 +493,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
     _t0 = time.time()
 
     if all_tags == None:
-        logger.info("post-process: recreating all_tags..")
+        logger.info("  recreating all_tags..")
         all_tags = set()
         # we need to read the tags from the processes
         for p in j.processes:
@@ -379,65 +502,47 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
 
     # Add sum of tags to job
     if all_tags:
-        logger.info("post-process: found %d distinct sets of process tags",len(all_tags))
+        logger.info("  found %d distinct sets of process tags",len(all_tags))
         # convert each of the pickled tags back into a dict
         proc_sums[settings.all_tags_field] = [ loads(t) for t in sorted(all_tags) ]
     else:
-        logger.debug('post-process: no process tags found in th entire job')
+        logger.debug('  no process tags found in th entire job')
         proc_sums[settings.all_tags_field] = []
 
-    logger.debug('post-process: tag processing took: %2.5f sec', time.time() - _t0)
+    logger.debug('  tag processing took: %2.5f sec', time.time() - _t0)
 
     if all_procs is None:
         _all_procs_t0 = time.time()
         all_procs = []
         for p in j.processes:
             all_procs.append(p)
-        logger.debug('post-process: re-populating %d processes took: %2.5f sec', len(all_procs), time.time() - _all_procs_t0)
-
-    if (pid_map is None):
-        _pid_t0 = time.time()
-        _populate_all_procs = False
-        pid_map = {}
-        for p in all_procs:
-            pid_map[p.pid] = p
-        logger.debug("post-process: recreating pid_map took: %2.5f sec", time.time() - _pid_t0)
+        logger.debug('  re-populating %d processes took: %2.5f sec', len(all_procs), time.time() - _all_procs_t0)
 
     # Add all processes to job and compute process totals to add to
     # job.proc_sums field
     nthreads = 0
     threads_sums_across_procs = {}
     if all_procs:
-        _t1 = time.time()
-        desc_map = _create_process_tree(pid_map)
+        logger.info("  computing thread sums across job processes..")
         _t2 = time.time()
-        logger.debug('process tree took: %2.5f sec', _t2 - _t1)
-        # computing process inclusive times
-        logger.info("synthesizing aggregates across job processes..")
         hosts = set()
         for proc in all_procs:
             if settings.bulk_insert:
-                # in bulk inserts, we cannnot rely on process.dependants to be
-                # available, so we use a descendants map created during the
-                # process tree creation step
-                proc_descendants = desc_map.get(proc.id, set())
-                proc.inclusive_cpu_time = float(proc.cpu_time + sum([p.cpu_time for p in proc_descendants]))
                 hosts.add(proc.host_id)
             else:
-                proc.inclusive_cpu_time = float(proc.cpu_time + orm_sum_attribute(proc.descendants, 'cpu_time'))
                 hosts.add(proc.host)
             nthreads += proc.numtids
             threads_sums_across_procs = sum_dicts(threads_sums_across_procs, proc.threads_sums)
-        logger.info("job contains %d processes (%d threads)",len(all_procs), nthreads)
+        logger.info("  job contains %d processes (%d threads)",len(all_procs), nthreads)
         _t3 = time.time()
-        logger.debug('thread sums calculation took: %2.5f sec', _t3 - _t2)
+        logger.debug('  thread sums calculation took: %2.5f sec', _t3 - _t2)
         if settings.bulk_insert:
             t = Base.metadata.tables['host_job_associations']
             thr_data.engine.execute(t.insert(), [ { 'jobid': j.jobid, 'hostname': h } for h in hosts])
         else:
             j.hosts = list(hosts)
         _t4 = time.time()
-        logger.debug('adding hosts to job took: %2.5f sec', _t4 - _t3)
+        logger.debug('  adding %d host(s) to job took: %2.5f sec', len(hosts), _t4 - _t3)
 
         # we MUST NOT add all_procs to j.processes below
         # as we already associated the process with the job
@@ -446,16 +551,18 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
         # duplicate bindings.
         # orm_add_to_collection(j.processes, all_procs)
 
+    _t4 = time.time()
     proc_sums['num_procs'] = len(all_procs)
     proc_sums['num_threads'] = nthreads
     # merge the threads sums across all processes in the job.proc_sums dict
-    _t4 = time.time()
     for (k, v) in threads_sums_across_procs.items():
         proc_sums[k] = v
     j.proc_sums = proc_sums
     _t5 = time.time()
-    logger.debug('proc_sums calculation took: %2.5f sec', _t5 - _t4)
+    logger.debug('  proc_sums calculation took: %2.5f sec', _t5 - _t4)
 
+    if not settings.lazy_compute_process_tree:
+        mk_process_tree(j, all_procs)
 
     # The calculation below has been moved to before post-processing
     #
@@ -469,12 +576,26 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None):
 
     # now mark the job as processed if it was previously marked otherwise
     # for now, only sqlalchemy supports post-processing in a separate phase
-    if settings.orm == 'sqlalchemy':
-        u = orm_get(UnprocessedJob, j.jobid)
-        if u:
-            orm_delete(u)
-            logger.info('marking job as processed in database')
-            orm_commit()
+    # update_unprocessed_jobs_table option is used to speed up operations if the 
+    # job has been just created. In this case, we know the job doesn't
+    # already exist in the UnprocessedJobs table. This saves us a lookup
+    # which ordinarily should've been cheap, but because we haven't yet 
+    # done a commit/flush to the DB, the lookup appears as expensive and
+    # makes the overall post-processing function appear costly, even though
+    # it's just the cost of the db commit/flush
+    # For delayed post-processing, the lookup isn't expensive as the commit
+    # has already happened. Note this optimization doesn't really save any
+    # time. It just fixes the profiling accounting and makes the commit
+    # time appear under the commit head, and not in post processing
+    if update_unprocessed_jobs_table:
+        if settings.orm == 'sqlalchemy':
+            _t6 = time.time()
+            u = orm_get(UnprocessedJob, pk=j.jobid)
+            if u:
+                orm_delete(u)
+                logger.info('  marking job as processed in database')
+                orm_commit()
+            logger.debug('  checking/updating unprocessed jobs table (includes implicit commit) took: %2.5f sec', time.time() - _t6)
     return True
 
 
@@ -614,14 +735,17 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     df_process_time = 0
     proc_tag_process_time = 0
     load_process_from_df_time = 0
-    # profile = dotdict()
-    # profile.load_process = dotdict({'init': 0, 'host_lookup': 0, 'misc': 0, 'proc_tags': 0, 'thread_sums': 0, 'to_json': 0})
+    proc_misc_time = 0
+    read_csv_time = 0
+    tar_extract_time = 0
+    profile = dotdict()
+    profile.load_process = dotdict({'init': 0, 'misc': 0, 'proc_tags': 0, 'thread_sums': 0, 'to_json': 0})
 
     for hostname, files in filedict.items():
         logger.debug("Processing host %s",hostname)
         # we only need to a lookup_or_create_host if papiex doesn't
         # have a hostname column
-        # h = lookup_or_create_host(hostname)
+        h = lookup_or_create_host(hostname) if hostname else None
         cntmax = len(files)
         cnt = 0
         nrecs = 0
@@ -638,38 +762,49 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 #
 # We need rows to skip
 # oldproctag (after comment char) is outdated as a process tag but kept for posterities sake
-            rows,oldproctag = extract_tags_from_comment_line(f,tarfile=tarfile)
-            logger.debug("%s had %d comment rows, oldproctags %s",f,rows,oldproctag)
+            skiprows,oldproctag = extract_tags_from_comment_line(f,tarfile=tarfile)
+            logger.debug("%s had %d comment rows, oldproctags %s",f,skiprows,oldproctag)
 
             if tarfile:
                 info = tarfile.getmember(f)
                 flo = tarfile.extractfile(info)
             else:
                 flo = f
+
+            csv_file = StringIO(flo.read().decode('utf8'))
                 
-            from pandas import read_csv
-            collated_df = read_csv(flo,
-                                   sep=",",
-                                   #dtype=dtype_dic, 
-                                   converters=conv_dic,
-                                   skiprows=rows, escapechar='\\')
+            # from pandas import read_csv
+            # collated_df = read_csv(flo,
+            #                        sep=",",
+            #                        #dtype=dtype_dic, 
+            #                        converters=conv_dic,
+            #                        skiprows=rows, escapechar='\\')
             file_io_time += time.time() - _file_io_start_ts
-            if collated_df.empty:
-                logger.error("Something wrong with file %s, readcsv returned empty, skipping...",f)
-                continue
+            # if collated_df.empty:
+            #     logger.error("Something wrong with file %s, readcsv returned empty, skipping...",f)
+            #     continue
+
+            # in case we cannot figure out the hostname from the file, we
+            # will use the papiex data. To reduce the expense of host lookups
+            # we want to do this only once per job. This mechanism assumes
+            # all the processes for a job reside on the same host
+            # if not(h) and 'hostname' in collated_df:
+            #      h = lookup_or_create_host(collated_df['hostname'][0])
 
 # Make Process/Thread/Metrics objects in DB
             # there are 1 or more process dataframes in the collated df
             # let's iterate over them
             _df_process_start_ts = time.time()
-            for df in _get_process_df(collated_df):
-                # we provide the hostname argument as a fallback in case
-                # the papiex data doesn't have a hostname column
+           
+            # we ignore the second value returned by get_proc_rows
+            # (rownum). The third is just a fixed value (number of
+            # rows in csv). 
+            for (proc, _, nrows) in get_proc_rows(csv_file, skiprows):
                 _load_process_from_df_start_ts = time.time()
-                p = load_process_from_pandas(df, hostname, j, u, settings)
+                p = load_process_from_pandas(proc, h, j, u, settings, profile)
                 load_process_from_df_time += time.time() - _load_process_from_df_start_ts
                 if not p:
-                    logger.error("Failed loading from pandas, file %s!",f);
+                    logger.error("Failed loading process, file %s!",f);
                     continue
 # If using old version of papiex, process tags are in the comment field
                 _proc_tag_start_ts = time.time()
@@ -682,6 +817,10 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                     all_tags.add(dumps(p.tags, sort_keys=True))
                 proc_tag_process_time += time.time() - _proc_tag_start_ts
 
+                _t = time.time()
+                # We shouldn't be seeing a pid repeat in a job. 
+                # Theoretically it's posssible but it would complicate the pid map a bit
+                # assert(p.pid not in pid_map)
                 pid_map[p.pid] = p
                 all_procs.append(p)
 # Compute duration of job
@@ -707,16 +846,18 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 cnt += 1
                 nrecs += p.numtids
                 csvt = datetime.now() - csv
-                if ((nrecs % 1000) == 0) or \
-                   ((cntmax==1) and (nrecs == collated_df.shape[0])) or \
-                   ((cntmax > 1) and (fileno == cntmax)) :
+                if (((nrecs % 1000) == 0) or \
+                    ((cntmax==1) and (nrecs == nrows)) or \
+                    ((cntmax > 1) and (fileno == cntmax))):
                     if cntmax > 1:
                         # many small files each with a single process
                         logger.info("Did %d (%d/%d files)...%.2f/sec",nrecs,fileno, cntmax,nrecs/csvt.total_seconds())
                     else:
                         # collated file
-                        logger.info("Did %d (%d in file)...%.2f/sec",nrecs,collated_df.shape[0],nrecs/csvt.total_seconds())
+                        logger.info("Did %d (%d in file)...%.2f/sec",nrecs,nrows,nrecs/csvt.total_seconds())
                     # break
+                proc_misc_time += time.time() - _t
+
             df_process_time += time.time() - _df_process_start_ts
 
 #
@@ -725,10 +866,12 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 
 #    stdout.write('\b')            # erase the last written char
     logger.debug('file I/O time took: %2.5f sec', file_io_time)
-    logger.debug('process df ops took: %2.5f sec', df_process_time)
-    logger.debug('  - load process from df took: %2.5f sec', load_process_from_df_time)
-    # logger.debug('    - {0}'.format(profile.load_process))
+    logger.debug('process load ops took: %2.5f sec', df_process_time)
+    logger.debug('  - load process from dictlist took: %2.5f sec', load_process_from_df_time)
+    logger.debug('    - {0}'.format([ "%s: %2.5f sec" % (k, v)  for (k,v) in profile.load_process.items()]))
     logger.debug('  - tag processing took: %2.5f sec', proc_tag_process_time)
+    logger.debug('  - proc misc. processing took: %2.5f sec', proc_misc_time)
+    logger.debug('  - get_proc_rows took: %2.5f sec', df_process_time - load_process_from_df_time - proc_tag_process_time - proc_misc_time)
 
     if filedict:
         if not didsomething:
@@ -763,10 +906,11 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         _b0 = time.time()
         #thr_data.engine.execute(Process.__table__.insert(), all_procs)
         Session.bulk_insert_mappings(Process, all_procs)
-        logger.info('bulk insert time: %2.5f sec', time.time() - _b0)
+        logger.info('bulk insert of processes took: %2.5f sec', time.time() - _b0)
 
     
     if settings.post_process_job_on_ingest:
+        # _post_process_start_ts = time.time()
         if settings.bulk_insert:
             # when doing bulk inserts we don't pass in all_procs
             # and pid_map as they have to be recreated using
@@ -779,9 +923,10 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             # such as j.processes work after the processes were
             # bulk-inserted.
             orm_commit()
-            post_process_job(j, all_tags)
+            post_process_job(j, all_tags, None, None, False)
         else:
-            post_process_job(j, all_tags, all_procs, pid_map)
+            post_process_job(j, all_tags, all_procs, pid_map, False)
+        # logger.debug('post process job took: %2.5f sec', time.time() - _post_process_start_ts)
     else:
         orm_create(UnprocessedJob, jobid=j.jobid)
         logger.info('Skipped post-processing and marked job as **UNPROCESSED**')

@@ -18,7 +18,11 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
+<<<<<<< HEAD
 _version = (2,2,6)
+=======
+_version = (3,0,1)
+>>>>>>> sow3-phase2
 
 def version():
     return _version
@@ -60,7 +64,7 @@ def set_logging(intlvl = 0, check = False):
     rootLogger.addHandler(fileHandler)
 
     consoleHandler = logging.StreamHandler()
-    consoleFormatter = logging.Formatter("%(levelname)s:%(name)s:%(message)s")
+    consoleFormatter = logging.Formatter("%(levelname)7.7s: %(name)15.15s: %(message)s")
     consoleHandler.setFormatter(consoleFormatter)
     rootLogger.addHandler(consoleHandler)
 
@@ -140,6 +144,9 @@ def init_settings(settings):
     if not hasattr(settings, 'post_process_job_on_ingest'):
         logger.warning("missing settings.post_process_job_on_ingest")
         settings.post_process_job_on_ingest = True
+    if not hasattr(settings, 'lazy_compute_process_tree'):
+        logger.warning("missing settings.lazy_compute_process_tree")
+        settings.lazy_compute_process_tree = True
     if ((settings.orm != 'sqlalchemy') and (not(settings.post_process_job_on_ingest))):
         err_msg += '\n - post_process_job_on_ingest set as False is only permitted with sqlalchemy'
     if not hasattr(settings, 'db_params'):
@@ -178,7 +185,7 @@ def timing(f):
         ts = time()
         result = f(*args, **kw)
         te = time()
-        logger.debug('%r function took: %2.4f sec' % (f.__name__, te-ts))
+        logger.info('%r took: %2.5f sec' % (f.__name__, te-ts))
         return result
     return wrap
 
@@ -509,8 +516,8 @@ def get_metadata_env_changes(metadata):
     stop_env=metadata['job_el_env']
     (added, removed, modified, same) = compare_dicts(stop_env, start_env)
     env_changes = {}
-    for e in same:
-        logger.debug("Found "+e+"\t"+start_env[e])
+    # for e in same:
+    #    logger.debug("Found "+e+"\t"+start_env[e])
     for e in modified:
         logger.debug("Different at stop "+e+"\t"+stop_env[e])
         env_changes[e] = stop_env[e]
