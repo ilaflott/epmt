@@ -18,11 +18,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-<<<<<<< HEAD
-_version = (2,2,6)
-=======
 _version = (3,0,1)
->>>>>>> sow3-phase2
 
 def version():
     return _version
