@@ -362,7 +362,13 @@ def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
 def _proc_ancestors(pid_map, proc, ancestor_pid, relations = None, descendant_map = {}):
     
     if ancestor_pid in pid_map:
-        ancestor = pid_map[ancestor_pid]
+        entries = pid_map[ancestor_pid]
+        if len(entries) == 1:
+            # common case no hash collision
+            ancestor = entries[0]
+        else:
+            # get the actual parent from the list of possible parent entries
+            ancestor = _disambiguate_parent(entries, proc)
         if ancestor.id in descendant_map:
             descendant_map[ancestor.id].add(proc)
         else:
@@ -381,28 +387,70 @@ def _proc_ancestors(pid_map, proc, ancestor_pid, relations = None, descendant_ma
         _proc_ancestors(pid_map, proc, ancestor.ppid, relations, descendant_map)
     return (relations, descendant_map)
 
+# Makes a pid map (a dictionary referenced by PIDs).
+# Each dict entry is a list containing one or more Process
+# (or dotdict if using bulk inserts) objects.
+def _mk_pid_map(all_procs):
+    pid_map = {}
+    for p in all_procs:
+        if p.pid in pid_map:
+            logger.debug('handled hash collision for PID (%d) -- process execed', p.pid)
+            pid_map[p.pid].append(p)
+        else:
+            pid_map[p.pid] = [p]
+    return pid_map
+
+
+# determines the actual parent of a process give a list
+# of candidates whose PID matches the PPID of proc.
+# proc is a dotdict or a Process object
+def _disambiguate_parent(entries, proc):
+    sorted_entries = sorted(entries, key = lambda p: p.start)
+    for p in sorted_entries:
+        if (p.end > proc.start):
+            # if (p.start > proc.start):
+            #     for x in sorted_entries:
+            #         print(x.pid, x.ppid, x.exename, x.start, x.end)
+            #     print('---')
+            #     print(proc.pid, proc.ppid, proc.exename, proc.start, proc.end)
+            # assert(p.start < proc.start)
+            return p
+    # each process has a unique parent, so we know
+    # control must never come here else something's broken
+    assert(False)
+
 
 def _create_process_tree(pid_map):
     logger = getLogger(__name__)  # you can use other name
     logger.info("  creating process tree..")
-    for (pid, proc) in pid_map.items():
-        ppid = proc.ppid
-        if ppid in pid_map:
-            parent = pid_map[ppid]
-            proc.parent = parent
-            # commented out line below as it's automatically
-            # implied by the proc.parent assignment above.
-            # If we uncomment it, then on sqlalchemy, each
-            # parent will have duplicate nodes for each child.
-            # orm_add_to_collection(parent.children, proc)
+    for (pid, procs) in pid_map.items():
+        for proc in procs:
+            ppid = proc.ppid
+            if ppid in pid_map:
+                entries = pid_map[ppid]
+                if len(entries) == 1:
+                    # common case no hash collision
+                    parent = entries[0]
+                else:
+                    # the process must have execed so we have
+                    # multiple records for the PID.
+                    for e in entries: assert(e.pid == ppid)
+                    parent = _disambiguate_parent(entries, proc)
+                proc.parent = parent
+                # commented out line below as it's automatically
+                # implied by the proc.parent assignment above.
+                # If we uncomment it, then on sqlalchemy, each
+                # parent will have duplicate nodes for each child.
+                # orm_add_to_collection(parent.children, proc)
     logger.debug('    creating ancestor/descendant relations..')
 
     r = [] if settings.bulk_insert else None
     # descendants map
     desc_map = {}
-    for (pid, proc) in pid_map.items():
-        ppid = proc.ppid
-        (r, desc_map) = _proc_ancestors(pid_map, proc, ppid, r, desc_map)
+    for (pid, procs) in pid_map.items():
+        for proc in procs:
+            ppid = proc.ppid
+            (r, desc_map) = _proc_ancestors(pid_map, proc, ppid, r, desc_map)
 
     # r will only be non-empty if we are doing bulk-inserts
     if r:
@@ -438,12 +486,7 @@ def mk_process_tree(j, all_procs = None, pid_map = None):
 
     if (pid_map is None):
         _pid_t0 = time.time()
-        pid_map = {}
-        for p in all_procs:
-            # We shouldn't be seeing a pid repeat in a job. 
-            # Theoretically it's posssible but it would complicate the pid map a bit
-            # assert(p.pid not in pid_map)
-            pid_map[p.pid] = p
+        pid_map = _mk_pid_map(all_procs)
         logger.debug("  recreating pid_map took: %2.5f sec", time.time() - _pid_t0)
 
     _t1 = time.time()
