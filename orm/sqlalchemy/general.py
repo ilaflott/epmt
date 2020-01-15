@@ -126,6 +126,14 @@ def setup_db(settings,drop=False,create=True):
 def orm_get(model, pk=None, **kwargs):
     return Session.query(model).get(pk) if (pk != None) else Session.query(model).filter_by(**kwargs).one_or_none()
 
+# def orm_get_or_create(model, **kwargs):
+#     o = Session.query(model).with_for_update(of=model).filter_by(**kwargs).one()
+#     if not o:
+#         o = model(**kwargs)
+#         Session.add(o)
+#         Session.commit()
+#     return o
+
 
 def orm_findall(model, **kwargs):
     return Session.query(model).filter_by(**kwargs)

@@ -8,6 +8,7 @@ from random import randint
 from imp import find_module
 from glob import glob
 from sys import stdout, stderr
+from json import dumps, loads
 import errno
 
 from shutil import rmtree
@@ -634,11 +635,65 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True):
     if dry_run and drop:
         logger.error("You can't drop tables and do a dry run")
         return(False)
-    r = True
-    for f in dirs:
-        r = submit_to_db(f,settings.input_pattern,dry_run=dry_run,drop=drop)
-        if r is False and not keep_going:
-            return(r)
+
+    import multiprocessing
+
+    def submit_fn(tid, work_list, ret_dict):
+        from os import getpid
+        logger.info('Worker %d, PID %d', tid, getpid())
+        retval = {}
+        for f in work_list:
+            r = submit_to_db(f,settings.input_pattern,dry_run=dry_run,drop=drop)
+            retval[f] = r
+            if r is False and not keep_going:
+                break
+        ret_dict[tid] = dumps(retval)
+        return
+    # we shouldn't use more processors than the number of discrete
+    # work items. We don't currently split the work within a directory.
+    # If we a directory is passed we assume it's a single work item.
+    # TODO: Get a full files list from all the directories passed and
+    # then split the list of files for a better distribution and more
+    # optimal parallelization.
+    num_cores = multiprocessing.cpu_count()
+    logger.info('You are running on a machine with %d cores', num_cores)
+    nprocs = num_cores
+    nprocs = min(nprocs, len(dirs))
+    logger.info('using %d lightweight processes', nprocs)
+    from numpy import array_split
+    import time
+    procs = []
+    worker_id = 0
+    manager = multiprocessing.Manager()
+    return_dict = manager.dict()
+    start_ts = time.time()
+    # pool = multiprocessing.Pool(processes=nprocs)
+    # work_chunks = [list(x) for x in array_split(dirs, nprocs)]
+    # results = [pool.apply_async(submit_fn, (i, work_chunks[i])) for i in range(nprocs)]
+    # print([res.get() for res in results])
+    for work in array_split(dirs, nprocs):
+        logger.info('Worker %d will work on %s', worker_id, str(work))
+        process = multiprocessing.Process(target = submit_fn, args=(worker_id, work, return_dict))
+        procs.append(process)
+        worker_id += 1
+    for p in procs:
+        p.start()
+    for p in procs:
+        p.join()
+    fini_ts = time.time()
+    r = { k: loads(return_dict[k]) for k, v in return_dict.items() }
+    total_procs = 0
+    jobs_imported = []
+    for v in r.values():
+        for (f, res) in v.items():
+            if not res:
+                logger.error('Error in importing: %s', f)
+            else:
+                (jobid, process_count) = res
+                jobs_imported.append(jobid)
+                total_procs += process_count
+    if jobs_imported:
+        logger.info('Imported %d jobs (%d processes) at %2.2f processes/sec using %d workers', len(jobs_imported), total_procs, total_procs/(fini_ts - start_ts), nprocs)
     return(r)
 
 def compressed_tar(input):
@@ -718,11 +773,12 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
     from epmt_job import ETL_job_dict
     if setup_db(settings,drop) == False:
         return False
-    j = ETL_job_dict(metadata,filedict,settings,tarfile=tar)
-    if not j:
+    r = ETL_job_dict(metadata,filedict,settings,tarfile=tar)
+    if not r:
         return False
+    (j, process_count) = r
     logger.info("Committed job %s to database: %s",j.jobid,j)
-    return True
+    return (j.jobid, process_count)
 
 
 def stage_job(dir,collate=True,compress_and_tar=True):

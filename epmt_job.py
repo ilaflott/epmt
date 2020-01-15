@@ -95,10 +95,11 @@ def lookup_or_create_host(hostname):
 
 def lookup_or_create_user(username):
     logger = getLogger(__name__)  # you can use other name
-    user = orm_get(User, username)
-    if user is None:
-        logger.info("Creating user %s",username)
-        user = orm_create(User, name=username)
+    user = orm_get_or_create(User, name = username)
+    # user = orm_get(User, username)
+    # if user is None:
+    #     logger.info("Creating user %s",username)
+    #     user = orm_create(User, name=username)
     return user
 
 
@@ -754,7 +755,14 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 #
 # Create user and job object
 #
-    u = lookup_or_create_user(username)
+    from sqlalchemy import exc
+    try:
+        u = lookup_or_create_user(username)
+    except exc.IntegrityError:
+        # The insert failed due to a concurrent transaction  
+        Session.rollback()
+        # the user must exist now
+        u = lookup_or_create_user(username)
     j = create_job(jobid,u)
     if not j: # FIX! We might have leaked a username to the database here
         return None
@@ -982,7 +990,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     logger.info("Staged import of %d processes took %s, %f processes/sec",
                 len(all_procs), now - then,len(all_procs)/float((now-then).total_seconds()))
     print("Imported successfully - job:",jobid,"processes:",len(all_procs),"rate:",len(all_procs)/float((now-then).total_seconds()))
-    return j
+    return (j, len(all_procs))
 
 #
 # We should remove below here

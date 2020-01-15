@@ -1,11 +1,5 @@
 from os import environ
 import epmt_settings as settings
-
-if settings.orm == 'sqlalchemy':
-    from .sqlalchemy import *
-else:
-    from .pony import *
-
 from .op import *
 
 #
@@ -30,3 +24,9 @@ def orm_col_len(c):
         return len(c)
     except:
         return c.count()
+
+if settings.orm == 'sqlalchemy':
+    from .sqlalchemy import *
+else:
+    from .pony import *
+
