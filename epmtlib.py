@@ -31,12 +31,12 @@ def get_username():
     return getpwuid( getuid() )[ 0 ]
 
 # if check is set, then we will bail if logging has already been initialized
-def set_logging(intlvl = 0, check = False):
+def epmt_logging_init(intlvl = 0, check = False):
     import logging
     import epmt_settings as settings
 
-    if check and hasattr(set_logging, 'initialized'): return
-    set_logging.initialized = True
+    if check and hasattr(epmt_logging_init, 'initialized'): return
+    epmt_logging_init.initialized = True
     if intlvl == None:
         intlvl = 0
     intlvl = int(intlvl)

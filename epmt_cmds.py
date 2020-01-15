@@ -17,7 +17,7 @@ from logging import getLogger, basicConfig, DEBUG, INFO, WARNING, ERROR
 logger = getLogger(__name__)  # you can use other name
 import epmt_settings as settings
 
-from epmtlib import get_username, set_logging, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm, timing, dict_filter, check_fix_metadata
+from epmtlib import get_username, epmt_logging_init, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm, timing, dict_filter, check_fix_metadata
 
 def find_diffs_in_envs(start_env,stop_env):
     env = {}
@@ -837,10 +837,10 @@ def epmt_entrypoint(args):
     if args.verbose == None:
         args.verbose = 0
     logger = getLogger(__name__)  # you can use other name
-    set_logging(args.verbose, check=False)
+    epmt_logging_init(args.verbose, check=False)
     init_settings(settings)
     if not args.verbose:
-        set_logging(settings.verbose, check=True)
+        epmt_logging_init(settings.verbose, check=True)
 
 
     # Here it's up to each command to validate what it is looking for

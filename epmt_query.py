@@ -8,10 +8,10 @@ from logging import getLogger
 import epmt_settings as settings
 
 # do NOT do any epmt imports until logging is set up
-# using set_logging, other than import set_logging
-from epmtlib import set_logging
+# using epmt_logging_init, other than import epmt_logging_init
+from epmtlib import epmt_logging_init
 logger = getLogger(__name__)  # you can use other name
-set_logging(settings.verbose if hasattr(settings, 'verbose') else 0, check=True)
+epmt_logging_init(settings.verbose if hasattr(settings, 'verbose') else 0, check=True)
 
 ### Put EPMT imports below, after logging is set up
 from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key, stringify_dicts, version, version_str

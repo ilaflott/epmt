@@ -75,11 +75,11 @@ class EPMTSubmit(unittest.TestCase):
     def test_corrupted_csv(self):
         datafiles='test/data/misc/corrupted-csv.tgz'
         # quell the error message
-        set_logging(-2)
+        epmt_logging_init(-2)
         with self.assertRaises(ValueError):
             epmt_submit(glob(datafiles), dry_run=False)
         # restore logging level
-        set_logging(-1)
+        epmt_logging_init(-1)
 
     def check_lazy_compute(self, j, lazy_eval):
         from epmt_job import is_process_tree_computed, mk_process_tree
