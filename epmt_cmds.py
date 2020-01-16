@@ -635,6 +635,9 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1):
     if dry_run and drop:
         logger.error("You can't drop tables and do a dry run")
         return(False)
+    if drop:
+        from orm import orm_drop_db
+        orm_drop_db()
 
     import multiprocessing
 
@@ -643,7 +646,7 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1):
         logger.info('Worker %d, PID %d', tid, getpid())
         retval = {}
         for f in work_list:
-            r = submit_to_db(f,settings.input_pattern,dry_run=dry_run,drop=drop)
+            r = submit_to_db(f,settings.input_pattern,dry_run=dry_run)
             retval[f] = r
             if r is False and not keep_going:
                 break
@@ -724,8 +727,8 @@ def compressed_tar(input):
 # Check for Experiment related variables
 #    metadata = check_and_add_workflowdb_envvars(metadata,total_env)
 
-def submit_to_db(input, pattern, dry_run=True, drop=False):
-    logger.info("submit_to_db(%s,%s,dry_run=%s,drop=%s)",input,pattern,str(dry_run),str(drop))
+def submit_to_db(input, pattern, dry_run=True):
+    logger.info("submit_to_db(%s,%s,dry_run=%s)",input,pattern,str(dry_run))
 
     err,tar = compressed_tar(input)
     if err:
@@ -773,7 +776,7 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
 # Now we touch the Database
     from orm import setup_db
     from epmt_job import ETL_job_dict
-    if setup_db(settings,drop) == False:
+    if setup_db(settings,False) == False:
         return False
     r = ETL_job_dict(metadata,filedict,settings,tarfile=tar)
     if not r:

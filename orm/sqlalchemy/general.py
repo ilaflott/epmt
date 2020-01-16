@@ -133,7 +133,7 @@ def orm_get(model, pk=None, **kwargs):
 #         Session.add(o)
 #         Session.commit()
 #     return o
-
+ 
 
 def orm_findall(model, **kwargs):
     return Session.query(model).filter_by(**kwargs)

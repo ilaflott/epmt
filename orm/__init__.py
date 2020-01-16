@@ -5,6 +5,9 @@ from .op import *
 #
 # Below are API calls that have the same implementation on all ORMs
 #
+
+# Note, the function below is not ATOMIC! There is a potential
+# for a race condition here.
 def orm_get_or_create(model, **kwargs):
     return (orm_get(model, **kwargs) or orm_create(model, **kwargs))
 
