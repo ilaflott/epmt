@@ -18,7 +18,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (3,1,0)
+_version = (3,1,1)
 
 def version():
     return _version
@@ -60,7 +60,7 @@ def epmt_logging_init(intlvl = 0, check = False):
     rootLogger.addHandler(fileHandler)
 
     consoleHandler = logging.StreamHandler()
-    consoleFormatter = logging.Formatter("%(levelname)7.7s: %(name)15.15s: %(message)s")
+    consoleFormatter = logging.Formatter("[PID %(process)d] %(levelname)7.7s: %(name)s: %(message)s")
     consoleHandler.setFormatter(consoleFormatter)
     rootLogger.addHandler(consoleHandler)
 

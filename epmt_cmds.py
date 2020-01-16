@@ -635,20 +635,36 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1):
     if dry_run and drop:
         logger.error("You can't drop tables and do a dry run")
         return(False)
+    if (ncpus > 1) and (settings.orm != 'sqlalchemy'):
+        logger.error('Parallel submit is only supported for SQLAlchemy at present')
+        return False
+    if drop and (ncpus > 1):
+        # FIX:
+        # when we do drop tables we end up calling setup_db
+        # However, this initializes certain variables and later 
+        # when a parallel submit happens setup_db is skipped in the
+        # spawned processes. This means SQLA Session isn't initialized
+        # with the newly created tables in any of the processes except the
+        # master. In short we are unable to support the --drop option
+        # when using multiple processes. This should be fixable.
+        logger.error('At present we do not support dropping tables in a parallel submit mode. Please use either --drop or --num-cpus')
+        return(False)
+
     if drop:
-        from orm import orm_drop_db
+        from orm import orm_drop_db, setup_db
+        setup_db(settings)
         orm_drop_db()
 
     import multiprocessing
 
     def submit_fn(tid, work_list, ret_dict):
         from os import getpid
-        logger.info('Worker %d, PID %d', tid, getpid())
+        logger.debug('Worker %d, PID %d', tid, getpid())
         retval = {}
         for f in work_list:
             r = submit_to_db(f,settings.input_pattern,dry_run=dry_run)
             retval[f] = r
-            if r is False and not keep_going:
+            if r[0] is False and not keep_going:
                 break
         ret_dict[tid] = dumps(retval)
         return
@@ -671,13 +687,13 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1):
         return_dict = {}
         submit_fn(worker_id, dirs, return_dict)
     else:
-        logger.info('using %d worker processes', nprocs)
+        logger.info('Using %d worker processes', nprocs)
         from numpy import array_split
         procs = []
         manager = multiprocessing.Manager()
         return_dict = manager.dict()
         for work in array_split(dirs, nprocs):
-            logger.info('Worker %d will work on %s', worker_id, str(work))
+            logger.debug('Worker %d will work on %s', worker_id, str(work))
             process = multiprocessing.Process(target = submit_fn, args=(worker_id, work, return_dict))
             procs.append(process)
             worker_id += 1
@@ -689,16 +705,18 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1):
     r = { k: loads(return_dict[k]) for k, v in return_dict.items() }
     total_procs = 0
     jobs_imported = []
+    logger.info('**** Import Summary ****')
     for v in r.values():
         for (f, res) in v.items():
-            if not res:
-                logger.error('Error in importing: %s', f)
+            if res[0] is False:
+                logger.error('Error in importing: %s: %s', f, res[1])
+            elif res[0] is None:
+                logger.warning('%s: %s', res[1], f)
             else:
-                (jobid, process_count) = res
+                (jobid, process_count) = res[-1]
                 jobs_imported.append(jobid)
                 total_procs += process_count
-    if jobs_imported:
-        logger.info('Imported %d jobs (%d processes) in %2.2f sec at %2.2f processes/sec using %d workers (at %2.2f processes/sec per worker)', len(jobs_imported), total_procs, (fini_ts - start_ts), total_procs/(fini_ts - start_ts), nprocs, total_procs/(nprocs*(fini_ts - start_ts)))
+    logger.info('Imported %d jobs (%d processes) in %2.2f sec at %2.2f procs/sec, %d workers', len(jobs_imported), total_procs, (fini_ts - start_ts), total_procs/(fini_ts - start_ts), nprocs)
     return(r if jobs_imported else False)
 
 def compressed_tar(input):
@@ -732,7 +750,7 @@ def submit_to_db(input, pattern, dry_run=True):
 
     err,tar = compressed_tar(input)
     if err:
-        return False
+        return (False, 'Error processing compressed tar')
 #    None
 #    if (input.endswith("tar.gz") or input.endswith("tgz")):
 #        import tarfile
@@ -750,7 +768,7 @@ def submit_to_db(input, pattern, dry_run=True):
             info = tar.getmember("./job_metadata")
         except KeyError:
             logger.error('ERROR: Did not find %s in tar archive' % "job_metadata")
-            return False
+            return (False, 'Did not find metadata in tar archive')
         else:
             logger.info('%s is %d bytes in archive' % (info.name, info.size))
             f = tar.extractfile(info)
@@ -761,7 +779,7 @@ def submit_to_db(input, pattern, dry_run=True):
         filedict = get_filedict(input,settings.input_pattern)
 
     if not metadata:
-        return False
+        return (False, 'Did not find valid metadata')
 
     logger.info("%d hosts found: %s",len(filedict.keys()),filedict.keys())
     for h in filedict.keys():
@@ -771,19 +789,19 @@ def submit_to_db(input, pattern, dry_run=True):
     if dry_run:
 #        check_workflowdb_dict(metadata,pfx="exp_")
         logger.info("Dry run finished, skipping DB work")
-        return True
+        return (True, 'Dry run finished, skipping DB work')
 
 # Now we touch the Database
     from orm import setup_db
-    from epmt_job import ETL_job_dict
     if setup_db(settings,False) == False:
-        return False
+        return (False, 'Error in DB setup')
+    from epmt_job import ETL_job_dict
     r = ETL_job_dict(metadata,filedict,settings,tarfile=tar)
-    if not r:
-        return False
-    (j, process_count) = r
-    logger.info("Committed job %s to database: %s",j.jobid,j)
-    return (j.jobid, process_count)
+    # if not r[0]:
+    return r
+    # (j, process_count) = r[-1]
+    # logger.info("Committed job %s to database: %s",j.jobid,j)
+    # return (j.jobid, process_count)
 
 
 def stage_job(dir,collate=True,compress_and_tar=True):

@@ -103,7 +103,7 @@ if (__name__ == "__main__"):
     submit_parser.add_argument('--drop',action='store_true',help="Drop all tables/data and recreate before importing")
     from epmtlib import suggested_cpu_count_for_submit
     optimal_cpus = suggested_cpu_count_for_submit()
-    submit_parser.add_argument('-p', '--num-cpus', type=int, nargs='?', default=1, const=optimal_cpus, help='Number of parallel processes to use for submission. You should specify no more than the number of available processors on your machine. If this option is selected, but no value is specified, then the optimal value ({0}) will be used, based on your hardware resources.'.format(optimal_cpus))
+    submit_parser.add_argument('-p', '--num-cpus', type=int, nargs='?', default=1, const=optimal_cpus, help='Number of parallel processes to use for submission. You should specify no more than the number of available processors on your machine. If this option is selected, but no value is specified, then the optimal value ({0}) will be used, based on your hardware resources. Note: This option is only supported for SQLAlchemy ORM at present.'.format(optimal_cpus))
 
     # DBSize
     dbsize_parser = subparser.add_parser('dbsize', help="Find detailed size of database",

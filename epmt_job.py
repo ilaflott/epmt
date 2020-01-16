@@ -668,7 +668,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     # it will not waste time re-checking (since it marks the metadata as checked)
     metadata = check_fix_metadata(raw_metadata) 
     if metadata is False:
-        return False
+        return (False, 'Error: Could not get valid metadata')
 
     job_status = {}
     if metadata.get('job_pl_scriptname'):
@@ -765,7 +765,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         u = lookup_or_create_user(username)
     j = create_job(jobid,u)
     if not j: # FIX! We might have leaked a username to the database here
-        return None
+        return (None, 'Job already in database')
     j.jobname = jobname
     j.exitcode = exitcode
 # fix below
@@ -796,7 +796,15 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         logger.debug("Processing host %s",hostname)
         # we only need to a lookup_or_create_host if papiex doesn't
         # have a hostname column
-        h = lookup_or_create_host(hostname) if hostname else None
+        h = None
+        if hostname:
+            try:
+                h = lookup_or_create_host(hostname)
+            except exc.IntegrityError:
+                # The insert failed due to a concurrent transaction  
+                Session.rollback()
+                # the host must exist now
+                h = lookup_or_create_host(hostname)
         cntmax = len(files)
         cnt = 0
         nrecs = 0
@@ -927,7 +935,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     if filedict:
         if not didsomething:
             logger.warning("Something went wrong in parsing CSV files")
-            return False
+            return (False, "Error parsing CSV")
     else:
         logger.warning("job %s, user %s, jobname %s has no CSV data",jobid,username,jobname)
 
@@ -990,7 +998,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     logger.info("Staged import of %d processes took %s, %f processes/sec",
                 len(all_procs), now - then,len(all_procs)/float((now-then).total_seconds()))
     print("Imported successfully - job:",jobid,"processes:",len(all_procs),"rate:",len(all_procs)/float((now-then).total_seconds()))
-    return (j, len(all_procs))
+    return (True, 'Import successful', (j.jobid, len(all_procs)))
 
 #
 # We should remove below here
