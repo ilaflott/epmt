@@ -609,5 +609,13 @@ def check_pid(pid):
             return (True, str(err.errno))
     return (True,'')
 
+def suggested_cpu_count_for_submit():
+    '''
+    Suggests the optimal number of cpus to use for the submit operation
+    '''
+    from multiprocessing import cpu_count
+    max_procs = cpu_count()
+    return max(1, max_procs - 1)
+
 if __name__ == "__main__":
     print(version_str(True))

@@ -101,6 +101,10 @@ if (__name__ == "__main__"):
     submit_parser.add_argument('-e', '--error', action='store_true',help="Exit at the first sign of trouble")
     submit_parser.add_argument('-n', '--dry-run', action='store_true',help="Don't touch the database")
     submit_parser.add_argument('--drop',action='store_true',help="Drop all tables/data and recreate before importing")
+    from epmtlib import suggested_cpu_count_for_submit
+    optimal_cpus = suggested_cpu_count_for_submit()
+    submit_parser.add_argument('-j', '--num-cpus', type=int, default=optimal_cpus, help='Number of parallel processes to use for submission. You should use less than the number of available cpus on the machine. The default ({0}) is the suggested optimal value'.format(optimal_cpus))
+
     # DBSize
     dbsize_parser = subparser.add_parser('dbsize', help="Find detailed size of database",
         description="dbsize will print to console the physical on disk size of different aspects of the database.\

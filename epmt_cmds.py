@@ -622,7 +622,7 @@ def get_filedict(dirname,pattern,tar=False):
 
     return filedict
 
-def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True):
+def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1):
     logger.debug("epmt_submit(%s,dry_run=%s,drop=%s,keep_going=%s)",dirs,dry_run,drop,keep_going)
     if not dirs:
         global_jobid,global_datadir,global_metadatafile = setup_vars()
@@ -655,31 +655,33 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True):
     # TODO: Get a full files list from all the directories passed and
     # then split the list of files for a better distribution and more
     # optimal parallelization.
+    nprocs = min(ncpus, len(dirs))
     num_cores = multiprocessing.cpu_count()
     logger.info('You are running on a machine with %d cores', num_cores)
-    nprocs = num_cores
-    nprocs = min(nprocs, len(dirs))
-    logger.info('using %d lightweight processes', nprocs)
-    from numpy import array_split
+    logger.info('Found %d items to submit', len(dirs))
+    if nprocs > num_cores:
+        logger.warning('You have requested to use (%d), which is more than the available cpus (%d)', ncpus, num_cores)
     import time
-    procs = []
     worker_id = 0
-    manager = multiprocessing.Manager()
-    return_dict = manager.dict()
     start_ts = time.time()
-    # pool = multiprocessing.Pool(processes=nprocs)
-    # work_chunks = [list(x) for x in array_split(dirs, nprocs)]
-    # results = [pool.apply_async(submit_fn, (i, work_chunks[i])) for i in range(nprocs)]
-    # print([res.get() for res in results])
-    for work in array_split(dirs, nprocs):
-        logger.info('Worker %d will work on %s', worker_id, str(work))
-        process = multiprocessing.Process(target = submit_fn, args=(worker_id, work, return_dict))
-        procs.append(process)
-        worker_id += 1
-    for p in procs:
-        p.start()
-    for p in procs:
-        p.join()
+    if nprocs == 1:
+        return_dict = {}
+        submit_fn(worker_id, dirs, return_dict)
+    else:
+        logger.info('using %d worker processes', nprocs)
+        from numpy import array_split
+        procs = []
+        manager = multiprocessing.Manager()
+        return_dict = manager.dict()
+        for work in array_split(dirs, nprocs):
+            logger.info('Worker %d will work on %s', worker_id, str(work))
+            process = multiprocessing.Process(target = submit_fn, args=(worker_id, work, return_dict))
+            procs.append(process)
+            worker_id += 1
+        for p in procs:
+            p.start()
+        for p in procs:
+            p.join()
     fini_ts = time.time()
     r = { k: loads(return_dict[k]) for k, v in return_dict.items() }
     total_procs = 0
@@ -693,8 +695,8 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True):
                 jobs_imported.append(jobid)
                 total_procs += process_count
     if jobs_imported:
-        logger.info('Imported %d jobs (%d processes) at %2.2f processes/sec using %d workers', len(jobs_imported), total_procs, total_procs/(fini_ts - start_ts), nprocs)
-    return(r)
+        logger.info('Imported %d jobs (%d processes) in %2.2f sec at %2.2f processes/sec using %d workers (at %2.2f processes/sec per worker)', len(jobs_imported), total_procs, (fini_ts - start_ts), total_procs/(fini_ts - start_ts), nprocs, total_procs/(nprocs*(fini_ts - start_ts)))
+    return(r if jobs_imported else False)
 
 def compressed_tar(input):
     tar = None
@@ -970,7 +972,7 @@ def epmt_entrypoint(args):
     if args.command == 'dump':
         return(epmt_dump_metadata(args.epmt_cmd_args) == False)
     if args.command == 'submit':
-        return(epmt_submit(args.epmt_cmd_args,dry_run=args.dry_run,drop=args.drop,keep_going=not args.error) == False)
+        return(epmt_submit(args.epmt_cmd_args,dry_run=args.dry_run,drop=args.drop,keep_going=not args.error, ncpus = args.num_cpus) == False)
     if args.command == 'check':
         return(epmt_check() == False)
     if args.command == 'delete':
