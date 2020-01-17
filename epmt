@@ -36,7 +36,7 @@ if (__name__ == "__main__"):
     parser.add_argument('-V', '--version',action='version', version=version_str(), help="Display EPMT Version")
     
     # Global Verbose
-    parser.add_argument('-v', '--verbose',action='count',help="Increase level of verbosity/debug")
+    parser.add_argument('-v', '--verbose',action='count', default=0,help="Increase level of verbosity/debug")
 
     subparser = parser.add_subparsers(title="EPMT Commands", dest="command")
     # Source

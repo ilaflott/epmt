@@ -31,7 +31,7 @@ def get_username():
     return getpwuid( getuid() )[ 0 ]
 
 # if check is set, then we will bail if logging has already been initialized
-def epmt_logging_init(intlvl = 0, check = False):
+def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
     import logging
     import epmt_settings as settings
 
@@ -60,7 +60,7 @@ def epmt_logging_init(intlvl = 0, check = False):
     rootLogger.addHandler(fileHandler)
 
     consoleHandler = logging.StreamHandler()
-    consoleFormatter = logging.Formatter("[PID %(process)d] %(levelname)7.7s: %(name)s: %(message)s")
+    consoleFormatter = logging.Formatter("[PID %(process)d] %(levelname)7.7s: %(name)s: %(message)s" if log_pid else "%(levelname)7.7s: %(name)s: %(message)s")
     consoleHandler.setFormatter(consoleFormatter)
     rootLogger.addHandler(consoleHandler)
 

@@ -916,10 +916,12 @@ def epmt_entrypoint(args):
     if args.verbose == None:
         args.verbose = 0
     logger = getLogger(__name__)  # you can use other name
-    epmt_logging_init(args.verbose, check=False)
+    # we only need to log the PID to the console for parallel runs
+    epmt_logging_init(args.verbose, check=False, log_pid = (hasattr(args, 'num_cpus') and (args.num_cpus > 1)))
     init_settings(settings)
-    if not args.verbose:
-        epmt_logging_init(settings.verbose, check=True)
+    if not args.verbose and settings.verbose:
+        # we need to enable verbose mode
+        epmt_logging_init(settings.verbose, check=False, log_pid = (hasattr(args, 'num_cpus') and (args.num_cpus > 1)))
 
 
     # Here it's up to each command to validate what it is looking for
