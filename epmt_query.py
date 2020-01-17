@@ -1217,6 +1217,16 @@ def delete_jobs(jobs, force = False, before=None, after=None):
     if num_jobs > 1 and not force:
         logger.warning('You must set force=True when calling this function as you want to delete more than one job')
         return 0
+
+    # make sure we aren't trying to delete jobs with models associated with them
+    jobs_with_models = {}
+    for j in jobs:
+        if j.ref_models: 
+            jobs_with_models[j.jobid] = [r.id for r in j.ref_models]
+    if jobs_with_models:
+        logger.error('The following jobs have models (their IDs have been mentioned in square brackets) associated with them. No jobs have been deleted. Please remove the reference models before deleting the jobs:\n\t%s\n', str(jobs_with_models))
+        return 0
+
     logger.info('deleting %d jobs, in an atomic operation..', num_jobs)
     orm_delete_jobs(jobs)
     return num_jobs

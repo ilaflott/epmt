@@ -21,13 +21,13 @@ refmodel_job_associations_table = Table('refmodel_job_associations', Base.metada
 )
 
 host_job_associations_table = Table('host_job_associations', Base.metadata,
-    Column('jobid', String, ForeignKey('jobs.jobid'), primary_key=True),
+    Column('jobid', String, ForeignKey('jobs.jobid', ondelete="CASCADE"), primary_key=True),
     Column('hostname', String, ForeignKey('hosts.name'), primary_key=True)
 )
 
 ancestor_descendant_associations_table = Table('ancestor_descendant_associations', Base.metadata,
-    Column('ancestor', Integer, ForeignKey('processes.id'), primary_key=True),
-    Column('descendant', Integer, ForeignKey('processes.id'), primary_key=True)
+    Column('ancestor', Integer, ForeignKey('processes.id', ondelete="CASCADE"), primary_key=True),
+    Column('descendant', Integer, ForeignKey('processes.id', ondelete="CASCADE"), primary_key=True)
 )
 
 class User(with_metaclass(CommonMeta, Base)):
@@ -109,7 +109,7 @@ class UnprocessedJob(with_metaclass(CommonMeta, Base)):
     __tablename__ = 'unprocessed_jobs'
     created_at = Column(DateTime, default=datetime.now)
     info_dict = Column(JSON, default={})
-    jobid = Column(String, ForeignKey('jobs.jobid'), primary_key=True)
+    jobid = Column(String, ForeignKey('jobs.jobid', ondelete="CASCADE"), primary_key=True)
     job = relationship('Job')
 
     def __repr__(self):
@@ -126,7 +126,7 @@ class Process(with_metaclass(CommonMeta, Base)):
     user_id = Column(String, ForeignKey('users.name'))
     user = relationship('User', back_populates = "processes")
 
-    jobid = Column(String, ForeignKey('jobs.jobid'))
+    jobid = Column(String, ForeignKey('jobs.jobid', ondelete="CASCADE"), index=True)
     job = relationship('Job', back_populates='processes')
 
     start = Column(DateTime, default=datetime.now, index=True)
