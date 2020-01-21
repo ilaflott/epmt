@@ -87,7 +87,7 @@ class Job(with_metaclass(CommonMeta, Base)):
     env_dict = Column(JSON)
     env_changes_dict = Column(JSON)
     submit = Column(DateTime)
-    jobid = Column(String, primary_key=True)
+    jobid = Column(String, primary_key=True, index=True)
     jobname = Column(String)
     exitcode = Column(Integer)
 
@@ -156,7 +156,7 @@ class Process(with_metaclass(CommonMeta, Base)):
     # for creating a process graph
     # a child process is also included in the list of descendants
     # while parent is included in the ancestors
-    parent_id = Column(Integer, ForeignKey('processes.id'))
+    parent_id = Column(Integer, ForeignKey('processes.id'), index=True)
     children= relationship('Process', backref=backref('parent', remote_side=[id]))
     #ancestors = relationship('ProcessAssociation',backref='descendants', primaryjoin=id==ProcessAssociation.fk_ancestor)
     #descendants = relationship('ProcessAssociation',backref='ancestors', primaryjoin=id==ProcessAssociation.fk_descendant )
