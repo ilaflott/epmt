@@ -18,7 +18,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (3,1,2)
+_version = (3,1,3)
 
 def version():
     return _version
@@ -132,6 +132,12 @@ def init_settings(settings):
     if not hasattr(settings, 'outlier_features_blacklist'):
         logger.warning("missing settings.outlier_features_blacklist")
         settings.outlier_features_blacklist = []
+    if not hasattr(settings, 'retire_jobs_ndays'):
+        logger.warning("missing settings.retire_jobs_ndays")
+        settings.retire_jobs_ndays = 0
+    if not hasattr(settings, 'retire_models_ndays'):
+        logger.warning("missing settings.retire_models_ndays")
+        settings.retire_models_ndays = 0
     if not hasattr(settings, 'bulk_insert'):
         logger.warning("missing settings.bulk_insert")
         settings.bulk_insert = False
@@ -616,6 +622,45 @@ def suggested_cpu_count_for_submit():
     from multiprocessing import cpu_count
     max_procs = cpu_count()
     return max(1, max_procs - 1)
+
+
+def conv_to_datetime(t):
+    """
+    This converts a time specified as a string or a Unix timestamp
+    or a negative integer (signifiying a relative offset in days
+    from the current time) to a python datetime object. If passed a 
+    datetime object it will be returned without modification
+    E.g., of valid values of t:
+
+                '08/13/2019 23:29' (string)
+                 1565606303 (Unix timestamp)
+                 datetime.datetime(2019, 8, 13, 23, 29) (datetime object)
+                 -1 => 1 day ago
+                 -30 => 30 days ago
+                 0 => now
+
+    """
+    from datetime import datetime, timedelta
+    retval = t
+
+    if type(t) == str:
+        if not t: return None
+        try:
+            retval = datetime.strptime(t, '%m/%d/%Y %H:%M')
+        except Exception as e:
+            logger = getLogger(__name__)
+            logger.error('could not convert string to datetime: %s' % str(e))
+            return None
+    elif type(t) in (int, float):
+        if t > 0:
+            retval = datetime.fromtimestamp((int)(t))
+        else:
+            # interpret a negative integer as number of days before now()
+            # if it's zero interpret it as now
+            retval = datetime.now() - timedelta(days=(-t))
+    return retval
+
+
 
 if __name__ == "__main__":
     print(version_str(True))

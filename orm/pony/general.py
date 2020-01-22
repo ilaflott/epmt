@@ -370,7 +370,7 @@ def _attribute_filter(qs, attr, target, exact_match = False):
             qs = qs.filter(lambda j: getattr(j, attr)[k] == v)
     return qs
 
-def orm_get_refmodels(name = None, tag = {}, fltr=None, limit=0, order='', exact_tag_only=False):
+def orm_get_refmodels(name = None, tag = {}, fltr=None, limit=0, order='', before = None, after = None, exact_tag_only=False):
     from .models import ReferenceModel
 
     qs = ReferenceModel.select() if (name is None) else ReferenceModel.select().filter(name = name)
@@ -382,6 +382,12 @@ def orm_get_refmodels(name = None, tag = {}, fltr=None, limit=0, order='', exact
     # if fltr is a lambda function or a string apply it
     if fltr:
         qs = qs.filter(fltr)
+
+    if before is not None:
+        qs = qs.filter(lambda r: r.created_at <= before)
+
+    if after is not None:
+        qs = qs.filter(lambda r: r.created_at >= after)
 
     if order:
         qs = qs.order_by(order)

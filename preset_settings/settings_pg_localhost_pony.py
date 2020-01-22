@@ -31,7 +31,17 @@ db_params = { 'url': 'postgresql://postgres:example@localhost:5432/EPMT' }
 # # outlier detection
 # outlier_thresholds = { 'modified_z_score': 2.5, 'iqr': [20,80], 'z_score': 3.0 }
 # outlier_features = ['duration', 'cpu_time', 'num_procs']
-# outlier_features_blacklist = ['user+system']
+# # blacklist features for outlier detection. These will be skipped.
+# # e.g, outlier_features_blacklist = ['rdtsc_duration', 'vol_ctxsw']
+# outlier_features_blacklist = []
+#
+# data retention
+# You will need to run `epmt retire` in a cron job for this to happen
+# Remember, jobs that have dependent trained models will not be retired
+# retire_jobs_ndays = 0   # specify in number of days; set to 0 to not retire jobs
+# retire_models_ndays = 0 # specify in number of days; set to 0 to not retire models
+#
+#
 #
 # post_process_job_on_ingest = True
 #

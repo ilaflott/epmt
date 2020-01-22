@@ -953,6 +953,20 @@ def epmt_entrypoint(args):
                 return -1
         print('All tests successfully PASSED')
         return 0
+
+    if args.command == 'retire':
+        from epmt_query import retire_jobs, retire_refmodels
+        if settings.retire_models_ndays:
+            logger.info('Retiring models older than %d days', settings.retire_models_ndays)
+            retire_refmodels()
+        else:
+            logger.info("Not retiring any models (based on the data retention policy in settings.py)")
+        if settings.retire_jobs_ndays:
+            logger.info('Retiring jobs older than %d days', settings.retire_jobs_ndays)
+            retire_jobs()
+        else:
+            logger.info("Not retiring any jobs (based on the data retention policy in settings.py)")
+        return 0
             
     if args.command == 'check':
         # fake a job id so that epmt_check doesn't fail because of a missing job id

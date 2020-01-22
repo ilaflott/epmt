@@ -482,7 +482,7 @@ def _analyses_filter(qs, analyses):
     from .models import Job
     return _attribute_filter(qs, 'analyses', analyses, model = Job, conv_to_str = True)
 
-def orm_get_refmodels(name = None, tag = {}, fltr=None, limit=0, order=None, exact_tag_only=False):
+def orm_get_refmodels(name = None, tag = {}, fltr=None, limit=0, order=None, before=None, after=None, exact_tag_only=False):
     from .models import ReferenceModel
 
     qs = Session.query(ReferenceModel).filter_by(name=name) if (name is not None) else Session.query(ReferenceModel)
@@ -493,6 +493,12 @@ def orm_get_refmodels(name = None, tag = {}, fltr=None, limit=0, order=None, exa
     # if fltr is a lambda function or a string apply it
     if not (fltr is None):
         qs = qs.filter(fltr)
+
+    if not (before is None):
+        qs = qs.filter(ReferenceModel.created_at <= before)
+
+    if not (after is None):
+        qs = qs.filter(ReferenceModel.created_at >= after)
 
     if not (order is None):
         qs = qs.order_by(order)

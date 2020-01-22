@@ -37,8 +37,15 @@ all_tags_field = 'all_proc_tags'
 outlier_thresholds = { 'modified_z_score': 2.5, 'iqr': [20,80], 'z_score': 3.0 }
 # default features to use if no features specified
 outlier_features = ['duration', 'cpu_time', 'num_procs']
-# user+system gives trouble in detect_outlier_ops because of the '+'
-outlier_features_blacklist = ['user+system']
+# # blacklist features for outlier detection. These will be skipped.
+# # e.g, outlier_features_blacklist = ['rdtsc_duration', 'vol_ctxsw']
+outlier_features_blacklist = []
+
+# data retention
+# You will need to run `epmt retire` in a cron job for this to happen
+# Remember, jobs that have dependent trained models will not be retired
+retire_jobs_ndays = 0   # specify in number of days; set to 0 to not retire jobs
+retire_models_ndays = 0 # specify in number of days; set to 0 to not retire models
 
 # we expect the settings below to be overriden in settings.py
 # depending on the template of your choice

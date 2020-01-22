@@ -14,7 +14,7 @@ logger = getLogger(__name__)  # you can use other name
 epmt_logging_init(settings.verbose if hasattr(settings, 'verbose') else 0, check=True)
 
 ### Put EPMT imports below, after logging is set up
-from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key, stringify_dicts, version, version_str
+from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key, stringify_dicts, version, version_str, conv_to_datetime
 from epmt_stat import modified_z_score
 
 init_settings(settings) # type: ignore
@@ -362,31 +362,11 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
                 logger.error('could not convert "when" string to datetime: %s' % str(e))
                 return None
 
-    if before != None:
-        if type(before) == str:
-            try:
-                before = datetime.strptime(before, '%m/%d/%Y %H:%M')
-            except Exception as e:
-                logger.error('could not convert "before" string to datetime: %s' % str(e))
-                return None
-        elif type(before) in (int, float):
-            if before > 0:
-                before = datetime.fromtimestamp((int)(before))
-            else:
-                before = datetime.now() - timedelta(days=(-before))
+    if before is not None:
+        before = conv_to_datetime(before)
 
-    if after != None:
-        if type(after) == str:
-            try:
-                after = datetime.strptime(after, '%m/%d/%Y %H:%M')
-            except Exception as e:
-                logger.error('could not convert "after" string to datetime: %s' % str(e))
-                return None
-        elif type(after) in (int, float):
-            if after > 0:
-                after = datetime.fromtimestamp((int)(after))
-            else:
-                after = datetime.now() - timedelta(days=(-after))
+    if after is not None:
+        after = conv_to_datetime(after)
 
     if hosts:
         if isString(hosts):
@@ -636,7 +616,7 @@ def rank_proc_tags_keys(jobs, order = 'cardinality', exclude = []):
 
 
 @db_session
-def get_refmodels(name=None, tag = {}, fltr=None, limit=0, order=None, exact_tag_only=False, merge_nested_fields=True, fmt='dict'):
+def get_refmodels(name=None, tag = {}, fltr=None, limit=0, order=None, before=None, after=None, exact_tag_only=False, merge_nested_fields=True, fmt='dict'):
     """
     This function returns reference models filtered using name / tag / fltr
     
@@ -646,6 +626,26 @@ def get_refmodels(name=None, tag = {}, fltr=None, limit=0, order=None, exact_tag
     fltr  : a lambda function or a string containing a pony expression
     limit : used to limit the number of output items, 0 means no limit
     order : used to order the output list, its a lambda function or a string
+    before : Restrict the output to models created before time specified.
+             'before' can be specified either as a python datetime or
+             a Unix timestamp or a string. If a negative integer is specified,
+             then the time is interpreted as a negative days offset from
+             the current time.
+                 '08/13/2019 23:29' (string)
+                 1565606303 (Unix timestamp)
+                 datetime.datetime(2019, 8, 13, 23, 29) (datetime object)
+                 -1 => 1 day ago
+                 -30 => 30 days ago
+    after  : Restrict the output to models created after time specified.
+             'after' can be specified either as a python datetime or
+             a Unix timestamp or a string. If a negative integer is specified,
+             then the time is interpreted as a negative days offset from
+             the current time.
+                 '08/13/2019 23:29' (string)
+                 1565606303 (Unix timestamp)
+                 datetime.datetime(2019, 8, 13, 23, 29) (datetime object)
+                 -1 => 1 day ago
+                 -30 => 30 days ago
     exact_tag_only: is used to match the DB tag with the supplied tag:
             the full dictionary must match for a successful match. Default False.
     merge_nested_fields: used to hoist attributes from the 'computed'
@@ -660,7 +660,12 @@ def get_refmodels(name=None, tag = {}, fltr=None, limit=0, order=None, exact_tag
     if type(tag) == str:
         tag = tag_from_string(tag)
 
-    qs = orm_get_refmodels(name, tag, fltr, limit, order, exact_tag_only)
+    if before is not None:
+        before = conv_to_datetime(before)
+    if after is not None:
+        after = conv_to_datetime(after)
+
+    qs = orm_get_refmodels(name, tag, fltr, limit, order, before, after, exact_tag_only)
 
     if fmt == 'orm':
         return qs
@@ -846,6 +851,22 @@ def delete_refmodels(*ref_ids):
     ref_ids = [int(r) for r in ref_ids]
     return orm_delete_refmodels(ref_ids)
 
+def retire_refmodels(ndays = settings.retire_models_ndays):
+    """
+    Retire models older than ndays (ndays > 0). If ndays is
+    specified as <= 0 then it's a nop. On success it returns
+    the number of models deleted.
+    """
+    if ndays <= 0: return 0
+
+    # ndays > 0
+    models = get_refmodels(before=-ndays, fmt='terse')
+    if models:
+        logger.info('Retiring following models (older than %d days): %s', ndays, str(models))
+        return delete_refmodels(models)
+    else:
+        logger.info('No models to retire (older than %d days)', ndays)
+    return 0
 
 def refmodel_set_enabled(ref_id, enabled = False):
     """
@@ -1220,17 +1241,32 @@ def delete_jobs(jobs, force = False, before=None, after=None):
 
     # make sure we aren't trying to delete jobs with models associated with them
     jobs_with_models = {}
+    jobs_to_delete = []
     for j in jobs:
         if j.ref_models: 
             jobs_with_models[j.jobid] = [r.id for r in j.ref_models]
+        else:
+            jobs_to_delete.append(j)
     if jobs_with_models:
-        logger.error('The following jobs have models (their IDs have been mentioned in square brackets) associated with them. No jobs have been deleted. Please remove the reference models before deleting the jobs:\n\t%s\n', str(jobs_with_models))
-        return 0
-
-    logger.info('deleting %d jobs, in an atomic operation..', num_jobs)
+        logger.error('The following jobs have models (their IDs have been mentioned in square brackets) associated with them and will not be deleted. Please remove the reference models before deleting these jobs:\n\t%s\n', str(jobs_with_models))
+        if not jobs_to_delete:
+            return 0
+        jobs = orm_jobs_col(jobs_to_delete)
+        num_jobs = len(jobs_to_delete)
+    logger.info('deleting %d jobs (%s), in an atomic operation..', num_jobs, str(jobs_to_delete))
     orm_delete_jobs(jobs)
     return num_jobs
 
+
+def retire_jobs(ndays = settings.retire_jobs_ndays):
+    """
+    Retires jobs older than 'ndays' and returns the list of jobs retired.
+
+    ndays must be > 0 for any jobs to be retired. For ndays <=0, no jobs
+    are retired.
+    """
+    if ndays <= 0: return 0
+    return delete_jobs([], force=True, before = -ndays)
 
 @db_session
 def dm_calc(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op:dmput', 'op:hsmget', 'op:rm', 'op:cp']):
