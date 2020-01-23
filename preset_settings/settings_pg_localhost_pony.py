@@ -26,7 +26,6 @@ db_params = { 'url': 'postgresql://postgres:example@localhost:5432/EPMT' }
 # job_tags_env = 'EPMT_JOB_TAGS'
 # per_process_fields = ["tags","hostname","exename","path","args","exitcode","pid","generation","ppid","pgid","sid","numtids"]
 # skip_for_thread_sums = ["tid", "start", "end", "num_threads", "starttime"]
-# all_tags_field = 'all_proc_tags'
 # 
 # # outlier detection
 # outlier_thresholds = { 'modified_z_score': 2.5, 'iqr': [20,80], 'z_score': 3.0 }

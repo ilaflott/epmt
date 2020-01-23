@@ -938,7 +938,7 @@ def __unique_proc_tags_for_job(job, exclude=[], fold=True):
     proc_sums = getattr(job, PROC_SUMS_FIELD_IN_JOB, {})
     tags = []
     try:
-        tags = proc_sums[settings.all_tags_field]
+        tags = proc_sums['all_proc_tags']
     except:
         # if we haven't found it the easy way, do the heavy compute
         import numpy as np

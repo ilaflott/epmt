@@ -18,7 +18,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (3,1,3)
+_version = (3,1,4)
 
 def version():
     return _version
@@ -120,9 +120,6 @@ def init_settings(settings):
     if not hasattr(settings, 'skip_for_thread_sums'):
         logger.warning("missing settings.skip_for_thread_sums")
         settings.skip_for_thread_sums = ["tid", "start", "end", "num_threads", "starttime"]
-    if not hasattr(settings, 'all_tags_field'):
-        logger.warning("missing settings.all_tags_field")
-        settings.all_tags_field = 'all_proc_tags'
     if not hasattr(settings, 'outlier_thresholds'):
         logger.warning("missing settings.outlier_thresholds")
         settings.outlier_thresholds = { 'modified_z_score': 2.5, 'iqr': [20,80], 'z_score': 3.0 }

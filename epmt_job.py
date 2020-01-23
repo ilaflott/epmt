@@ -548,10 +548,10 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     if all_tags:
         logger.info("  found %d distinct sets of process tags",len(all_tags))
         # convert each of the pickled tags back into a dict
-        proc_sums[settings.all_tags_field] = [ loads(t) for t in sorted(all_tags) ]
+        proc_sums['all_proc_tags'] = [ loads(t) for t in sorted(all_tags) ]
     else:
         logger.debug('  no process tags found in th entire job')
-        proc_sums[settings.all_tags_field] = []
+        proc_sums['all_proc_tags'] = []
 
     logger.debug('  tag processing took: %2.5f sec', time.time() - _t0)
 
