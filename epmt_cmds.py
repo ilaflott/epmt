@@ -458,6 +458,23 @@ def epmt_dump_metadata(filelist):
             print("%-24s%-56s" % (d,str(metadata[d])))
     return True
 
+
+# d is dictionary of key/value pairs
+def epmt_annotate(d):
+    if not d: return False
+    global_jobid,global_datadir,global_metadatafile = setup_vars()
+    if not (global_jobid and global_datadir and global_metadatafile):
+        return False
+    metadata = read_job_metadata(global_metadatafile)
+    if not metadata:
+        return False
+    # merge existing annotations if any
+    annotations = metadata.get('job_annotations', {})
+    annotations.update(d)
+    metadata['job_annotations'] = annotations
+    retval = write_job_metadata(global_metadatafile,metadata)
+    return retval
+
 def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run_cmd=False):
     """
 
@@ -992,6 +1009,9 @@ def epmt_entrypoint(args):
         return(epmt_stage(args.epmt_cmd_args,keep_going=not args.error) == False)
     if args.command == 'run':
         return(epmt_run(args.epmt_cmd_args,wrapit=args.auto,dry_run=args.dry_run,debug=(args.verbose > 2)))
+    if args.command == 'annotate':
+        from epmtlib import kwargify
+        return(epmt_annotate(kwargify(args.epmt_cmd_args) if args.epmt_cmd_args else {}) == False)
     if args.command == 'source':
         s = epmt_source(slurm_prolog=args.slurm,papiex_debug=(args.verbose > 2),monitor_debug=(args.verbose > 3))
         if not s:

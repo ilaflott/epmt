@@ -56,6 +56,9 @@ if (__name__ == "__main__"):
             original job files and job directory.")
     stage_parser.add_argument('epmt_cmd_args', nargs='*', help="List of directories from batch")
     stage_parser.add_argument('-e', '--error', action='store_true',help="Exit at the first sign of trouble")
+    # annotate
+    annotate_parser = subparser.add_parser('annotate', help="Annotate job", description="Annotates the job with key/value pairs")
+    annotate_parser.add_argument('epmt_cmd_args', nargs='*', help="key/value pairs in the form key1=value1 key2=value2..")
 
     # Dump
     dump_parser = subparser.add_parser('dump', help="Print metadata from archive",

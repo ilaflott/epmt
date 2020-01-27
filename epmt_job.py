@@ -669,7 +669,6 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     metadata = check_fix_metadata(raw_metadata) 
     if metadata is False:
         return (False, 'Error: Could not get valid metadata')
-
     job_status = {}
     if metadata.get('job_pl_scriptname'):
         job_status['script_name'] = metadata['job_pl_scriptname']
@@ -711,6 +710,9 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     exitcode = metadata['job_el_exitcode']
     env_changes_dict = metadata['job_env_changes']
     job_tags = metadata['job_tags']
+    annotations = metadata.get('job_annotations', {})
+    if annotations:
+        logger.info('Job annotations: {0}'.format(annotations))
 
     # sometimes script name is to be found in the job tags
     if (job_status.get('script_name') is None) and job_tags and job_tags.get('script_name'):
@@ -768,6 +770,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         return (None, 'Job already in database')
     j.jobname = jobname
     j.exitcode = exitcode
+    j.annotations = annotations    
 # fix below
     j.env_dict = env_dict
     j.env_changes_dict = env_changes_dict
