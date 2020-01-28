@@ -1361,7 +1361,7 @@ def annotate_job(jobid, annotation, replace=False):
 
     Returns the new annotations for the job.
     '''
-    j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
+    j = Job[jobid] if (type(jobid) == str) else jobid
     if type(annotation) == str:
         annotation = tag_from_string(annotation)
     ann = {} if replace else dict(j.annotations)

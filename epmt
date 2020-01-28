@@ -57,8 +57,16 @@ if (__name__ == "__main__"):
     stage_parser.add_argument('epmt_cmd_args', nargs='*', help="List of directories from batch")
     stage_parser.add_argument('-e', '--error', action='store_true',help="Exit at the first sign of trouble")
     # annotate
-    annotate_parser = subparser.add_parser('annotate', help="Annotate job", description="Annotates the job with key/value pairs")
-    annotate_parser.add_argument('epmt_cmd_args', nargs='*', help="key/value pairs in the form key1=value1 key2=value2..")
+    annotate_parser = subparser.add_parser('annotate', help="Annotate a job", formatter_class=argparse.RawTextHelpFormatter, description="Annotates a job with key/value pairs. This call takes three forms:\n\n"
+      "To annotate a stopped job within the batch environment: \n"
+      "\tepmt annotate x=100 y=200\n\n"
+      "To annotate a stage .tgz file:\n"
+      "\tepmt annotate 111.tgz x=100 y=200\n\n"
+      "To annotate an existing job in the database:\n"
+      "\tepmt annotate 685000 x=100 y=200\n\n"
+      "In all the above cases the annotations are *merged* on to the existing annotations, unless --replace is set (in which case existing annotations are removed first)")
+    annotate_parser.add_argument('epmt_cmd_args', nargs='+', help="key/value pairs in the form key1=value1 key2=value2..")
+    annotate_parser.add_argument('--replace',action='store_true',default=False,help="Replace existing annotations instead of merging onto them")
 
     # Dump
     dump_parser = subparser.add_parser('dump', help="Print metadata from archive",
