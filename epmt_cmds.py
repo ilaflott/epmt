@@ -461,8 +461,11 @@ def epmt_dump_metadata(filelist):
 
 # args list is one of the following forms:
 #   ['key1=value1', 'key2=value2', ...]  - annotate stopped job within a batch env
+#   or 
 #   ['111.tgz', 'key1=value1', 'key2=value2', ...] - annotate staged job file
+#   or
 #   ['658000', 'key1=value1', 'key2y=value2', ...] - annotate job in database
+#
 # Annotations are appended to unless replace is True, in which
 # case existing annotations are wiped clean first.
  
@@ -472,35 +475,73 @@ def epmt_annotate(argslist, replace = False):
     if '=' in argslist[0]:
         # first form, we are annotating a stopped job
         d = kwargify(argslist)
+        if not d: return False
+        mode = 0   # stopped job mode
         logger.info('annotating stopped job: {}'.format(d))
+        jobid,datadir,metadatafile = setup_vars()
+        if not (jobid and datadir and metadatafile):
+            return False
+        metadata = read_job_metadata(metadatafile)
+        if not metadata:
+            return False
     else:
+        # annotating either a staged job file
+        # or a job in the database
         assert(len(argslist) > 1)
         d = kwargify(argslist[1:])
+        if not d: return False
         if '.tgz' in argslist[0]:
-            logger.info('annotating staged job {0}: {1}'.format(argslist[0], d))
-            logger.error('annotating staged jobs is not yet implemented')
-            return False
+            # annotating a staged .tgz file
+            mode = 1  # staged job annotation
+            infile = argslist[0]
+            logger.info('annotating staged job file {0}: {1}'.format(infile, d))
+            if not path.exists(infile):
+                 logger.error("%s does not exist!",infile)
+                 return False
+
+            err,tar = compressed_tar(infile)
+            try:
+                info = tar.getmember("./job_metadata")
+            except KeyError:
+                logger.error('ERROR: Did not find %s in tar archive' % "job_metadata")
+                return False
+            else:
+                logger.info('%s is %d bytes in archive' % (info.name, info.size))
+                f = tar.extractfile(info)
+                metadata = read_job_metadata_direct(f)
+                if not metadata:
+                    return False
+                jobid = metadata['job_pl_id']
+                username = metadata['job_pl_username']
+                datadir = settings.epmt_output_prefix + username + "/" + jobid + "/"
+                metadatafile = datadir + "job_metadata"
+                logger.debug('extracting {0} to {1}'.format(infile, datadir))
+                tar.extractall(path=datadir)
+               
         else:
             jobid = argslist[0]
             logger.info('annotating job {0} in db: {1}'.format(jobid, d))
+            mode = 2  # annotating job in database
             from epmt_query import annotate_job
             updated_ann = annotate_job(jobid, d, replace)
             logger.debug('updated annotations: {}'.format(updated_ann))
             return d.items() <= updated_ann.items()
 
-    # we handle the annotation of stopped job below         
-    if not d: return False
-    global_jobid,global_datadir,global_metadatafile = setup_vars()
-    if not (global_jobid and global_datadir and global_metadatafile):
-        return False
-    metadata = read_job_metadata(global_metadatafile)
-    if not metadata:
-        return False
+    # below we handle annotation update in the metadata file
+    # if its a stopped job, we simply write out the metadata and we
+    # are done. If it's a staged job we need to recreate the .tgz
+    # with the updated metadata
+
     # merge existing annotations if any
     annotations = metadata.get('job_annotations', {}) if (not replace) else {}
     annotations.update(d)
     metadata['job_annotations'] = annotations
-    retval = write_job_metadata(global_metadatafile,metadata)
+    retval = write_job_metadata(metadatafile,metadata)
+
+    # for staged job we need to recreate the staged file
+    if mode == 1:
+        stage_job(datadir, collate=False)
+
     return retval
 
 def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run_cmd=False):
@@ -920,7 +961,7 @@ def stage_job(dir,collate=True,compress_and_tar=True):
             return False
 
 # Collation does it's own cleanup
-        if not collated_file or len(collated_file) == 0:
+        if not collate or (not collated_file) or (len(collated_file) == 0):
             cmd = "rm -rf "+dir
             logger.debug(cmd)
             return_code = forkexecwait(cmd, shell=True)
