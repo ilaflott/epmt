@@ -390,8 +390,15 @@ def epmt_start_job(other=[]):
     global_jobid,global_datadir,global_metadatafile = setup_vars()
     if not (global_jobid and global_datadir and global_metadatafile):
         return False
-        
-    metadata = create_start_job_metadata(global_jobid,False,other)
+  
+    # there is a rare possibility that epmt annotate was called before
+    # epmt start. In which case a metadata file will already exists 
+    if not path.exists(global_metadatafile): 
+        metadata = create_start_job_metadata(global_jobid,False,other)
+    else:
+        # it seems epmt annotate must have run and already called epmt_start_job
+        # in such a case we return with a no-op
+        return True
     if create_job_dir(global_datadir) is False:
         return False
     if path.exists(global_metadatafile):
@@ -481,9 +488,12 @@ def epmt_annotate(argslist, replace = False):
         jobid,datadir,metadatafile = setup_vars()
         if not (jobid and datadir and metadatafile):
             return False
+        if not path.exists(metadatafile):
+            # this means we haven't even run epmt_start_job as otherwise
+            # we would have a metadata file
+            if not epmt_start_job():
+                return False
         metadata = read_job_metadata(metadatafile)
-        if not metadata:
-            return False
     else:
         # annotating either a staged job file
         # or a job in the database
