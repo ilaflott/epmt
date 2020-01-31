@@ -61,6 +61,88 @@ def get_outlier_1d(df,column,func=outliers_iqr):
     return(func(df[column]))
 
 
+def mvod_scores(X = None, classifiers = []):
+    '''
+    Performs multivariate outlier scoring on a multi-dimensional
+    numpy array. Returns a numpy array of scores for each
+    classifier (same length as the input) where each score 
+    represents to the anomaly score of the corresponding point 
+    in the original array using that classifer.
+    The more the likelihood of a point being an outlier, the
+    higher score it will have.
+
+    At present we support classifiers from PYOD. If none
+    are provided in the 'classifiers' argument, then default
+    classifiers (ABOD, KNN) will be selected.
+
+    X: Multi-dimensional np array. If not provided a random
+       
+    classifiers is a list of tuples of the form:
+        [(classifier1_name, classifier_1), (c2_name, c2),...]
+        e.g.,
+             [
+                 ('Angle-based Outlier Detector (ABOD)'   : ABOD()),
+                 ('K Nearest Neighbors (KNN)' :  KNN())
+             ]
+
+    '''
+    logger = getLogger(__name__)  # you can use other name
+    from scipy import stats
+    # import matplotlib.pyplot as plt
+    #%matplotlib inline
+    # import matplotlib.font_manager
+
+
+    if not classifiers:
+        from pyod.models.abod import ABOD
+        from pyod.models.knn import KNN
+        classifiers = [
+             ('Angle-based Outlier Detector (ABOD)', ABOD()),
+             ('K Nearest Neighbors (KNN)', KNN())
+        ]
+
+    Y = None  # Y is only used to test predictor with random data
+    if not X:
+        logger.warning('No input data for MVOD. Random data will be used with 2 features')
+        from pyod.utils.data import generate_data, get_outliers_inliers
+        #generate random data with two features
+        X, Y = generate_data(n_train=200,train_only=True, n_features=2)
+    
+        # store outliers and inliers in different numpy arrays
+        x_outliers, x_inliers = get_outliers_inliers(X,Y)
+    
+        n_inliers = len(x_inliers)
+        n_outliers = len(x_outliers)
+
+    (npts, ndim) = X.shape
+    logger.debug('Input data length {0}, dimensions {1}'.format(npts, ndim))
+    
+    scores = {} 
+    for (clf_name,clf) in classifiers:
+        # fit the dataset to the model
+        clf.fit(X)
+    
+        # predict raw anomaly score
+        scores[clf_name] = clf.decision_function(X)
+   
+        if Y is not None: 
+            # prediction of a datapoint category outlier or inlier
+            y_pred = clf.predict(X)
+            # print(y_pred)
+    
+            # no of errors in prediction
+            n_errors = (y_pred != Y).sum()
+            print('No of Errors using ', clf_name, ': ', n_errors)
+    
+    
+            # threshold value to consider a datapoint inlier or outlier
+            # 0.1 is the default outlier fraction in the generated data
+            threshold = stats.scoreatpercentile(scores[clf_name],100 * 0.9)
+            print(clf_name, ' threshold: ', threshold)
+    #print(scores)
+    return scores
+    
+
 # ref is a dataframe of reference entities, where the columns represent
 # the features.
 # inp represents a single entity and is either a Series or a DataFrame 
