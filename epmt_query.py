@@ -15,7 +15,7 @@ epmt_logging_init(settings.verbose if hasattr(settings, 'verbose') else 0, check
 
 ### Put EPMT imports below, after logging is set up
 from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key, stringify_dicts, version, version_str, conv_to_datetime
-from epmt_stat import modified_z_score
+from epmt_stat import modified_z_score, get_classifier_name, is_classifier_mv, mvod_scores
 
 init_settings(settings) # type: ignore
 setup_db(settings) # type: ignore
@@ -695,6 +695,8 @@ def get_refmodels(name=None, tag = {}, fltr=None, limit=0, order=None, before=No
 
 
 # This function computes a dict such as:
+# for univariate classifiers:
+#
 # { 'z_score': {'duration': (max, median, median_dev), {'cpu_time': (max, median, median_dev)},
 #   'iqr': {'duration': ...}
 #
@@ -703,11 +705,21 @@ def _refmodel_scores(col, outlier_methods, features):
     df = conv_jobs(col, fmt='pandas') if col.__class__.__name__ != 'DataFrame' else col
     ret = {}
     for m in outlier_methods:
-        ret[m.__name__] = {}
-        for c in features:
-            # we save everything except the first element of the
-            # tuple as the first element is the actual scores
-            ret[m.__name__][c] = m(df[c])[1:]
+        m_name = get_classifier_name(m)
+        ret[m_name] = {}
+        if is_classifier_mv(m):
+            logger.debug('scoring with MV classifier ({0}), using features ({1})'.format(m_name, features))
+            nd_array = df[features].to_numpy()
+            # the second element return is a dict indexed by classifier
+            # and containing the max anomaly score using the classifier
+            ret[m_name][",".join(sorted(features))] = mvod_scores(nd_array, classifiers = [m])[1][m_name]
+        else:
+            # univariate classifiers can only handle
+            logger.debug('scoring with univariate classifier: {}'.format(m_name))
+            for c in features:
+                # we save everything except the first element of the
+                # tuple as the first element is the raw scores
+                ret[m_name][c] = m(df[c])[1:]
     return ret
 #
 @db_session
@@ -774,6 +786,28 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
     
     >>> r['op_tags']
     [{u'op_instance': u'4', u'op_sequence': u'4', u'op': u'build'}, {u'op_instance': u'5', u'op_sequence': u'5', u'op': u'clean'}, {u'op_instance': u'3', u'op_sequence': u'3', u'op': u'configure'}, {u'op_instance': u'1', u'op_sequence': u'1', u'op': u'download'}, {u'op_instance': u'2', u'op_sequence': u'2', u'op': u'extract'}]
+
+    Below is an example of creating a refmodel using MV classifiers
+    >>> from pyod.models.knn import KNN
+    >>> from pyod.models.abod import ABOD
+    >>> r = eq.create_refmodel(['625172', '627922', '629337', '633144', '676007', '680181', '685000', '685003', '685016', '692544', '693147', '696127'], outlier_methods = [ABOD(), KNN()], features = ['cpu_time', 'duration', 'num_procs'])
+    WARNING: epmt_query: The jobs do not share identical tag values for "exp_name" and "exp_component"
+    WARNING: The jobs do not share identical tag values for "exp_name" and "exp_component"
+        685000 ESM4_historical_D151 ocean_annual_rho2_1x1deg
+        685003 ESM4_historical_D151 ocean_cobalt_fdet_100
+        685016 ESM4_historical_D151 ocean_month_rho2_1x1deg
+        625172 ESM4_historical_D151 ocean_month_rho2_1x1deg
+        693147 ESM4_historical_D151 ocean_month_rho2_1x1deg
+        692544 ESM4_historical_D151 ocean_month_rho2_1x1deg
+        696127 ESM4_historical_D151 ocean_month_rho2_1x1deg
+        627922 ESM4_historical_D151 ocean_month_rho2_1x1deg
+        629337 ESM4_historical_D151 ocean_month_rho2_1x1deg
+        633144 ESM4_historical_D151 ocean_month_rho2_1x1deg
+        676007 ESM4_historical_D151 ocean_month_rho2_1x1deg
+        680181 ESM4_historical_D151 ocean_month_rho2_1x1deg
+    >>> r
+    {'jobs': ['685000', '685003', '685016', '625172', '693147', '692544', '696127', '627922', '629337', '633144', '676007', '680181'], 'name': None, 'tags': {}, 'op_tags': [], 'computed': {'pyod.models.abod': {'cpu_time,duration,num_procs': -3.478362573453902e-40}, 'pyod.models.knn': {'cpu_time,duration,num_procs': 6014539197.113887}}, 'enabled': True, 'id': 6, 'created_at': datetime.datetime(2020, 2, 3, 17, 6, 59, 501012)}
+
     """
     if not jobs or (not(orm_is_query(jobs)) and len(jobs)==0) or (orm_is_query(jobs) and (jobs.count == 0)):
         logger.error('You need to specify one or more jobs to create a reference model')

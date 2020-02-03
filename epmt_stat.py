@@ -12,6 +12,26 @@ import epmt_settings as settings
 # this sets the defaults to be used when a trained model is not provided
 thresholds = settings.outlier_thresholds 
 
+
+def get_classifier_name(c):
+    """
+    Returns the classifier name as a string
+    """
+    if hasattr(c, '__name__'): return c.__name__
+    if hasattr(c, '__module__'): return c.__module__
+    raise 'Could not determine classifier name for {}'.format(c)
+
+def is_classifier_mv(c):
+    """
+    Returns True if classifier is a multivariate classifier
+    and False in all other cases. At present, we can only handle
+    classifiers in this module and pyod
+    """
+    n = get_classifier_name(c)
+    if n.startswith('pyod'): return True
+    return False
+
+
 # These all return a tuple containing a list of indicies
 # For 1-D this is just a tuple with one element that is a list of rows
 def outliers_z_score(ys, threshold=thresholds['z_score']):
@@ -61,6 +81,7 @@ def get_outlier_1d(df,column,func=outliers_iqr):
     return(func(df[column]))
 
 
+
 # use like:
 # x = mvod_scores(...)
 # to get outliers for a particular threshold:
@@ -82,18 +103,16 @@ def mvod_scores(X = None, classifiers = []):
     X: Multi-dimensional np array. If not provided a random
        two-dimenstional numpy array is generated
        
-    classifiers is a list of tuples of the form:
-        [(classifier1_name, classifier_1), (c2_name, c2),...]
-        e.g.,
+    classifiers is a list of classifier functions:
              [
-                 ('Angle-based Outlier Detector (ABOD)'   : ABOD()),
-                 ('K Nearest Neighbors (KNN)' :  KNN())
+                 ABOD(),
+                 KNN()
              ]
 
     Here is a run with random data:
 
     >>> x = mvod_scores()                                                                                     
-    No input data for MVOD. Random data will be used with 2 features
+    No input data for MVOD. Random data will be used with 16 features
     No of Errors using  Angle-based Outlier Detector (ABOD) :  2
     Angle-based Outlier Detector (ABOD)  threshold:  -0.0883552095486537  (> threshold => outlier)
     No of Errors using  K Nearest Neighbors (KNN) :  0
@@ -103,33 +122,40 @@ def mvod_scores(X = None, classifiers = []):
      'K Nearest Neighbors (KNN)':  array(...) }    
     '''
     logger = getLogger(__name__)  # you can use other name
-    # import matplotlib.pyplot as plt
-    #%matplotlib inline
-    # import matplotlib.font_manager
+
+    # the contamination below, is *ONLY* used in the model
+    # for preditiction of outliers and used for random data
+    # The API is confusing and it might appear that we are using the
+    # parameter for the classifier, in fact, its' only used for
+    # prediction of the outlier. The scores are the *same* regardless
+    # of the contamination factor
+    contamination = 0.1
 
 
     if not classifiers:
         from pyod.models.abod import ABOD
         from pyod.models.knn import KNN
         classifiers = [
-             ('Angle-based Outlier Detector (ABOD)', ABOD()),
-             ('K Nearest Neighbors (KNN)', KNN())
+             ABOD(contamination=contamination),
+             KNN(contamination=contamination)
         ]
+    logger.debug('using classifiers: {}'.format([get_classifier_name(c) for c in classifiers]))
 
     Y = None  # Y is only used to test predictor with random data
-    if not X:
-        logger.warning('No input data for MVOD. Random data will be used with 2 features')
+    if X is None:
+        n_pts = 100
+        n_features = 16
+        logger.warning('No input data for MVOD. Random data will be used with contamination {}'.format(contamination))
         from pyod.utils.data import generate_data, get_outliers_inliers
         from scipy import stats
         #generate random data with two features
         X = None
         # generate_data has a bug in that in some rare cases it produces
-        # zeroes for the outliers (last 10 elements). This messes model
+        # zeroes for the outliers. This messes model
         # fitting. So we just make sure we generate valid data
         # pylint: disable=unsubscriptable-object
-        while (X is None) or (X[-10:-1].sum() == 0.0):
-            X, Y = generate_data(n_train=100,train_only=True, n_features=2)
-    
+        while (X is None) or (X[-int(n_pts*contamination):-1].sum() == 0.0):
+            X, Y = generate_data(n_train=n_pts,train_only=True, n_features=n_features, contamination=contamination)
         # store outliers and inliers in different numpy arrays
         x_outliers, x_inliers = get_outliers_inliers(X,Y)
     
@@ -137,15 +163,18 @@ def mvod_scores(X = None, classifiers = []):
         n_outliers = len(x_outliers)
 
     (npts, ndim) = X.shape
-    logger.debug('Input data length {0}, dimensions {1}'.format(npts, ndim))
+    logger.info('mvod: Input data length {0}, dimensions {1}'.format(npts, ndim))
     
-    scores = {} 
-    for (clf_name,clf) in classifiers:
+    scores = {}
+    max_score_for_cf = {}
+    for clf in classifiers:
+        clf_name = get_classifier_name(clf)
         # fit the dataset to the model
         clf.fit(X)
     
         # predict raw anomaly score
         scores[clf_name] = clf.decision_function(X)
+        max_score_for_cf[clf_name] = scores[clf_name].max()
    
         if Y is not None: 
             # prediction of a datapoint category outlier or inlier
@@ -160,10 +189,10 @@ def mvod_scores(X = None, classifiers = []):
     
             # threshold value to consider a datapoint inlier or outlier
             # 0.1 is the default outlier fraction in the generated data
-            threshold = stats.scoreatpercentile(scores[clf_name],100 * 0.9)
+            threshold = stats.scoreatpercentile(scores[clf_name],100 * (1 - contamination))
             print(clf_name, ' threshold: ', threshold, ' (> threshold => outlier)')
     #print(scores)
-    return scores
+    return (scores, max_score_for_cf)
     
 
 # ref is a dataframe of reference entities, where the columns represent
@@ -196,9 +225,10 @@ def rca(ref, inp, features, methods = [modified_z_score]):
     result_dict = { f: 0 for f in features }
 
     for m in methods:
-        ref_computed.loc['ref_max_' + m.__name__] = 0
-        ref_computed.loc[m.__name__] = 0
-        ref_computed.loc[m.__name__+'_ratio' ] = 0
+        c_name = get_classifier_name(m)
+        ref_computed.loc['ref_max_' + c_name] = 0
+        ref_computed.loc[c_name] = 0
+        ref_computed.loc[c_name+'_ratio' ] = 0
         for f in features:
             # lets get the params for ref using the scoring method
             # we expect the following tuple:
@@ -207,17 +237,17 @@ def rca(ref, inp, features, methods = [modified_z_score]):
             # ([scores], max_score, ....)
             ref_params = m(ref[f])
             ref_max_score = ref_params[1]
-            ref_computed[f]['ref_max_' + m.__name__] = ref_max_score
+            ref_computed[f]['ref_max_' + c_name] = ref_max_score
             inp_params = m([inp[f][0]], ref_params[1:])
             inp_score = inp_params[0][0]
-            ref_computed[f][m.__name__] = inp_score
+            ref_computed[f][c_name] = inp_score
             if ref_max_score != 0:
                 ratio = inp_score/ref_max_score
             elif inp_score == 0:
                 ratio = inp_score
             else:
                 ratio = float('inf')
-            ref_computed[f][m.__name__+'_ratio'] = ratio
+            ref_computed[f][c_name+'_ratio'] = ratio
             result_dict[f] += ratio
 
     # sort the result_dict by descending value

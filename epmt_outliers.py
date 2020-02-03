@@ -10,7 +10,7 @@ from orm import db_session, ReferenceModel, orm_get, orm_col_len
 # the first epmt import must be epmt_query as it sets up logging
 import epmt_query as eq
 from epmtlib import tags_list, tag_from_string, dict_in_list, isString
-from epmt_stat import thresholds, modified_z_score,outliers_iqr,outliers_modified_z_score,rca
+from epmt_stat import thresholds, modified_z_score,outliers_iqr,outliers_modified_z_score,rca, get_classifier_name
 
 logger = getLogger(__name__)  # you can use other name
 import epmt_settings as settings
@@ -182,7 +182,8 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
         _err_col_len(jobs, 4, 'Too few jobs to do outlier detection. Need at least 4!')
 
     for m in methods:
-        model_params[m] = trained_model.computed[m.__name__] if trained_model else {}
+        c_name = get_classifier_name(m)
+        model_params[m] = trained_model.computed[c_name] if trained_model else {}
 
     # sanitize features list
     features = _sanitize_features(features, jobs, trained_model)
@@ -192,13 +193,14 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
     for c in features:
         # print('data-type for feature column {0} is {1}'.format(c, jobs[c].dtype))
         for m in methods:
+            m_name = get_classifier_name(m)
             params = model_params[m].get(c, ())
             if params:
-                logger.debug('params[{0}][{1}]: {2}'.format(m.__name__, c, params))
+                logger.debug('params[{0}][{1}]: {2}'.format(m_name, c, params))
             scores = m(jobs[c], params)[0]
             # use the max score in the refmodel if we have a trained model
             # otherwise use the default threshold for the method
-            threshold = params[0] if params else thresholds[m.__name__]
+            threshold = params[0] if params else thresholds[m_name]
             outlier_rows = np.where(np.abs(scores) > threshold)[0]
             retval.loc[outlier_rows,c] += 1
     # add a jobid column to the output dataframe
@@ -338,7 +340,8 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
         t = dumps(t, sort_keys=True)
         model_params[t] = {}
         for m in methods:
-            model_params[t][m] = trained_model.computed[t][m.__name__] if trained_model else {}
+            m_name = get_classifier_name(m)
+            model_params[t][m] = trained_model.computed[t][m_name] if trained_model else {}
 
 
     # get the dataframe of aggregate metrics, where each row
@@ -378,17 +381,18 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
             score_diff = 0
             for m in methods:
                 params = model_params[t][m].get(c, ())
+                m_name = get_classifier_name(m)
                 # if params:
                 #     logger.debug('params[{0}][{1}][{2}]: {3}'.format(t,m.__name__, c, params))
                 scores = m(rows[c], params)[0]
                 # use the max score in the refmodel if we have a trained model
                 # otherwise use the default threshold for the method
-                threshold = params[0] if params else thresholds[m.__name__]
+                threshold = params[0] if params else thresholds[m_name]
                 outlier_rows = np.where(np.abs(scores) > threshold)[0]
                 score_diff += max(max(scores) - threshold, 0)
                 # remain the outlier rows indices to the indices in the original df
                 outlier_rows = rows.index[outlier_rows].values
-                logger.debug('outliers for [{0}][{1}][{2}] -> {3}'.format(t,m.__name__,c,outlier_rows))
+                logger.debug('outliers for [{0}][{1}][{2}] -> {3}'.format(t,m_name,c,outlier_rows))
                 retval.loc[outlier_rows,c] += 1
             tags_max[t].append(round(score_diff, 3))
     retval['jobid'] = ops['job']
@@ -449,8 +453,9 @@ def detect_outlier_processes(processes, trained_model=None,
     retval = pd.DataFrame(0, columns=features, index=processes.index)
     for c in features:
         for m in methods:
+            m_name = get_classifier_name(m)
             outlier_rows = m(processes[c])
-            print(m.__name__,c,len(outlier_rows),"outliers")
+            print(m_name,c,len(outlier_rows),"outliers")
             retval.loc[outlier_rows,c] += 1
 #
 #   Here we can demand that more than one detector signal an outlier, currently only 1 is required.
