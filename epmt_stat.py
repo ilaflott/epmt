@@ -61,6 +61,10 @@ def get_outlier_1d(df,column,func=outliers_iqr):
     return(func(df[column]))
 
 
+# use like:
+# x = mvod_scores(...)
+# to get outliers for a particular threshold:
+# (x['K Nearest Neighbors (KNN)'] > 0.5104869395352308) * 1
 def mvod_scores(X = None, classifiers = []):
     '''
     Performs multivariate outlier scoring on a multi-dimensional
@@ -76,6 +80,7 @@ def mvod_scores(X = None, classifiers = []):
     classifiers (ABOD, KNN) will be selected.
 
     X: Multi-dimensional np array. If not provided a random
+       two-dimenstional numpy array is generated
        
     classifiers is a list of tuples of the form:
         [(classifier1_name, classifier_1), (c2_name, c2),...]
@@ -85,9 +90,19 @@ def mvod_scores(X = None, classifiers = []):
                  ('K Nearest Neighbors (KNN)' :  KNN())
              ]
 
+    Here is a run with random data:
+
+    >>> x = mvod_scores()                                                                                     
+    No input data for MVOD. Random data will be used with 2 features
+    No of Errors using  Angle-based Outlier Detector (ABOD) :  2
+    Angle-based Outlier Detector (ABOD)  threshold:  -0.0883552095486537  (> threshold => outlier)
+    No of Errors using  K Nearest Neighbors (KNN) :  0
+    K Nearest Neighbors (KNN)  threshold:  0.8296872805514997  (> threshold => outlier)
+    >>> x
+    {'Angle-based Outlier Detector (ABOD)': array(...),
+     'K Nearest Neighbors (KNN)':  array(...) }    
     '''
     logger = getLogger(__name__)  # you can use other name
-    from scipy import stats
     # import matplotlib.pyplot as plt
     #%matplotlib inline
     # import matplotlib.font_manager
@@ -105,8 +120,15 @@ def mvod_scores(X = None, classifiers = []):
     if not X:
         logger.warning('No input data for MVOD. Random data will be used with 2 features')
         from pyod.utils.data import generate_data, get_outliers_inliers
+        from scipy import stats
         #generate random data with two features
-        X, Y = generate_data(n_train=200,train_only=True, n_features=2)
+        X = None
+        # generate_data has a bug in that in some rare cases it produces
+        # zeroes for the outliers (last 10 elements). This messes model
+        # fitting. So we just make sure we generate valid data
+        # pylint: disable=unsubscriptable-object
+        while (X is None) or (X[-10:-1].sum() == 0.0):
+            X, Y = generate_data(n_train=100,train_only=True, n_features=2)
     
         # store outliers and inliers in different numpy arrays
         x_outliers, x_inliers = get_outliers_inliers(X,Y)
@@ -128,6 +150,7 @@ def mvod_scores(X = None, classifiers = []):
         if Y is not None: 
             # prediction of a datapoint category outlier or inlier
             y_pred = clf.predict(X)
+            # print(Y)
             # print(y_pred)
     
             # no of errors in prediction
@@ -138,7 +161,7 @@ def mvod_scores(X = None, classifiers = []):
             # threshold value to consider a datapoint inlier or outlier
             # 0.1 is the default outlier fraction in the generated data
             threshold = stats.scoreatpercentile(scores[clf_name],100 * 0.9)
-            print(clf_name, ' threshold: ', threshold)
+            print(clf_name, ' threshold: ', threshold, ' (> threshold => outlier)')
     #print(scores)
     return scores
     
