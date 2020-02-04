@@ -10,7 +10,7 @@ from orm import db_session, ReferenceModel, orm_get, orm_col_len
 # the first epmt import must be epmt_query as it sets up logging
 import epmt_query as eq
 from epmtlib import tags_list, tag_from_string, dict_in_list, isString
-from epmt_stat import thresholds, modified_z_score,outliers_iqr,outliers_modified_z_score,rca, get_classifier_name
+from epmt_stat import thresholds, modified_z_score,outliers_iqr,outliers_modified_z_score,rca, get_classifier_name, is_classifier_mv
 
 logger = getLogger(__name__)  # you can use other name
 import epmt_settings as settings
