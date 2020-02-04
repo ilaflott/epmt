@@ -103,7 +103,7 @@ def mvod_scores(X = None, classifiers = []):
     X: Multi-dimensional np array. If not provided a random
        two-dimenstional numpy array is generated
        
-    classifiers is a list of classifier functions:
+    classifiers is a list of classifier functions like so:
              [
                  ABOD(),
                  KNN()
@@ -135,9 +135,13 @@ def mvod_scores(X = None, classifiers = []):
     if not classifiers:
         from pyod.models.abod import ABOD
         from pyod.models.knn import KNN
+        from pyod.models.iforest import IForest
+        from pyod.models.mcd import MCD
         classifiers = [
              ABOD(contamination=contamination),
-             KNN(contamination=contamination)
+             KNN(contamination=contamination),
+             IForest(contamination=contamination),
+             MCD(contamination=contamination)
         ]
     logger.debug('using classifiers: {}'.format([get_classifier_name(c) for c in classifiers]))
 

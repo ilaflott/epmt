@@ -709,10 +709,13 @@ def _refmodel_scores(col, outlier_methods, features):
         ret[m_name] = {}
         if is_classifier_mv(m):
             logger.debug('scoring with MV classifier ({0}), using features ({1})'.format(m_name, features))
-            nd_array = df[features].to_numpy()
+            _f = sorted(features)
+            nd_array = df[_f].to_numpy()
             # the second element return is a dict indexed by classifier
             # and containing the max anomaly score using the classifier
-            ret[m_name][",".join(sorted(features))] = mvod_scores(nd_array, classifiers = [m])[1][m_name]
+            (full_scores, max_score) = mvod_scores(nd_array, classifiers = [m])
+            logger.debug('{0} scores:\n{1}'.format(m_name, full_scores[m_name]))
+            ret[m_name][",".join(_f)] = float(max_score[m_name])
         else:
             # univariate classifiers can only handle
             logger.debug('scoring with univariate classifier: {}'.format(m_name))

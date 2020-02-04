@@ -121,7 +121,10 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
               outlier_features in settings will be used.
 
     methods:  This is an advanced option to specify the function(s) to use
-              for outlier detection.
+              for outlier detection. If unspecified it will default to
+              modified z-score. If multivariate classifiers are specified,
+              a trained model *must* be specified. We only support pyod
+              classifiers at present for multivariate classifiers.
 
     thresholds: Advanced option defining what it means to be an outlier.
               This is ordered in the same order as 'methods', and has 
@@ -183,6 +186,10 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
 
     for m in methods:
         c_name = get_classifier_name(m)
+        if (trained_model is None) and (is_classifier_mv(m)):
+            err_msg = 'Multivariate classifier ({}) requires a trained model for outlier detection'.format(c_name)
+            logger.error(err_msg)
+            raise ValueError(err_msg)
         model_params[m] = trained_model.computed[c_name] if trained_model else {}
 
     # sanitize features list
