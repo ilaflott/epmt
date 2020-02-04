@@ -1090,6 +1090,9 @@ def epmt_entrypoint(args):
         return(epmt_run(args.epmt_cmd_args,wrapit=args.auto,dry_run=args.dry_run,debug=(args.verbose > 2)))
     if args.command == 'annotate':
         return(epmt_annotate(args.epmt_cmd_args, args.replace) == False)
+    if args.command == 'show':
+        from epmt_cmd_show import epmt_show_job
+        return(epmt_show_job(args.epmt_cmd_args) == False)
     if args.command == 'source':
         s = epmt_source(slurm_prolog=args.slurm,papiex_debug=(args.verbose > 2),monitor_debug=(args.verbose > 3))
         if not s:

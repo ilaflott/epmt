@@ -68,6 +68,11 @@ if (__name__ == "__main__"):
     annotate_parser.add_argument('epmt_cmd_args', nargs='+', help="key/value pairs in the form key1=value1 key2=value2..")
     annotate_parser.add_argument('--replace',action='store_true',default=False,help="Replace existing annotations instead of merging onto them")
 
+    # show
+    show_parser = subparser.add_parser('show', help="Show details of job from the database",
+        description="Show will print to console details of a job from the database")
+    show_parser.add_argument('epmt_cmd_args', nargs=1, help="Job ID in database")
+
     # Dump
     dump_parser = subparser.add_parser('dump', help="Print metadata from archive",
         description="Dump will print to console the metadata of a job directory")
