@@ -31,6 +31,15 @@ def is_classifier_mv(c):
     if n.startswith('pyod'): return True
     return False
 
+def partition_classifiers_uv_mv(classifiers):
+    """
+    Partition given list of classifiers into two disjoint sets,
+    one containing multivariate classifiers and the other
+    univariate classifiers
+    """
+    mv_set = set([ c for c in classifiers if is_classifier_mv(c) ])
+    uv_set = set(classifiers) - mv_set
+    return (uv_set, mv_set)
 
 # These all return a tuple containing a list of indicies
 # For 1-D this is just a tuple with one element that is a list of rows
@@ -197,8 +206,70 @@ def mvod_scores(X = None, classifiers = []):
             print(clf_name, ' threshold: ', threshold, ' (> threshold => outlier)')
     #print(scores)
     return (scores, max_score_for_cf)
-    
 
+
+def mvod_scores_using_model(inp, model_inp, classifier, threshold = None):
+    """
+    Determines the score for *each row* separately against
+    a model for a given classifier. If threshold is set, then
+    rather than returning an array of scores, we just return
+    an array of 0/1 corresponding to whether the row was an
+    outlier or not.
+
+    The important thing to remember in this function is that
+    we do NOT run an MV classifier on the whole "inp". Rather
+    we iterate over "inp" one row at a time. Join it to
+    the model input, and then run on MVOD on the resultant
+    matrix. Then we pick score for the inp row and append
+    it to the return array of scores. If threshold is set
+    then we just return an array of 0/1 values. 
+
+    inp: ndarray, columns correspond to features, and rows
+         presumably, different jobs.
+
+    model_inp: ndarray of model input
+
+    classifier: an multivariate classifier
+
+    threshold: optional. If provided this represents the
+               the model score, and the inp is classified
+               against it. 
+
+    Returns: If threshold is not set, then:
+
+             numpy array of scores where the score at the
+             ith index corresponds to the score of
+             the ith row of inp.     
+
+             If threshold is set, then a numpy array of
+             0 or 1, where the ith index is 1 if the ith
+             row score is higher than the given threshold
+             and 0 if its lower.
+    """
+    inp_nrows = inp.shape[0]
+    scores = []
+    for i in range(inp_nrows):
+        # pick the ith row
+        row = inp[i]
+        # append it to the model input
+        X = np.append(model_inp, [row], axis=0)
+        # now run the mvod scoring
+        (_scores, _) = mvod_scores(X, [classifier])
+        # mvod_scores returns a dict indexed by classifier name
+        # it will have exactly 1 key/value
+        _scores = list(_scores.values())[0]
+        # pick the score of the appended row (last element) and save it
+        scores[i] = _scores[-1]
+
+    # make list into a numpy array
+    scores = np.array(scores)
+
+    # return scores if threshold is not set. Else return
+    # a 0/1 vector of inlier / outliers
+    # multiply by 1 to convert to a 0/1 vector
+    return scores if (threshold is None) else (scores > threshold) * 1
+
+    
 # ref is a dataframe of reference entities, where the columns represent
 # the features.
 # inp represents a single entity and is either a Series or a DataFrame 

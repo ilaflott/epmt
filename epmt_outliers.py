@@ -10,7 +10,7 @@ from orm import db_session, ReferenceModel, orm_get, orm_col_len
 # the first epmt import must be epmt_query as it sets up logging
 import epmt_query as eq
 from epmtlib import tags_list, tag_from_string, dict_in_list, isString
-from epmt_stat import thresholds, modified_z_score,outliers_iqr,outliers_modified_z_score,rca, get_classifier_name, is_classifier_mv
+from epmt_stat import thresholds, modified_z_score,outliers_iqr,outliers_modified_z_score,rca, get_classifier_name, is_classifier_mv, partition_classifiers_uv_mv, mvod_scores_using_model
 
 logger = getLogger(__name__)  # you can use other name
 import epmt_settings as settings
@@ -184,43 +184,79 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
     else:
         _err_col_len(jobs, 4, 'Too few jobs to do outlier detection. Need at least 4!')
 
+    (uv_methods, mv_methods) = partition_classifiers_uv_mv(methods)
+
+    if mv_methods and (trained_model is None):
+        err_msg = 'Multivariate classifiers require a trained model for outlier detection'
+        logger.error(err_msg)
+        raise ValueError(err_msg)
+
     for m in methods:
         c_name = get_classifier_name(m)
-        if (trained_model is None) and (is_classifier_mv(m)):
-            err_msg = 'Multivariate classifier ({}) requires a trained model for outlier detection'.format(c_name)
-            logger.error(err_msg)
-            raise ValueError(err_msg)
         model_params[m] = trained_model.computed[c_name] if trained_model else {}
 
     # sanitize features list
     features = _sanitize_features(features, jobs, trained_model)
 
-    # initialize a df with all values set to False
-    retval = pd.DataFrame(0, columns=features, index=jobs.index)
-    for c in features:
-        # print('data-type for feature column {0} is {1}'.format(c, jobs[c].dtype))
-        for m in methods:
+    # list of stuff to return from this fn
+    retlist = []
+
+    # unfortunately we cannot leverage the same code for
+    # univariate and multivariate classifiers, since the 
+    # univariate code needs to iterate over the features
+    # while the multivariate code takes them in one go
+    if uv_methods:
+        # initialize a df with all values set to False
+        retval = pd.DataFrame(0, columns=features, index=jobs.index)
+        for c in features:
+            # print('data-type for feature column {0} is {1}'.format(c, jobs[c].dtype))
+            for m in uv_methods:
+                m_name = get_classifier_name(m)
+                params = model_params[m].get(c, ())
+                if params:
+                    logger.debug('params[{0}][{1}]: {2}'.format(m_name, c, params))
+                scores = m(jobs[c], params)[0]
+                # use the max score in the refmodel if we have a trained model
+                # otherwise use the default threshold for the method
+                threshold = params[0] if params else thresholds[m_name]
+                outlier_rows = np.where(np.abs(scores) > threshold)[0]
+                retval.loc[outlier_rows,c] += 1
+
+        # add a jobid column to the output dataframe
+        retval['jobid'] = jobs['jobid']
+        retval = retval[['jobid']+features]
+        # now let's create a dictionary where the key is the feature
+        # and he value is a tuple like ([ref_jobs],[outlier_jobs])
+        parts = {}
+        for f in features:
+            df_ref = retval[retval[f] == 0]
+            df_outl= retval[retval[f] > 0]
+            parts[f] = (set(df_ref['jobid'].values), (set(df_outl['jobid'].values)))
+        retlist.append(retval)
+        retlist.append(parts)
+
+    if mv_methods:
+        # initialize a df with all values set to False
+        features_str = ",".join(sorted(features))
+        mvod_retval = None
+        for m in mv_methods:
             m_name = get_classifier_name(m)
-            params = model_params[m].get(c, ())
-            if params:
-                logger.debug('params[{0}][{1}]: {2}'.format(m_name, c, params))
-            scores = m(jobs[c], params)[0]
-            # use the max score in the refmodel if we have a trained model
-            # otherwise use the default threshold for the method
-            threshold = params[0] if params else thresholds[m_name]
-            outlier_rows = np.where(np.abs(scores) > threshold)[0]
-            retval.loc[outlier_rows,c] += 1
-    # add a jobid column to the output dataframe
-    retval['jobid'] = jobs['jobid']
-    retval = retval[['jobid']+features]
-    # now let's create a dictionary where the key is the feature
-    # and he value is a tuple like ([ref_jobs],[outlier_jobs])
-    parts = {}
-    for f in features:
-        df_ref = retval[retval[f] == 0]
-        df_outl= retval[retval[f] > 0]
-        parts[f] = (set(df_ref['jobid'].values), (set(df_outl['jobid'].values)))
-    return (retval, parts)
+            if not features_str in model_params[m]:
+                logger.warning('Skipping classifier {}, as could not find model threshold for the feature set'.format(m_name))
+                continue
+            (model_score, model_inp) = model_params[m].get(features_str)
+            model_ndarray = np.asarray(model_inp)
+            logger.debug('classifier {0} model threshold: {1}'.format(m_name, model_score))
+            outliers_vec = mvod_scores_using_model(jobs[features].to_numpy(), model_ndarray, m, model_score)
+            logger.debug('outliers vector using {0}: {1}'.format(m_name, outliers_vec))
+            # sum the bitmap vectors - the value for the ith row in the result
+            # shows the number of mvod classifiers that considered the row (job) to
+            # be an outlier
+            mvod_retval = outliers_vec if (mvod_retval is None) else mvod_retval + outliers_vec 
+        mvod_df = pd.DataFrame(mvod_retval, columns=['mvod-outlier-score'], index=jobs.index)
+        retlist.append(mvod_df)
+
+    return retlist
         
 
 @db_session

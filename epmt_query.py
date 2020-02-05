@@ -715,7 +715,11 @@ def _refmodel_scores(col, outlier_methods, features):
             # and containing the max anomaly score using the classifier
             (full_scores, max_score) = mvod_scores(nd_array, classifiers = [m])
             logger.debug('{0} scores:\n{1}'.format(m_name, full_scores[m_name]))
-            ret[m_name][",".join(_f)] = float(max_score[m_name])
+
+            # we save the max score and also we need the input nd_array for
+            # future reference. We will need the nd_array for outlier detection
+            # in detect_outlier_jobs
+            ret[m_name][",".join(_f)] = [float(max_score[m_name]), nd_array.tolist()]
         else:
             # univariate classifiers can only handle
             logger.debug('scoring with univariate classifier: {}'.format(m_name))
