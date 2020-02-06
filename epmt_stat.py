@@ -130,6 +130,11 @@ def mvod_scores(X = None, classifiers = []):
     {'Angle-based Outlier Detector (ABOD)': array(...),
      'K Nearest Neighbors (KNN)':  array(...) }    
     '''
+    # import warnings filter
+    from warnings import simplefilter
+    # ignore all future warnings
+    simplefilter(action='ignore', category=FutureWarning)
+
     logger = getLogger(__name__)  # you can use other name
 
     # the contamination below, is *ONLY* used in the model
@@ -143,13 +148,9 @@ def mvod_scores(X = None, classifiers = []):
 
     if not classifiers:
         from pyod.models.abod import ABOD
-        from pyod.models.knn import KNN
-        from pyod.models.iforest import IForest
         from pyod.models.mcd import MCD
         classifiers = [
              ABOD(contamination=contamination),
-             KNN(contamination=contamination),
-             IForest(contamination=contamination),
              MCD(contamination=contamination)
         ]
     logger.debug('using classifiers: {}'.format([get_classifier_name(c) for c in classifiers]))
@@ -176,7 +177,8 @@ def mvod_scores(X = None, classifiers = []):
         n_outliers = len(x_outliers)
 
     (npts, ndim) = X.shape
-    logger.info('mvod: Input data length {0}, dimensions {1}'.format(npts, ndim))
+    logger.debug('mvod: input length {0}, dimensions {1}'.format(npts, ndim))
+    logger.debug(X)
     
     scores = {}
     max_score_for_cf = {}
@@ -205,6 +207,8 @@ def mvod_scores(X = None, classifiers = []):
             threshold = stats.scoreatpercentile(scores[clf_name],100 * (1 - contamination))
             print(clf_name, ' threshold: ', threshold, ' (> threshold => outlier)')
     #print(scores)
+    logger.debug('mvod: scores')
+    logger.debug(scores)
     return (scores, max_score_for_cf)
 
 
@@ -246,12 +250,24 @@ def mvod_scores_using_model(inp, model_inp, classifier, threshold = None):
              row score is higher than the given threshold
              and 0 if its lower.
     """
+    logger = getLogger(__name__)  # you can use other name
     inp_nrows = inp.shape[0]
+    logger.debug('--- input to classify ---')
+    logger.debug(inp)
+    logger.debug('-------------------------')
+    logger.debug('=== model input ===')
+    logger.debug(model_inp)
+    logger.debug('===================')
+
     scores = []
     # compute model score for sanity
+    logger.debug('recomputing model scores as a sanity check on model stability..')
+    c_name = get_classifier_name(classifier)
     (model_scores, model_score_max) = mvod_scores(model_inp, [classifier])
-    logger.info('computed model threshold (max of model scores): {}'.format(model_score_max))
-    logger.info('MVOD classifier {0} (threshold={1})'.format(get_classifier_name(classifier), threshold))
+    model_score_max = model_score_max[c_name]
+    logger.debug('MVOD {0} (threshold={1})'.format(c_name, threshold))
+    if model_score_max != threshold:
+        logger.warning('MVOD {} is not stable. We computed a threshold {}, while the passed threshold from the saved model was {}'.format(c_name, model_score_max, threshold))
     for i in range(inp_nrows):
         # pick the ith row
         row = inp[i]
@@ -264,7 +280,7 @@ def mvod_scores_using_model(inp, model_inp, classifier, threshold = None):
         _scores = list(_scores.values())[0]
         # pick the score of the appended row (last element) and save it
         score = _scores[-1]
-        logger.info('MVOD score for row #{0}: {1}'.format(i, score))
+        logger.debug('MVOD {0} score for input index #{1}: {2}'.format(c_name, i, score))
         scores.append(_scores[-1])
 
     # make list into a numpy array
@@ -273,6 +289,9 @@ def mvod_scores_using_model(inp, model_inp, classifier, threshold = None):
     # return scores if threshold is not set. Else return
     # a 0/1 vector of inlier / outliers
     # multiply by 1 to convert to a 0/1 vector
+    logger.debug('*** input scores (model threshold={}) ***'.format(threshold))
+    logger.debug(scores)
+    
     return scores if (threshold is None) else (scores > threshold) * 1
 
     

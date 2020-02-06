@@ -253,10 +253,14 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
             # shows the number of mvod classifiers that considered the row (job) to
             # be an outlier
             mvod_retval = outliers_vec if (mvod_retval is None) else mvod_retval + outliers_vec 
-        mvod_df = pd.DataFrame(mvod_retval, columns=['mvod-outlier'], index=jobs.index)
+        mvod_df = pd.DataFrame(mvod_retval, columns=['outlier'], index=jobs.index)
         # add a jobid column to the output dataframe
         mvod_df['jobid'] = jobs['jobid']
-        mvod_df = mvod_df[['jobid','mvod-outlier']]
+        mvod_df = mvod_df[['jobid','outlier']]
+        mvod_df.name = ",".join([get_classifier_name(m) for m in mv_methods])
+        mvod_df.name += " (" + features_str + ")"
+        logger.info(mvod_df.name)
+        logger.info(mvod_df)
         retlist.append(mvod_df)
 
     # return a list if we have more than one item
@@ -637,7 +641,9 @@ def _sanitize_features(f, df, model = None):
             logger.debug('skipping feature({0}) as type is not int/float'.format(c))
     if not features:
         raise RuntimeError("Need a non-empty list of features for outlier detection")
-    logger.info('using features: {0}'.format(features))
+
+    features = sorted(features)
+    logger.debug('using features: {0}'.format(features))
     # print('features: {0}'.format(features))
     return features
 
