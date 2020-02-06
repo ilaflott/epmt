@@ -229,7 +229,7 @@ def mvod_scores_using_model(inp, model_inp, classifier, threshold = None):
 
     model_inp: ndarray of model input
 
-    classifier: an multivariate classifier
+    classifier: a multivariate classifier
 
     threshold: optional. If provided this represents the
                the model score, and the inp is classified
@@ -248,6 +248,10 @@ def mvod_scores_using_model(inp, model_inp, classifier, threshold = None):
     """
     inp_nrows = inp.shape[0]
     scores = []
+    # compute model score for sanity
+    (model_scores, model_score_max) = mvod_scores(model_inp, [classifier])
+    logger.info('computed model threshold (max of model scores): {}'.format(model_score_max))
+    logger.info('MVOD classifier {0} (threshold={1})'.format(get_classifier_name(classifier), threshold))
     for i in range(inp_nrows):
         # pick the ith row
         row = inp[i]
@@ -259,7 +263,9 @@ def mvod_scores_using_model(inp, model_inp, classifier, threshold = None):
         # it will have exactly 1 key/value
         _scores = list(_scores.values())[0]
         # pick the score of the appended row (last element) and save it
-        scores[i] = _scores[-1]
+        score = _scores[-1]
+        logger.info('MVOD score for row #{0}: {1}'.format(i, score))
+        scores.append(_scores[-1])
 
     # make list into a numpy array
     scores = np.array(scores)

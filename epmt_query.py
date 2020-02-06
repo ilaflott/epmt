@@ -949,7 +949,18 @@ def refmodel_get_metrics(model, active_only = False):
         if active_metrics:
             # do an intersection
             metrics &= set(active_metrics)
-    return metrics
+
+    # while metrics should consist of features that are each singular
+    # it might also consist of a MV feature set like "duration,num_procs,cpu_time"
+    # In other words a composite feature set. We need to break them down
+    decomposed_metrics = set()
+    for f in metrics:
+        if "," in f:
+            decomp_features = f.split(",")
+            decomposed_metrics |= set(decomp_features)
+        else:
+            decomposed_metrics.add(f)
+    return decomposed_metrics
 
 def refmodel_set_active_metrics(ref_id, metrics):
     """

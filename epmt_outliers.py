@@ -253,10 +253,14 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
             # shows the number of mvod classifiers that considered the row (job) to
             # be an outlier
             mvod_retval = outliers_vec if (mvod_retval is None) else mvod_retval + outliers_vec 
-        mvod_df = pd.DataFrame(mvod_retval, columns=['mvod-outlier-score'], index=jobs.index)
+        mvod_df = pd.DataFrame(mvod_retval, columns=['mvod-outlier'], index=jobs.index)
+        # add a jobid column to the output dataframe
+        mvod_df['jobid'] = jobs['jobid']
+        mvod_df = mvod_df[['jobid','mvod-outlier']]
         retlist.append(mvod_df)
 
-    return retlist
+    # return a list if we have more than one item
+    return (retlist if len(retlist) > 1 else retlist[0])
         
 
 @db_session
