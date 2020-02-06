@@ -349,7 +349,7 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
     if (not(orm_is_query(jobs))) and (type(jobs) != pd.DataFrame) and (jobs in [[], '', None]):
         if (fmt != 'orm') and (limit == None): 
             limit = 20
-            logger.warning('No limit set, defaults to {0}. Set limit to 0 to avoid limits'.format(limit))
+            logger.warning('No limit set, defaults to {0}. Set limit=0 to avoid limits'.format(limit))
 
     if order is None: order = Job.start
       
@@ -489,7 +489,7 @@ def get_procs(jobs = [], tags = None, fltr = None, order = None, limit = None, w
 
     if (limit is None) and (fmt != 'orm'):
         limit = 10000
-        logger.warning('No limit set, defaults to {0}. Set limit to 0 to avoid limits'.format(limit))
+        logger.warning('No limit set, defaults to {0}. Set limit=0 to avoid limits'.format(limit))
 
     if when:
         if type(when) == str:

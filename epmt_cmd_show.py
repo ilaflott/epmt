@@ -2,9 +2,9 @@ from __future__ import print_function
 
 def epmt_show_job(jobid):
     from orm import Job, orm_to_dict
-    from logging import getLogger
     import epmt_query # to set up db and init stuff
-    logger = getLogger(__name__)  # you can use other name
+    if type(jobid) == list:
+        jobid = jobid[0]
     j = Job[jobid]
     # EXCLUDE_ATTR = { 'processes', 'metadata' }
     j_dict = orm_to_dict(j)
