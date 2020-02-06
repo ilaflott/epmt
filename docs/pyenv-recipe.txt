@@ -1,0 +1,48 @@
+# https://realpython.com/intro-to-pyenv/
+
+# Ubuntu
+$ sudo apt-get install -y make build-essential libssl-dev zlib1g-dev \
+libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev \
+libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python-openssl git
+
+$ git clone git@gitlab-mm:minimal-metrics-llc/epmt/epmt.git
+
+$ curl https://pyenv.run | bash
+$ export PATH="/root/.pyenv/bin:$PATH"  # add this to your .bashrc/.profile
+$ eval "$(pyenv init -)"                # add this to your .bashrc/.profile
+$ eval "$(pyenv virtualenv-init -)"     # add this to your .bashrc/.profile
+
+$ pyenv versions
+$ pyenv install 3.7.4
+$ pyenv global 3.7.4
+
+# run python -V and make sure you see 3.7.4
+$ python -V
+Python 3.7.4
+
+# Now let's create a virtualenv (make sure python refers to 3.7.4
+# before doing the steps below -- run python -V to be sure)
+
+$ cd epmt
+$ python -m venv venv374
+# a vevn374 directory would now be existing with stuff inside
+$ source venv374/bin/activate    # you need to do this whenever you want to use the virtual env
+
+# you will now see venv374 in the shell prompt as below
+(venv374) tushar@perftools:~/epmt$ 
+
+# now install the python packages (you need to do this only once)
+(venv374) tushar@perftools:~/epmt$ pip install -r requirements.txt.py3
+
+# now you are all set to use epmt
+(venv374) tushar@perftools:~/epmt$ python
+Python 3.7.4 (default, Sep 23 2019, 20:23:18) 
+[GCC 5.4.0 20160609] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import epmt_query as eq
+
+# to get out of the virtual environment
+(venv374) tushar@perftools:~/epmt$ deactivate
+
+# You can always activate by doing
+$ source venv374/bin/activate 
