@@ -95,7 +95,7 @@ def get_outlier_1d(df,column,func=outliers_iqr):
 # x = mvod_scores(...)
 # to get outliers for a particular threshold:
 # (x['K Nearest Neighbors (KNN)'] > 0.5104869395352308) * 1
-def mvod_scores(X = None, classifiers = []):
+def mvod_scores(X = None, classifiers = [], warnopts = ''):
     '''
     Performs multivariate outlier scoring on a multi-dimensional
     numpy array. Returns a numpy array of scores for each
@@ -107,7 +107,7 @@ def mvod_scores(X = None, classifiers = []):
 
     At present we support classifiers from PYOD. If none
     are provided in the 'classifiers' argument, then default
-    classifiers (ABOD, KNN) will be selected.
+    classifiers will be selected.
 
     X: Multi-dimensional np array. If not provided a random
        two-dimenstional numpy array is generated
@@ -117,6 +117,9 @@ def mvod_scores(X = None, classifiers = []):
                  ABOD(),
                  KNN()
              ]
+
+    warnopts takes the options from the python warning module:
+        "default", "error", "ignore", "always", "module" and "once"
 
     Here is a run with random data:
 
@@ -130,10 +133,12 @@ def mvod_scores(X = None, classifiers = []):
     {'Angle-based Outlier Detector (ABOD)': array(...),
      'K Nearest Neighbors (KNN)':  array(...) }    
     '''
-    # import warnings filter
-    from warnings import simplefilter
-    # ignore all future warnings
-    simplefilter(action='ignore', category=FutureWarning)
+
+    if warnopts:
+        from warnings import simplefilter
+        # ignore all future warnings
+        # simplefilter(action='ignore', category=FutureWarning)
+        simplefilter(warnopts)
 
     logger = getLogger(__name__)  # you can use other name
 
@@ -148,11 +153,31 @@ def mvod_scores(X = None, classifiers = []):
 
     if not classifiers:
         from pyod.models.abod import ABOD
+        from pyod.models.knn import KNN
+        #from pyod.models.feature_bagging import FeatureBagging # not stable, wrong results
         from pyod.models.mcd import MCD
+        from pyod.models.cof import COF
+        from pyod.models.hbos import HBOS
+        from pyod.models.pca import PCA
+        # from pyod.models.sos import SOS  # wrong result
+        #from pyod.models.lmdd import LMDD
+        #from pyod.models.cblof import CBLOF
+        #from pyod.models.loci import LOCI # wrong result
+        from pyod.models.ocsvm import OCSVM
+        from pyod.models.iforest import IForest
+
+
         classifiers = [
-             ABOD(contamination=contamination),
-             MCD(contamination=contamination)
-        ]
+                          ABOD(contamination=contamination), 
+                          KNN(contamination=contamination), 
+                          MCD(contamination=contamination), 
+                          COF(contamination=contamination), 
+                          HBOS(contamination=contamination), 
+                          PCA(contamination=contamination), 
+                          OCSVM(contamination=contamination), 
+                          IForest(contamination=contamination),
+                      ]
+
     logger.debug('using classifiers: {}'.format([get_classifier_name(c) for c in classifiers]))
 
     Y = None  # Y is only used to test predictor with random data
@@ -199,13 +224,13 @@ def mvod_scores(X = None, classifiers = []):
     
             # no of errors in prediction
             n_errors = (y_pred != Y).sum()
-            print('No of Errors using ', clf_name, ': ', n_errors)
+            print('No. of errors using ', clf_name, ': ', n_errors)
     
     
             # threshold value to consider a datapoint inlier or outlier
             # 0.1 is the default outlier fraction in the generated data
             threshold = stats.scoreatpercentile(scores[clf_name],100 * (1 - contamination))
-            print(clf_name, ' threshold: ', threshold, ' (> threshold => outlier)')
+            logger.debug('{0} threshold: {1}'.format(clf_name, threshold))
     #print(scores)
     logger.debug('mvod: scores')
     logger.debug(scores)
@@ -266,7 +291,8 @@ def mvod_scores_using_model(inp, model_inp, classifier, threshold = None):
     (model_scores, model_score_max) = mvod_scores(model_inp, [classifier])
     model_score_max = model_score_max[c_name]
     logger.debug('MVOD {0} (threshold={1})'.format(c_name, threshold))
-    if model_score_max != threshold:
+    from math import isclose
+    if not isclose(model_score_max, threshold, rel_tol=1e-2):
         logger.warning('MVOD {} is not stable. We computed a threshold {}, while the passed threshold from the saved model was {}'.format(c_name, model_score_max, threshold))
     for i in range(inp_nrows):
         # pick the ith row

@@ -238,7 +238,8 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
     if mv_methods:
         # initialize a df with all values set to False
         features_str = ",".join(sorted(features))
-        mvod_retval = None
+        mvod_outliers = None
+        classfiers_od_dict = {} # will store outlier vectors index by classifier
         for m in mv_methods:
             m_name = get_classifier_name(m)
             if not features_str in model_params[m]:
@@ -249,11 +250,12 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
             logger.debug('classifier {0} model threshold: {1}'.format(m_name, model_score))
             outliers_vec = mvod_scores_using_model(jobs[features].to_numpy(), model_ndarray, m, model_score)
             logger.debug('outliers vector using {0}: {1}'.format(m_name, outliers_vec))
+            classfiers_od_dict[m_name] = list(outliers_vec)
             # sum the bitmap vectors - the value for the ith row in the result
             # shows the number of mvod classifiers that considered the row (job) to
             # be an outlier
-            mvod_retval = outliers_vec if (mvod_retval is None) else mvod_retval + outliers_vec 
-        mvod_df = pd.DataFrame(mvod_retval, columns=['outlier'], index=jobs.index)
+            mvod_outliers = outliers_vec if (mvod_outliers is None) else mvod_outliers + outliers_vec 
+        mvod_df = pd.DataFrame(mvod_outliers, columns=['outlier'], index=jobs.index)
         # add a jobid column to the output dataframe
         mvod_df['jobid'] = jobs['jobid']
         mvod_df = mvod_df[['jobid','outlier']]
@@ -262,6 +264,8 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
         logger.info(mvod_df.name)
         logger.info(mvod_df)
         retlist.append(mvod_df)
+        if (len(mv_methods) > 1):
+            retlist.append(classfiers_od_dict)
 
     # return a list if we have more than one item
     return (retlist if len(retlist) > 1 else retlist[0])

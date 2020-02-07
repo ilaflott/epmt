@@ -704,11 +704,12 @@ def get_refmodels(name=None, tag = {}, fltr=None, limit=0, order=None, before=No
 def _refmodel_scores(col, outlier_methods, features):
     df = conv_jobs(col, fmt='pandas') if col.__class__.__name__ != 'DataFrame' else col
     ret = {}
+    logger.info('creating trained model using {0} for features {1}'.format([get_classifier_name(c) for c in outlier_methods], features))
     for m in outlier_methods:
         m_name = get_classifier_name(m)
         ret[m_name] = {}
         if is_classifier_mv(m):
-            logger.debug('scoring with MV classifier ({0}), using features ({1})'.format(m_name, features))
+            logger.info('mvod {0}; features ({1})'.format(m_name, features))
             _f = sorted(features)
             nd_array = df[_f].to_numpy()
             # the second element return is a dict indexed by classifier
@@ -722,7 +723,7 @@ def _refmodel_scores(col, outlier_methods, features):
             ret[m_name][",".join(_f)] = [float(max_score[m_name]), nd_array.tolist()]
         else:
             # univariate classifiers can only handle
-            logger.debug('scoring with univariate classifier: {}'.format(m_name))
+            logger.debug('univariate classifier {0}; features {1}'.format(m_name, features))
             for c in features:
                 # we save everything except the first element of the
                 # tuple as the first element is the raw scores
