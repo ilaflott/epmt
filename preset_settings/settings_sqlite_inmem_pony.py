@@ -24,7 +24,7 @@ db_params = { 'url': 'sqlite:///:memory:' }
 # DO NOT EDIT BELOW UNLESS YOU KNOW WHAT YOU ARE DOING!
 # #
 # job_tags_env = 'EPMT_JOB_TAGS'
-# per_process_fields = ["tags","hostname","exename","path","args","exitcode","pid","generation","ppid","pgid","sid","numtids"]
+# per_process_fields = ["tags","hostname","exename","path","args","exitcode","pid","generation","ppid","pgid","sid","numtids", "mpinumranks", "mpirank", "exitsignal"]
 # skip_for_thread_sums = ["tid", "start", "end", "num_threads", "starttime"]
 # 
 # # outlier detection
