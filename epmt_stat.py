@@ -90,12 +90,47 @@ def get_outlier_1d(df,column,func=outliers_iqr):
     return(func(df[column]))
 
 
+def mvod_classifiers(contamination = 0.1, warnopts='ignore'):
+    '''
+    Returns a list of multivariate classifiers
+    '''
+    if warnopts:
+        from warnings import simplefilter
+        simplefilter(warnopts)
+    logger = getLogger(__name__)  # you can use other name
+
+    from pyod.models.abod import ABOD
+    from pyod.models.knn import KNN
+    #from pyod.models.feature_bagging import FeatureBagging # not stable, wrong results
+    from pyod.models.mcd import MCD
+    from pyod.models.cof import COF
+    from pyod.models.hbos import HBOS
+    from pyod.models.pca import PCA
+    # from pyod.models.sos import SOS  # wrong result
+    #from pyod.models.lmdd import LMDD # not stable
+    #from pyod.models.cblof import CBLOF
+    #from pyod.models.loci import LOCI # wrong result
+    from pyod.models.ocsvm import OCSVM
+    from pyod.models.iforest import IForest
+
+    classifiers = [
+                      ABOD(contamination=contamination), 
+                      KNN(contamination=contamination), # requires too many data points
+                      MCD(contamination=contamination), 
+                      COF(contamination=contamination), 
+                      HBOS(contamination=contamination), 
+                      PCA(contamination=contamination), 
+                      OCSVM(contamination=contamination), 
+                      IForest(contamination=contamination),
+                  ]
+    return classifiers
+
 
 # use like:
 # x = mvod_scores(...)
 # to get outliers for a particular threshold:
 # (x['K Nearest Neighbors (KNN)'] > 0.5104869395352308) * 1
-def mvod_scores(X = None, classifiers = [], warnopts = ''):
+def mvod_scores(X = None, classifiers = [], warnopts = 'ignore'):
     '''
     Performs multivariate outlier scoring on a multi-dimensional
     numpy array. Returns a numpy array of scores for each
@@ -107,7 +142,7 @@ def mvod_scores(X = None, classifiers = [], warnopts = ''):
 
     At present we support classifiers from PYOD. If none
     are provided in the 'classifiers' argument, then default
-    classifiers will be selected.
+    classifiers will be selected using mvod_classifiers()
 
     X: Multi-dimensional np array. If not provided a random
        two-dimenstional numpy array is generated
@@ -150,33 +185,8 @@ def mvod_scores(X = None, classifiers = [], warnopts = ''):
     # of the contamination factor
     contamination = 0.1
 
-
     if not classifiers:
-        from pyod.models.abod import ABOD
-        from pyod.models.knn import KNN
-        #from pyod.models.feature_bagging import FeatureBagging # not stable, wrong results
-        from pyod.models.mcd import MCD
-        from pyod.models.cof import COF
-        from pyod.models.hbos import HBOS
-        from pyod.models.pca import PCA
-        # from pyod.models.sos import SOS  # wrong result
-        #from pyod.models.lmdd import LMDD
-        #from pyod.models.cblof import CBLOF
-        #from pyod.models.loci import LOCI # wrong result
-        from pyod.models.ocsvm import OCSVM
-        from pyod.models.iforest import IForest
-
-
-        classifiers = [
-                          ABOD(contamination=contamination), 
-                          KNN(contamination=contamination), 
-                          MCD(contamination=contamination), 
-                          COF(contamination=contamination), 
-                          HBOS(contamination=contamination), 
-                          PCA(contamination=contamination), 
-                          OCSVM(contamination=contamination), 
-                          IForest(contamination=contamination),
-                      ]
+        classifiers = mvod_classifiers(contamination, warnopts)
 
     logger.debug('using classifiers: {}'.format([get_classifier_name(c) for c in classifiers]))
 
@@ -213,7 +223,13 @@ def mvod_scores(X = None, classifiers = [], warnopts = ''):
         clf.fit(X)
     
         # predict raw anomaly score
-        scores[clf_name] = clf.decision_function(X)
+        try:
+            scores[clf_name] = clf.decision_function(X)
+        except Exception as e:
+            logger.warning('Could not score using classifier {}'.format(clf_name))
+            logger.warning('Exception follows below: ')
+            logger.warning(e, exc_info=True)
+            continue
         max_score_for_cf[clf_name] = scores[clf_name].max()
    
         if Y is not None: 
@@ -232,6 +248,9 @@ def mvod_scores(X = None, classifiers = [], warnopts = ''):
             threshold = stats.scoreatpercentile(scores[clf_name],100 * (1 - contamination))
             logger.debug('{0} threshold: {1}'.format(clf_name, threshold))
     #print(scores)
+    if not scores: 
+        # some error occured and we didn't generate scores at all
+        return False
     logger.debug('mvod: scores')
     logger.debug(scores)
     return (scores, max_score_for_cf)
@@ -288,7 +307,11 @@ def mvod_scores_using_model(inp, model_inp, classifier, threshold = None):
     # compute model score for sanity
     logger.debug('recomputing model scores as a sanity check on model stability..')
     c_name = get_classifier_name(classifier)
-    (model_scores, model_score_max) = mvod_scores(model_inp, [classifier])
+    retval = mvod_scores(model_inp, [classifier])
+    if not retval:
+        logger.warning('could not score using {}'.format(c_name))
+        return False
+    (model_scores, model_score_max) = retval
     model_score_max = model_score_max[c_name]
     logger.debug('MVOD {0} (threshold={1})'.format(c_name, threshold))
     from math import isclose
@@ -300,7 +323,11 @@ def mvod_scores_using_model(inp, model_inp, classifier, threshold = None):
         # append it to the model input
         X = np.append(model_inp, [row], axis=0)
         # now run the mvod scoring
-        (_scores, _) = mvod_scores(X, [classifier])
+        retval = mvod_scores(X, [classifier])
+        if not retval:
+            logger.warning('could not score using {}'.format(c_name))
+            return False
+        (_scores, _) = retval
         # mvod_scores returns a dict indexed by classifier name
         # it will have exactly 1 key/value
         _scores = list(_scores.values())[0]

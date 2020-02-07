@@ -714,7 +714,11 @@ def _refmodel_scores(col, outlier_methods, features):
             nd_array = df[_f].to_numpy()
             # the second element return is a dict indexed by classifier
             # and containing the max anomaly score using the classifier
-            (full_scores, max_score) = mvod_scores(nd_array, classifiers = [m])
+            retval = mvod_scores(nd_array, classifiers = [m])
+            if not retval:
+                logger.warning('Could not score using mvod classifier {}. Skipping it.'.format(m_name))
+                continue
+            (full_scores, max_score) = retval
             logger.debug('{0} scores:\n{1}'.format(m_name, full_scores[m_name]))
 
             # we save the max score and also we need the input nd_array for

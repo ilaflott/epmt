@@ -249,6 +249,9 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
             model_ndarray = np.asarray(model_inp)
             logger.debug('classifier {0} model threshold: {1}'.format(m_name, model_score))
             outliers_vec = mvod_scores_using_model(jobs[features].to_numpy(), model_ndarray, m, model_score)
+            if outliers_vec is False:
+                logger.warning('Could not score using {}, skipping it'.format(m_name))
+                continue
             logger.debug('outliers vector using {0}: {1}'.format(m_name, outliers_vec))
             classfiers_od_dict[m_name] = list(outliers_vec)
             # sum the bitmap vectors - the value for the ith row in the result
