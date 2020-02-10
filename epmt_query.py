@@ -733,7 +733,7 @@ def _refmodel_scores(col, outlier_methods, features):
                 # we save everything except the first element of the
                 # tuple as the first element is the raw scores
                 ret[m_name][c] = m(df[c])[1:]
-    print(ret)
+    # print(ret)
     return ret
 #
 @db_session

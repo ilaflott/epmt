@@ -184,6 +184,26 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
     else:
         _err_col_len(jobs, 4, 'Too few jobs to do outlier detection. Need at least 4!')
 
+    # get model parameters if available in trained model
+    # skip over methods that do not exist in trained model
+    _methods = []
+    logger.info('outlier detection provided {} classifiers'.format(len(methods)))
+    for m in methods:
+        c_name = get_classifier_name(m)
+        if trained_model:
+             if not c_name in trained_model.computed:
+                 logger.warning("Skipping classifier {} -- could not find it in trained model".format(c_name))
+                 continue
+             model_params[m] = trained_model.computed[c_name]
+        else:
+             model_params[m] = {}
+        _methods.append(m)
+    methods = _methods
+    logger.info('{} classifiers eligible'.format(len(methods)))
+    if not methods:
+        logger.error('No eligible classifiers available')
+        return False
+
     (uv_methods, mv_methods) = partition_classifiers_uv_mv(methods)
 
     if mv_methods and (trained_model is None):
@@ -191,9 +211,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
         logger.error(err_msg)
         raise ValueError(err_msg)
 
-    for m in methods:
-        c_name = get_classifier_name(m)
-        model_params[m] = trained_model.computed[c_name] if trained_model else {}
+    logger.info('outlier detection will be performed using {} univariate and {} multivariate classifiers'.format(len(uv_methods), len(mv_methods)))
 
     # sanitize features list
     features = _sanitize_features(features, jobs, trained_model)
@@ -247,12 +265,12 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
                 continue
             (model_score, model_inp) = model_params[m].get(features_str)
             model_ndarray = np.asarray(model_inp)
-            logger.debug('classifier {0} model threshold: {1}'.format(m_name, model_score))
+            logger.info('classifier {0} model threshold: {1}'.format(m_name, model_score))
             outliers_vec = mvod_scores_using_model(jobs[features].to_numpy(), model_ndarray, m, model_score)
             if outliers_vec is False:
                 logger.warning('Could not score using {}, skipping it'.format(m_name))
                 continue
-            logger.debug('outliers vector using {0}: {1}'.format(m_name, outliers_vec))
+            logger.info('outliers vector using {0}: {1}'.format(m_name, outliers_vec))
             classfiers_od_dict[m_name] = list(outliers_vec)
             # sum the bitmap vectors - the value for the ith row in the result
             # shows the number of mvod classifiers that considered the row (job) to

@@ -103,6 +103,12 @@ class OutliersAPI(unittest.TestCase):
         # now check that we used *all* the features
         self.assertEqual(set(df.columns.values) & all_features, all_features)
 
+    @db_session
+    def test_outlier_jobs_trained_mvod(self):
+        from epmt_stat import mvod_classifiers
+        r = eq.create_refmodel(['kern-6656-20190614-190245', 'kern-6656-20190614-191138','kern-6656-20190614-194024'], outlier_methods = mvod_classifiers())
+        (df, _) = eod.detect_outlier_jobs(sorted(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024']), trained_model = r['id'], methods = mvod_classifiers())
+        self.assertEqual(list(df['outlier'].values), [0, 4, 0, 0])
 
     @db_session
     def test_outlier_ops_trained(self):

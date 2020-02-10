@@ -13,7 +13,7 @@ db_params = db_params = { 'url': 'sqlite:///{HOME}/EPMT_DB.sqlite'.format(HOME=s
 # epmt_output_prefix = "/tmp/epmt/"
 # stage_command = "mv"
 # stage_command_dest = "./"
-# verbose = 1
+# verbose = 0
 # input_pattern = "*-papiex-*-[0-9]*.csv"
 # install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-oss-install/"
 # logfile = path.dirname(path.abspath(__file__)) + '/epmt.log'
