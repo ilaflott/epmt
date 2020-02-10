@@ -658,6 +658,18 @@ def conv_to_datetime(t):
     return retval
 
 
+def ranges(i):
+    """
+    Return a list of ranges for a list of integers
+    
+    >>> print(list(ranges([0, 1, 2, 3, 4, 7, 8, 9, 11])))
+    >>> [(0, 4), (7, 9), (11, 11)]
+    """
+
+    from itertools import groupby
+    for a, b in groupby(enumerate(i), lambda pair: pair[1] - pair[0]):
+        b = list(b)
+        yield b[0][1], b[-1][1]
 
 if __name__ == "__main__":
     print(version_str(True))

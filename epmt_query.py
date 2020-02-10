@@ -348,7 +348,7 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
     # set defaults for limit and ordering only if the user doesn't specify jobs
     if (not(orm_is_query(jobs))) and (type(jobs) != pd.DataFrame) and (jobs in [[], '', None]):
         if (fmt != 'orm') and (limit == None): 
-            limit = 20
+            limit = 10000
             logger.warning('No limit set, defaults to {0}. Set limit=0 to avoid limits'.format(limit))
 
     if order is None: order = Job.start
@@ -1674,3 +1674,35 @@ def compute_process_trees(jobs):
     jobs = orm_jobs_col(jobs)
     for j in jobs:
         mk_process_tree(j)
+
+def exp_explore(exp_name, order_key = 'duration', op = 'sum', limit=10):
+    from epmtlib import ranges
+    exp_jobs = get_jobs(tags = { 'exp_name': exp_name }, fmt = 'orm' )
+    exp_jobids = sorted([int(j.jobid) for j in exp_jobs])
+    job_ranges_str = ",".join(["{}..{}".format(a, b) for (a,b) in ranges(exp_jobids)])
+    print('Experiment {} contains {} jobs:\n{}'.format(exp_name, exp_jobs.count(), job_ranges_str))
+
+    c_dict = {}
+    for j in exp_jobs:
+        c = j.tags['exp_component']
+        entry = c_dict.get(c, {'data': []})
+        entry['data'].append((j.tags['exp_time'], j.jobid, getattr(j, order_key)))
+        c_dict[c] = entry
+
+    c_list = []
+    agg_f = 0
+    for c, v in c_dict.items():
+        v['exp_component'] = c
+        jobids = [d[1] for d in v['data']]
+        f_vals = [d[2] for d in v['data']]
+        v['sum_' + order_key ] = sum(f_vals)
+        agg_f += v['sum_' + order_key ]
+        v['min_' + order_key ] = min(f_vals)
+        v['max_' + order_key ] = max(f_vals)
+        c_list.append(v)
+    ordered_c_list = sorted(c_list, key = lambda v: v[op+'_' + order_key], reverse=True)[:limit]
+
+    print('\ntop {} components by {}({}):'.format(limit, op, order_key))
+    for v in ordered_c_list:
+        print("%20.20s: %16d [%4.1f%%]" % (v['exp_component'], v[op+'_' + order_key], 100*v['sum_' + order_key ]/agg_f))
+    
