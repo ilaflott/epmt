@@ -107,8 +107,9 @@ class OutliersAPI(unittest.TestCase):
     def test_outlier_jobs_trained_mvod(self):
         from epmt_stat import mvod_classifiers
         r = eq.create_refmodel(['kern-6656-20190614-190245', 'kern-6656-20190614-191138','kern-6656-20190614-194024'], outlier_methods = mvod_classifiers())
-        (df, _) = eod.detect_outlier_jobs(sorted(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024']), trained_model = r['id'], methods = mvod_classifiers())
-        self.assertEqual(list(df['outlier'].values), [0, 4, 0, 0])
+        (df, _) = eod.detect_outlier_jobs(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], trained_model = r['id'], methods = mvod_classifiers())
+        df.sort_values(by=['jobid'], inplace=True)
+        self.assertEqual(list(df['outlier'].values), [0, 0, 4, 0])
 
     @db_session
     def test_outlier_ops_trained(self):
