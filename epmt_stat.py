@@ -219,18 +219,27 @@ def mvod_scores(X = None, classifiers = [], warnopts = 'ignore'):
     max_score_for_cf = {}
     for clf in classifiers:
         clf_name = get_classifier_name(clf)
-        # fit the dataset to the model
-        clf.fit(X)
-    
-        # predict raw anomaly score
+   
+        # classifiers may often fail for a variety of reasons,
+        # and do so by throwing exceptions. We trap those 
+        # exceptions, issue a warning and move on to the
+        # next MVOD classifiers 
         try:
-            scores[clf_name] = clf.decision_function(X)
+            # fit the dataset to the model
+            clf.fit(X)
+            # predict raw anomaly score
+            _clf_scores = clf.decision_function(X)
         except Exception as e:
             logger.warning('Could not score using classifier {}'.format(clf_name))
             logger.warning('Exception follows below: ')
             logger.warning(e, exc_info=True)
             continue
-        max_score_for_cf[clf_name] = scores[clf_name].max()
+        if not check_finite(_clf_scores):
+            logger.warning('Could not score using classifier {} -- got NaNs or Inf'.format(clf_name))
+            continue
+        scores[clf_name] = _clf_scores
+        max_score_for_cf[clf_name] = _clf_scores.max()
+       
    
         if Y is not None: 
             # prediction of a datapoint category outlier or inlier
@@ -413,3 +422,16 @@ def rca(ref, inp, features, methods = [modified_z_score]):
     # Sort order of columns in returned dataframe
     return (True, ref_computed[ranked_features], dlst)
 
+
+def check_finite(values):
+    from math import isnan, isinf
+    n_nans = 0
+    n_infs = 0
+    for v in values:
+        if isnan(v): n_nans += 1
+        if isinf(v): n_infs += 1
+    if n_nans:
+        logger.debug('found {} NaN'.format(n_nans))
+    if n_infs:
+        logger.debug('found {} Inf'.format(n_infs))
+    return ((n_infs == 0) and (n_nans == 0))
