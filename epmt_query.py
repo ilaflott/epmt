@@ -1695,7 +1695,10 @@ def exp_explore(exp_name, order_key = 'duration', op = 'sum', limit=10):
     for c, v in c_dict.items():
         v['exp_component'] = c
         jobids = [d[1] for d in v['data']]
+        v['jobids'] = jobids
         f_vals = [d[2] for d in v['data']]
+        outliers_vec = np.abs(modified_z_score(f_vals)[0]) > settings.outlier_thresholds['modified_z_score']
+        v['outliers'] = outliers_vec
         v['sum_' + order_key ] = sum(f_vals)
         agg_f += v['sum_' + order_key ]
         v['min_' + order_key ] = min(f_vals)
@@ -1716,8 +1719,12 @@ def exp_explore(exp_name, order_key = 'duration', op = 'sum', limit=10):
     # now let's the variations within a component across different time segments
     print('\nvariations across time segments:')
     print("%16s %12s %12s %16s" % ("component", "exp_time", "jobid", order_key))
+
     for v in ordered_c_list:
+        outliers = v['outliers']
+        idx = 0
         for d in v['data']:
-            print("%16.16s %12s %12s %16d" % (v['exp_component'], d[0], d[1], d[2]))
+            print("%16.16s %12s %12s %16d %4s" % (v['exp_component'], d[0], d[1], d[2], "****" if outliers[idx] else ""))
+            idx += 1
         print()
 
