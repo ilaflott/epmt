@@ -1678,6 +1678,8 @@ def compute_process_trees(jobs):
 def exp_explore(exp_name, order_key = 'duration', op = 'sum', limit=10):
     from epmtlib import ranges
     import numpy as np
+    order_key = order_key or 'duration' # defaults when using with command-line
+    limit = limit or 10 # defaults when using with command-line
     exp_jobs = get_jobs(tags = { 'exp_name': exp_name }, fmt = 'orm' )
     exp_jobids = sorted([int(j.jobid) for j in exp_jobs])
     job_ranges_str = ",".join(["{}..{}".format(a, b) for (a,b) in ranges(exp_jobids)])
@@ -1728,3 +1730,21 @@ def exp_explore(exp_name, order_key = 'duration', op = 'sum', limit=10):
             idx += 1
         print()
 
+    # finally let's see if by summing the metric across all the jobs in a 
+    # time segment we can spot something interesting
+    time_seg_dict = {}
+    for j in exp_jobs:
+        m = getattr(j, order_key)
+        exp_time = j.tags['exp_time']
+        m_total = time_seg_dict.get(exp_time, 0)
+        m_total += m
+        time_seg_dict[exp_time] = m_total
+    inp_vec = []
+    for t in sorted(list(time_seg_dict.keys())):
+        inp_vec.append(time_seg_dict[t])
+    out_vec = np.abs(modified_z_score(inp_vec)[0]) > settings.outlier_thresholds['modified_z_score']
+    print('{} by time segment:'.format(order_key))
+    idx = 0
+    for t in sorted(list(time_seg_dict.keys())):
+        print("%12s %16d %4s" % (t, time_seg_dict[t], "****" if out_vec[idx] else ""))
+        idx += 1

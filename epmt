@@ -71,7 +71,7 @@ if (__name__ == "__main__"):
     # show
     show_parser = subparser.add_parser('show', help="Show details of job from the database",
         description="Show will print to console details of a job from the database")
-    show_parser.add_argument('epmt_cmd_args', nargs=1, help="Job ID in database")
+    show_parser.add_argument('epmt_cmd_args', help="Job ID in database")
 
     # Dump
     dump_parser = subparser.add_parser('dump', help="Print metadata from archive",
@@ -148,6 +148,11 @@ if (__name__ == "__main__"):
                                            description="Perform programmatic, interactive analyses of EPMT data in iPython")
     notebook_parser.add_argument('epmt_cmd_args', nargs='*',
                                  help="Arguments to ipython notebook, first one **must** be preceded with double dash followed by a space, i.e. epmt notebook -- --ip 0.0.0.0 --allow-root, see epmt notebook -- --help for more info")
+    # experiment explore (mostly GFDL-specific)
+    exp_explore_parser = subparser.add_parser('explore', help="Explore a particular experiment, looking for outliers", description="Drilldown into an experiment using job tags")
+    exp_explore_parser.add_argument('epmt_cmd_args', help="Experiment name (matched against the 'exp_name' in job tags)")
+    exp_explore_parser.add_argument('--metric', help="metric to measure (default: duration)")
+    exp_explore_parser.add_argument('--limit', type=int, help="number of components to show (default: 10)")
 
 # Dummy Help for ./epmt help
     help_parser = subparser.add_parser('help', help="Display this help with extended configuration information")

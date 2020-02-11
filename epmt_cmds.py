@@ -1027,6 +1027,10 @@ def epmt_entrypoint(args):
         from code import interact
         interact(local=locals())
         return 0
+    if args.command == 'explore':
+        from epmt_query import exp_explore
+        exp_explore(args.epmt_cmd_args, order_key = args.metric, limit = args.limit)
+        return 0
     if args.command == 'gui':
         from ui import init_app, app
         init_app()
