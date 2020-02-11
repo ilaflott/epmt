@@ -1677,6 +1677,7 @@ def compute_process_trees(jobs):
 
 def exp_explore(exp_name, order_key = 'duration', op = 'sum', limit=10):
     from epmtlib import ranges
+    import numpy as np
     exp_jobs = get_jobs(tags = { 'exp_name': exp_name }, fmt = 'orm' )
     exp_jobids = sorted([int(j.jobid) for j in exp_jobs])
     job_ranges_str = ",".join(["{}..{}".format(a, b) for (a,b) in ranges(exp_jobids)])
@@ -1699,10 +1700,24 @@ def exp_explore(exp_name, order_key = 'duration', op = 'sum', limit=10):
         agg_f += v['sum_' + order_key ]
         v['min_' + order_key ] = min(f_vals)
         v['max_' + order_key ] = max(f_vals)
+        v['avg_' + order_key ] = v['sum_' + order_key ]/len(f_vals)
+        v['stddev_' + order_key ] = np.std(f_vals)
+        v['cv_' + order_key ] = round(v['stddev_' + order_key ]/v['avg_' + order_key ], 2)
         c_list.append(v)
+    
     ordered_c_list = sorted(c_list, key = lambda v: v[op+'_' + order_key], reverse=True)[:limit]
 
+
     print('\ntop {} components by {}({}):'.format(limit, op, order_key))
+    print("%16s  %12s         %12s %12s %4s" % ("component", "sum", "min", "max", "cv"))
     for v in ordered_c_list:
-        print("%20.20s: %16d [%4.1f%%]" % (v['exp_component'], v[op+'_' + order_key], 100*v['sum_' + order_key ]/agg_f))
-    
+        print("%16.16s: %12d [%4.1f%%] %12d %12d %4.1f" % (v['exp_component'], v[op+'_' + order_key], 100*v['sum_' + order_key ]/agg_f, v['min_' + order_key ],  v['max_' + order_key ], v['cv_' + order_key ]))
+
+    # now let's the variations within a component across different time segments
+    print('\nvariations across time segments:')
+    print("%16s %12s %12s %16s" % ("component", "exp_time", "jobid", order_key))
+    for v in ordered_c_list:
+        for d in v['data']:
+            print("%16.16s %12s %12s %16d" % (v['exp_component'], d[0], d[1], d[2]))
+        print()
+
