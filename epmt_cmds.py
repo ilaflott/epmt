@@ -803,10 +803,12 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1):
     total_procs = 0
     jobs_imported = []
     logger.info('**** Import Summary ****')
+    error_occurred = False
     for v in r.values():
         for (f, res) in v.items():
             if res[0] is False:
                 logger.error('Error in importing: %s: %s', f, res[1])
+                error_occurred = True
             elif res[0] is None:
                 logger.warning('%s: %s', res[1], f)
             else:
@@ -814,7 +816,7 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1):
                 jobs_imported.append(jobid)
                 total_procs += process_count
     logger.info('Imported %d jobs (%d processes) in %2.2f sec at %2.2f procs/sec, %d workers', len(jobs_imported), total_procs, (fini_ts - start_ts), total_procs/(fini_ts - start_ts), nprocs)
-    return(r if jobs_imported else False)
+    return(False if error_occurred else r)
 
 def compressed_tar(input):
     tar = None

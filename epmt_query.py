@@ -1675,6 +1675,7 @@ def compute_process_trees(jobs):
     for j in jobs:
         mk_process_tree(j)
 
+@db_session
 def exp_explore(exp_name, order_key = 'duration', op = 'sum', limit=10):
     from epmtlib import ranges
     import numpy as np
@@ -1682,8 +1683,11 @@ def exp_explore(exp_name, order_key = 'duration', op = 'sum', limit=10):
     limit = limit or 10 # defaults when using with command-line
     exp_jobs = get_jobs(tags = { 'exp_name': exp_name }, fmt = 'orm' )
     exp_jobids = sorted([int(j.jobid) for j in exp_jobs])
-    job_ranges_str = ",".join(["{}..{}".format(a, b) for (a,b) in ranges(exp_jobids)])
-    print('Experiment {} contains {} jobs:\n{}'.format(exp_name, exp_jobs.count(), job_ranges_str))
+    if not exp_jobids:
+        logger.warning('Could not find any jobs with an "exp_name" tag matching {}'.format(exp_name))
+        return False
+    job_ranges_str = ",".join(["{}..{}".format(a, b) if (a != b) else "{}".format(a) for (a,b) in ranges(exp_jobids)])
+    print('Experiment {} contains {} jobs: {}'.format(exp_name, exp_jobs.count(), job_ranges_str))
 
     c_dict = {}
     for j in exp_jobs:
@@ -1748,3 +1752,4 @@ def exp_explore(exp_name, order_key = 'duration', op = 'sum', limit=10):
     for t in sorted(list(time_seg_dict.keys())):
         print("%12s %16d %4s" % (t, time_seg_dict[t], "****" if out_vec[idx] else ""))
         idx += 1
+    return True
