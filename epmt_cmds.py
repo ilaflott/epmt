@@ -427,7 +427,7 @@ def epmt_stop_job(other=[]):
     retval = write_job_metadata(global_metadatafile,checked_metadata)
     return retval
 
-def epmt_dump_metadata(filelist):
+def epmt_dump_metadata(filelist, key = None):
     if not filelist:
         global_jobid,global_datadir,global_metadatafile = setup_vars()
         if not (global_jobid and global_datadir and global_metadatafile):
@@ -461,8 +461,11 @@ def epmt_dump_metadata(filelist):
 
         if not metadata:
             return False
-        for d in sorted(metadata.keys()):
-            print("%-24s%-56s" % (d,str(metadata[d])))
+        if key:
+            print(metadata[key])
+        else:
+            for d in sorted(metadata.keys()):
+                print("%-24s%-56s" % (d,str(metadata[d])))
     return True
 
 
@@ -1098,7 +1101,7 @@ def epmt_entrypoint(args):
         return(epmt_annotate(args.epmt_cmd_args, args.replace) == False)
     if args.command == 'show':
         from epmt_cmd_show import epmt_show_job
-        return(epmt_show_job(args.epmt_cmd_args) == False)
+        return(epmt_show_job(args.epmt_cmd_args, key = args.key) == False)
     if args.command == 'source':
         s = epmt_source(slurm_prolog=args.slurm,papiex_debug=(args.verbose > 2),monitor_debug=(args.verbose > 3))
         if not s:
@@ -1106,7 +1109,7 @@ def epmt_entrypoint(args):
         print(s,end="")
         return(0)
     if args.command == 'dump':
-        return(epmt_dump_metadata(args.epmt_cmd_args) == False)
+        return(epmt_dump_metadata(args.epmt_cmd_args, key = args.key) == False)
     if args.command == 'submit':
         return(epmt_submit(args.epmt_cmd_args,dry_run=args.dry_run,drop=args.drop,keep_going=not args.error, ncpus = args.num_cpus) == False)
     if args.command == 'check':

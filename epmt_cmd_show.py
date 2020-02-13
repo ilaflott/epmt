@@ -2,7 +2,7 @@ from __future__ import print_function
 import epmt_query as eq
 from logging import getLogger
 
-def epmt_show_job(jobid):
+def epmt_show_job(jobid, key = None):
     logger = getLogger(__name__)  # you can use other name
     if type(jobid) == list:
         jobid = jobid[0]
@@ -11,9 +11,14 @@ def epmt_show_job(jobid):
         logger.error('Job %s could not be found in database' % jobid)
         return False
     j_dict = jobs[0]
-    for key in sorted(j_dict.keys()):
-        # if attr.startswith('_'): continue
-        # if attr in EXCLUDE_ATTR: continue
-        # print("%-20s\t%-20s" % ( attr, getattr(j, attr)))
-        print("%-20s      %-20s" % (key, j_dict[key]))
+    if key:
+        if key in j_dict:
+            print(j_dict[key])
+        else:
+            logger.error('Key "{}" was not found as an attribute of the job table'.format(key))
+            print('Here are the keys that were found: {}'.format(",".join(sorted(j_dict.keys()))))
+            return False
+    else:
+        for k in sorted(j_dict.keys()):
+            print("%-20s      %-20s" % (k, j_dict[k]))
     return True

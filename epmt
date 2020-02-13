@@ -72,11 +72,13 @@ if (__name__ == "__main__"):
     show_parser = subparser.add_parser('show', help="Show details of job from the database",
         description="Show will print to console details of a job from the database")
     show_parser.add_argument('epmt_cmd_args', help="Job ID in database")
+    show_parser.add_argument('-k', '--key', help="Only show the value for the specified key")
 
     # Dump
     dump_parser = subparser.add_parser('dump', help="Print metadata from archive",
         description="Dump will print to console the metadata of a job directory")
     dump_parser.add_argument('epmt_cmd_args', default=[], nargs='*', help="Archive or list of archives to dump")
+    dump_parser.add_argument('-k', '--key', help="Only dump the value for the specified key")
     # Run
     run_parser = subparser.add_parser('run', help="Execute a process",
         description="Run will execute a command in shell typically used with the auto -a flag to begin instrumentation\
