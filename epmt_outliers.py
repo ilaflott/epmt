@@ -635,16 +635,16 @@ def detect_rootcause_op(jobs, inp, tag, features = FEATURES,  methods = [modifie
     return rca(ref_ops_df, inp_ops_df, features, methods)
 
 
-def pca_feature_combine(input_df, features = [], desired = 2, retain_features = False):
+def pca_feature_combine(inp_df, inp_features = [], desired = 2, retain_features = False):
     '''
     Performs PCA and returns a new dataframe containing
     the new PCA features as columns. The returned dataframe
     does not contain the old features unless retain_features
     is enabled.
 
-    input_df: A pandas dataframe where some or all of the columns are features.
+    inp_df: A pandas dataframe where some or all of the columns are features.
 
-    features: A list of features to use. If not set, the feature set
+    inp_features: A list of features to use. If not set, the feature set
         will be automatically determined.
 
     desired: Refers to the number of components desired in the PCA.
@@ -654,36 +654,88 @@ def pca_feature_combine(input_df, features = [], desired = 2, retain_features = 
     retain_features: Defaults to False. If enabled, the input features
              will also be copied into the output dataframe.
 
-    RETURNS: A tuple consisting of (output_df, pca_variance_ratios_list, pca_feature_names)
+    RETURNS: A tuple consisting of (out_df, pca_variance_ratios_list, pca_feature_names)
+
+    EXAMPLE:
+        >>> jobs = eq.get_jobs(['625151', '627907', '629322', '633114', '675992', '680163', '685001', '691209', '693129'], fmt='pandas')
+        >>> (df, variances, pca_features) = eod.pca_feature_combine(jobs)
+        >>> df.iloc[:,[0,1,2,3]]
+            jobid     pca_01    pca_02                                      all_proc_tags
+        0  625151  11.748975 -0.700262  [{'op': 'cp', 'op_instance': '1', 'op_sequence...
+        1  627907  -0.408930  1.383793  [{'op': 'cp', 'op_instance': '11', 'op_sequenc...
+        2  629322  -0.485693  5.288491  [{'op': 'cp', 'op_instance': '11', 'op_sequenc...
+        3  633114  -2.183437 -1.234823  [{'op': 'cp', 'op_instance': '11', 'op_sequenc...
+        4  675992  -1.429851  0.082807  [{'op': 'cp', 'op_instance': '11', 'op_sequenc...
+        5  680163  -1.847891 -1.319421  [{'op': 'cp', 'op_instance': '11', 'op_sequenc...
+        6  685001  -2.000026 -1.283439  [{'op': 'cp', 'op_instance': '11', 'op_sequenc...
+        7  691209  -1.848527 -1.166007  [{'op': 'cp', 'op_instance': '11', 'op_sequenc...
+        8  693129  -1.544619 -1.051139  [{'op': 'cp', 'op_instance': '11', 'op_sequenc...
+
+        # Ideally, we want the variances sum to be at least 80% or more to have confidence in PCA
+        >>> variances
+            array([0.70431608, 0.16781148])
+
+        >>> pca_features
+            ['pca_01', 'pca_02']
+
+        >>> x = eod.detect_outlier_jobs(df, features = pca_features)
+        >>> x[0]
+            jobid  pca_01  pca_02
+        0  625151       1       0
+        1  627907       0       1
+        2  629322       0       1
+        3  633114       0       0
+        4  675992       0       1
+        5  680163       0       0
+        6  685001       0       0
+        7  691209       0       0
+        8  693129       0       0
+
+        # We don't care about pca_02 if pca_01 is not set,
+        # So we want to do an & operation like below:
+        >>> y = x[0]
+        >>> y['pca_02'] = y['pca_01'] & y['pca_02']
+        >>> y
+            jobid  pca_01  pca_02
+        0  625151       1       0
+        1  627907       0       0
+        2  629322       0       0
+        3  633114       0       0
+        4  675992       0       0
+        5  680163       0       0
+        6  685001       0       0
+        7  691209       0       0
+        8  693129       0       0
+
+    IOW, 625151 is an outlier according to pca_01.        
     '''
 
     from epmt_stat import pca_stat
-    if type(input_df) != pd.DataFrame:
+    if type(inp_df) != pd.DataFrame:
         logger.error('Input needs to be a pandas dataframe')
         return False
 
-    inp_features = features   # keep a copy
-    features = _sanitize_features(inp_features, input_df)
-    logger.debug('PCA input features: {}'.format(features)
-    inp_data = input_df[features].to_numpy
+    features = _sanitize_features(inp_features, inp_df)
+    logger.debug('PCA input features: {}'.format(features))
+    inp_data = inp_df[features].to_numpy()
     (pca_data, pca_variance_ratios) = pca_stat(inp_data, desired)
     pca_feature_names = []
     for i in range(len(pca_variance_ratios)):
         pca_feature_names.append('pca_{:02d}'.format(i+1))
-    output_df = pd.DataFrame(data = pca_data, columns = pca_feature_names, index = input_df.index)
+    out_df = pd.DataFrame(data = pca_data, columns = pca_feature_names, index = inp_df.index)
 
-    inp_features_set = set(inp_features)
-    for c in input_df.columns.values:
+    inp_features_set = set(features)
+    for c in inp_df.columns.values:
         # input features don't need to be in the output df 
         # unless retain_features is set
         if (not(retain_features)) and c in inp_features_set: continue
-        output_df[c] = input_df[c]
+        out_df[c] = inp_df[c]
     # make sure jobid is the first column, followed by the pca columns
     # in the output dataframe
-    if 'jobid' in input_df.columns.values:
-        out_cols = ['jobid'] + pca_feature_names + sorted(list(set(output_df.columns.values) - set(['jobid'] + pca_feature_names)))
-        output_df = output_df[out_cols]
-    return (output_df, pca_variance_ratios, pca_feature_names)
+    if 'jobid' in inp_df.columns.values:
+        out_cols = ['jobid'] + pca_feature_names + sorted(list(set(out_df.columns.values) - set(['jobid'] + pca_feature_names)))
+        out_df = out_df[out_cols]
+    return (out_df, pca_variance_ratios, pca_feature_names)
 
 # Sanitize feature list by removing blacklisted features
 # and allowing only features whose columns have int/float types
