@@ -435,3 +435,56 @@ def check_finite(values):
     if n_infs:
         logger.debug('found {} Inf'.format(n_infs))
     return ((n_infs == 0) and (n_nans == 0))
+
+def pca_feature_combine(inp_features, desired = 2):
+    '''
+    Combines features ndarray into a new PCA feature array with 
+    a dimensionality equal to n_components. It also returns an
+    array containing the explained_variance_ratio. 
+
+    The PCA analysis will do scaling as part of this function,
+    so the original feature set need not be provided scaled.
+
+    inp_features: numpy multidimensional array of input features
+
+    desired: Usually represents the number of PCA components desired. 
+             Defaults to 2. If this number is set to a floating point number
+             less than 1.0, then it will be interpreted as the desired 
+             variance ratio. In that case the number of PCA components 
+             will be determined to be the least number of components that 
+             yields a variance greater than or equal to the level desired.
+
+    Returns: A tuple, the first element is a numpy array of
+             new PCA features. The second element of the tuple is
+             the list of explained variance ratios. If you sum this
+             list of explained variance ratios you arrive at the
+             cumumlative variance of the PCA, and is a measure
+             of the extent to which the new PCA features capture
+             the original features information.
+    '''
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.decomposition import PCA
+
+    logger = getLogger(__name__)  # you can use other name
+    logger.debug('input feature array shape: {}'.format(inp_features.shape))
+
+    # the second paramer denotes the number of components usually
+    # however if it is less than 1, then it denotes the desired variance.
+    # In the latter case the number of components is automatically chosen
+    # to achieve the desired variance.
+    if desired >= 1:
+        logger.debug('desired num. PCA components: {}'.format(desired))
+    else:
+        logger.debug('desired variance ratio: {}'.format(desired))
+
+    n_samples, n_dim = inp_features.shape
+    assert(n_dim > 1)
+
+    x = StandardScaler().fit_transform(inp_features)
+
+    pca = PCA(n_components=desired) if (desired >= 1) else PCA(desired)
+    principalComponents = pca.fit_transform(x)
+    if desired < 1:
+        logger.debug('number of PCA components: {}'.format(principalComponents.shape[1]))
+    logger.debug('PCA explained variance ratio: {}'.format(pca.explained_variance_ratio_))
+    return (principalComponents, pca.explained_variance_ratio_)
