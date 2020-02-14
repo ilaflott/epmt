@@ -436,7 +436,7 @@ def check_finite(values):
         logger.debug('found {} Inf'.format(n_infs))
     return ((n_infs == 0) and (n_nans == 0))
 
-def pca_feature_combine(inp_features, desired = 2):
+def pca_stat(inp_features, desired = 2):
     '''
     Combines features ndarray into a new PCA feature array with 
     a dimensionality equal to n_components. It also returns an
@@ -483,8 +483,11 @@ def pca_feature_combine(inp_features, desired = 2):
     x = StandardScaler().fit_transform(inp_features)
 
     pca = PCA(n_components=desired) if (desired >= 1) else PCA(desired)
-    principalComponents = pca.fit_transform(x)
+    pc_array = pca.fit_transform(x)
     if desired < 1:
-        logger.debug('number of PCA components: {}'.format(principalComponents.shape[1]))
-    logger.debug('PCA explained variance ratio: {}'.format(pca.explained_variance_ratio_))
-    return (principalComponents, pca.explained_variance_ratio_)
+        logger.debug('number of PCA components: {}'.format(pc_array.shape[1]))
+    sum_variance = sum(pca.explained_variance_ratio_)
+    logger.debug('PCA explained variance ratio: {}, sum({})'.format(pca.explained_variance_ratio_, sum_variance))
+    if sum_variance < 0.80:
+        logger.warning('cumulative variance for PCA ({}) < 0.80'.format(sum_variance))
+    return (pc_array, pca.explained_variance_ratio_)

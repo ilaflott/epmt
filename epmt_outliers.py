@@ -635,6 +635,56 @@ def detect_rootcause_op(jobs, inp, tag, features = FEATURES,  methods = [modifie
     return rca(ref_ops_df, inp_ops_df, features, methods)
 
 
+def pca_feature_combine(input_df, features = [], desired = 2, retain_features = False):
+    '''
+    Performs PCA and returns a new dataframe containing
+    the new PCA features as columns. The returned dataframe
+    does not contain the old features unless retain_features
+    is enabled.
+
+    input_df: A pandas dataframe where some or all of the columns are features.
+
+    features: A list of features to use. If not set, the feature set
+        will be automatically determined.
+
+    desired: Refers to the number of components desired in the PCA.
+             It may be set instead to a number < 1.0, in which case
+             it implies the desired PCA variance ratio.
+
+    retain_features: Defaults to False. If enabled, the input features
+             will also be copied into the output dataframe.
+
+    RETURNS: A tuple consisting of (output_df, pca_variance_ratios_list, pca_feature_names)
+    '''
+
+    from epmt_stat import pca_stat
+    if type(input_df) != pd.DataFrame:
+        logger.error('Input needs to be a pandas dataframe')
+        return False
+
+    inp_features = features   # keep a copy
+    features = _sanitize_features(inp_features, input_df)
+    logger.debug('PCA input features: {}'.format(features)
+    inp_data = input_df[features].to_numpy
+    (pca_data, pca_variance_ratios) = pca_stat(inp_data, desired)
+    pca_feature_names = []
+    for i in range(len(pca_variance_ratios)):
+        pca_feature_names.append('pca_{:02d}'.format(i+1))
+    output_df = pd.DataFrame(data = pca_data, columns = pca_feature_names, index = input_df.index)
+
+    inp_features_set = set(inp_features)
+    for c in input_df.columns.values:
+        # input features don't need to be in the output df 
+        # unless retain_features is set
+        if (not(retain_features)) and c in inp_features_set: continue
+        output_df[c] = input_df[c]
+    # make sure jobid is the first column, followed by the pca columns
+    # in the output dataframe
+    if 'jobid' in input_df.columns.values:
+        out_cols = ['jobid'] + pca_feature_names + sorted(list(set(output_df.columns.values) - set(['jobid'] + pca_feature_names)))
+        output_df = output_df[out_cols]
+    return (output_df, pca_variance_ratios, pca_feature_names)
+
 # Sanitize feature list by removing blacklisted features
 # and allowing only features whose columns have int/float types
 # f: feature list
@@ -642,7 +692,7 @@ def detect_rootcause_op(jobs, inp, tag, features = FEATURES,  methods = [modifie
 # model: reference model
 def _sanitize_features(f, df, model = None):
     if f in ([], '', '*', None):
-        logger.debug('using all available features in outlier detection')
+        logger.debug('using all available features in dataframe')
         f = set(df.columns.values)
     else:
         f = set(f) & set(df.columns.values)
