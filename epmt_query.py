@@ -1012,7 +1012,7 @@ def __unique_proc_tags_for_job(job, exclude=[], fold=True):
 
 
 @db_session
-def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict', op_duration_method = "sum"):
+def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict', op_duration_method = "sum", full= False):
     '''
     Returns a list of "Operations", where each Operation is either
     an object or a dict, depending on 'fmt'. An operation represents a collection
@@ -1051,6 +1051,12 @@ def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict', 
                        difference of the last process to finish and the first
                        process to start. 
                   Defaults to "sum"
+
+    full: This argument is False by default. Its only useful when format is set to
+          dict. With this option enabled, the full Operation object including
+          expensive fields to compute such as intervals, are computed and 
+          included in the dictionary. This is an expensive option, so it's disabled
+          by default. (ADVANCED)
 
     EXAMPLES:
           To get the ops as a list of dicts for two distinct tags, do:
@@ -1129,7 +1135,7 @@ def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict', 
             if op: ops.append(op)
 
     if fmt == 'dict':
-        ops = [ op.to_dict() for op in ops ]
+        ops = [ op.to_dict(full=full) for op in ops ]
     return ops
 
 @db_session
