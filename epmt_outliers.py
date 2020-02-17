@@ -97,7 +97,7 @@ def partition_jobs_by_ops(jobs, tags=[], features=FEATURES, methods=[modified_z_
 
 
 @db_session
-def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds = thresholds, sanity_check=True):
+def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds = thresholds, sanity_check=True, pca = False):
     """
     This function will detects outlier jobs among a set of input jobs.
     This should be used as the first tool in outlier detection. If you
@@ -131,6 +131,16 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
               meaning in the context of the 'method' it applies to.
 
     sanity_check: Warn if the jobs are not comparable. Enabled by default.
+
+    pca:    False by default. If enabled, the PCA analysis will be done
+            on the features prior to outlier detection. Rather than setting
+            this option to True, you may also set this option to something
+            like: pca = 2, in which case it will mean you want two components
+            in the PCA. Or something like, pca = 0.95, which will be 
+            intepreted as meaning do PCA and automatically select the number
+            components to arrive at the number of components in the PCA.
+            If set to True, a 0.85 variance ratio will be set to enable
+            automatic selection of PCA components.
     
     OUTPUT:
       (df, partitions_dict)
@@ -165,6 +175,39 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
                     u'kern-6656-20190614-194024',
                     u'kern-6656-20190614-191138'],
                    [])}
+
+
+    # Now let's look at outlier detection using PCA. Here we do
+    # with 2 PCA components. We could instead have set a variance
+    # ratio, such as 0.90. In which case, the number of PCA components
+    # would have been automatically determined.
+    # Notice, we select all available features as input to the PCA engine.
+    # We scale the PCA scores since the PCA features aren't equal. So,
+    # the column of importance is 'pca_weighted', rather than the individual
+    # pca columns. 
+
+    >>> x = eod.detect_outlier_jobs(eq.get_jobs(fmt='pandas'), features=[], pca = 2)
+           INFO: epmt_outliers: outlier detection provided 1 classifiers
+           INFO: epmt_outliers: 1 classifiers eligible
+           INFO: epmt_outliers: outlier detection will be performed using 1 univariate and 0 multivariate classifi
+        ers
+           INFO: epmt_outliers: request to do PCA (pca=2). Input features: ['PERF_COUNT_SW_CPU_CLOCK', 'cancelled_write_bytes', 'cpu_time', 'delayacct_blkio_time', 'duration', 'exitcode', 'guest_time', 'inblock', 'invol_ctxsw', 'majflt', 'minflt', 'num_procs', 'num_threads', 'outblock', 'processor', 'rchar', 'rdtsc_duration', 'read_bytes', 'rssmax', 'syscr', 'syscw', 'systemtime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wchar', 'write_bytes']
+           INFO: epmt_outliers: 2 PCA components obtained: ['pca_01', 'pca_02']
+           INFO: epmt_outliers: PCA variances: [0.70431608 0.16781148] (sum=0.8721275632391069)
+           INFO: epmt_outliers: adjusting the PCA scores based on PCA variances
+    >>> x[0]
+            jobid  pca_weighted  pca_01  pca_02
+        0  625151           4.2       1       0
+        1  627907           1.0       0       1
+        2  629322           1.0       0       1
+        3  633114           0.0       0       0
+        4  675992           1.0       0       1
+        5  680163           0.0       0       0
+        6  685001           0.0       0       0
+        7  691209           0.0       0       0
+        8  693129           0.0       0       0
+
+
     """
     eq._empty_collection_check(jobs)
     if sanity_check:
@@ -215,6 +258,15 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
 
     # sanitize features list
     features = _sanitize_features(features, jobs, trained_model)
+    if pca is not False:
+        logger.info("request to do PCA (pca={}). Input features: {}".format(pca, features))
+        if len(features) < 5:
+            logger.warning('Too few input features for PCA. Are you sure you did not want to set features=[] to enable selecting all available features?')
+        (jobs_pca_df, pca_variances, pca_features) = pca_feature_combine(jobs, features, desired = 0.85 if pca is True else pca)
+        logger.info('{} PCA components obtained: {}'.format(len(pca_features), pca_features))
+        logger.info('PCA variances: {} (sum={})'.format(pca_variances, np.sum(pca_variances)))
+        jobs = jobs_pca_df
+        features = pca_features
 
     # list of stuff to return from this fn
     retlist = []
@@ -287,6 +339,17 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
         retlist.append(mvod_df)
         if (len(mv_methods) > 1):
             retlist.append(classfiers_od_dict)
+
+    if pca is not False:
+        logger.info('adjusting the PCA scores based on PCA variances')
+        _new_retlist = []
+        for arg in retlist:
+            if type(arg) == pd.DataFrame:
+                adjusted_df = pca_weighted_score(arg, pca_features, pca_variances)[0]
+                _new_retlist.append(adjusted_df)
+            else:
+                _new_retlist.append(arg)
+        retlist = _new_retlist
 
     # return a list if we have more than one item
     return (retlist if len(retlist) > 1 else retlist[0])
