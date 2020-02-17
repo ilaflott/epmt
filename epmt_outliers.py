@@ -737,6 +737,40 @@ def pca_feature_combine(inp_df, inp_features = [], desired = 2, retain_features 
         out_df = out_df[out_cols]
     return (out_df, pca_variance_ratios, pca_feature_names)
 
+
+def pca_weighted_score(pca_df, pca_features, variances):
+    '''
+    Takes an input dataframe consisting of PCA outlier scores
+    and returns a dataframe comprising of an additional column
+    -- 'pca_weighted' -- which is obtained by weighting the
+    individual PCA feature scores by their variance weight.
+
+    For example, if the input df is like:
+      jobid    pca_01     pca_02
+      xxxx     1          0
+      yyyy     0          1
+      zzzz     0          0
+
+    And the variances are: [0.75, 0.25]
+
+    A new column is added, by mutiplying the pca_1 column (0.75/0.25 = 3)
+    and pca_2 column by (0.25/0.25 = 1) and the summing the resultant vectors
+       jobid  pca_weighted   pca_01     pca_02
+       xxxx     3              1          0
+       yyyy     1              0          1
+       zzzz     0              0          0
+
+    The new vector is also returned as a separate element, with the
+    return value being a tuple (new_df, pca_weight_vec)
+    '''
+    np_variances = np.asarray(variances)
+    np_scale_factors = np.round(np_variances * (1/np.min(np_variances)), 2)
+    pca_data = pca_df[pca_features].to_numpy()
+    pca_weighted_vec = np.round(np.sum(pca_data * np_scale_factors, axis=1), 1)
+    out_df = pca_df.copy()
+    out_df.insert(1, 'pca_weighted', pca_weighted_vec)
+    return (out_df, pca_weighted_vec)
+    
 # Sanitize feature list by removing blacklisted features
 # and allowing only features whose columns have int/float types
 # f: feature list

@@ -227,7 +227,32 @@ class OutliersAPI(unittest.TestCase):
         parts = { frozen_dict(loads(k)): v for k,v in parts.items() }
         self.assertEqual(parts[frozen_dict({"op_instance": "4", "op_sequence": "4", "op": "build"})], (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024']), set([u'kern-6656-20190614-192044-outlier'])))
         self.assertEqual(parts[frozen_dict({"op_instance": "2", "op_sequence": "2", "op": "extract"})], (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024']), set([u'kern-6656-20190614-192044-outlier'])), "wrong partitioning when supplying tags consisting of a list of string and dict")
-        
+
+    def test_pca(self):
+        jobs_df = eq.get_jobs(tags='exp_name:linux_kernel', fmt='pandas')
+        (df_pca, variances, pca_features) = eod.pca_feature_combine(jobs_df, desired=0.80)
+        self.assertEqual(pca_features, ['pca_01', 'pca_02'])
+        self.assertEqual(list(variances), [0.68112048, 0.24584736])
+        (df_outl, _) = eod.detect_outlier_jobs(df_pca, features = pca_features)
+        df_outl = df_outl.sort_values('jobid')
+        self.assertEqual(df_outl.shape, (4,3))
+        self.assertEqual(list(df_outl['jobid'].values), ['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'])
+        self.assertEqual(list(df_outl['pca_01'].values), [0, 0, 1, 0])
+        self.assertEqual(list(df_outl['pca_02'].values), [0, 0, 0, 0])
+        # now lets get the weighted pca scores
+        (pca_weighted_df, pca_weighted_vec) = eod.pca_weighted_score(df_outl, pca_features, variances)
+        self.assertEqual(list(pca_weighted_vec), [0.0, 0.0, 2.8, 0.0])
+        self.assertEqual(pca_weighted_df.shape, (4,4))
+        self.assertEqual(list(pca_weighted_df['pca_weighted'].values), [0.0, 0.0, 2.8, 0.0])
+        # now try with single PCA component
+        (df, variances, pca_features) = eod.pca_feature_combine(jobs_df, desired=1)
+        self.assertEqual(list(variances), [0.68112048])
+        self.assertEqual(pca_features, ['pca_01'])
+        (outl, _) = eod.detect_outlier_jobs(df, features = pca_features)
+        outl = outl.sort_values('jobid')
+        self.assertEqual(outl.shape, (4,2))
+        self.assertEqual(list(outl['jobid'].values), ['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'])
+        self.assertEqual(list(outl['pca_01'].values), [0, 0, 1, 0])
 
     @db_session
     def test_rca_jobs(self):
