@@ -91,6 +91,9 @@ release-all:
 	$(MAKE) release6 && utils/check-release
 	$(MAKE) release7 && utils/check-release
 
+test-ui:
+	docker run -it -w /usr/workspace -v $(PWD):/usr/workspace python-chromedriver:3.7 python ui/test/first_dash_test.py
+
 clean:
 	find . -name "*~" -o -name "*.pyc" -o -name epmt.log -o -name core -exec rm -f {} \; 
 	rm -rf __pycache__
