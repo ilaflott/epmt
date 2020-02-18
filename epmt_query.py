@@ -158,6 +158,8 @@ def get_roots(jobs, fmt='dict'):
 def root(job, fmt='dict'):
     """
     Get the root process of a job. The job is either a Job object or a jobid
+    If multiple root processes exist, then this returns the first of them
+    (by start time)
     
     EXAMPLE:
     >>> eq.root('685016',fmt='terse')
