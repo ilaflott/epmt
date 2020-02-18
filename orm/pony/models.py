@@ -89,6 +89,7 @@ class Process(db.Entity):
     children = Set('Process', reverse="parent")
     ancestors = Set('Process', reverse="descendants")
     descendants = Set('Process', reverse="ancestors")
+    depth = Optional(int) # depth in process tree; root process has depth 0
 
 # class Thread(db.Entity):
 # # These are measured

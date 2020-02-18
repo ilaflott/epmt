@@ -363,6 +363,7 @@ def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
 def _proc_ancestors(pid_map, proc, ancestor_pid, relations = None, descendant_map = {}):
     
     if ancestor_pid in pid_map:
+        proc.depth += 1
         entries = pid_map[ancestor_pid]
         if len(entries) == 1:
             # common case no hash collision
@@ -443,14 +444,15 @@ def _create_process_tree(pid_map):
                 # If we uncomment it, then on sqlalchemy, each
                 # parent will have duplicate nodes for each child.
                 # orm_add_to_collection(parent.children, proc)
-    logger.debug('    creating ancestor/descendant relations..')
 
+    logger.debug('    creating ancestor/descendant relations..')
     r = [] if settings.bulk_insert else None
     # descendants map
     desc_map = {}
     for (pid, procs) in pid_map.items():
         for proc in procs:
             ppid = proc.ppid
+            proc.depth = 0
             (r, desc_map) = _proc_ancestors(pid_map, proc, ppid, r, desc_map)
 
     # r will only be non-empty if we are doing bulk-inserts

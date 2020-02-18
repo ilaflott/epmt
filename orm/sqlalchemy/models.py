@@ -161,6 +161,7 @@ class Process(with_metaclass(CommonMeta, Base)):
     #ancestors = relationship('ProcessAssociation',backref='descendants', primaryjoin=id==ProcessAssociation.fk_ancestor)
     #descendants = relationship('ProcessAssociation',backref='ancestors', primaryjoin=id==ProcessAssociation.fk_descendant )
     ancestors = relationship('Process', backref='descendants', secondary=ancestor_descendant_associations_table, primaryjoin=id==ancestor_descendant_associations_table.c.descendant, secondaryjoin=id==ancestor_descendant_associations_table.c.ancestor)
+    depth = Column(Integer)   # depth in process tree, root process has depth 0
 
     @db_session
     def __repr__(self):
