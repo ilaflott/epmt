@@ -258,16 +258,32 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
 
     # sanitize features list
     features = _sanitize_features(features, jobs, trained_model)
+
     if pca is not False:
         logger.info("request to do PCA (pca={}). Input features: {}".format(pca, features))
         if len(features) < 5:
             logger.warning('Too few input features for PCA. Are you sure you did not want to set features=[] to enable selecting all available features?')
-        # for PCA analysis if we use a trained model, then we need to
-        # include the trained model jobs prior to PCA (as the scaling
-        # done as part of PCA will need those jobs
-        # TODO:
-        # Append model jobs into dataframe
+        if trained_model:
+            # for PCA analysis if we use a trained model, then we need to
+            # include the trained model jobs prior to PCA (as the scaling
+            # done as part of PCA will need those jobs
+            # TODO:
+            # Append model jobs into dataframe
+            model_jobs = []
+            jobids_set = set(list(jobs['jobid'].values))
+            for mjob in trained_model.jobs:
+                if mjob.jobid not in jobids_set:
+                    model_jobs.append(mjob.jobid)
+            logger.debug('appending model jobs {} prior to PCA'.format(model_jobs))
+            model_jobs_df = eq.get_jobs(model_jobs, fmt='pandas')[['jobid']+features]
+            jobs = pd.concat([jobs[['jobid']+features], model_jobs_df], axis=0, ignore_index=True)
+
         (jobs_pca_df, pca_variances, pca_features) = pca_feature_combine(jobs, features, desired = 0.85 if pca is True else pca)
+
+        # remove the rows of the appended model jobs
+        if trained_model and model_jobs:
+            jobs_pca_df = jobs_pca_df[~jobs_pca_df.jobid.isin(model_jobs)].reset_index(drop=True)
+
         logger.info('{} PCA components obtained: {}'.format(len(pca_features), pca_features))
         logger.info('PCA variances: {} (sum={})'.format(pca_variances, np.sum(pca_variances)))
         jobs = jobs_pca_df

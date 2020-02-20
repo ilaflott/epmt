@@ -732,8 +732,9 @@ def _refmodel_scores(col, outlier_methods, features):
             # univariate classifiers can only handle
             logger.debug('univariate classifier {0}; features {1}'.format(m_name, features))
             for c in features:
-                # we save everything except the first element of the
-                # tuple as the first element is the raw scores
+                # we save everything returned by the function
+                # except the first element, which is a list of scores
+                # We really only need the max, median etc
                 ret[m_name][c] = m(df[c])[1:]
     # print(ret)
     return ret
@@ -1803,3 +1804,4 @@ def exp_explore(exp_name, order_key = 'duration', op = 'sum', limit=10):
         print("%12s %16d %4s" % (t, time_seg_dict[t], "****" if out_vec[idx] else ""))
         idx += 1
     return True
+
