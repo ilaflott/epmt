@@ -131,12 +131,14 @@ class Operation(dict):
         d['jobs'] = self.jobs[:]
         d['duration'] = self.duration
         d['proc_sums'] = self.proc_sums
-        d['processes'] = self.processes[:]
+        # d['processes'] = self.processes[:]
         d['start'] = self.start
         d['finish'] = self.finish
         if full:
             d['intervals'] = self.intervals
             d['contiguous'] = (len(self.intervals) == 1)
-            d['num_runs'] = len(self.intervals) 
+            d['num_runs'] = len(self.intervals)
+            from epmt_query import conv_procs
+            d['processes'] = conv_procs(self.processes, fmt='dict')
         for attr in ('_duration', '_start', '_finish', '_intervals', '_proc_sums', '_processes'): del d[attr]
         return d
