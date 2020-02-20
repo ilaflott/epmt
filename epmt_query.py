@@ -742,7 +742,7 @@ def _refmodel_scores(col, outlier_methods, features):
 def create_refmodel(jobs=[], name=None, tag={}, op_tags=[], 
                     outlier_methods=[modified_z_score], 
                     features=['duration', 'cpu_time', 'num_procs'], exact_tag_only=False,
-                    fmt='dict', sanity_check = True, enabled=True):
+                    fmt='dict', sanity_check = True, enabled=True, pca=False):
     """
     This function creates a reference model and returns
     the ID of the newly-created model in the database
@@ -783,6 +783,17 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
 
     enabled: Allow the trained model to be used for outlier detection.
              Enabled is set to True by default.
+
+    pca:    False by default. If enabled, the PCA analysis will be done
+            on the features prior to creating the model. Rather than setting
+            this option to True, you may also set this option to something
+            like: pca = 2, in which case it will mean you want two components
+            in the PCA. Or something like, pca = 0.95, which will be 
+            intepreted as meaning do PCA and automatically select the number
+            components to arrive at the number of components in the PCA.
+            If set to True, a 0.85 variance ratio will be set to enable
+            automatic selection of PCA components.
+
     
     e.g,.
     
@@ -829,6 +840,10 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
         logger.error('You need to specify one or more jobs to create a reference model')
         return None
 
+    if op_tags and pca:
+        logger.error('PCA analysis is not supported for operations at present')
+        return None
+
     if type(tag) == str:
         tag = tag_from_string(tag)
 
@@ -843,10 +858,22 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
     jobs_df = conv_jobs(jobs_orm, fmt='pandas')
     jobs = jobs_orm[:]
     from epmt_outliers import _sanitize_features
-    features = _sanitize_features(features, jobs_df)
 
     if sanity_check:
         _warn_incomparable_jobs(jobs)
+
+    features = _sanitize_features(features, jobs_df)
+    if pca is not False:
+        logger.info("request to do PCA (pca={}). Input features: {}".format(pca, features))
+        if len(features) < 5:
+            logger.warning('Too few input features for PCA. Are you sure you did not want to set features=[] to enable selecting all available features?')
+        from epmt_outliers import pca_feature_combine
+        import numpy as np
+        (jobs_pca_df, pca_variances, pca_features) = pca_feature_combine(jobs_df, features, desired = 0.85 if pca is True else pca)
+        logger.info('{} PCA components obtained: {}'.format(len(pca_features), pca_features))
+        logger.info('PCA variances: {} (sum={})'.format(pca_variances, np.sum(pca_variances)))
+        jobs_df = jobs_pca_df
+        features = pca_features
 
     if op_tags:
         if op_tags == '*':
@@ -870,7 +897,7 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
             scores[stag] = _refmodel_scores(ops_df[ops_df.tags == t], outlier_methods, features)
     else:
         # full jobs, no ops
-        scores = _refmodel_scores(jobs, outlier_methods, features)
+        scores = _refmodel_scores(jobs_df, outlier_methods, features)
 
     logger.debug('computed scores: {0}'.format(scores))
     computed = scores
