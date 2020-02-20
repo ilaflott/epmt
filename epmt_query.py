@@ -863,6 +863,7 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
         _warn_incomparable_jobs(jobs)
 
     features = _sanitize_features(features, jobs_df)
+    orig_features = features  # keep a copy as features might be reassigned below
     if pca is not False:
         logger.info("request to do PCA (pca={}). Input features: {}".format(pca, features))
         if len(features) < 5:
@@ -902,8 +903,15 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
     logger.debug('computed scores: {0}'.format(scores))
     computed = scores
 
+    # if we use pca, then we need to save the input feature names
+    # for future reference. To be safe, we also save the output PCA
+    # feature names
+    info_dict = {}
+    if pca:
+        info_dict['pca'] = { 'inp_features': orig_features, 'out_features': pca_features }
+
     # now save the ref model
-    r = ReferenceModel(jobs=jobs, name=name, tags=tag, op_tags=op_tags, computed=computed, enabled=enabled)
+    r = ReferenceModel(jobs=jobs, name=name, tags=tag, op_tags=op_tags, computed=computed, info_dict = info_dict, enabled=enabled)
     orm_commit()
     if fmt=='orm': 
         return r
@@ -980,6 +988,13 @@ def refmodel_get_metrics(model, active_only = False):
         except:
             m = v.keys()
         metrics |= set(m)
+
+    # see if we have any PCA features
+    pca_features = (r.info_dict or {}).get('pca', {}).get('inp_features', [])
+    if pca_features:
+        logger.debug('PCA features found in model: {}'.format(pca_features))
+        metrics |= set(pca_features)
+
     if active_only:
         active_metrics = (r.info_dict or {}).get('active_metrics', [])
         if active_metrics:

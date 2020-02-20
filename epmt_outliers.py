@@ -262,6 +262,11 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
         logger.info("request to do PCA (pca={}). Input features: {}".format(pca, features))
         if len(features) < 5:
             logger.warning('Too few input features for PCA. Are you sure you did not want to set features=[] to enable selecting all available features?')
+        # for PCA analysis if we use a trained model, then we need to
+        # include the trained model jobs prior to PCA (as the scaling
+        # done as part of PCA will need those jobs
+        # TODO:
+        # Append model jobs into dataframe
         (jobs_pca_df, pca_variances, pca_features) = pca_feature_combine(jobs, features, desired = 0.85 if pca is True else pca)
         logger.info('{} PCA components obtained: {}'.format(len(pca_features), pca_features))
         logger.info('PCA variances: {} (sum={})'.format(pca_variances, np.sum(pca_variances)))
@@ -867,7 +872,7 @@ def _sanitize_features(f, df, model = None):
         raise RuntimeError("Need a non-empty list of features for outlier detection")
 
     features = sorted(features)
-    logger.debug('using features: {0}'.format(features))
+    logger.debug('input features: {0}'.format(features))
     # print('features: {0}'.format(features))
     return features
 
