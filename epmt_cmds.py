@@ -1039,10 +1039,17 @@ def epmt_entrypoint(args):
     if args.command == 'python':
         script_file = args.epmt_cmd_args
         if script_file:
-            if not path.exists(script_file):
-                logger.error('script {} does not exist'.format(script_file))
-                return(-1)
-            exec(open(script_file).read())
+            if script_file == '-':
+                # special handling for stdin
+                from sys import stdin
+                f = stdin
+            else:
+                if not path.exists(script_file):
+                    logger.error('script {} does not exist'.format(script_file))
+                    return(-1)
+                else:
+                    f = open(script_file)
+            exec(f.read())
         else:
             epmt_shell()
         return 0
