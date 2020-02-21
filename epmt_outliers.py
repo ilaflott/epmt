@@ -224,6 +224,11 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
             trained_model = orm_get(ReferenceModel, trained_model)
         if not eq.refmodel_is_enabled(trained_model.id):
             raise RuntimeError("Trained model is disabled. You will need to enable it using 'refmodel_set_status' and try again")
+        if trained_model.info_dict and trained_model.info_dict.get('pca', {}):
+            logger.debug('trained model used PCA')
+            if not pca:
+                logger.warning('Auto-enabling PCA prior to outlier detection. In future, please call detect_outlier_jobs with pca=True when using PCA-based trained models for outlier detection')
+                pca = True
     else:
         _err_col_len(jobs, 4, 'Too few jobs to do outlier detection. Need at least 4!')
 
