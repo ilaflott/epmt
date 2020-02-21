@@ -1025,6 +1025,11 @@ def epmt_entrypoint(args):
     # Here it's up to each command to validate what it is looking for
     # and error out appropriately
     if args.command == 'shell':
+        # we import builtins so pyinstaller will use the full builtins module
+        # instead of a sketchy replacement. Also we need help from pydoc
+        # since the builtins module included by pydoc doesn't have help
+        import builtins
+        from pydoc import help
         from code import interact
         interact(local=locals())
         return 0

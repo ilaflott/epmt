@@ -78,7 +78,7 @@ release:
 	@if [ -f $(EPMT_RELEASE) ]; then echo "$(EPMT_RELEASE) already exists. Please remove it and try again"; exit 1; fi
 	@echo "Making EPMT release $(VERSION) for $(OS_TARGET)..."
 	@echo " - building epmt and epmt-test tarball.."
-	@$(MAKE) docker-dist # > /dev/null
+	@$(MAKE) docker-dist > /dev/null
 	@ls epmt-$(VERSION).tgz test-epmt-$(VERSION).tgz
 	@echo " - building papiex tarball"
 	cd ../papiex-oss; rm -f papiex-epmt-*.tgz;  make OS_TARGET=$(OS_TARGET) docker-dist > /dev/null; cp -v papiex-epmt-*.tgz ../epmt/papiex-epmt-$(VERSION).tgz
