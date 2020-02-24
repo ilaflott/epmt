@@ -923,6 +923,73 @@ def pca_weighted_score(pca_df, pca_features, variances, index = 1):
     out_df = pca_df.copy()
     out_df.insert(index, 'pca_weighted', pca_weighted_vec)
     return (out_df, pca_weighted_vec)
+
+
+def feature_plot_2d(jobs, features = ['duration', 'cpu_time'], outfile='plot.png', annotate = False):
+    '''
+    Generates a 2-D scatter plot of jobs with features on two axes.
+    If more than 2 features are requested, for example by setting
+    features=[], then 2-component PCA analysis is automatically
+    done, prior to plotting the features.
+
+    jobs: A collection of jobs or jobids
+
+    features: A list/tuple of features. If more than two are
+              provided, then 2-component PCA analysis is done
+              to reduce the number of features to 2.
+              [] or '*' imply all features, and PCA will be done
+              if more than two features are found. By default,
+              features will be set to ['duration', 'cpu_time']
+
+    outfile: Output file to save the plot as (defaults to plot.png)
+
+    annotate: Annotate each datapoint (plot can become cluttered if enabled)
+
+    EXAMPLE:
+
+    # The following does PCA automatically as we select *all* features as input
+    >>> feature_plot_2d(['625151', '627907', '629322', '633114', '675992', '680163', '685001', '691209', '693129'], features=[])
+    # The following selects two features
+    >>> feature_plot_2d(['625151', '627907', '629322', '633114', '675992', '680163', '685001', '691209', '693129'], features=['cpu_time', 'duration'])
+    '''
+    jobs_df = eq.get_jobs(jobs, fmt='pandas')
+    features = _sanitize_features(features, jobs_df)
+    title_ex = ''  # extention to append to the title on the plot
+    if len(features) > 2:
+        logger.info('Performing 2-component PCA as input features({}) more than 2'.format(features))
+        (jobs_pca_df, pca_variances, pca_features) = pca_feature_combine(jobs_df, features, desired=2)
+        logger.info('{} PCA components obtained: {}'.format(len(pca_features), pca_features))
+        logger.info('PCA variances: {}, sum={})'.format(pca_variances, np.sum(pca_variances)))
+        jobs_df = jobs_pca_df
+        features = pca_features
+    if len(features) != 2:
+        logger.error('Cannot generate scatter plot as requested features ({}) < 2'.format(features))
+        return False
+    import matplotlib.pyplot as plt
+    import matplotlib.colors as pltc
+    from random import sample
+    all_colors = [k for k,v in pltc.cnames.items()]
+    fig = plt.figure(figsize = (8,8))
+    ax = fig.add_subplot(1,1,1) 
+    ax.set_xlabel(features[0], fontsize = 15)
+    ax.set_ylabel(features[1], fontsize = 15)
+    ax.set_title('2-feature plot', fontsize = 20)
+    jobids = list(jobs_df['jobid'].values)
+    colors = sample(all_colors, len(jobids))
+    idx = 0
+    for jobid in jobids:
+        indexToKeep = jobs_df['jobid'] == jobid
+        x = jobs_df.loc[indexToKeep, features[0]]
+        y = jobs_df.loc[indexToKeep, features[1]]
+        ax.scatter(x, y, c = colors[idx], s = 50)
+        if annotate:
+            ax.text(x+0.1, y+0.1, jobid, fontsize=8)
+        idx += 1
+    ax.legend(jobids)
+    ax.grid()
+    print('plot saved to {}'.format(outfile))
+    plt.savefig(outfile)
+
     
 # Sanitize feature list by removing blacklisted features
 # and allowing only features whose columns have int/float types
