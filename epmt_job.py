@@ -67,6 +67,9 @@ def create_job(jobid,user):
 #	metadata['job_el_status'] = status
                     
 created_hosts = {}
+# Rather than using this function directly, please use
+# lookup_or_create_host_safe, as that handles a race condition
+# when using concurrent submits
 def lookup_or_create_host(hostname):
     logger = getLogger(__name__)  # you can use other name
     host = created_hosts.get(hostname)
@@ -92,6 +95,20 @@ def lookup_or_create_host(hostname):
             created_hosts[hostname] = host
     assert(host.name == hostname)
     return host
+
+
+# This function handles a race condition when submitting jobs using
+# multiple processes
+def lookup_or_create_host_safe(hostname):
+    from sqlalchemy import exc
+    try:
+        h = lookup_or_create_host(hostname)
+    except exc.IntegrityError:
+        # The insert failed due to a concurrent transaction  
+        Session.rollback()
+        # the host must exist now
+        h = lookup_or_create_host(hostname)
+    return h
 
 def lookup_or_create_user(username):
     logger = getLogger(__name__)  # you can use other name
@@ -170,16 +187,15 @@ def get_proc_rows(csvfile, skiprows = 0):
 # The first list item (thread 0) is special in that it has values for fields pertaining
 # to the process such as 'exename', 'args', etc. The other threads
 # may not have process fields set.
-def load_process_from_pandas(proc, host, j, u, settings, profile):
+def load_process_from_dictlist(proc, host, j, u, settings, profile):
     from pandas import Timestamp
     logger = getLogger(__name__)  # you can use other name
 
-    # fallback to the host read from the filename if we don't have a hostname column
-    # _t = time.time()
-    # host = h
-    # host = lookup_or_create_host(df['hostname'][0] if 'hostname' in df.columns else h)
-    # host = lookup_or_create_host(h)
-    # profile.load_process.host_lookup += time.time() - _t
+    hostname = proc[0].get('hostname', '')
+    if hostname:
+        if (host is None) or (host.name != hostname):
+            logger.warning('using hostname as set in papiex data: {}'.format(hostname))
+            host = lookup_or_create_host_safe(hostname)
 
     _t = time.time()
     try:
@@ -798,18 +814,15 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     profile.load_process = dotdict({'init': 0, 'misc': 0, 'proc_tags': 0, 'thread_sums': 0, 'to_json': 0})
 
     for hostname, files in filedict.items():
+        if hostname == "unknown":
+            logger.warning('could not determine hostname from filedict, picking it from metadata instead')
+            hostname = metadata.get('job_pl_hostname', '')
+            if not hostname:
+                logger.warning('could not determine hostname from metadata either')
         logger.debug("Processing host %s",hostname)
-        # we only need to a lookup_or_create_host if papiex doesn't
-        # have a hostname column
         h = None
         if hostname:
-            try:
-                h = lookup_or_create_host(hostname)
-            except exc.IntegrityError:
-                # The insert failed due to a concurrent transaction  
-                Session.rollback()
-                # the host must exist now
-                h = lookup_or_create_host(hostname)
+            h = lookup_or_create_host_safe(hostname)
         cntmax = len(files)
         cnt = 0
         nrecs = 0
@@ -848,12 +861,6 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             #     logger.error("Something wrong with file %s, readcsv returned empty, skipping...",f)
             #     continue
 
-            # in case we cannot figure out the hostname from the file, we
-            # will use the papiex data. To reduce the expense of host lookups
-            # we want to do this only once per job. This mechanism assumes
-            # all the processes for a job reside on the same host
-            # if not(h) and 'hostname' in collated_df:
-            #      h = lookup_or_create_host(collated_df['hostname'][0])
 
 # Make Process/Thread/Metrics objects in DB
             # there are 1 or more process dataframes in the collated df
@@ -865,7 +872,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             # rows in csv). 
             for (proc, _, nrows) in get_proc_rows(csv_file, skiprows):
                 _load_process_from_df_start_ts = time.time()
-                p = load_process_from_pandas(proc, h, j, u, settings, profile)
+                p = load_process_from_dictlist(proc, h, j, u, settings, profile)
                 load_process_from_df_time += time.time() - _load_process_from_df_start_ts
                 if not p:
                     logger.error("Failed loading process, file %s!",f);

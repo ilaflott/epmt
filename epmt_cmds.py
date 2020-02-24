@@ -327,6 +327,13 @@ def create_start_job_metadata(jobid, submit_ts, from_batch=[]):
     metadata['job_pl_start_ts'] = ts
     metadata['job_pl_env'] = start_env
     metadata['job_pl_username'] = get_username()
+    from socket import gethostname
+    from os import uname
+    try:
+        # this should normally never fail
+        metadata['job_pl_hostname'] = gethostname() or uname()[1]
+    except:
+        pass
     return metadata
 
 def merge_stop_job_metadata(metadata, exitcode, reason, from_batch=[]):
