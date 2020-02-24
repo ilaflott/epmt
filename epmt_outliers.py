@@ -469,6 +469,27 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
     
     >>> sorted_features
     ['duration', 'cpu_time', 'num_procs']
+
+    # Now let's do one with PCA:
+
+    >>> out_df = eod.detect_outlier_ops(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], features=[], pca = True)
+   INFO: epmt_outliers: request to do PCA (pca=True). Input features: ['PERF_COUNT_SW_CPU_CLOCK', 'cancelled_write_byte
+s', 'cpu_time', 'delayacct_blkio_time', 'duration', 'guest_time', 'inblock', 'invol_ctxsw', 'majflt', 'minflt', 'num_pr
+ocs', 'numtids', 'outblock', 'processor', 'rchar', 'rdtsc_duration', 'read_bytes', 'rssmax', 'syscr', 'syscw', 'systemt
+ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wchar', 'write_bytes']
+   INFO: epmt_outliers: 2 PCA components obtained: ['pca_01', 'pca_02']
+   INFO: epmt_outliers: PCA variances: [0.66848523 0.24011409] (sum=0.9085993214405101)
+   INFO: epmt_outliers: adjusting the PCA scores based on PCA variances
+
+    # pick out the outlier rows
+    >>> out_df[out_df.pca_weighted > 0]
+                                jobid                                               tags  pca_weighted  pca_01  pca_02
+2   kern-6656-20190614-192044-outlier  {'op': 'build', 'op_instance': '4', 'op_sequen...           3.8       1       1
+6   kern-6656-20190614-192044-outlier  {'op': 'clean', 'op_instance': '5', 'op_sequen...           3.8       1       1
+10  kern-6656-20190614-192044-outlier  {'op': 'configure', 'op_instance': '3', 'op_se...           3.8       1       1
+14  kern-6656-20190614-192044-outlier  {'op': 'download', 'op_instance': '1', 'op_seq...           3.8       1       1
+18  kern-6656-20190614-192044-outlier  {'op': 'extract', 'op_instance': '2', 'op_sequ...           3.8       1       1
+
     """
     eq._empty_collection_check(jobs)
     if sanity_check:

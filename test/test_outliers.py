@@ -265,6 +265,15 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(list(outl['pca_01'].values), [0, 0, 1, 0])
         self.assertEqual(list(outl['pca_02'].values), [0, 0, 0, 0])
 
+    def test_pca_ops(self):
+        out_df = eod.detect_outlier_ops(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], features=[], pca = True)
+        self.assertEqual(out_df.shape, (20, 5))
+        self.assertEqual(out_df[out_df.pca_weighted > 0].shape, (5, 5))
+        self.assertEqual(set(out_df[out_df.pca_weighted > 0].jobid.values), {'kern-6656-20190614-192044-outlier'})
+        self.assertEqual(list(out_df[out_df.pca_weighted > 0].pca_weighted.values), [3.8, 3.8, 3.8, 3.8, 3.8])
+        self.assertEqual(list(out_df[out_df.pca_weighted > 0].pca_weighted.index.values), [2, 6, 10, 14, 18])
+
+
     def test_pca_trained_model(self):
         r = eq.create_refmodel(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024'], features=[], pca=True)
         self.assertEqual(r['info_dict']['pca']['inp_features'], ['PERF_COUNT_SW_CPU_CLOCK', 'cancelled_write_bytes', 'cpu_time', 'delayacct_blkio_time', 'duration', 'exitcode', 'guest_time', 'inblock', 'invol_ctxsw', 'majflt', 'minflt', 'num_procs', 'num_threads', 'outblock', 'processor', 'rchar', 'rdtsc_duration', 'read_bytes', 'rssmax', 'syscr', 'syscw', 'systemtime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wchar', 'write_bytes'])
