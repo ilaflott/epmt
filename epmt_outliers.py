@@ -262,6 +262,8 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
     logger.info('outlier detection will be performed using {} univariate and {} multivariate classifiers'.format(len(uv_methods), len(mv_methods)))
 
     # sanitize features list
+    if pca and features and (features != '*'):
+        logger.warning('It is strongly recommended to set features=[] when doing PCA')
     features = _sanitize_features(features, jobs, trained_model)
 
     if pca is not False:
@@ -382,7 +384,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
         
 
 @db_session
-def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds=thresholds, sanity_check=True):
+def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds=thresholds, sanity_check=True, pca = False):
     """
     This function detects outlier *operations* across a set of *jobs*.
     You should be using this function only if you want to figure out
@@ -394,6 +396,19 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
     tags is a list of tags specified either as a string or a list of string/list of dicts
     If tags is not specified, then the list of jobs will be queried to get the
     superset of unique tags across the jobs.
+
+    pca:    False by default. If enabled, the PCA analysis will be done
+            on the features prior to outlier detection. Rather than setting
+            this option to True, you may also set this option to something
+            like: pca = 2, in which case it will mean you want two components
+            in the PCA. Or something like, pca = 0.95, which will be 
+            intepreted as meaning do PCA and automatically select the number
+            components to arrive at the number of components in the PCA.
+            If set to True, a 0.85 variance ratio will be set to enable
+            automatic selection of PCA components.
+
+            NOTE: When pca is enabled, then the return value is a single dataframe
+            with no special ordering of rows other than they are grouped by tag.
     
     OUTPUT:
      (df, dict_of_partitions, scores_df, sorted_tags, sorted_features)
@@ -416,6 +431,9 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
     sorted_features is a sorted list of features by feature_score, where
     feature_score is defined as the sum of scores for a feature across 
     all tags:
+
+    NOTE: When pca is enabled, then the return value is a single dataframe
+          with no special ordering of rows other than they are grouped by tag.
     
     e.g.,
     jobs = [u'625151', u'627907', u'629322', u'633114', u'675992', u'680163', u'685001', u'691209', u'693129', u'696110', u'802938', u'804266']
@@ -455,6 +473,10 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
     eq._empty_collection_check(jobs)
     if sanity_check:
         eq._warn_incomparable_jobs(jobs)
+
+    if trained_model and pca:
+        logger.error('PCA+trained_model combination is unsupported for detecting outlier ops at present')
+        return False
 
     tags = tags_list(tags)
     jobs_tags_set = set()
@@ -516,7 +538,20 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
     if len(ops) == 0:
         logger.warning('no matching tags found in the tag set: {0}'.format(tags_to_use))
         return (None, {})
+    if pca and features and (features != '*'):
+        logger.warning('It is strongly recommended to set features=[] when doing PCA')
     features = _sanitize_features(features, ops, trained_model)
+
+    if pca is not False:
+        logger.info("request to do PCA (pca={}). Input features: {}".format(pca, features))
+        if len(features) < 5:
+            logger.warning('Too few input features for PCA. Are you sure you did not want to set features=[] to enable selecting all available features?')
+        (ops_pca_df, pca_variances, pca_features) = pca_feature_combine(ops, features, desired = 0.85 if pca is True else pca)
+        logger.info('{} PCA components obtained: {}'.format(len(pca_features), pca_features))
+        logger.info('PCA variances: {} (sum={})'.format(pca_variances, np.sum(pca_variances)))
+        ops = ops_pca_df
+        features = pca_features
+
     retval = pd.DataFrame(0, columns=features, index=ops.index)
 
     # the dict below will be indexed by tag, and will store
@@ -563,6 +598,11 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
     retval['jobid'] = ops['job']
     retval['tags'] = ops['tags']
     retval = retval[['jobid', 'tags']+features]
+
+    if pca is not False:
+        logger.info('adjusting the PCA scores based on PCA variances')
+        adjusted_df = pca_weighted_score(retval, pca_features, pca_variances, 2)[0]
+        return adjusted_df
 
     # now lets sort the tags by the max of the scores across the features
     sorted_tags_with_scores = sorted(tags_max.items(), key=lambda e: max(e[1]), reverse=True)
@@ -827,12 +867,15 @@ def pca_feature_combine(inp_df, inp_features = [], desired = 2, retain_features 
     return (out_df, pca_variance_ratios, pca_feature_names)
 
 
-def pca_weighted_score(pca_df, pca_features, variances):
+def pca_weighted_score(pca_df, pca_features, variances, index = 1):
     '''
     Takes an input dataframe consisting of PCA outlier scores
     and returns a dataframe comprising of an additional column
     -- 'pca_weighted' -- which is obtained by weighting the
     individual PCA feature scores by their variance weight.
+
+    index: Column number where to insert the pca_weighted column
+           in the output dataframe
 
     For example, if the input df is like:
       jobid    pca_01     pca_02
@@ -857,7 +900,7 @@ def pca_weighted_score(pca_df, pca_features, variances):
     pca_data = pca_df[pca_features].to_numpy()
     pca_weighted_vec = np.round(np.sum(pca_data * np_scale_factors, axis=1), 1)
     out_df = pca_df.copy()
-    out_df.insert(1, 'pca_weighted', pca_weighted_vec)
+    out_df.insert(index, 'pca_weighted', pca_weighted_vec)
     return (out_df, pca_weighted_vec)
     
 # Sanitize feature list by removing blacklisted features

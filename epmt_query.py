@@ -863,6 +863,8 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
     if sanity_check:
         _warn_incomparable_jobs(jobs)
 
+    if pca and features and (features != '*'):
+        logger.warning('It is strongly recommended to set features=[] when doing PCA')
     features = _sanitize_features(features, jobs_df)
     orig_features = features  # keep a copy as features might be reassigned below
     if pca is not False:
