@@ -447,9 +447,18 @@ def epmt_dump_metadata(filelist, key = None):
         return False
 
     for file in filelist:
+        logger.info('Processing {}'.format(file))
         if not path.exists(file):
-            logger.error("%s does not exist!",file)
-            return False
+            if ('/' in file) or ('.tgz' in file):
+                logger.error("%s does not exist!",file)
+                return False
+            logger.debug('{} was not found in the file-system. Checking database..'.format(file))
+            from epmt_cmd_show import epmt_show_job
+            # if the file does not exist then we 
+            rc = epmt_show_job(file, key = key)
+            if not(rc):
+                return False
+            continue
 
         err,tar = compressed_tar(file)
         if tar:
