@@ -956,6 +956,7 @@ def feature_plot_2d(jobs, features = [], outfile='plot.png', annotate = False):
     jobs_df = eq.get_jobs(jobs, fmt='pandas')
     features = _sanitize_features(features, jobs_df)
     title_ex = ''  # extention to append to the title on the plot
+    pca_variances = None
     if len(features) > 2:
         logger.info('Performing 2-component PCA as input features({}) more than 2'.format(features))
         (jobs_pca_df, pca_variances, pca_features) = pca_feature_combine(jobs_df, features, desired=2)
@@ -970,11 +971,17 @@ def feature_plot_2d(jobs, features = [], outfile='plot.png', annotate = False):
     import matplotlib.colors as pltc
     from random import sample
     all_colors = [k for k,v in pltc.cnames.items()]
-    fig = plt.figure(figsize = (8,8))
+    x_label_ext = ''
+    if pca_variances is not None:
+        pca_01_weight = round(pca_variances[0]/pca_variances[1], 1)
+        fig = plt.figure(figsize = (max(pca_01_weight*4, 12),4))
+        x_label_ext = ' (weight: {})'.format(pca_01_weight)
+    else:
+        fig = plt.figure(8, 8)
     ax = fig.add_subplot(1,1,1) 
-    ax.set_xlabel(features[0], fontsize = 15)
-    ax.set_ylabel(features[1], fontsize = 15)
-    ax.set_title('2-feature plot', fontsize = 20)
+    ax.set_xlabel(features[0] + x_label_ext, fontsize = 10)
+    ax.set_ylabel(features[1], fontsize = 10)
+    ax.set_title('2-feature plot', fontsize = 15)
     jobids = list(jobs_df['jobid'].values)
     colors = sample(all_colors, len(jobids))
     idx = 0
@@ -986,7 +993,8 @@ def feature_plot_2d(jobs, features = [], outfile='plot.png', annotate = False):
         if annotate:
             ax.text(x+0.1, y+0.1, jobid, fontsize=8)
         idx += 1
-    ax.legend(jobids)
+    ax.legend(jobids, loc='upper center', bbox_to_anchor=(0.5, 1.05),
+          ncol=3, fancybox=True, shadow=True)
     ax.grid()
     print('plot saved to {}'.format(outfile))
     plt.savefig(outfile)
