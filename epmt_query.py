@@ -1740,7 +1740,7 @@ def exp_explore(exp_name, order_key = 'duration', op = 'sum', limit=10):
         logger.warning('Could not find any jobs with an "exp_name" tag matching {}'.format(exp_name))
         return False
     try:
-        job_ranges_str = ",".join(["{}..{}".format(a, b) if (a != b) else "{}".format(a) for (a,b) in ranges(exp_jobids)])
+        job_ranges_str = ",".join(["{}..{}".format(a, b) if (a != b) else "{}".format(a) for (a,b) in ranges([int(x) for x in exp_jobids])])
         print('Experiment {} contains {} jobs: {}'.format(exp_name, exp_jobs.count(), job_ranges_str))
     except:
         # the ranges function can fail for non-integer jobids, so here
