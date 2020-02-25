@@ -18,7 +18,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (3,3,9)
+_version = (3,3,10)
 
 def version():
     return _version
@@ -670,6 +670,22 @@ def ranges(i):
     for a, b in groupby(enumerate(i), lambda pair: pair[1] - pair[0]):
         b = list(b)
         yield b[0][1], b[-1][1]
+
+def atoi(text):
+    return int(text) if text.isdigit() else text
+
+def natural_keys(text):
+    '''
+    alist.sort(key=natural_keys) sorts in human order
+    http://nedbatchelder.com/blog/200712/human_sorting.html
+    (See Toothy's implementation in the comments)
+
+    >>> alist = [ 'phil10', 'phil1', 'phil11', 'phil0' ]
+    >>> sorted(alist, key=natural_keys)
+    ['phil0', 'phil1', 'phil10', 'phil11']
+    '''
+    import re
+    return [ atoi(c) for c in re.split(r'(\d+)', text) ]
 
 if __name__ == "__main__":
     print(version_str(True))
