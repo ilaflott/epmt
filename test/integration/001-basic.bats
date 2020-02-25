@@ -3,7 +3,7 @@ load 'libs/bats-assert/load'
 
 @test "epmt version" {
   run epmt -V
-  assert_output --regexp '^EPMT [0-9]+\.[0-9]+\.[0-9]$'
+  assert_output --regexp '^EPMT [0-9]+\.[0-9]+\.[0-9]+$'
 }
 
 @test "epmt submit" {
