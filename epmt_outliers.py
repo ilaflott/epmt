@@ -925,7 +925,7 @@ def pca_weighted_score(pca_df, pca_features, variances, index = 1):
     return (out_df, pca_weighted_vec)
 
 
-def feature_plot_2d(jobs, features = ['duration', 'cpu_time'], outfile='plot.png', annotate = False):
+def feature_plot_2d(jobs, features = [], outfile='plot.png', annotate = False):
     '''
     Generates a 2-D scatter plot of jobs with features on two axes.
     If more than 2 features are requested, for example by setting
@@ -939,7 +939,8 @@ def feature_plot_2d(jobs, features = ['duration', 'cpu_time'], outfile='plot.png
               to reduce the number of features to 2.
               [] or '*' imply all features, and PCA will be done
               if more than two features are found. By default,
-              features will be set to ['duration', 'cpu_time']
+              features is set to [], so PCA analysis will be performed
+              to reduce the final feature set to 2.
 
     outfile: Output file to save the plot as (defaults to plot.png)
 

@@ -284,6 +284,18 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(list(df.columns), ['jobid', 'pca_weighted', 'pca_01', 'pca_02'])
         self.assertEqual(list(df.iloc[0].values), ['kern-6656-20190614-192044-outlier', 2.8, 1, 0])
 
+    def test_plot_2d(self):
+        plotfile = 'output.png'
+        with capture() as (out, err):
+            eod.feature_plot_2d(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], outfile = plotfile)
+        s = out.getvalue()
+        from os import path, remove, stat
+        self.assertTrue(path.isfile(plotfile))
+        statinfo = stat(plotfile)
+        self.assertTrue(statinfo.st_size > 0)
+        remove(plotfile)
+        self.assertIn('plot saved to {}'.format(plotfile), s)
+
     @db_session
     def test_rca_jobs(self):
         fltr = (~Job.jobid.like('%outlier%')) if settings.orm == 'sqlalchemy' else '"outlier" not in j.jobid'
