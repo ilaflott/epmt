@@ -841,10 +841,6 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
         logger.error('You need to specify one or more jobs to create a reference model')
         return None
 
-    if op_tags and pca:
-        logger.error('PCA analysis is not supported for operations at present')
-        return None
-
     if type(tag) == str:
         tag = tag_from_string(tag)
 
@@ -867,17 +863,12 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
         logger.warning('It is strongly recommended to set features=[] when doing PCA')
     features = _sanitize_features(features, jobs_df)
     orig_features = features  # keep a copy as features might be reassigned below
-    if pca is not False:
+    if pca:
         logger.info("request to do PCA (pca={}). Input features: {}".format(pca, features))
         if len(features) < 5:
             logger.warning('Too few input features for PCA. Are you sure you did not want to set features=[] to enable selecting all available features?')
         from epmt_outliers import pca_feature_combine
         import numpy as np
-        (jobs_pca_df, pca_variances, pca_features) = pca_feature_combine(jobs_df, features, desired = 0.85 if pca is True else pca)
-        logger.info('{} PCA components obtained: {}'.format(len(pca_features), pca_features))
-        logger.info('PCA variances: {} (sum={})'.format(pca_variances, np.sum(pca_variances)))
-        jobs_df = jobs_pca_df
-        features = pca_features
 
     if op_tags:
         if op_tags == '*':
@@ -893,6 +884,13 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
             op_tags = tags_list(op_tags)
         # let's get the dataframe of metrics aggregated by op_tags
         ops_df = get_op_metrics(jobs = jobs_orm, tags = op_tags, exact_tags_only = exact_tag_only, fmt='pandas')
+        if pca:
+            (ops_pca_df, pca_variances, pca_features) = pca_feature_combine(ops_df, features, desired = 0.85 if pca is True else pca)
+            logger.info('{} PCA components obtained: {}'.format(len(pca_features), pca_features))
+            logger.info('PCA variances: {} (sum={})'.format(pca_variances, np.sum(pca_variances)))
+            ops_df = ops_pca_df
+            features = pca_features
+
         scores = {}
         for t in op_tags:
             # serialize the tag so we can use it as a key
@@ -901,6 +899,12 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
             scores[stag] = _refmodel_scores(ops_df[ops_df.tags == t], outlier_methods, features)
     else:
         # full jobs, no ops
+        if pca:
+            (jobs_pca_df, pca_variances, pca_features) = pca_feature_combine(jobs_df, features, desired = 0.85 if pca is True else pca)
+            logger.info('{} PCA components obtained: {}'.format(len(pca_features), pca_features))
+            logger.info('PCA variances: {} (sum={})'.format(pca_variances, np.sum(pca_variances)))
+            jobs_df = jobs_pca_df
+            features = pca_features
         scores = _refmodel_scores(jobs_df, outlier_methods, features)
 
     logger.debug('computed scores: {0}'.format(scores))
