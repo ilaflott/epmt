@@ -77,7 +77,7 @@ def modified_z_score(ys, params=()):
         madz = [round(0.6745 * abs(y - median_y) / median_absolute_deviation_y, 4) for y in ys]
     else:
         madz = [float('inf') if abs((y - median_y)) > 0 else 0 for y in ys]
-    return (madz, max(madz), median_y, median_absolute_deviation_y)
+    return (madz, round(max(madz), 4), round(median_y, 4), round(median_absolute_deviation_y, 4))
 
 
 def outliers_modified_z_score(ys,threshold=thresholds['modified_z_score']):
