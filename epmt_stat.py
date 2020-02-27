@@ -77,6 +77,10 @@ def modified_z_score(ys, params=()):
         madz = [round(0.6745 * abs(y - median_y) / median_absolute_deviation_y, 4) for y in ys]
     else:
         madz = [float('inf') if abs((y - median_y)) > 0 else 0 for y in ys]
+    logger.debug('original vector: {}'.format(ys.to_numpy()))
+    if params:
+        logger.debug('model params: {}'.format(params))
+    logger.debug('madz scores: {}'.format(madz))
     return (madz, round(max(madz), 4), round(median_y, 4), round(median_absolute_deviation_y, 4))
 
 
@@ -486,6 +490,7 @@ def pca_stat(inp_features, desired = 2):
     pc_array = pca.fit_transform(x)
     if desired < 1:
         logger.debug('number of PCA components: {}'.format(pc_array.shape[1]))
+    logger.debug('PCA array:\n{}'.format(pc_array))
     sum_variance = sum(pca.explained_variance_ratio_)
     logger.debug('PCA explained variance ratio: {}, sum({})'.format(pca.explained_variance_ratio_, sum_variance))
     if sum_variance < 0.80:

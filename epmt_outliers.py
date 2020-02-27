@@ -274,22 +274,20 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
             # for PCA analysis if we use a trained model, then we need to
             # include the trained model jobs prior to PCA (as the scaling
             # done as part of PCA will need those jobs
-            # TODO:
-            # Append model jobs into dataframe
-            model_jobs = []
+            added_model_jobs = []
             jobids_set = set(list(jobs['jobid'].values))
             for mjob in trained_model.jobs:
                 if mjob.jobid not in jobids_set:
-                    model_jobs.append(mjob.jobid)
-            logger.debug('appending model jobs {} prior to PCA'.format(model_jobs))
-            model_jobs_df = eq.get_jobs(model_jobs, fmt='pandas')[['jobid']+features]
-            jobs = pd.concat([jobs[['jobid']+features], model_jobs_df], axis=0, ignore_index=True)
+                    added_model_jobs.append(mjob.jobid)
+            logger.debug('appending model jobs {} prior to PCA'.format(added_model_jobs))
+            added_model_jobs_df = eq.get_jobs(added_model_jobs, fmt='pandas')[['jobid']+features]
+            jobs = pd.concat([jobs[['jobid']+features], added_model_jobs_df], axis=0, ignore_index=True)
 
         (jobs_pca_df, pca_variances, pca_features) = pca_feature_combine(jobs, features, desired = 0.85 if pca is True else pca)
 
         # remove the rows of the appended model jobs
-        if trained_model and model_jobs:
-            jobs_pca_df = jobs_pca_df[~jobs_pca_df.jobid.isin(model_jobs)].reset_index(drop=True)
+        if trained_model and added_model_jobs:
+            jobs_pca_df = jobs_pca_df[~jobs_pca_df.jobid.isin(added_model_jobs)].reset_index(drop=True)
 
         logger.info('{} PCA components obtained: {}'.format(len(pca_features), pca_features))
         logger.info('PCA variances: {} (sum={})'.format(pca_variances, np.sum(pca_variances)))
@@ -494,10 +492,8 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
     eq._empty_collection_check(jobs)
     if sanity_check:
         eq._warn_incomparable_jobs(jobs)
+    jobids = eq.get_jobs(jobs, fmt='terse')
 
-    if trained_model and pca:
-        logger.error('PCA+trained_model combination is unsupported for detecting outlier ops at present')
-        return False
 
     tags = tags_list(tags)
     jobs_tags_set = set()
@@ -551,6 +547,18 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
             m_name = get_classifier_name(m)
             model_params[t][m] = trained_model.computed[t][m_name] if trained_model else {}
 
+    if trained_model and pca:
+        # for PCA analysis if we use a trained model, then we need to
+        # include the trained model jobs prior to PCA (as the scaling
+        # done as part of PCA will need those jobs
+        added_model_jobs = []
+        jobids_set = set(jobids)
+        for mjob in trained_model.jobs:
+            if mjob.jobid not in jobids_set:
+                added_model_jobs.append(mjob.jobid)
+        if added_model_jobs:
+            logger.debug('appending model jobs {} prior to PCA'.format(added_model_jobs))
+            jobs = jobids + added_model_jobs
 
     # get the dataframe of aggregate metrics, where each row
     # is an aggregate across a group of processes with a particular
@@ -563,11 +571,16 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
         logger.warning('It is strongly recommended to set features=[] when doing PCA')
     features = _sanitize_features(features, ops, trained_model)
 
-    if pca is not False:
+    if pca:
         logger.info("request to do PCA (pca={}). Input features: {}".format(pca, features))
         if len(features) < 5:
             logger.warning('Too few input features for PCA. Are you sure you did not want to set features=[] to enable selecting all available features?')
+        logger.debug('jobid,tags:\n{}'.format(ops[['jobid','tags']]))
         (ops_pca_df, pca_variances, pca_features) = pca_feature_combine(ops, features, desired = 0.85 if pca is True else pca)
+        # remove the rows of the appended model jobs
+        if trained_model and added_model_jobs:
+            ops_pca_df = ops_pca_df[~ops_pca_df.jobid.isin(added_model_jobs)].reset_index(drop=True)
+
         logger.info('{} PCA components obtained: {}'.format(len(pca_features), pca_features))
         logger.info('PCA variances: {} (sum={})'.format(pca_variances, np.sum(pca_variances)))
         ops = ops_pca_df
@@ -591,6 +604,7 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
     # now we iterate over tags and for each tag we select
     # the rows from the ops dataframe that have the same tag;
     # the select rows will have different job ids
+    logger.debug('jobid,tags:\n{}'.format(ops[['jobid', 'tags']]))
     for tag in tags_to_use:
         t = dumps(tag, sort_keys=True)
         logger.debug('Processing tag: {0}'.format(tag))
@@ -609,6 +623,7 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
                 # use the max score in the refmodel if we have a trained model
                 # otherwise use the default threshold for the method
                 threshold = params[0] if params else thresholds[m_name]
+                logger.debug('threshold: {}'.format(threshold))
                 outlier_rows = np.where(np.abs(scores) > threshold)[0]
                 score_diff += max(max(scores) - threshold, 0)
                 # remain the outlier rows indices to the indices in the original df

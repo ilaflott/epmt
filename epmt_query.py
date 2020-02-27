@@ -707,6 +707,7 @@ def _refmodel_scores(col, outlier_methods, features):
     df = conv_jobs(col, fmt='pandas') if col.__class__.__name__ != 'DataFrame' else col
     ret = {}
     logger.info('creating trained model using {0} for features {1}'.format([get_classifier_name(c) for c in outlier_methods], features))
+    logger.info('jobids: {}'.format(df['jobid'].values))
     for m in outlier_methods:
         m_name = get_classifier_name(m)
         ret[m_name] = {}
@@ -735,6 +736,7 @@ def _refmodel_scores(col, outlier_methods, features):
                 # we save everything returned by the function
                 # except the first element, which is a list of scores
                 # We really only need the max, median etc
+                logger.debug('scoring feature {}'.format(c))
                 ret[m_name][c] = m(df[c])[1:]
     # print(ret)
     return ret
@@ -884,6 +886,7 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
             op_tags = tags_list(op_tags)
         # let's get the dataframe of metrics aggregated by op_tags
         ops_df = get_op_metrics(jobs = jobs_orm, tags = op_tags, exact_tags_only = exact_tag_only, fmt='pandas')
+        logger.debug('jobid,tags:\n{}'.format(ops_df[['jobid','tags']]))
         if pca:
             (ops_pca_df, pca_variances, pca_features) = pca_feature_combine(ops_df, features, desired = 0.85 if pca is True else pca)
             logger.info('{} PCA components obtained: {}'.format(len(pca_features), pca_features))
@@ -896,9 +899,11 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
             # serialize the tag so we can use it as a key
             stag = dumps(t, sort_keys=True)
             # pylint: disable=no-member
+            logger.debug('scoring op {}'.format(t))
             scores[stag] = _refmodel_scores(ops_df[ops_df.tags == t], outlier_methods, features)
     else:
         # full jobs, no ops
+        logger.debug('jobid,tags:\n{}'.format(jobs_df[['jobid','tags']]))
         if pca:
             (jobs_pca_df, pca_variances, pca_features) = pca_feature_combine(jobs_df, features, desired = 0.85 if pca is True else pca)
             logger.info('{} PCA components obtained: {}'.format(len(pca_features), pca_features))

@@ -124,6 +124,7 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(df.shape, (20,5))
         # make sure rssmax was discarded from the features
         self.assertEqual(set(df.columns.values) & set(features), { 'cpu_time', 'duration', 'num_procs' })
+        # pylint: disable=unsubscriptable-object
         self.assertEqual(set(df[df.duration > 0]['jobid']), set([u'kern-6656-20190614-192044-outlier']))
         self.assertEqual(set(df[df.cpu_time > 0]['jobid']), set([u'kern-6656-20190614-192044-outlier']))
         self.assertEqual(set(df[df.num_procs > 0]['jobid']), set([]))
@@ -175,6 +176,7 @@ class OutliersAPI(unittest.TestCase):
         jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='orm')
         (df, parts, _, _, _) = eod.detect_outlier_ops(jobs)
         self.assertEqual(df.shape, (20,5), "wrong shape of df from detect_outlier_ops")
+        # pylint: disable=unsubscriptable-object
         self.assertEqual(len(df[df.duration > 0]), 3, 'wrong outlier count for duration')
         self.assertEqual(len(df[df.cpu_time > 0]), 5, 'wrong outlier count for cpu_time')
         self.assertEqual(len(df[df.num_procs > 0]), 0, 'wrong outlier count for num_procs')
