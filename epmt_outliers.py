@@ -551,6 +551,7 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
         # for PCA analysis if we use a trained model, then we need to
         # include the trained model jobs prior to PCA (as the scaling
         # done as part of PCA will need those jobs
+        trained_model_jobs = [j.jobid for j in trained_model.jobs]
         added_model_jobs = []
         jobids_set = set(jobids)
         for mjob in trained_model.jobs:
@@ -578,8 +579,8 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
         logger.debug('jobid,tags:\n{}'.format(ops[['jobid','tags']]))
         (ops_pca_df, pca_variances, pca_features) = pca_feature_combine(ops, features, desired = 0.85 if pca is True else pca)
         # remove the rows of the appended model jobs
-        if trained_model and added_model_jobs:
-            ops_pca_df = ops_pca_df[~ops_pca_df.jobid.isin(added_model_jobs)].reset_index(drop=True)
+        # if trained_model and added_model_jobs:
+        #     ops_pca_df = ops_pca_df[~ops_pca_df.jobid.isin(added_model_jobs)].reset_index(drop=True)
 
         logger.info('{} PCA components obtained: {}'.format(len(pca_features), pca_features))
         logger.info('PCA variances: {} (sum={})'.format(pca_variances, np.sum(pca_variances)))
@@ -615,14 +616,27 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
         for c in features:
             score_diff = 0
             for m in methods:
-                params = model_params[t][m].get(c, ())
+                # We ignore params for PCA, as the underlying PCA vector is not stable
+                params = model_params[t][m].get(c, ()) if not pca else ()
                 m_name = get_classifier_name(m)
                 # if params:
                 #     logger.debug('params[{0}][{1}][{2}]: {3}'.format(t,m.__name__, c, params))
+                logger.debug(rows[c])
                 scores = m(rows[c], params)[0]
-                # use the max score in the refmodel if we have a trained model
-                # otherwise use the default threshold for the method
-                threshold = params[0] if params else thresholds[m_name]
+                logger.debug('scores: {}'.format(scores))
+                if pca and trained_model:
+                    # when using PCA with trained model, we need to figure the threshold
+                    # from the rows comprising of the model jobs
+                    _r = rows.reset_index(drop=True)
+                    model_indices = _r[_r.jobid.isin(trained_model_jobs)].index.values
+                    logger.debug('trained model job indices: {}'.format(list(model_indices)))
+                    trained_model_scores = np.asarray(scores).take(model_indices)
+                    threshold = trained_model_scores.max()
+                    logger.debug('trained model scores: {}, max: {}'.format(trained_model_scores, threshold))
+                else:
+                    # use the max score in the refmodel if we have a trained model
+                    # otherwise use the default threshold for the method
+                    threshold = params[0] if params else thresholds[m_name]
                 logger.debug('threshold: {}'.format(threshold))
                 outlier_rows = np.where(np.abs(scores) > threshold)[0]
                 score_diff += max(max(scores) - threshold, 0)
@@ -635,7 +649,10 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
     retval['tags'] = ops['tags']
     retval = retval[['jobid', 'tags']+features]
 
-    if pca is not False:
+    if pca:
+        if trained_model:
+            # remove model rows that we added
+            retval = retval[~retval.jobid.isin(added_model_jobs)].reset_index(drop=True)
         logger.info('adjusting the PCA scores based on PCA variances')
         adjusted_df = pca_weighted_score(retval, pca_features, pca_variances, 2)[0]
         return adjusted_df
