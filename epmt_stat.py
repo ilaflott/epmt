@@ -77,7 +77,7 @@ def modified_z_score(ys, params=()):
         madz = [round(0.6745 * abs(y - median_y) / median_absolute_deviation_y, 4) for y in ys]
     else:
         madz = [float('inf') if abs((y - median_y)) > 0 else 0 for y in ys]
-    logger.debug('original vector: {}'.format(ys.to_numpy()))
+    logger.debug('original vector: {}'.format(list(ys)))
     if params:
         logger.debug('model params: {}'.format(params))
     logger.debug('madz scores: {}'.format(madz))
