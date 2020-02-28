@@ -57,7 +57,7 @@ proc ModulesHelp { } {
     puts stderr "	This module provides the EPMT suite from Minimal Metrics."
 }
 
-set version		$VERSION
+set version		$version
 prepend-path 	 PATH $EPMT_PREFIX/epmt-install/epmt
 EOT
 
