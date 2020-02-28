@@ -54,6 +54,7 @@ esac
 test -n "$release" || die "Could not find a release to test. Looking for EPMT-*.tgz"
 test -f "$release" || die "$release does not exist or is not readable"
 
+passed=0
 echo "Testing release: $release"
 echo "Staging area: $STAGE"
 echo "Wiping clean staging area and recreating it.."; rm -rf "$STAGE"
@@ -80,6 +81,7 @@ epmt -V || die "Could not execute EPMT"
 function cleanup() {
   echo;echo "Stopping SLURM test container.."
   docker stop $SLURM_CONTAINER
+  [ $passed -eq 1 ] || echo "One or more tests FAILED" >&2
 }
 
 echo;echo "Starting SLURM ($OS_TARGET) test container.."
@@ -127,5 +129,7 @@ else
   echo;echo "Running unit tests (in SLURM container)"
   docker exec $SLURM_CONTAINER bash -c "rm -f /root/EPMT_DB.*; epmt unittest"
 fi
+
+passed=1
 
 exit 0

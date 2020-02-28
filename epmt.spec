@@ -20,6 +20,9 @@ hidden.append('matplotlib')
 hidden.append('ipykernel.datapub')
 # Required for EPMT
 hidden.append('sqlalchemy.ext.baked')
+# pyod, pca
+hidden.extend(['sklearn.neighbors._typedefs','sklearn.neighbors._quad_tree','sklearn.tree._utils','sklearn.utils', 'sklearn.utils._cython_blas', 'sklearn.utils.arrayfuncs', 'sklearn.utils.arrayfuncs.array'])
+
 print("Hidden modules: ",hidden)
 
 exclude = ['settings']
