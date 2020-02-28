@@ -47,7 +47,8 @@ echo "Fixing paths in slurm scripts"
 (cd "$EPMT_PREFIX"; sed -i -e "s|/opt/epmt|$EPMT_PREFIX|" epmt-install/slurm/slurm_task*.sh)
 $EPMT_PREFIX/epmt-install/epmt/epmt -V || die "Installation failed."
 
-cat > $EPMT_PREFIX/epmt.module <<EOT
+mkdir $EPMT_PREFIX/modulefiles
+cat > $EPMT_PREFIX/modulefiles/epmt <<EOT
 #%Module1.0#####################################################################
 # vi:set filetype=tcl:
 conflict papi monitor papiex mmperftools
@@ -75,7 +76,7 @@ Or, for C shell/tcsh:
     setenv PATH "$EPMT_PREFIX/epmt-install/epmt:\$PATH"
 
 If you prefer using modules, you can instead do:
-    module load $EPMT_PREFIX/epmt.module
+    module load $EPMT_PREFIX/modulefiles/epmt
 ***********************************************************************
 
 EOT
