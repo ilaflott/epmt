@@ -46,6 +46,20 @@ echo "Installing settings.py"
 echo "Fixing paths in slurm scripts"
 (cd "$EPMT_PREFIX"; sed -i -e "s|/opt/epmt|$EPMT_PREFIX|" epmt-install/slurm/slurm_task*.sh)
 $EPMT_PREFIX/epmt-install/epmt/epmt -V || die "Installation failed."
+
+cat > $EPMT_PREFIX/epmt.module <<EOT
+#%Module1.0#####################################################################
+# vi:set filetype=tcl:
+conflict papi monitor papiex mmperftools
+
+proc ModulesHelp { } {
+    puts stderr "	This module provides the EPMT suite from Minimal Metrics."
+}
+
+set version		$VERSION
+prepend-path 	 PATH $EPMT_PREFIX/epmt-install/epmt
+EOT
+
 cat <<EOT
 
 ***********************************************************************
@@ -55,10 +69,13 @@ EPMT $version installed in: $EPMT_PREFIX
 Please add $EPMT_PREFIX/epmt-install/epmt to PATH:
 
 For Bash:
-export PATH="$EPMT_PREFIX/epmt-install/epmt:\$PATH"
+    export PATH="$EPMT_PREFIX/epmt-install/epmt:\$PATH"
 
 Or, for C shell/tcsh:
-setenv PATH "$EPMT_PREFIX/epmt-install/epmt:\$PATH"
+    setenv PATH "$EPMT_PREFIX/epmt-install/epmt:\$PATH"
+
+If you prefer using modules, you can instead do:
+    module load $EPMT_PREFIX/epmt.module
 ***********************************************************************
 
 EOT
