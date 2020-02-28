@@ -67,6 +67,9 @@ def create_job(jobid,user):
 #	metadata['job_el_status'] = status
                     
 created_hosts = {}
+# Rather than using this function directly, please use
+# lookup_or_create_host_safe, as that handles a race condition
+# when using concurrent submits
 def lookup_or_create_host(hostname):
     logger = getLogger(__name__)  # you can use other name
     host = created_hosts.get(hostname)
@@ -93,12 +96,27 @@ def lookup_or_create_host(hostname):
     assert(host.name == hostname)
     return host
 
+
+# This function handles a race condition when submitting jobs using
+# multiple processes
+def lookup_or_create_host_safe(hostname):
+    from sqlalchemy import exc
+    try:
+        h = lookup_or_create_host(hostname)
+    except exc.IntegrityError:
+        # The insert failed due to a concurrent transaction  
+        Session.rollback()
+        # the host must exist now
+        h = lookup_or_create_host(hostname)
+    return h
+
 def lookup_or_create_user(username):
     logger = getLogger(__name__)  # you can use other name
-    user = orm_get(User, username)
-    if user is None:
-        logger.info("Creating user %s",username)
-        user = orm_create(User, name=username)
+    user = orm_get_or_create(User, name = username)
+    # user = orm_get(User, username)
+    # if user is None:
+    #     logger.info("Creating user %s",username)
+    #     user = orm_create(User, name=username)
     return user
 
 
@@ -169,16 +187,15 @@ def get_proc_rows(csvfile, skiprows = 0):
 # The first list item (thread 0) is special in that it has values for fields pertaining
 # to the process such as 'exename', 'args', etc. The other threads
 # may not have process fields set.
-def load_process_from_pandas(proc, host, j, u, settings, profile):
+def load_process_from_dictlist(proc, host, j, u, settings, profile):
     from pandas import Timestamp
     logger = getLogger(__name__)  # you can use other name
 
-    # fallback to the host read from the filename if we don't have a hostname column
-    # _t = time.time()
-    # host = h
-    # host = lookup_or_create_host(df['hostname'][0] if 'hostname' in df.columns else h)
-    # host = lookup_or_create_host(h)
-    # profile.load_process.host_lookup += time.time() - _t
+    hostname = proc[0].get('hostname', '')
+    if hostname:
+        if (host is None) or (host.name != hostname):
+            logger.warning('using hostname as set in papiex data: {}'.format(hostname))
+            host = lookup_or_create_host_safe(hostname)
 
     _t = time.time()
     try:
@@ -362,7 +379,14 @@ def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
 def _proc_ancestors(pid_map, proc, ancestor_pid, relations = None, descendant_map = {}):
     
     if ancestor_pid in pid_map:
-        ancestor = pid_map[ancestor_pid]
+        proc.depth += 1
+        entries = pid_map[ancestor_pid]
+        if len(entries) == 1:
+            # common case no hash collision
+            ancestor = entries[0]
+        else:
+            # get the actual parent from the list of possible parent entries
+            ancestor = _disambiguate_parent(entries, proc)
         if ancestor.id in descendant_map:
             descendant_map[ancestor.id].add(proc)
         else:
@@ -381,28 +405,71 @@ def _proc_ancestors(pid_map, proc, ancestor_pid, relations = None, descendant_ma
         _proc_ancestors(pid_map, proc, ancestor.ppid, relations, descendant_map)
     return (relations, descendant_map)
 
+# Makes a pid map (a dictionary referenced by PIDs).
+# Each dict entry is a list containing one or more Process
+# (or dotdict if using bulk inserts) objects.
+def _mk_pid_map(all_procs):
+    pid_map = {}
+    for p in all_procs:
+        if p.pid in pid_map:
+            logger.debug('handled hash collision for PID (%d) -- process execed', p.pid)
+            pid_map[p.pid].append(p)
+        else:
+            pid_map[p.pid] = [p]
+    return pid_map
+
+
+# determines the actual parent of a process give a list
+# of candidates whose PID matches the PPID of proc.
+# proc is a dotdict or a Process object
+def _disambiguate_parent(entries, proc):
+    sorted_entries = sorted(entries, key = lambda p: p.start)
+    for p in sorted_entries:
+        if (p.end > proc.start):
+            # if (p.start > proc.start):
+            #     for x in sorted_entries:
+            #         print(x.pid, x.ppid, x.exename, x.start, x.end)
+            #     print('---')
+            #     print(proc.pid, proc.ppid, proc.exename, proc.start, proc.end)
+            # assert(p.start < proc.start)
+            return p
+    # each process has a unique parent, so we know
+    # control must never come here else something's broken
+    assert(False)
+
 
 def _create_process_tree(pid_map):
     logger = getLogger(__name__)  # you can use other name
     logger.info("  creating process tree..")
-    for (pid, proc) in pid_map.items():
-        ppid = proc.ppid
-        if ppid in pid_map:
-            parent = pid_map[ppid]
-            proc.parent = parent
-            # commented out line below as it's automatically
-            # implied by the proc.parent assignment above.
-            # If we uncomment it, then on sqlalchemy, each
-            # parent will have duplicate nodes for each child.
-            # orm_add_to_collection(parent.children, proc)
-    logger.debug('    creating ancestor/descendant relations..')
+    for (pid, procs) in pid_map.items():
+        for proc in procs:
+            ppid = proc.ppid
+            if ppid in pid_map:
+                entries = pid_map[ppid]
+                if len(entries) == 1:
+                    # common case no hash collision
+                    parent = entries[0]
+                else:
+                    # the process must have execed so we have
+                    # multiple records for the PID.
+                    for e in entries: assert(e.pid == ppid)
+                    parent = _disambiguate_parent(entries, proc)
+                proc.parent = parent
+                # commented out line below as it's automatically
+                # implied by the proc.parent assignment above.
+                # If we uncomment it, then on sqlalchemy, each
+                # parent will have duplicate nodes for each child.
+                # orm_add_to_collection(parent.children, proc)
 
+    logger.debug('    creating ancestor/descendant relations..')
     r = [] if settings.bulk_insert else None
     # descendants map
     desc_map = {}
-    for (pid, proc) in pid_map.items():
-        ppid = proc.ppid
-        (r, desc_map) = _proc_ancestors(pid_map, proc, ppid, r, desc_map)
+    for (pid, procs) in pid_map.items():
+        for proc in procs:
+            ppid = proc.ppid
+            proc.depth = 0
+            (r, desc_map) = _proc_ancestors(pid_map, proc, ppid, r, desc_map)
 
     # r will only be non-empty if we are doing bulk-inserts
     if r:
@@ -438,12 +505,7 @@ def mk_process_tree(j, all_procs = None, pid_map = None):
 
     if (pid_map is None):
         _pid_t0 = time.time()
-        pid_map = {}
-        for p in all_procs:
-            # We shouldn't be seeing a pid repeat in a job. 
-            # Theoretically it's posssible but it would complicate the pid map a bit
-            # assert(p.pid not in pid_map)
-            pid_map[p.pid] = p
+        pid_map = _mk_pid_map(all_procs)
         logger.debug("  recreating pid_map took: %2.5f sec", time.time() - _pid_t0)
 
     _t1 = time.time()
@@ -504,10 +566,10 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     if all_tags:
         logger.info("  found %d distinct sets of process tags",len(all_tags))
         # convert each of the pickled tags back into a dict
-        proc_sums[settings.all_tags_field] = [ loads(t) for t in sorted(all_tags) ]
+        proc_sums['all_proc_tags'] = [ loads(t) for t in sorted(all_tags) ]
     else:
         logger.debug('  no process tags found in th entire job')
-        proc_sums[settings.all_tags_field] = []
+        proc_sums['all_proc_tags'] = []
 
     logger.debug('  tag processing took: %2.5f sec', time.time() - _t0)
 
@@ -624,8 +686,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     # it will not waste time re-checking (since it marks the metadata as checked)
     metadata = check_fix_metadata(raw_metadata) 
     if metadata is False:
-        return False
-
+        return (False, 'Error: Could not get valid metadata')
     job_status = {}
     if metadata.get('job_pl_scriptname'):
         job_status['script_name'] = metadata['job_pl_scriptname']
@@ -667,6 +728,9 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     exitcode = metadata['job_el_exitcode']
     env_changes_dict = metadata['job_env_changes']
     job_tags = metadata['job_tags']
+    annotations = metadata.get('job_annotations', {})
+    if annotations:
+        logger.info('Job annotations: {0}'.format(annotations))
 
     # sometimes script name is to be found in the job tags
     if (job_status.get('script_name') is None) and job_tags and job_tags.get('script_name'):
@@ -711,12 +775,20 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 #
 # Create user and job object
 #
-    u = lookup_or_create_user(username)
+    from sqlalchemy import exc
+    try:
+        u = lookup_or_create_user(username)
+    except exc.IntegrityError:
+        # The insert failed due to a concurrent transaction  
+        Session.rollback()
+        # the user must exist now
+        u = lookup_or_create_user(username)
     j = create_job(jobid,u)
     if not j: # FIX! We might have leaked a username to the database here
-        return None
+        return (None, 'Job already in database')
     j.jobname = jobname
     j.exitcode = exitcode
+    j.annotations = annotations    
 # fix below
     j.env_dict = env_dict
     j.env_changes_dict = env_changes_dict
@@ -742,10 +814,15 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     profile.load_process = dotdict({'init': 0, 'misc': 0, 'proc_tags': 0, 'thread_sums': 0, 'to_json': 0})
 
     for hostname, files in filedict.items():
+        if hostname == "unknown":
+            logger.warning('could not determine hostname from filedict, picking it from metadata instead')
+            hostname = metadata.get('job_pl_hostname', '')
+            if not hostname:
+                logger.warning('could not determine hostname from metadata either')
         logger.debug("Processing host %s",hostname)
-        # we only need to a lookup_or_create_host if papiex doesn't
-        # have a hostname column
-        h = lookup_or_create_host(hostname) if hostname else None
+        h = None
+        if hostname:
+            h = lookup_or_create_host_safe(hostname)
         cntmax = len(files)
         cnt = 0
         nrecs = 0
@@ -784,12 +861,6 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             #     logger.error("Something wrong with file %s, readcsv returned empty, skipping...",f)
             #     continue
 
-            # in case we cannot figure out the hostname from the file, we
-            # will use the papiex data. To reduce the expense of host lookups
-            # we want to do this only once per job. This mechanism assumes
-            # all the processes for a job reside on the same host
-            # if not(h) and 'hostname' in collated_df:
-            #      h = lookup_or_create_host(collated_df['hostname'][0])
 
 # Make Process/Thread/Metrics objects in DB
             # there are 1 or more process dataframes in the collated df
@@ -801,7 +872,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             # rows in csv). 
             for (proc, _, nrows) in get_proc_rows(csv_file, skiprows):
                 _load_process_from_df_start_ts = time.time()
-                p = load_process_from_pandas(proc, h, j, u, settings, profile)
+                p = load_process_from_dictlist(proc, h, j, u, settings, profile)
                 load_process_from_df_time += time.time() - _load_process_from_df_start_ts
                 if not p:
                     logger.error("Failed loading process, file %s!",f);
@@ -876,7 +947,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     if filedict:
         if not didsomething:
             logger.warning("Something went wrong in parsing CSV files")
-            return False
+            return (False, "Error parsing CSV")
     else:
         logger.warning("job %s, user %s, jobname %s has no CSV data",jobid,username,jobname)
 
@@ -939,7 +1010,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     logger.info("Staged import of %d processes took %s, %f processes/sec",
                 len(all_procs), now - then,len(all_procs)/float((now-then).total_seconds()))
     print("Imported successfully - job:",jobid,"processes:",len(all_procs),"rate:",len(all_procs)/float((now-then).total_seconds()))
-    return j
+    return (True, 'Import successful', (j.jobid, len(all_procs)))
 
 #
 # We should remove below here

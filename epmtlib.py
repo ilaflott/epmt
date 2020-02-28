@@ -18,7 +18,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (3,0,1)
+_version = (3,3,20)
 
 def version():
     return _version
@@ -31,12 +31,12 @@ def get_username():
     return getpwuid( getuid() )[ 0 ]
 
 # if check is set, then we will bail if logging has already been initialized
-def set_logging(intlvl = 0, check = False):
+def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
     import logging
     import epmt_settings as settings
 
-    if check and hasattr(set_logging, 'initialized'): return
-    set_logging.initialized = True
+    if check and hasattr(epmt_logging_init, 'initialized'): return
+    epmt_logging_init.initialized = True
     if intlvl == None:
         intlvl = 0
     intlvl = int(intlvl)
@@ -60,7 +60,7 @@ def set_logging(intlvl = 0, check = False):
     rootLogger.addHandler(fileHandler)
 
     consoleHandler = logging.StreamHandler()
-    consoleFormatter = logging.Formatter("%(levelname)7.7s: %(name)15.15s: %(message)s")
+    consoleFormatter = logging.Formatter("[PID %(process)d] %(levelname)7.7s: %(name)s: %(message)s" if log_pid else "%(levelname)7.7s: %(name)s: %(message)s")
     consoleHandler.setFormatter(consoleFormatter)
     rootLogger.addHandler(consoleHandler)
 
@@ -120,9 +120,6 @@ def init_settings(settings):
     if not hasattr(settings, 'skip_for_thread_sums'):
         logger.warning("missing settings.skip_for_thread_sums")
         settings.skip_for_thread_sums = ["tid", "start", "end", "num_threads", "starttime"]
-    if not hasattr(settings, 'all_tags_field'):
-        logger.warning("missing settings.all_tags_field")
-        settings.all_tags_field = 'all_proc_tags'
     if not hasattr(settings, 'outlier_thresholds'):
         logger.warning("missing settings.outlier_thresholds")
         settings.outlier_thresholds = { 'modified_z_score': 2.5, 'iqr': [20,80], 'z_score': 3.0 }
@@ -132,6 +129,12 @@ def init_settings(settings):
     if not hasattr(settings, 'outlier_features_blacklist'):
         logger.warning("missing settings.outlier_features_blacklist")
         settings.outlier_features_blacklist = []
+    if not hasattr(settings, 'retire_jobs_ndays'):
+        logger.warning("missing settings.retire_jobs_ndays")
+        settings.retire_jobs_ndays = 0
+    if not hasattr(settings, 'retire_models_ndays'):
+        logger.warning("missing settings.retire_models_ndays")
+        settings.retire_models_ndays = 0
     if not hasattr(settings, 'bulk_insert'):
         logger.warning("missing settings.bulk_insert")
         settings.bulk_insert = False
@@ -608,6 +611,81 @@ def check_pid(pid):
             # (EINVAL, EPERM, ESRCH)
             return (True, str(err.errno))
     return (True,'')
+
+def suggested_cpu_count_for_submit():
+    '''
+    Suggests the optimal number of cpus to use for the submit operation
+    '''
+    from multiprocessing import cpu_count
+    max_procs = cpu_count()
+    return max(1, max_procs - 1)
+
+
+def conv_to_datetime(t):
+    """
+    This converts a time specified as a string or a Unix timestamp
+    or a negative integer (signifiying a relative offset in days
+    from the current time) to a python datetime object. If passed a 
+    datetime object it will be returned without modification
+    E.g., of valid values of t:
+
+                '08/13/2019 23:29' (string)
+                 1565606303 (Unix timestamp)
+                 datetime.datetime(2019, 8, 13, 23, 29) (datetime object)
+                 -1 => 1 day ago
+                 -30 => 30 days ago
+                 0 => now
+
+    """
+    from datetime import datetime, timedelta
+    retval = t
+
+    if type(t) == str:
+        if not t: return None
+        try:
+            retval = datetime.strptime(t, '%m/%d/%Y %H:%M')
+        except Exception as e:
+            logger = getLogger(__name__)
+            logger.error('could not convert string to datetime: %s' % str(e))
+            return None
+    elif type(t) in (int, float):
+        if t > 0:
+            retval = datetime.fromtimestamp((int)(t))
+        else:
+            # interpret a negative integer as number of days before now()
+            # if it's zero interpret it as now
+            retval = datetime.now() - timedelta(days=(-t))
+    return retval
+
+
+def ranges(i):
+    """
+    Return a list of ranges for a list of integers
+    
+    >>> print(list(ranges([0, 1, 2, 3, 4, 7, 8, 9, 11])))
+    >>> [(0, 4), (7, 9), (11, 11)]
+    """
+
+    from itertools import groupby
+    for a, b in groupby(enumerate(i), lambda pair: pair[1] - pair[0]):
+        b = list(b)
+        yield b[0][1], b[-1][1]
+
+def atoi(text):
+    return int(text) if text.isdigit() else text
+
+def natural_keys(text):
+    '''
+    alist.sort(key=natural_keys) sorts in human order
+    http://nedbatchelder.com/blog/200712/human_sorting.html
+    (See Toothy's implementation in the comments)
+
+    >>> alist = [ 'phil10', 'phil1', 'phil11', 'phil0' ]
+    >>> sorted(alist, key=natural_keys)
+    ['phil0', 'phil1', 'phil10', 'phil11']
+    '''
+    import re
+    return [ atoi(c) for c in re.split(r'(\d+)', text) ]
 
 if __name__ == "__main__":
     print(version_str(True))

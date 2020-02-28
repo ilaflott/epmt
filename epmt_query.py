@@ -8,14 +8,14 @@ from logging import getLogger
 import epmt_settings as settings
 
 # do NOT do any epmt imports until logging is set up
-# using set_logging, other than import set_logging
-from epmtlib import set_logging
+# using epmt_logging_init, other than import epmt_logging_init
+from epmtlib import epmt_logging_init
 logger = getLogger(__name__)  # you can use other name
-set_logging(settings.verbose if hasattr(settings, 'verbose') else 0, check=True)
+epmt_logging_init(settings.verbose if hasattr(settings, 'verbose') else 0, check=True)
 
 ### Put EPMT imports below, after logging is set up
-from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key, stringify_dicts, version, version_str
-from epmt_stat import modified_z_score
+from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key, stringify_dicts, version, version_str, conv_to_datetime
+from epmt_stat import modified_z_score, get_classifier_name, is_classifier_mv, mvod_scores
 
 init_settings(settings) # type: ignore
 setup_db(settings) # type: ignore
@@ -158,6 +158,8 @@ def get_roots(jobs, fmt='dict'):
 def root(job, fmt='dict'):
     """
     Get the root process of a job. The job is either a Job object or a jobid
+    If multiple root processes exist, then this returns the first of them
+    (by start time)
     
     EXAMPLE:
     >>> eq.root('685016',fmt='terse')
@@ -348,7 +350,8 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
     # set defaults for limit and ordering only if the user doesn't specify jobs
     if (not(orm_is_query(jobs))) and (type(jobs) != pd.DataFrame) and (jobs in [[], '', None]):
         if (fmt != 'orm') and (limit == None): 
-            limit = 20
+            limit = 10000
+            logger.warning('No limit set, defaults to {0}. Set limit=0 to avoid limits'.format(limit))
 
     if order is None: order = Job.start
       
@@ -362,31 +365,11 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
                 logger.error('could not convert "when" string to datetime: %s' % str(e))
                 return None
 
-    if before != None:
-        if type(before) == str:
-            try:
-                before = datetime.strptime(before, '%m/%d/%Y %H:%M')
-            except Exception as e:
-                logger.error('could not convert "before" string to datetime: %s' % str(e))
-                return None
-        elif type(before) in (int, float):
-            if before > 0:
-                before = datetime.fromtimestamp((int)(before))
-            else:
-                before = datetime.now() - timedelta(days=(-before))
+    if before is not None:
+        before = conv_to_datetime(before)
 
-    if after != None:
-        if type(after) == str:
-            try:
-                after = datetime.strptime(after, '%m/%d/%Y %H:%M')
-            except Exception as e:
-                logger.error('could not convert "after" string to datetime: %s' % str(e))
-                return None
-        elif type(after) in (int, float):
-            if after > 0:
-                after = datetime.fromtimestamp((int)(after))
-            else:
-                after = datetime.now() - timedelta(days=(-after))
+    if after is not None:
+        after = conv_to_datetime(after)
 
     if hosts:
         if isString(hosts):
@@ -508,7 +491,7 @@ def get_procs(jobs = [], tags = None, fltr = None, order = None, limit = None, w
 
     if (limit is None) and (fmt != 'orm'):
         limit = 10000
-        logger.info('No limit set, defaults to {0}. Set limit to 0 to avoid limits'.format(limit))
+        logger.warning('No limit set, defaults to {0}. Set limit=0 to avoid limits'.format(limit))
 
     if when:
         if type(when) == str:
@@ -636,7 +619,7 @@ def rank_proc_tags_keys(jobs, order = 'cardinality', exclude = []):
 
 
 @db_session
-def get_refmodels(name=None, tag = {}, fltr=None, limit=0, order=None, exact_tag_only=False, merge_nested_fields=True, fmt='dict'):
+def get_refmodels(name=None, tag = {}, fltr=None, limit=0, order=None, before=None, after=None, exact_tag_only=False, merge_nested_fields=True, fmt='dict'):
     """
     This function returns reference models filtered using name / tag / fltr
     
@@ -646,6 +629,26 @@ def get_refmodels(name=None, tag = {}, fltr=None, limit=0, order=None, exact_tag
     fltr  : a lambda function or a string containing a pony expression
     limit : used to limit the number of output items, 0 means no limit
     order : used to order the output list, its a lambda function or a string
+    before : Restrict the output to models created before time specified.
+             'before' can be specified either as a python datetime or
+             a Unix timestamp or a string. If a negative integer is specified,
+             then the time is interpreted as a negative days offset from
+             the current time.
+                 '08/13/2019 23:29' (string)
+                 1565606303 (Unix timestamp)
+                 datetime.datetime(2019, 8, 13, 23, 29) (datetime object)
+                 -1 => 1 day ago
+                 -30 => 30 days ago
+    after  : Restrict the output to models created after time specified.
+             'after' can be specified either as a python datetime or
+             a Unix timestamp or a string. If a negative integer is specified,
+             then the time is interpreted as a negative days offset from
+             the current time.
+                 '08/13/2019 23:29' (string)
+                 1565606303 (Unix timestamp)
+                 datetime.datetime(2019, 8, 13, 23, 29) (datetime object)
+                 -1 => 1 day ago
+                 -30 => 30 days ago
     exact_tag_only: is used to match the DB tag with the supplied tag:
             the full dictionary must match for a successful match. Default False.
     merge_nested_fields: used to hoist attributes from the 'computed'
@@ -660,7 +663,12 @@ def get_refmodels(name=None, tag = {}, fltr=None, limit=0, order=None, exact_tag
     if type(tag) == str:
         tag = tag_from_string(tag)
 
-    qs = orm_get_refmodels(name, tag, fltr, limit, order, exact_tag_only)
+    if before is not None:
+        before = conv_to_datetime(before)
+    if after is not None:
+        after = conv_to_datetime(after)
+
+    qs = orm_get_refmodels(name, tag, fltr, limit, order, before, after, exact_tag_only)
 
     if fmt == 'orm':
         return qs
@@ -689,6 +697,8 @@ def get_refmodels(name=None, tag = {}, fltr=None, limit=0, order=None, exact_tag
 
 
 # This function computes a dict such as:
+# for univariate classifiers:
+#
 # { 'z_score': {'duration': (max, median, median_dev), {'cpu_time': (max, median, median_dev)},
 #   'iqr': {'duration': ...}
 #
@@ -696,19 +706,46 @@ def get_refmodels(name=None, tag = {}, fltr=None, limit=0, order=None, exact_tag
 def _refmodel_scores(col, outlier_methods, features):
     df = conv_jobs(col, fmt='pandas') if col.__class__.__name__ != 'DataFrame' else col
     ret = {}
+    logger.info('creating trained model using {0} for features {1}'.format([get_classifier_name(c) for c in outlier_methods], features))
+    logger.info('jobids: {}'.format(df['jobid'].values))
     for m in outlier_methods:
-        ret[m.__name__] = {}
-        for c in features:
-            # we save everything except the first element of the
-            # tuple as the first element is the actual scores
-            ret[m.__name__][c] = m(df[c])[1:]
+        m_name = get_classifier_name(m)
+        ret[m_name] = {}
+        if is_classifier_mv(m):
+            logger.info('mvod {0}; features ({1})'.format(m_name, features))
+            _f = sorted(features)
+            nd_array = df[_f].to_numpy()
+            # the second element return is a dict indexed by classifier
+            # and containing the max anomaly score using the classifier
+            retval = mvod_scores(nd_array, classifiers = [m])
+            if not retval:
+                logger.warning('Could not score using mvod classifier {}. Skipping it.'.format(m_name))
+                del ret[m_name]
+                continue
+            (full_scores, max_score) = retval
+            logger.debug('{0} scores:\n{1}'.format(m_name, full_scores[m_name]))
+
+            # we save the max score and also we need the input nd_array for
+            # future reference. We will need the nd_array for outlier detection
+            # in detect_outlier_jobs
+            ret[m_name][",".join(_f)] = [float(max_score[m_name]), nd_array.tolist()]
+        else:
+            # univariate classifiers can only handle
+            logger.debug('univariate classifier {0}; features {1}'.format(m_name, features))
+            for c in features:
+                # we save everything returned by the function
+                # except the first element, which is a list of scores
+                # We really only need the max, median etc
+                logger.debug('scoring feature {}'.format(c))
+                ret[m_name][c] = m(df[c])[1:]
+    # print(ret)
     return ret
 #
 @db_session
 def create_refmodel(jobs=[], name=None, tag={}, op_tags=[], 
                     outlier_methods=[modified_z_score], 
                     features=['duration', 'cpu_time', 'num_procs'], exact_tag_only=False,
-                    fmt='dict', sanity_check = True, enabled=True):
+                    fmt='dict', sanity_check = True, enabled=True, pca=False):
     """
     This function creates a reference model and returns
     the ID of the newly-created model in the database
@@ -749,6 +786,17 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
 
     enabled: Allow the trained model to be used for outlier detection.
              Enabled is set to True by default.
+
+    pca:    False by default. If enabled, the PCA analysis will be done
+            on the features prior to creating the model. Rather than setting
+            this option to True, you may also set this option to something
+            like: pca = 2, in which case it will mean you want two components
+            in the PCA. Or something like, pca = 0.95, which will be 
+            intepreted as meaning do PCA and automatically select the number
+            components to arrive at the number of components in the PCA.
+            If set to True, a 0.85 variance ratio will be set to enable
+            automatic selection of PCA components.
+
     
     e.g,.
     
@@ -768,6 +816,28 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
     
     >>> r['op_tags']
     [{u'op_instance': u'4', u'op_sequence': u'4', u'op': u'build'}, {u'op_instance': u'5', u'op_sequence': u'5', u'op': u'clean'}, {u'op_instance': u'3', u'op_sequence': u'3', u'op': u'configure'}, {u'op_instance': u'1', u'op_sequence': u'1', u'op': u'download'}, {u'op_instance': u'2', u'op_sequence': u'2', u'op': u'extract'}]
+
+    Below is an example of creating a refmodel using MV classifiers
+    >>> from pyod.models.knn import KNN
+    >>> from pyod.models.abod import ABOD
+    >>> r = eq.create_refmodel(['625172', '627922', '629337', '633144', '676007', '680181', '685000', '685003', '685016', '692544', '693147', '696127'], outlier_methods = [ABOD(), KNN()], features = ['cpu_time', 'duration', 'num_procs'])
+    WARNING: epmt_query: The jobs do not share identical tag values for "exp_name" and "exp_component"
+    WARNING: The jobs do not share identical tag values for "exp_name" and "exp_component"
+        685000 ESM4_historical_D151 ocean_annual_rho2_1x1deg
+        685003 ESM4_historical_D151 ocean_cobalt_fdet_100
+        685016 ESM4_historical_D151 ocean_month_rho2_1x1deg
+        625172 ESM4_historical_D151 ocean_month_rho2_1x1deg
+        693147 ESM4_historical_D151 ocean_month_rho2_1x1deg
+        692544 ESM4_historical_D151 ocean_month_rho2_1x1deg
+        696127 ESM4_historical_D151 ocean_month_rho2_1x1deg
+        627922 ESM4_historical_D151 ocean_month_rho2_1x1deg
+        629337 ESM4_historical_D151 ocean_month_rho2_1x1deg
+        633144 ESM4_historical_D151 ocean_month_rho2_1x1deg
+        676007 ESM4_historical_D151 ocean_month_rho2_1x1deg
+        680181 ESM4_historical_D151 ocean_month_rho2_1x1deg
+    >>> r
+    {'jobs': ['685000', '685003', '685016', '625172', '693147', '692544', '696127', '627922', '629337', '633144', '676007', '680181'], 'name': None, 'tags': {}, 'op_tags': [], 'computed': {'pyod.models.abod': {'cpu_time,duration,num_procs': -3.478362573453902e-40}, 'pyod.models.knn': {'cpu_time,duration,num_procs': 6014539197.113887}}, 'enabled': True, 'id': 6, 'created_at': datetime.datetime(2020, 2, 3, 17, 6, 59, 501012)}
+
     """
     if not jobs or (not(orm_is_query(jobs)) and len(jobs)==0) or (orm_is_query(jobs) and (jobs.count == 0)):
         logger.error('You need to specify one or more jobs to create a reference model')
@@ -787,10 +857,20 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
     jobs_df = conv_jobs(jobs_orm, fmt='pandas')
     jobs = jobs_orm[:]
     from epmt_outliers import _sanitize_features
-    features = _sanitize_features(features, jobs_df)
 
     if sanity_check:
         _warn_incomparable_jobs(jobs)
+
+    if pca and features and (features != '*'):
+        logger.warning('It is strongly recommended to set features=[] when doing PCA')
+    features = _sanitize_features(features, jobs_df)
+    orig_features = features  # keep a copy as features might be reassigned below
+    if pca:
+        logger.info("request to do PCA (pca={}). Input features: {}".format(pca, features))
+        if len(features) < 5:
+            logger.warning('Too few input features for PCA. Are you sure you did not want to set features=[] to enable selecting all available features?')
+        from epmt_outliers import pca_feature_combine
+        import numpy as np
 
     if op_tags:
         if op_tags == '*':
@@ -806,21 +886,44 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
             op_tags = tags_list(op_tags)
         # let's get the dataframe of metrics aggregated by op_tags
         ops_df = get_op_metrics(jobs = jobs_orm, tags = op_tags, exact_tags_only = exact_tag_only, fmt='pandas')
+        logger.debug('jobid,tags:\n{}'.format(ops_df[['jobid','tags']]))
+        if pca:
+            (ops_pca_df, pca_variances, pca_features) = pca_feature_combine(ops_df, features, desired = 0.85 if pca is True else pca)
+            logger.info('{} PCA components obtained: {}'.format(len(pca_features), pca_features))
+            logger.info('PCA variances: {} (sum={})'.format(pca_variances, np.sum(pca_variances)))
+            ops_df = ops_pca_df
+            features = pca_features
+
         scores = {}
         for t in op_tags:
             # serialize the tag so we can use it as a key
             stag = dumps(t, sort_keys=True)
             # pylint: disable=no-member
+            logger.debug('scoring op {}'.format(t))
             scores[stag] = _refmodel_scores(ops_df[ops_df.tags == t], outlier_methods, features)
     else:
         # full jobs, no ops
-        scores = _refmodel_scores(jobs, outlier_methods, features)
+        logger.debug('jobid,tags:\n{}'.format(jobs_df[['jobid','tags']]))
+        if pca:
+            (jobs_pca_df, pca_variances, pca_features) = pca_feature_combine(jobs_df, features, desired = 0.85 if pca is True else pca)
+            logger.info('{} PCA components obtained: {}'.format(len(pca_features), pca_features))
+            logger.info('PCA variances: {} (sum={})'.format(pca_variances, np.sum(pca_variances)))
+            jobs_df = jobs_pca_df
+            features = pca_features
+        scores = _refmodel_scores(jobs_df, outlier_methods, features)
 
     logger.debug('computed scores: {0}'.format(scores))
     computed = scores
 
+    # if we use pca, then we need to save the input feature names
+    # for future reference. To be safe, we also save the output PCA
+    # feature names
+    info_dict = {}
+    if pca:
+        info_dict['pca'] = { 'inp_features': orig_features, 'out_features': pca_features }
+
     # now save the ref model
-    r = ReferenceModel(jobs=jobs, name=name, tags=tag, op_tags=op_tags, computed=computed, enabled=enabled)
+    r = ReferenceModel(jobs=jobs, name=name, tags=tag, op_tags=op_tags, computed=computed, info_dict = info_dict, enabled=enabled)
     orm_commit()
     if fmt=='orm': 
         return r
@@ -846,6 +949,22 @@ def delete_refmodels(*ref_ids):
     ref_ids = [int(r) for r in ref_ids]
     return orm_delete_refmodels(ref_ids)
 
+def retire_refmodels(ndays = settings.retire_models_ndays):
+    """
+    Retire models older than ndays (ndays > 0). If ndays is
+    specified as <= 0 then it's a nop. On success it returns
+    the number of models deleted.
+    """
+    if ndays <= 0: return 0
+
+    # ndays > 0
+    models = get_refmodels(before=-ndays, fmt='terse')
+    if models:
+        logger.info('Retiring following models (older than %d days): %s', ndays, str(models))
+        return delete_refmodels(models)
+    else:
+        logger.info('No models to retire (older than %d days)', ndays)
+    return 0
 
 def refmodel_set_enabled(ref_id, enabled = False):
     """
@@ -881,12 +1000,30 @@ def refmodel_get_metrics(model, active_only = False):
         except:
             m = v.keys()
         metrics |= set(m)
+
+    # see if we have any PCA features
+    pca_features = (r.info_dict or {}).get('pca', {}).get('inp_features', [])
+    if pca_features:
+        logger.debug('PCA features found in model: {}'.format(pca_features))
+        metrics |= set(pca_features)
+
     if active_only:
         active_metrics = (r.info_dict or {}).get('active_metrics', [])
         if active_metrics:
             # do an intersection
             metrics &= set(active_metrics)
-    return metrics
+
+    # while metrics should consist of features that are each singular
+    # it might also consist of a MV feature set like "duration,num_procs,cpu_time"
+    # In other words a composite feature set. We need to break them down
+    decomposed_metrics = set()
+    for f in metrics:
+        if "," in f:
+            decomp_features = f.split(",")
+            decomposed_metrics |= set(decomp_features)
+        else:
+            decomposed_metrics.add(f)
+    return decomposed_metrics
 
 def refmodel_set_active_metrics(ref_id, metrics):
     """
@@ -917,7 +1054,7 @@ def __unique_proc_tags_for_job(job, exclude=[], fold=True):
     proc_sums = getattr(job, PROC_SUMS_FIELD_IN_JOB, {})
     tags = []
     try:
-        tags = proc_sums[settings.all_tags_field]
+        tags = proc_sums['all_proc_tags']
     except:
         # if we haven't found it the easy way, do the heavy compute
         import numpy as np
@@ -931,7 +1068,7 @@ def __unique_proc_tags_for_job(job, exclude=[], fold=True):
 
 
 @db_session
-def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict', op_duration_method = "sum"):
+def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict', op_duration_method = "sum", full= False):
     '''
     Returns a list of "Operations", where each Operation is either
     an object or a dict, depending on 'fmt'. An operation represents a collection
@@ -970,6 +1107,12 @@ def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict', 
                        difference of the last process to finish and the first
                        process to start. 
                   Defaults to "sum"
+
+    full: This argument is False by default. Its only useful when format is set to
+          dict. With this option enabled, the full Operation object including
+          expensive fields to compute such as intervals, are computed and 
+          included in the dictionary. This is an expensive option, so it's disabled
+          by default. (ADVANCED)
 
     EXAMPLES:
           To get the ops as a list of dicts for two distinct tags, do:
@@ -1048,7 +1191,7 @@ def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict', 
             if op: ops.append(op)
 
     if fmt == 'dict':
-        ops = [ op.to_dict() for op in ops ]
+        ops = [ op.to_dict(full=full) for op in ops ]
     return ops
 
 @db_session
@@ -1217,10 +1360,35 @@ def delete_jobs(jobs, force = False, before=None, after=None):
     if num_jobs > 1 and not force:
         logger.warning('You must set force=True when calling this function as you want to delete more than one job')
         return 0
-    logger.info('deleting %d jobs, in an atomic operation..', num_jobs)
+
+    # make sure we aren't trying to delete jobs with models associated with them
+    jobs_with_models = {}
+    jobs_to_delete = []
+    for j in jobs:
+        if j.ref_models: 
+            jobs_with_models[j.jobid] = [r.id for r in j.ref_models]
+        else:
+            jobs_to_delete.append(j)
+    if jobs_with_models:
+        logger.error('The following jobs have models (their IDs have been mentioned in square brackets) associated with them and will not be deleted. Please remove the reference models before deleting these jobs:\n\t%s\n', str(jobs_with_models))
+        if not jobs_to_delete:
+            return 0
+        jobs = orm_jobs_col(jobs_to_delete)
+        num_jobs = len(jobs_to_delete)
+    logger.info('deleting %d jobs (%s), in an atomic operation..', num_jobs, str(jobs_to_delete))
     orm_delete_jobs(jobs)
     return num_jobs
 
+
+def retire_jobs(ndays = settings.retire_jobs_ndays):
+    """
+    Retires jobs older than 'ndays' and returns the list of jobs retired.
+
+    ndays must be > 0 for any jobs to be retired. For ndays <=0, no jobs
+    are retired.
+    """
+    if ndays <= 0: return 0
+    return delete_jobs([], force=True, before = -ndays)
 
 @db_session
 def dm_calc(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op:dmput', 'op:hsmget', 'op:rm', 'op:cp']):
@@ -1315,7 +1483,7 @@ def annotate_job(jobid, annotation, replace=False):
 
     Returns the new annotations for the job.
     '''
-    j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
+    j = Job[jobid] if (type(jobid) == str) else jobid
     if type(annotation) == str:
         annotation = tag_from_string(annotation)
     ann = {} if replace else dict(j.annotations)
@@ -1568,3 +1736,90 @@ def compute_process_trees(jobs):
     jobs = orm_jobs_col(jobs)
     for j in jobs:
         mk_process_tree(j)
+
+@db_session
+def exp_explore(exp_name, order_key = 'duration', op = 'sum', limit=10):
+    from epmtlib import ranges, natural_keys
+    import numpy as np
+    order_key = order_key or 'duration' # defaults when using with command-line
+    limit = limit or 10 # defaults when using with command-line
+    exp_jobs = get_jobs(tags = { 'exp_name': exp_name }, fmt = 'orm' )
+    exp_jobids = sorted([j.jobid for j in exp_jobs], key=natural_keys)
+    if not exp_jobids:
+        logger.warning('Could not find any jobs with an "exp_name" tag matching {}'.format(exp_name))
+        return False
+    try:
+        job_ranges_str = ",".join(["{}..{}".format(a, b) if (a != b) else "{}".format(a) for (a,b) in ranges([int(x) for x in exp_jobids])])
+        print('Experiment {} contains {} jobs: {}'.format(exp_name, exp_jobs.count(), job_ranges_str))
+    except:
+        # the ranges function can fail for non-integer jobids, so here
+        # we simply print the job count, and not actually list the jobids
+        print('Experiment {} contains {} jobs'.format(exp_name, exp_jobs.count()))
+
+    c_dict = {}
+    for j in exp_jobs:
+        c = j.tags['exp_component']
+        entry = c_dict.get(c, {'data': []})
+        entry['data'].append((j.tags.get('exp_time', ''), j.jobid, getattr(j, order_key)))
+        c_dict[c] = entry
+
+    c_list = []
+    agg_f = 0
+    for c, v in c_dict.items():
+        v['exp_component'] = c
+        jobids = [d[1] for d in v['data']]
+        v['jobids'] = jobids
+        f_vals = [d[2] for d in v['data']]
+        outliers_vec = np.abs(modified_z_score(f_vals)[0]) > settings.outlier_thresholds['modified_z_score']
+        v['outliers'] = outliers_vec
+        v['sum_' + order_key ] = sum(f_vals)
+        agg_f += v['sum_' + order_key ]
+        v['min_' + order_key ] = min(f_vals)
+        v['max_' + order_key ] = max(f_vals)
+        v['avg_' + order_key ] = v['sum_' + order_key ]/len(f_vals)
+        v['stddev_' + order_key ] = np.std(f_vals)
+        v['cv_' + order_key ] = round(v['stddev_' + order_key ]/v['avg_' + order_key ], 2)
+        c_list.append(v)
+    
+    ordered_c_list = sorted(c_list, key = lambda v: v[op+'_' + order_key], reverse=True)[:limit]
+
+
+    print('\ntop {} components by {}({}):'.format(limit, op, order_key))
+    print("%16s  %12s         %12s %12s %4s" % ("component", "sum", "min", "max", "cv"))
+    for v in ordered_c_list:
+        print("%16.16s: %12d [%4.1f%%] %12d %12d %4.1f" % (v['exp_component'], v[op+'_' + order_key], 100*v['sum_' + order_key ]/agg_f, v['min_' + order_key ],  v['max_' + order_key ], v['cv_' + order_key ]))
+
+    # now let's the variations within a component across different time segments
+    print('\nvariations across time segments:')
+    print("%16s %12s %12s %16s" % ("component", "exp_time", "jobid", order_key))
+
+    for v in ordered_c_list:
+        outliers = v['outliers']
+        idx = 0
+        for d in v['data']:
+            print("%16.16s %12s %12s %16d %4s" % (v['exp_component'], d[0], d[1], d[2], "****" if outliers[idx] else ""))
+            idx += 1
+        print()
+
+    # finally let's see if by summing the metric across all the jobs in a 
+    # time segment we can spot something interesting
+    time_seg_dict = {}
+    for j in exp_jobs:
+        m = getattr(j, order_key)
+        exp_time = j.tags.get('exp_time', '')
+        if not exp_time: continue
+        m_total = time_seg_dict.get(exp_time, 0)
+        m_total += m
+        time_seg_dict[exp_time] = m_total
+    inp_vec = []
+    for t in sorted(list(time_seg_dict.keys())):
+        inp_vec.append(time_seg_dict[t])
+    if inp_vec:
+        out_vec = np.abs(modified_z_score(inp_vec)[0]) > settings.outlier_thresholds['modified_z_score']
+        print('{} by time segment:'.format(order_key))
+        idx = 0
+        for t in sorted(list(time_seg_dict.keys())):
+            print("%12s %16d %4s" % (t, time_seg_dict[t], "****" if out_vec[idx] else ""))
+            idx += 1
+    return True
+

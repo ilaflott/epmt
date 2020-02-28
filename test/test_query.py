@@ -138,7 +138,7 @@ class QueryAPI(unittest.TestCase):
         procs = eq.get_procs(['685016', '685000'], fmt='orm')
         self.assertEqual(procs.count(), 6892, 'wrong count of processes in ORM format')
         df = eq.get_procs(JOBS_LIST, fmt='pandas', limit=10)
-        self.assertEqual(df.shape, (10,49))
+        self.assertEqual(df.shape, (10,50))
         procs_limit = eq.get_procs(fmt='terse')
         self.assertEqual(len(procs_limit), 10000)
         procs_unlimited = eq.get_procs(fmt='orm')
@@ -172,7 +172,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(int(procs.first().duration), 7005558348, 'wrong order when using orm with filter and order')
 
         df = eq.get_procs(JOBS_LIST, limit=5, order=desc(Process.cpu_time), fmt='pandas')
-        self.assertEqual(df.shape, (5,49), "incorrect dataframe shape")
+        self.assertEqual(df.shape, (5,50), "incorrect dataframe shape")
         self.assertEqual('685016', df.loc[0,'job'], "ordering of processes wrong in dataframe")
 
         ## Tags
@@ -227,6 +227,14 @@ class QueryAPI(unittest.TestCase):
 
     @db_session
     def test_process_tree(self):
+        from epmt_job import mk_process_tree
+        mk_process_tree('685000')
+        p = eq.get_procs('685000', fmt='orm', order=desc(Process.start), limit=1)[0]
+        self.assertEqual(p.depth, 3)
+        root = eq.root('685000', fmt='orm')
+        self.assertEqual(root.depth, 0)
+
+        # now let's check the children/descendant counts
         p = eq.get_procs(fltr = (Process.pid == 6098) if settings.orm == 'sqlalchemy' else (lambda p: p.pid == 6098), fmt='orm').first()
         self.assertEqual(len(p.children), 735)
         self.assertEqual(len(p.descendants), 3448)
@@ -293,7 +301,7 @@ class QueryAPI(unittest.TestCase):
         op = Operation(['685000'], {'op': 'timavg'}, op_duration_method = "finish-minus-start")
         self.assertEqual((op.tags, op.duration), ({'op': 'timavg'},51278054.0))
         self.assertEqual(op.proc_sums, {'syscr': 127808, 'guest_time': 0, 'inblock': 0, 'processor': 0, 'rchar': 5356358342, 'cancelled_write_bytes': 45056, 'outblock': 5139208, 'timeslices': 2661, 'PERF_COUNT_SW_CPU_CLOCK': 17547070414, 'wchar': 5262916589, 'rssmax': 7854752, 'numtids': 62, 'duration': 51278054.0, 'read_bytes': 0, 'time_waiting': 35814116, 'delayacct_blkio_time': 0, 'invol_ctxsw': 1884, 'majflt': 0, 'syscw': 80433, 'minflt': 92584, 'cpu_time': 17951212.0, 'vol_ctxsw': 714, 'time_oncpu': 17984466575, 'rdtsc_duration': 153196621348, 'systemtime': 4074354, 'num_procs': 57, 'write_bytes': 2631274496, 'usertime': 13876858 })
-        self.assertEqual(set(op.to_dict().keys()), {'jobs', 'proc_sums', 'duration', 'tags', 'processes',  'exact_tag_only', 'start', 'finish', 'op_duration_method'})
+        self.assertEqual(set(op.to_dict().keys()), {'jobs', 'proc_sums', 'duration', 'tags', 'exact_tag_only', 'start', 'finish', 'op_duration_method'})
         self.assertEqual(set(op.to_dict(full = True).keys()), {'jobs', 'proc_sums', 'duration', 'tags', 'processes',  'exact_tag_only', 'start', 'finish', 'intervals', 'num_runs', 'contiguous', 'op_duration_method'})
         op = Operation(['685000', '685003'], {'op': 'timavg'})
         self.assertEqual(op.proc_sums, {'syscw': 89297, 'PERF_COUNT_SW_CPU_CLOCK': 29297709455, 'time_oncpu': 32531383700, 'usertime': 25906808, 'time_waiting': 81086345, 'timeslices': 8001, 'cancelled_write_bytes': 262144, 'outblock': 5665088, 'guest_time': 0, 'minflt': 647328, 'invol_ctxsw': 3996, 'processor': 0, 'rssmax': 10901764, 'read_bytes': 7303168, 'rdtsc_duration': 244679507379, 'inblock': 14264, 'majflt': 18, 'num_procs': 428, 'write_bytes': 2900525056, 'delayacct_blkio_time': 0, 'duration': 67847274.0, 'syscr': 206204, 'rchar': 8118076508, 'cpu_time': 32325636.0, 'systemtime': 6418828, 'wchar': 5805294586, 'vol_ctxsw': 3571, 'numtids': 433})
@@ -381,7 +389,7 @@ class QueryAPI(unittest.TestCase):
         p = eq.root('685016', fmt='orm')
         self.assertEqual(p.pid, 122181)
         df = eq.root('685016', fmt='pandas')
-        self.assertEqual(df.shape, (1,49))
+        self.assertEqual(df.shape, (1,50))
         self.assertEqual(df.loc[0,'pid'], 122181)
 
     @db_session
@@ -452,7 +460,7 @@ class QueryAPI(unittest.TestCase):
         #l = eq.select((p.job.jobid, p.pid) for p in op_root_procs)[:]
         #self.assertEqual(l, [(u'685000', 6226), (u'685000', 10042), (u'685000', 10046), (u'685000', 10058), (u'685000', 10065), (u'685000', 10066), (u'685003', 29079), (u'685003', 31184), (u'685003', 31185), (u'685003', 31191), (u'685003', 31198), (u'685003', 31199), (u'685016', 122259), (u'685016', 128848), (u'685016', 128849), (u'685016', 128855), (u'685016', 128862), (u'685016', 128863)])
         df = eq.op_roots(['685000', '685003', '685016'], 'op_sequence:1', fmt='pandas')
-        self.assertEqual(df.shape, (18,49))
+        self.assertEqual(df.shape, (18,50))
         self.assertEqual(list(df['pid'].values), [6226, 10042, 10046, 10058, 10065, 10066, 29079, 31184, 31185, 31191, 31198, 31199, 122259, 128848, 128849, 128855, 128862, 128863])
 
     @db_session

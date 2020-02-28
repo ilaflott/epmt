@@ -4,6 +4,7 @@ attrs==19.3.0
 backcall==0.1.0
 bleach==3.1.0
 cffi==1.12.3
+combo==0.0.8
 cycler==0.10.0
 decorator==4.4.1
 defusedxml==0.6.0
@@ -18,6 +19,7 @@ ipywidgets==7.5.1
 isort==4.3.21
 jedi==0.15.1
 Jinja2==2.10.3
+joblib==0.14.1
 jsonschema==3.2.0
 jupyter==1.0.0
 jupyter-client==5.3.4
@@ -25,6 +27,7 @@ jupyter-console==6.0.0
 jupyter-core==4.6.1
 kiwisolver==1.1.0
 lazy-object-proxy==1.4.3
+llvmlite==0.31.0
 lockfile==0.12.2
 Mako==1.1.0
 MarkupSafe==1.1.1
@@ -35,6 +38,7 @@ more-itertools==7.2.0
 nbconvert==5.6.1
 nbformat==4.4.0
 notebook==6.0.2
+numba==0.47.0
 numexpr==2.6.9
 numpy==1.17.2
 pandas==0.25.1
@@ -50,6 +54,7 @@ ptyprocess==0.6.0
 pycparser==2.19
 Pygments==2.4.2
 pylint==2.4.4
+pyod==0.7.7.1
 pyparsing==2.4.5
 pyrsistent==0.15.5
 python-daemon==2.2.4
@@ -58,9 +63,12 @@ python-editor==1.0.4
 pytz==2019.2
 pyzmq==18.1.1
 qtconsole==4.6.0
+scikit-learn==0.22.1
+scipy==1.4.1
 Send2Trash==1.5.0
 six==1.12.0
 SQLAlchemy==1.3.8
+suod==0.0.2
 terminado==0.8.3
 testpath==0.4.4
 tornado==6.0.3

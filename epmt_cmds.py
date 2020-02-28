@@ -8,6 +8,7 @@ from random import randint
 from imp import find_module
 from glob import glob
 from sys import stdout, stderr
+from json import dumps, loads
 import errno
 
 from shutil import rmtree
@@ -17,7 +18,7 @@ from logging import getLogger, basicConfig, DEBUG, INFO, WARNING, ERROR
 logger = getLogger(__name__)  # you can use other name
 import epmt_settings as settings
 
-from epmtlib import get_username, set_logging, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm, timing, dict_filter, check_fix_metadata
+from epmtlib import get_username, epmt_logging_init, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm, timing, dict_filter, check_fix_metadata
 
 def find_diffs_in_envs(start_env,stop_env):
     env = {}
@@ -39,11 +40,12 @@ def find_diffs_in_envs(start_env,stop_env):
 
 
 def dump_config(outf):
-    print("\nsettings.py (affected by the below env. vars):", file=outf)
+    print("\nsettings.py:", file=outf)
 #    book = {}
     for key, value in sorted(settings.__dict__.items()):
-        if not (key.startswith('__') or key.startswith('_')):
-            print("%-24s%-56s" % (key,str(value)), file=outf)
+        if not (key.startswith('__') or key.startswith('_') or key == 'ERROR'):
+            if type(value) in [str, int, float, list, dict, bool]:
+                print("%-24s%-56s" % (key,str(value)), file=outf)
     print("\nenvironment variables (overrides settings.py):", file=outf)
     for v in [ "PAPIEX_OSS_PATH", "PAPIEX_OUTPUT", "EPMT_DB_PROVIDER", "EPMT_DB_USER", "EPMT_DB_PASSWORD", "EPMT_DB_HOST", "EPMT_DB_DBNAME", "EPMT_DB_FILENAME" ]:
 #                "provider", "user", "password", "host", "dbname", "filename" ]:
@@ -325,6 +327,13 @@ def create_start_job_metadata(jobid, submit_ts, from_batch=[]):
     metadata['job_pl_start_ts'] = ts
     metadata['job_pl_env'] = start_env
     metadata['job_pl_username'] = get_username()
+    from socket import gethostname
+    from os import uname
+    try:
+        # this should normally never fail
+        metadata['job_pl_hostname'] = gethostname() or uname()[1]
+    except:
+        pass
     return metadata
 
 def merge_stop_job_metadata(metadata, exitcode, reason, from_batch=[]):
@@ -388,8 +397,15 @@ def epmt_start_job(other=[]):
     global_jobid,global_datadir,global_metadatafile = setup_vars()
     if not (global_jobid and global_datadir and global_metadatafile):
         return False
-        
-    metadata = create_start_job_metadata(global_jobid,False,other)
+  
+    # there is a rare possibility that epmt annotate was called before
+    # epmt start. In which case a metadata file will already exists 
+    if not path.exists(global_metadatafile): 
+        metadata = create_start_job_metadata(global_jobid,False,other)
+    else:
+        # it seems epmt annotate must have run and already called epmt_start_job
+        # in such a case we return with a no-op
+        return True
     if create_job_dir(global_datadir) is False:
         return False
     if path.exists(global_metadatafile):
@@ -418,7 +434,7 @@ def epmt_stop_job(other=[]):
     retval = write_job_metadata(global_metadatafile,checked_metadata)
     return retval
 
-def epmt_dump_metadata(filelist):
+def epmt_dump_metadata(filelist, key = None):
     if not filelist:
         global_jobid,global_datadir,global_metadatafile = setup_vars()
         if not (global_jobid and global_datadir and global_metadatafile):
@@ -431,9 +447,18 @@ def epmt_dump_metadata(filelist):
         return False
 
     for file in filelist:
+        logger.info('Processing {}'.format(file))
         if not path.exists(file):
-            logger.error("%s does not exist!",file)
-            return False
+            if ('/' in file) or ('.tgz' in file):
+                logger.error("%s does not exist!",file)
+                return False
+            logger.debug('{} was not found in the file-system. Checking database..'.format(file))
+            from epmt_cmd_show import epmt_show_job
+            # if the file does not exist then we 
+            rc = epmt_show_job(file, key = key)
+            if not(rc):
+                return False
+            continue
 
         err,tar = compressed_tar(file)
         if tar:
@@ -452,9 +477,101 @@ def epmt_dump_metadata(filelist):
 
         if not metadata:
             return False
-        for d in sorted(metadata.keys()):
-            print("%-24s%-56s" % (d,str(metadata[d])))
+        if key:
+            print(metadata[key])
+        else:
+            for d in sorted(metadata.keys()):
+                print("%-24s%-56s" % (d,str(metadata[d])))
     return True
+
+
+# args list is one of the following forms:
+#   ['key1=value1', 'key2=value2', ...]  - annotate stopped job within a batch env
+#   or 
+#   ['111.tgz', 'key1=value1', 'key2=value2', ...] - annotate staged job file
+#   or
+#   ['658000', 'key1=value1', 'key2y=value2', ...] - annotate job in database
+#
+# Annotations are appended to unless replace is True, in which
+# case existing annotations are wiped clean first.
+ 
+def epmt_annotate(argslist, replace = False):
+    if not argslist: return False
+    from epmtlib import kwargify
+    if '=' in argslist[0]:
+        # first form, we are annotating a stopped job
+        d = kwargify(argslist)
+        if not d: return False
+        mode = 0   # stopped job mode
+        logger.info('annotating stopped job: {}'.format(d))
+        jobid,datadir,metadatafile = setup_vars()
+        if not (jobid and datadir and metadatafile):
+            return False
+        if not path.exists(metadatafile):
+            # this means we haven't even run epmt_start_job as otherwise
+            # we would have a metadata file
+            if not epmt_start_job():
+                return False
+        metadata = read_job_metadata(metadatafile)
+    else:
+        # annotating either a staged job file
+        # or a job in the database
+        assert(len(argslist) > 1)
+        d = kwargify(argslist[1:])
+        if not d: return False
+        if '.tgz' in argslist[0]:
+            # annotating a staged .tgz file
+            mode = 1  # staged job annotation
+            infile = argslist[0]
+            logger.info('annotating staged job file {0}: {1}'.format(infile, d))
+            if not path.exists(infile):
+                 logger.error("%s does not exist!",infile)
+                 return False
+
+            err,tar = compressed_tar(infile)
+            try:
+                info = tar.getmember("./job_metadata")
+            except KeyError:
+                logger.error('ERROR: Did not find %s in tar archive' % "job_metadata")
+                return False
+            else:
+                logger.info('%s is %d bytes in archive' % (info.name, info.size))
+                f = tar.extractfile(info)
+                metadata = read_job_metadata_direct(f)
+                if not metadata:
+                    return False
+                jobid = metadata['job_pl_id']
+                username = metadata['job_pl_username']
+                datadir = settings.epmt_output_prefix + username + "/" + jobid + "/"
+                metadatafile = datadir + "job_metadata"
+                logger.debug('extracting {0} to {1}'.format(infile, datadir))
+                tar.extractall(path=datadir)
+               
+        else:
+            jobid = argslist[0]
+            logger.info('annotating job {0} in db: {1}'.format(jobid, d))
+            mode = 2  # annotating job in database
+            from epmt_query import annotate_job
+            updated_ann = annotate_job(jobid, d, replace)
+            logger.debug('updated annotations: {}'.format(updated_ann))
+            return d.items() <= updated_ann.items()
+
+    # below we handle annotation update in the metadata file
+    # if its a stopped job, we simply write out the metadata and we
+    # are done. If it's a staged job we need to recreate the .tgz
+    # with the updated metadata
+
+    # merge existing annotations if any
+    annotations = metadata.get('job_annotations', {}) if (not replace) else {}
+    annotations.update(d)
+    metadata['job_annotations'] = annotations
+    retval = write_job_metadata(metadatafile,metadata)
+
+    # for staged job we need to recreate the staged file
+    if mode == 1:
+        stage_job(datadir, collate=False)
+
+    return retval
 
 def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run_cmd=False):
     """
@@ -621,7 +738,7 @@ def get_filedict(dirname,pattern,tar=False):
 
     return filedict
 
-def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True):
+def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1):
     logger.debug("epmt_submit(%s,dry_run=%s,drop=%s,keep_going=%s)",dirs,dry_run,drop,keep_going)
     if not dirs:
         global_jobid,global_datadir,global_metadatafile = setup_vars()
@@ -634,12 +751,91 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True):
     if dry_run and drop:
         logger.error("You can't drop tables and do a dry run")
         return(False)
-    r = True
-    for f in dirs:
-        r = submit_to_db(f,settings.input_pattern,dry_run=dry_run,drop=drop)
-        if r is False and not keep_going:
-            return(r)
-    return(r)
+    if (ncpus > 1) and (settings.orm != 'sqlalchemy'):
+        logger.error('Parallel submit is only supported for SQLAlchemy at present')
+        return False
+    if drop and (ncpus > 1):
+        # FIX:
+        # when we do drop tables we end up calling setup_db
+        # However, this initializes certain variables and later 
+        # when a parallel submit happens setup_db is skipped in the
+        # spawned processes. This means SQLA Session isn't initialized
+        # with the newly created tables in any of the processes except the
+        # master. In short we are unable to support the --drop option
+        # when using multiple processes. This should be fixable.
+        logger.error('At present we do not support dropping tables in a parallel submit mode. Please use either --drop or --num-cpus')
+        return(False)
+
+    if drop:
+        from orm import orm_drop_db, setup_db
+        setup_db(settings)
+        orm_drop_db()
+
+    import multiprocessing
+
+    def submit_fn(tid, work_list, ret_dict):
+        from os import getpid
+        logger.debug('Worker %d, PID %d', tid, getpid())
+        retval = {}
+        for f in work_list:
+            r = submit_to_db(f,settings.input_pattern,dry_run=dry_run)
+            retval[f] = r
+            if r[0] is False and not keep_going:
+                break
+        ret_dict[tid] = dumps(retval)
+        return
+    # we shouldn't use more processors than the number of discrete
+    # work items. We don't currently split the work within a directory.
+    # If we a directory is passed we assume it's a single work item.
+    # TODO: Get a full files list from all the directories passed and
+    # then split the list of files for a better distribution and more
+    # optimal parallelization.
+    nprocs = min(ncpus, len(dirs))
+    num_cores = multiprocessing.cpu_count()
+    logger.info('You are running on a machine with %d cores', num_cores)
+    logger.info('Found %d items to submit', len(dirs))
+    if nprocs > num_cores:
+        logger.warning('You have requested to use (%d), which is more than the available cpus (%d)', ncpus, num_cores)
+    import time
+    worker_id = 0
+    start_ts = time.time()
+    if nprocs == 1:
+        return_dict = {}
+        submit_fn(worker_id, dirs, return_dict)
+    else:
+        logger.info('Using %d worker processes', nprocs)
+        from numpy import array_split
+        procs = []
+        manager = multiprocessing.Manager()
+        return_dict = manager.dict()
+        for work in array_split(dirs, nprocs):
+            logger.debug('Worker %d will work on %s', worker_id, str(work))
+            process = multiprocessing.Process(target = submit_fn, args=(worker_id, work, return_dict))
+            procs.append(process)
+            worker_id += 1
+        for p in procs:
+            p.start()
+        for p in procs:
+            p.join()
+    fini_ts = time.time()
+    r = { k: loads(return_dict[k]) for k, v in return_dict.items() }
+    total_procs = 0
+    jobs_imported = []
+    logger.info('**** Import Summary ****')
+    error_occurred = False
+    for v in r.values():
+        for (f, res) in v.items():
+            if res[0] is False:
+                logger.error('Error in importing: %s: %s', f, res[1])
+                error_occurred = True
+            elif res[0] is None:
+                logger.warning('%s: %s', res[1], f)
+            else:
+                (jobid, process_count) = res[-1]
+                jobs_imported.append(jobid)
+                total_procs += process_count
+    logger.info('Imported %d jobs (%d processes) in %2.2f sec at %2.2f procs/sec, %d workers', len(jobs_imported), total_procs, (fini_ts - start_ts), total_procs/(fini_ts - start_ts), nprocs)
+    return(False if error_occurred else r)
 
 def compressed_tar(input):
     tar = None
@@ -667,12 +863,12 @@ def compressed_tar(input):
 # Check for Experiment related variables
 #    metadata = check_and_add_workflowdb_envvars(metadata,total_env)
 
-def submit_to_db(input, pattern, dry_run=True, drop=False):
-    logger.info("submit_to_db(%s,%s,dry_run=%s,drop=%s)",input,pattern,str(dry_run),str(drop))
+def submit_to_db(input, pattern, dry_run=True):
+    logger.info("submit_to_db(%s,%s,dry_run=%s)",input,pattern,str(dry_run))
 
     err,tar = compressed_tar(input)
     if err:
-        return False
+        return (False, 'Error processing compressed tar')
 #    None
 #    if (input.endswith("tar.gz") or input.endswith("tgz")):
 #        import tarfile
@@ -690,7 +886,7 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
             info = tar.getmember("./job_metadata")
         except KeyError:
             logger.error('ERROR: Did not find %s in tar archive' % "job_metadata")
-            return False
+            return (False, 'Did not find metadata in tar archive')
         else:
             logger.info('%s is %d bytes in archive' % (info.name, info.size))
             f = tar.extractfile(info)
@@ -701,7 +897,7 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
         filedict = get_filedict(input,settings.input_pattern)
 
     if not metadata:
-        return False
+        return (False, 'Did not find valid metadata')
 
     logger.info("%d hosts found: %s",len(filedict.keys()),filedict.keys())
     for h in filedict.keys():
@@ -711,18 +907,19 @@ def submit_to_db(input, pattern, dry_run=True, drop=False):
     if dry_run:
 #        check_workflowdb_dict(metadata,pfx="exp_")
         logger.info("Dry run finished, skipping DB work")
-        return True
+        return (True, 'Dry run finished, skipping DB work')
 
 # Now we touch the Database
     from orm import setup_db
+    if setup_db(settings,False) == False:
+        return (False, 'Error in DB setup')
     from epmt_job import ETL_job_dict
-    if setup_db(settings,drop) == False:
-        return False
-    j = ETL_job_dict(metadata,filedict,settings,tarfile=tar)
-    if not j:
-        return False
-    logger.info("Committed job %s to database: %s",j.jobid,j)
-    return True
+    r = ETL_job_dict(metadata,filedict,settings,tarfile=tar)
+    # if not r[0]:
+    return r
+    # (j, process_count) = r[-1]
+    # logger.info("Committed job %s to database: %s",j.jobid,j)
+    # return (j.jobid, process_count)
 
 
 def stage_job(dir,collate=True,compress_and_tar=True):
@@ -795,7 +992,7 @@ def stage_job(dir,collate=True,compress_and_tar=True):
             return False
 
 # Collation does it's own cleanup
-        if not collated_file or len(collated_file) == 0:
+        if not collate or (not collated_file) or (len(collated_file) == 0):
             cmd = "rm -rf "+dir
             logger.debug(cmd)
             return_code = forkexecwait(cmd, shell=True)
@@ -837,6 +1034,15 @@ def epmt_dbsize(findwhat=['database','table','index','tablespace'], usejson=Fals
                 cleanList.append(cleaner)
     return(get_db_size(cleanList,usejson,usebytes))
 
+def epmt_shell():
+    # we import builtins so pyinstaller will use the full builtins module
+    # instead of a sketchy replacement. Also we need help from pydoc
+    # since the builtins module included by pydoc doesn't have help
+    import builtins
+    from pydoc import help
+    from code import interact
+    interact(local=locals())
+
 
 def epmt_entrypoint(args):
 
@@ -845,17 +1051,35 @@ def epmt_entrypoint(args):
     if args.verbose == None:
         args.verbose = 0
     logger = getLogger(__name__)  # you can use other name
-    set_logging(args.verbose, check=False)
+    # we only need to log the PID to the console for parallel runs
+    epmt_logging_init(args.verbose or settings.verbose, check=True, log_pid = (hasattr(args, 'num_cpus') and (args.num_cpus > 1)))
     init_settings(settings)
-    if not args.verbose:
-        set_logging(settings.verbose, check=True)
-
 
     # Here it's up to each command to validate what it is looking for
     # and error out appropriately
     if args.command == 'shell':
-        from code import interact
-        interact(local=locals())
+        epmt_shell()
+        return 0
+    if args.command == 'python':
+        script_file = args.epmt_cmd_args
+        if script_file:
+            if script_file == '-':
+                # special handling for stdin
+                from sys import stdin
+                f = stdin
+            else:
+                if not path.exists(script_file):
+                    logger.error('script {} does not exist'.format(script_file))
+                    return(-1)
+                else:
+                    f = open(script_file)
+            exec(f.read())
+        else:
+            epmt_shell()
+        return 0
+    if args.command == 'explore':
+        from epmt_query import exp_explore
+        exp_explore(args.epmt_cmd_args, order_key = args.metric, limit = args.limit)
         return 0
     if args.command == 'gui':
         from ui import init_app, app
@@ -880,7 +1104,12 @@ def epmt_entrypoint(args):
                 return -1
         print('All tests successfully PASSED')
         return 0
-            
+
+    if args.command == 'retire':
+        from epmt_cmd_retire import epmt_retire
+        epmt_retire()
+        return 0
+
     if args.command == 'check':
         # fake a job id so that epmt_check doesn't fail because of a missing job id
         environ['SLURM_JOB_ID'] = '1'
@@ -913,6 +1142,12 @@ def epmt_entrypoint(args):
         return(epmt_stage(args.epmt_cmd_args,keep_going=not args.error) == False)
     if args.command == 'run':
         return(epmt_run(args.epmt_cmd_args,wrapit=args.auto,dry_run=args.dry_run,debug=(args.verbose > 2)))
+    if args.command == 'annotate':
+        return(epmt_annotate(args.epmt_cmd_args, args.replace) == False)
+    # show functionality is now handled in the 'dump' command
+    # if args.command == 'show':
+    #     from epmt_cmd_show import epmt_show_job
+    #     return(epmt_show_job(args.epmt_cmd_args, key = args.key) == False)
     if args.command == 'source':
         s = epmt_source(slurm_prolog=args.slurm,papiex_debug=(args.verbose > 2),monitor_debug=(args.verbose > 3))
         if not s:
@@ -920,9 +1155,9 @@ def epmt_entrypoint(args):
         print(s,end="")
         return(0)
     if args.command == 'dump':
-        return(epmt_dump_metadata(args.epmt_cmd_args) == False)
+        return(epmt_dump_metadata(args.epmt_cmd_args, key = args.key) == False)
     if args.command == 'submit':
-        return(epmt_submit(args.epmt_cmd_args,dry_run=args.dry_run,drop=args.drop,keep_going=not args.error) == False)
+        return(epmt_submit(args.epmt_cmd_args,dry_run=args.dry_run,drop=args.drop,keep_going=not args.error, ncpus = args.num_cpus) == False)
     if args.command == 'check':
         return(epmt_check() == False)
     if args.command == 'delete':

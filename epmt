@@ -36,7 +36,7 @@ if (__name__ == "__main__"):
     parser.add_argument('-V', '--version',action='version', version=version_str(), help="Display EPMT Version")
     
     # Global Verbose
-    parser.add_argument('-v', '--verbose',action='count',help="Increase level of verbosity/debug")
+    parser.add_argument('-v', '--verbose',action='count', default=0,help="Increase level of verbosity/debug")
 
     subparser = parser.add_subparsers(title="EPMT Commands", dest="command")
     # Source
@@ -56,11 +56,29 @@ if (__name__ == "__main__"):
             original job files and job directory.")
     stage_parser.add_argument('epmt_cmd_args', nargs='*', help="List of directories from batch")
     stage_parser.add_argument('-e', '--error', action='store_true',help="Exit at the first sign of trouble")
+    # annotate
+    annotate_parser = subparser.add_parser('annotate', help="Annotate a job", formatter_class=argparse.RawTextHelpFormatter, description="Annotates a job with key/value pairs. This call takes three forms:\n\n"
+      "To annotate a stopped job within the batch environment: \n"
+      "\tepmt annotate x=100 y=200\n\n"
+      "To annotate a stage .tgz file:\n"
+      "\tepmt annotate 111.tgz x=100 y=200\n\n"
+      "To annotate an existing job in the database:\n"
+      "\tepmt annotate 685000 x=100 y=200\n\n"
+      "In all the above cases the annotations are *merged* on to the existing annotations, unless --replace is set (in which case existing annotations are removed first)")
+    annotate_parser.add_argument('epmt_cmd_args', nargs='+', help="key/value pairs in the form key1=value1 key2=value2..")
+    annotate_parser.add_argument('--replace',action='store_true',default=False,help="Replace existing annotations instead of merging onto them")
+
+    # show functionality is now handled by dump
+    # show_parser = subparser.add_parser('show', help="Show details of job from the database",
+    #     description="Show will print to console details of a job from the database")
+    # show_parser.add_argument('epmt_cmd_args', help="Job ID in database")
+    # show_parser.add_argument('-k', '--key', help="Only show the value for the specified key")
 
     # Dump
-    dump_parser = subparser.add_parser('dump', help="Print metadata from archive",
-        description="Dump will print to console the metadata of a job directory")
-    dump_parser.add_argument('epmt_cmd_args', default=[], nargs='*', help="Archive or list of archives to dump")
+    dump_parser = subparser.add_parser('dump', help="Print job metadata from archive or database",
+        description="Dump will print to console the metadata of a job directory, job archive or a job in the database")
+    dump_parser.add_argument('epmt_cmd_args', default=[], nargs='*', help="Archive or list of archives to dump from file-system, or a list of jobids from database")
+    dump_parser.add_argument('-k', '--key', help="Only dump the value for the specified key")
     # Run
     run_parser = subparser.add_parser('run', help="Execute a process",
         description="Run will execute a command in shell typically used with the auto -a flag to begin instrumentation\
@@ -83,6 +101,10 @@ if (__name__ == "__main__"):
     # shell
     shell_parser = subparser.add_parser('shell', help = "Run an interactive Python shell",
        description = "shell runs an interactive python shell")
+    # python
+    py_parser = subparser.add_parser('python', help = "Run a Python script under the python interpreter",
+       description = "python runs an executable python script under the python interpreter. If no script is provided as an argument, an interactive python shell is executed")
+    py_parser.add_argument('epmt_cmd_args', nargs='?', help="python script to execute")
     # ui
     gui_parser = subparser.add_parser('gui', help = "Run the EPMT dashboard GUI",
        description = "gui a web-based dashboard accessible at: http://localhost:8050")
@@ -92,6 +114,8 @@ if (__name__ == "__main__"):
     # drop
     drop_parser = subparser.add_parser('drop', help="Drop the entire database. Caution!! This action is irreversible.")
     drop_parser.add_argument('-f', '--force', action='store_true',help="Do not prompt to confirm")
+    # retire
+    retire_parser = subparser.add_parser('retire', help="Delete jobs and models (based on the data retention policy in settings.py)")
     # Submit
     submit_parser = subparser.add_parser('submit', help="Commit completed job to database",
         description="Submit accepts job directories and updates the database configured with \
@@ -101,6 +125,10 @@ if (__name__ == "__main__"):
     submit_parser.add_argument('-e', '--error', action='store_true',help="Exit at the first sign of trouble")
     submit_parser.add_argument('-n', '--dry-run', action='store_true',help="Don't touch the database")
     submit_parser.add_argument('--drop',action='store_true',help="Drop all tables/data and recreate before importing")
+    from epmtlib import suggested_cpu_count_for_submit
+    optimal_cpus = suggested_cpu_count_for_submit()
+    submit_parser.add_argument('-p', '--num-cpus', type=int, nargs='?', default=1, const=optimal_cpus, help='Number of parallel processes to use for submission. You should specify no more than the number of available processors on your machine. If this option is selected, but no value is specified, then the optimal value ({0}) will be used, based on your hardware resources. Note: This option is only supported for SQLAlchemy ORM at present.'.format(optimal_cpus))
+
     # DBSize
     dbsize_parser = subparser.add_parser('dbsize', help="Find detailed size of database",
         description="dbsize will print to console the physical on disk size of different aspects of the database.\
@@ -126,6 +154,11 @@ if (__name__ == "__main__"):
                                            description="Perform programmatic, interactive analyses of EPMT data in iPython")
     notebook_parser.add_argument('epmt_cmd_args', nargs='*',
                                  help="Arguments to ipython notebook, first one **must** be preceded with double dash followed by a space, i.e. epmt notebook -- --ip 0.0.0.0 --allow-root, see epmt notebook -- --help for more info")
+    # experiment explore (mostly GFDL-specific)
+    exp_explore_parser = subparser.add_parser('explore', help="Explore a particular experiment, looking for outliers", description="Drilldown into an experiment using job tags")
+    exp_explore_parser.add_argument('epmt_cmd_args', help="Experiment name (matched against the 'exp_name' in job tags)")
+    exp_explore_parser.add_argument('--metric', help="metric to measure (default: duration)")
+    exp_explore_parser.add_argument('--limit', type=int, help="number of components to show (default: 10)")
 
 # Dummy Help for ./epmt help
     help_parser = subparser.add_parser('help', help="Display this help with extended configuration information")
@@ -167,7 +200,6 @@ if (__name__ == "__main__"):
     #     print('-'*60, file=stderr)
     #     # except:
     #     #     pass
-
     exit(retval)
 
 else:

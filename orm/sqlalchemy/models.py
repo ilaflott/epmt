@@ -21,13 +21,13 @@ refmodel_job_associations_table = Table('refmodel_job_associations', Base.metada
 )
 
 host_job_associations_table = Table('host_job_associations', Base.metadata,
-    Column('jobid', String, ForeignKey('jobs.jobid'), primary_key=True),
+    Column('jobid', String, ForeignKey('jobs.jobid', ondelete="CASCADE"), primary_key=True),
     Column('hostname', String, ForeignKey('hosts.name'), primary_key=True)
 )
 
 ancestor_descendant_associations_table = Table('ancestor_descendant_associations', Base.metadata,
-    Column('ancestor', Integer, ForeignKey('processes.id'), primary_key=True),
-    Column('descendant', Integer, ForeignKey('processes.id'), primary_key=True)
+    Column('ancestor', Integer, ForeignKey('processes.id', ondelete="CASCADE"), primary_key=True),
+    Column('descendant', Integer, ForeignKey('processes.id', ondelete="CASCADE"), primary_key=True)
 )
 
 class User(with_metaclass(CommonMeta, Base)):
@@ -87,7 +87,7 @@ class Job(with_metaclass(CommonMeta, Base)):
     env_dict = Column(JSON)
     env_changes_dict = Column(JSON)
     submit = Column(DateTime)
-    jobid = Column(String, primary_key=True)
+    jobid = Column(String, primary_key=True, index=True)
     jobname = Column(String)
     exitcode = Column(Integer)
 
@@ -109,7 +109,7 @@ class UnprocessedJob(with_metaclass(CommonMeta, Base)):
     __tablename__ = 'unprocessed_jobs'
     created_at = Column(DateTime, default=datetime.now)
     info_dict = Column(JSON, default={})
-    jobid = Column(String, ForeignKey('jobs.jobid'), primary_key=True)
+    jobid = Column(String, ForeignKey('jobs.jobid', ondelete="CASCADE"), primary_key=True)
     job = relationship('Job')
 
     def __repr__(self):
@@ -126,7 +126,7 @@ class Process(with_metaclass(CommonMeta, Base)):
     user_id = Column(String, ForeignKey('users.name'))
     user = relationship('User', back_populates = "processes")
 
-    jobid = Column(String, ForeignKey('jobs.jobid'))
+    jobid = Column(String, ForeignKey('jobs.jobid', ondelete="CASCADE"), index=True)
     job = relationship('Job', back_populates='processes')
 
     start = Column(DateTime, default=datetime.now, index=True)
@@ -156,11 +156,12 @@ class Process(with_metaclass(CommonMeta, Base)):
     # for creating a process graph
     # a child process is also included in the list of descendants
     # while parent is included in the ancestors
-    parent_id = Column(Integer, ForeignKey('processes.id'))
+    parent_id = Column(Integer, ForeignKey('processes.id'), index=True)
     children= relationship('Process', backref=backref('parent', remote_side=[id]))
     #ancestors = relationship('ProcessAssociation',backref='descendants', primaryjoin=id==ProcessAssociation.fk_ancestor)
     #descendants = relationship('ProcessAssociation',backref='ancestors', primaryjoin=id==ProcessAssociation.fk_descendant )
     ancestors = relationship('Process', backref='descendants', secondary=ancestor_descendant_associations_table, primaryjoin=id==ancestor_descendant_associations_table.c.descendant, secondaryjoin=id==ancestor_descendant_associations_table.c.ancestor)
+    depth = Column(Integer)   # depth in process tree, root process has depth 0
 
     @db_session
     def __repr__(self):

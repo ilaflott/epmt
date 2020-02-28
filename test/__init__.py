@@ -11,9 +11,9 @@ import pandas as pd
 #from os.path import dirname
 #sys.path.append(dirname(__file__) + "/..")
 
-from epmtlib import set_logging, capture
+from epmtlib import epmt_logging_init, capture
 # we only want to emit errors or higher
-set_logging(-1)
+epmt_logging_init(-1)
 
 import epmt_settings as settings
 import epmt_query as eq

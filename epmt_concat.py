@@ -26,7 +26,7 @@ from os import getcwd, path
 from glob import glob
 from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
 logger = getLogger('epmt_concat')  # you can use other name
-from epmtlib import set_logging
+from epmtlib import epmt_logging_init
 
 class InvalidFileFormat(RuntimeError):
     pass
@@ -235,12 +235,12 @@ def csvjoiner(indir,
     """ CSVJoiner will collate the csv files within the indir
         The resulting collated file can be designated with outfile paramater. """
     logger = getLogger("csvjoiner")
-    set_logging(intlvl=debug, check=True)
-    #set_logging(intlvl=2, check=True)
+    epmt_logging_init(intlvl=debug, check=True)
+    #epmt_logging_init(intlvl=2, check=True)
     # if (debug.lower() == "true"):
-    #     set_logging(intlvl=2, check=False)  # Since debug paramater is specified check false
+    #     epmt_logging_init(intlvl=2, check=False)  # Since debug paramater is specified check false
     # elif (debug.lower() == "false"):
-    #     set_logging(intlvl=0, check=False)  # Since debug paramater is specified check false
+    #     epmt_logging_init(intlvl=0, check=False)  # Since debug paramater is specified check false
     # elif (debug != "false"):
     #     print("""\nUnknown debug option.
     #     Please use:\ndebug=True full debug details\n

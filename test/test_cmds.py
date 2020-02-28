@@ -119,6 +119,23 @@ class EPMTCmds(unittest.TestCase):
                 throws = False
         self.assertEqual(throws, False, 'JSON not loaded successfully')
 
+    def test_yy_retire(self):
+        from datetime import datetime, timedelta
+        org_jobs = eq.get_jobs(fmt='terse')
+        self.assertTrue('627919' in org_jobs)
+        # ndays = (datetime.now() - datetime(2019,6,15,7,52)).days # days since start of 685000 
+        # Job 627919 start: 2019-06-10 06:23:08.427666-04:00
+        ndays = (datetime.now() - datetime(2019,6,10,6,23)).days
+        org_setting = settings.retire_jobs_ndays
+        settings.retire_jobs_ndays = ndays - 1 # to make sure we retire 627919
+        from epmt_cmd_retire import epmt_retire
+        with capture() as (out,err):
+            (jobs_delete_count, _) = epmt_retire()
+        settings.retire_jobs_ndays = org_setting # restore original setting
+        self.assertTrue(jobs_delete_count > 0)
+        jobs = eq.get_jobs(fmt='terse')
+        self.assertFalse('627919' in jobs)
+
     def test_zz_drop_db(self):
         jobs = eq.get_jobs(fmt='terse')
         self.assertTrue(len(jobs) > 0)

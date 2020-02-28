@@ -12,6 +12,35 @@ import epmt_settings as settings
 # this sets the defaults to be used when a trained model is not provided
 thresholds = settings.outlier_thresholds 
 
+
+def get_classifier_name(c):
+    """
+    Returns the classifier name as a string
+    """
+    if hasattr(c, '__name__'): return c.__name__
+    if hasattr(c, '__module__'): return c.__module__
+    raise 'Could not determine classifier name for {}'.format(c)
+
+def is_classifier_mv(c):
+    """
+    Returns True if classifier is a multivariate classifier
+    and False in all other cases. At present, we can only handle
+    classifiers in this module and pyod
+    """
+    n = get_classifier_name(c)
+    if n.startswith('pyod'): return True
+    return False
+
+def partition_classifiers_uv_mv(classifiers):
+    """
+    Partition given list of classifiers into two disjoint sets,
+    one containing multivariate classifiers and the other
+    univariate classifiers
+    """
+    mv_set = set([ c for c in classifiers if is_classifier_mv(c) ])
+    uv_set = set(classifiers) - mv_set
+    return (uv_set, mv_set)
+
 # These all return a tuple containing a list of indicies
 # For 1-D this is just a tuple with one element that is a list of rows
 def outliers_z_score(ys, threshold=thresholds['z_score']):
@@ -48,7 +77,11 @@ def modified_z_score(ys, params=()):
         madz = [round(0.6745 * abs(y - median_y) / median_absolute_deviation_y, 4) for y in ys]
     else:
         madz = [float('inf') if abs((y - median_y)) > 0 else 0 for y in ys]
-    return (madz, max(madz), median_y, median_absolute_deviation_y)
+    logger.debug('original vector: {}'.format(list(ys)))
+    if params:
+        logger.debug('model params: {}'.format(params))
+    logger.debug('madz scores: {}'.format(madz))
+    return (madz, round(max(madz), 4), round(median_y, 4), round(median_absolute_deviation_y, 4))
 
 
 def outliers_modified_z_score(ys,threshold=thresholds['modified_z_score']):
@@ -61,6 +94,273 @@ def get_outlier_1d(df,column,func=outliers_iqr):
     return(func(df[column]))
 
 
+def mvod_classifiers(contamination = 0.1, warnopts='ignore'):
+    '''
+    Returns a list of multivariate classifiers
+    '''
+    if warnopts:
+        from warnings import simplefilter
+        simplefilter(warnopts)
+    logger = getLogger(__name__)  # you can use other name
+
+    from pyod.models.abod import ABOD
+    from pyod.models.knn import KNN
+    #from pyod.models.feature_bagging import FeatureBagging # not stable, wrong results
+    from pyod.models.mcd import MCD
+    from pyod.models.cof import COF
+    from pyod.models.hbos import HBOS
+    from pyod.models.pca import PCA
+    # from pyod.models.sos import SOS  # wrong result
+    #from pyod.models.lmdd import LMDD # not stable
+    #from pyod.models.cblof import CBLOF
+    #from pyod.models.loci import LOCI # wrong result
+    from pyod.models.ocsvm import OCSVM
+    from pyod.models.iforest import IForest
+
+    classifiers = [
+                      ABOD(contamination=contamination), 
+                      KNN(contamination=contamination), # requires too many data points
+                      MCD(contamination=contamination), 
+                      COF(contamination=contamination), 
+                      HBOS(contamination=contamination), 
+                      PCA(contamination=contamination), 
+                      OCSVM(contamination=contamination), 
+                      IForest(contamination=contamination),
+                  ]
+    return classifiers
+
+
+# use like:
+# x = mvod_scores(...)
+# to get outliers for a particular threshold:
+# (x['K Nearest Neighbors (KNN)'] > 0.5104869395352308) * 1
+def mvod_scores(X = None, classifiers = [], warnopts = 'ignore'):
+    '''
+    Performs multivariate outlier scoring on a multi-dimensional
+    numpy array. Returns a numpy array of scores for each
+    classifier (same length as the input) where each score 
+    represents to the anomaly score of the corresponding point 
+    in the original array using that classifer.
+    The more the likelihood of a point being an outlier, the
+    higher score it will have.
+
+    At present we support classifiers from PYOD. If none
+    are provided in the 'classifiers' argument, then default
+    classifiers will be selected using mvod_classifiers()
+
+    X: Multi-dimensional np array. If not provided a random
+       two-dimenstional numpy array is generated
+       
+    classifiers is a list of classifier functions like so:
+             [
+                 ABOD(),
+                 KNN()
+             ]
+
+    warnopts takes the options from the python warning module:
+        "default", "error", "ignore", "always", "module" and "once"
+
+    Here is a run with random data:
+
+    >>> x = mvod_scores()                                                                                     
+    No input data for MVOD. Random data will be used with 16 features
+    No of Errors using  Angle-based Outlier Detector (ABOD) :  2
+    Angle-based Outlier Detector (ABOD)  threshold:  -0.0883552095486537  (> threshold => outlier)
+    No of Errors using  K Nearest Neighbors (KNN) :  0
+    K Nearest Neighbors (KNN)  threshold:  0.8296872805514997  (> threshold => outlier)
+    >>> x
+    {'Angle-based Outlier Detector (ABOD)': array(...),
+     'K Nearest Neighbors (KNN)':  array(...) }    
+    '''
+
+    if warnopts:
+        from warnings import simplefilter
+        # ignore all future warnings
+        # simplefilter(action='ignore', category=FutureWarning)
+        simplefilter(warnopts)
+
+    logger = getLogger(__name__)  # you can use other name
+
+    # the contamination below, is *ONLY* used in the model
+    # for preditiction of outliers and used for random data
+    # The API is confusing and it might appear that we are using the
+    # parameter for the classifier, in fact, its' only used for
+    # prediction of the outlier. The scores are the *same* regardless
+    # of the contamination factor
+    contamination = 0.1
+
+    if not classifiers:
+        classifiers = mvod_classifiers(contamination, warnopts)
+
+    logger.debug('using classifiers: {}'.format([get_classifier_name(c) for c in classifiers]))
+
+    Y = None  # Y is only used to test predictor with random data
+    if X is None:
+        n_pts = 100
+        n_features = 16
+        logger.warning('No input data for MVOD. Random data will be used with contamination {}'.format(contamination))
+        from pyod.utils.data import generate_data, get_outliers_inliers
+        from scipy import stats
+        #generate random data with two features
+        X = None
+        # generate_data has a bug in that in some rare cases it produces
+        # zeroes for the outliers. This messes model
+        # fitting. So we just make sure we generate valid data
+        # pylint: disable=unsubscriptable-object
+        while (X is None) or (X[-int(n_pts*contamination):-1].sum() == 0.0):
+            X, Y = generate_data(n_train=n_pts,train_only=True, n_features=n_features, contamination=contamination)
+        # store outliers and inliers in different numpy arrays
+        x_outliers, x_inliers = get_outliers_inliers(X,Y)
+    
+        n_inliers = len(x_inliers)
+        n_outliers = len(x_outliers)
+
+    (npts, ndim) = X.shape
+    logger.debug('mvod: input length {0}, dimensions {1}'.format(npts, ndim))
+    logger.debug(X)
+    
+    scores = {}
+    max_score_for_cf = {}
+    for clf in classifiers:
+        clf_name = get_classifier_name(clf)
+   
+        # classifiers may often fail for a variety of reasons,
+        # and do so by throwing exceptions. We trap those 
+        # exceptions, issue a warning and move on to the
+        # next MVOD classifiers 
+        try:
+            # fit the dataset to the model
+            clf.fit(X)
+            # predict raw anomaly score
+            _clf_scores = clf.decision_function(X)
+        except Exception as e:
+            logger.warning('Could not score using classifier {}'.format(clf_name))
+            logger.warning('Exception follows below: ')
+            logger.warning(e, exc_info=True)
+            continue
+        if not check_finite(_clf_scores):
+            logger.warning('Could not score using classifier {} -- got NaNs or Inf'.format(clf_name))
+            continue
+        scores[clf_name] = _clf_scores
+        max_score_for_cf[clf_name] = _clf_scores.max()
+       
+   
+        if Y is not None: 
+            # prediction of a datapoint category outlier or inlier
+            y_pred = clf.predict(X)
+            # print(Y)
+            # print(y_pred)
+    
+            # no of errors in prediction
+            n_errors = (y_pred != Y).sum()
+            print('No. of errors using ', clf_name, ': ', n_errors)
+    
+    
+            # threshold value to consider a datapoint inlier or outlier
+            # 0.1 is the default outlier fraction in the generated data
+            threshold = stats.scoreatpercentile(scores[clf_name],100 * (1 - contamination))
+            logger.debug('{0} threshold: {1}'.format(clf_name, threshold))
+    #print(scores)
+    if not scores: 
+        # some error occured and we didn't generate scores at all
+        return False
+    logger.debug('mvod: scores')
+    logger.debug(scores)
+    return (scores, max_score_for_cf)
+
+
+def mvod_scores_using_model(inp, model_inp, classifier, threshold = None):
+    """
+    Determines the score for *each row* separately against
+    a model for a given classifier. If threshold is set, then
+    rather than returning an array of scores, we just return
+    an array of 0/1 corresponding to whether the row was an
+    outlier or not.
+
+    The important thing to remember in this function is that
+    we do NOT run an MV classifier on the whole "inp". Rather
+    we iterate over "inp" one row at a time. Join it to
+    the model input, and then run on MVOD on the resultant
+    matrix. Then we pick score for the inp row and append
+    it to the return array of scores. If threshold is set
+    then we just return an array of 0/1 values. 
+
+    inp: ndarray, columns correspond to features, and rows
+         presumably, different jobs.
+
+    model_inp: ndarray of model input
+
+    classifier: a multivariate classifier
+
+    threshold: optional. If provided this represents the
+               the model score, and the inp is classified
+               against it. 
+
+    Returns: If threshold is not set, then:
+
+             numpy array of scores where the score at the
+             ith index corresponds to the score of
+             the ith row of inp.     
+
+             If threshold is set, then a numpy array of
+             0 or 1, where the ith index is 1 if the ith
+             row score is higher than the given threshold
+             and 0 if its lower.
+    """
+    logger = getLogger(__name__)  # you can use other name
+    inp_nrows = inp.shape[0]
+    logger.debug('--- input to classify ---')
+    logger.debug(inp)
+    logger.debug('-------------------------')
+    logger.debug('=== model input ===')
+    logger.debug(model_inp)
+    logger.debug('===================')
+
+    scores = []
+    # compute model score for sanity
+    logger.debug('recomputing model scores as a sanity check on model stability..')
+    c_name = get_classifier_name(classifier)
+    retval = mvod_scores(model_inp, [classifier])
+    if not retval:
+        logger.warning('could not score using {}'.format(c_name))
+        return False
+    (model_scores, model_score_max) = retval
+    model_score_max = model_score_max[c_name]
+    logger.debug('MVOD {0} (threshold={1})'.format(c_name, threshold))
+    from math import isclose
+    if not isclose(model_score_max, threshold, rel_tol=1e-2):
+        logger.warning('MVOD {} is not stable. We computed a threshold {}, while the passed threshold from the saved model was {}'.format(c_name, model_score_max, threshold))
+    for i in range(inp_nrows):
+        # pick the ith row
+        row = inp[i]
+        # append it to the model input
+        X = np.append(model_inp, [row], axis=0)
+        # now run the mvod scoring
+        retval = mvod_scores(X, [classifier])
+        if not retval:
+            logger.warning('could not score using {}'.format(c_name))
+            return False
+        (_scores, _) = retval
+        # mvod_scores returns a dict indexed by classifier name
+        # it will have exactly 1 key/value
+        _scores = list(_scores.values())[0]
+        # pick the score of the appended row (last element) and save it
+        score = _scores[-1]
+        logger.debug('MVOD {0} score for input index #{1}: {2}'.format(c_name, i, score))
+        scores.append(_scores[-1])
+
+    # make list into a numpy array
+    scores = np.array(scores)
+
+    # return scores if threshold is not set. Else return
+    # a 0/1 vector of inlier / outliers
+    # multiply by 1 to convert to a 0/1 vector
+    logger.debug('*** input scores (model threshold={}) ***'.format(threshold))
+    logger.debug(scores)
+    
+    return scores if (threshold is None) else (scores > threshold) * 1
+
+    
 # ref is a dataframe of reference entities, where the columns represent
 # the features.
 # inp represents a single entity and is either a Series or a DataFrame 
@@ -91,9 +391,10 @@ def rca(ref, inp, features, methods = [modified_z_score]):
     result_dict = { f: 0 for f in features }
 
     for m in methods:
-        ref_computed.loc['ref_max_' + m.__name__] = 0
-        ref_computed.loc[m.__name__] = 0
-        ref_computed.loc[m.__name__+'_ratio' ] = 0
+        c_name = get_classifier_name(m)
+        ref_computed.loc['ref_max_' + c_name] = 0
+        ref_computed.loc[c_name] = 0
+        ref_computed.loc[c_name+'_ratio' ] = 0
         for f in features:
             # lets get the params for ref using the scoring method
             # we expect the following tuple:
@@ -102,17 +403,17 @@ def rca(ref, inp, features, methods = [modified_z_score]):
             # ([scores], max_score, ....)
             ref_params = m(ref[f])
             ref_max_score = ref_params[1]
-            ref_computed[f]['ref_max_' + m.__name__] = ref_max_score
+            ref_computed[f]['ref_max_' + c_name] = ref_max_score
             inp_params = m([inp[f][0]], ref_params[1:])
             inp_score = inp_params[0][0]
-            ref_computed[f][m.__name__] = inp_score
+            ref_computed[f][c_name] = inp_score
             if ref_max_score != 0:
                 ratio = inp_score/ref_max_score
             elif inp_score == 0:
                 ratio = inp_score
             else:
                 ratio = float('inf')
-            ref_computed[f][m.__name__+'_ratio'] = ratio
+            ref_computed[f][c_name+'_ratio'] = ratio
             result_dict[f] += ratio
 
     # sort the result_dict by descending value
@@ -125,3 +426,73 @@ def rca(ref, inp, features, methods = [modified_z_score]):
     # Sort order of columns in returned dataframe
     return (True, ref_computed[ranked_features], dlst)
 
+
+def check_finite(values):
+    from math import isnan, isinf
+    n_nans = 0
+    n_infs = 0
+    for v in values:
+        if isnan(v): n_nans += 1
+        if isinf(v): n_infs += 1
+    if n_nans:
+        logger.debug('found {} NaN'.format(n_nans))
+    if n_infs:
+        logger.debug('found {} Inf'.format(n_infs))
+    return ((n_infs == 0) and (n_nans == 0))
+
+def pca_stat(inp_features, desired = 2):
+    '''
+    Combines features ndarray into a new PCA feature array with 
+    a dimensionality equal to n_components. It also returns an
+    array containing the explained_variance_ratio. 
+
+    The PCA analysis will do scaling as part of this function,
+    so the original feature set need not be provided scaled.
+
+    inp_features: numpy multidimensional array of input features
+
+    desired: Usually represents the number of PCA components desired. 
+             Defaults to 2. If this number is set to a floating point number
+             less than 1.0, then it will be interpreted as the desired 
+             variance ratio. In that case the number of PCA components 
+             will be determined to be the least number of components that 
+             yields a variance greater than or equal to the level desired.
+
+    Returns: A tuple, the first element is a numpy array of
+             new PCA features. The second element of the tuple is
+             the list of explained variance ratios. If you sum this
+             list of explained variance ratios you arrive at the
+             cumumlative variance of the PCA, and is a measure
+             of the extent to which the new PCA features capture
+             the original features information.
+    '''
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.decomposition import PCA
+
+    logger = getLogger(__name__)  # you can use other name
+    logger.debug('input feature array shape: {}'.format(inp_features.shape))
+
+    # the second paramer denotes the number of components usually
+    # however if it is less than 1, then it denotes the desired variance.
+    # In the latter case the number of components is automatically chosen
+    # to achieve the desired variance.
+    if desired >= 1:
+        logger.debug('desired num. PCA components: {}'.format(desired))
+    else:
+        logger.debug('desired variance ratio: {}'.format(desired))
+
+    n_samples, n_dim = inp_features.shape
+    assert(n_dim > 1)
+
+    x = StandardScaler().fit_transform(inp_features)
+
+    pca = PCA(n_components=desired) if (desired >= 1) else PCA(desired)
+    pc_array = pca.fit_transform(x)
+    if desired < 1:
+        logger.debug('number of PCA components: {}'.format(pc_array.shape[1]))
+    logger.debug('PCA array:\n{}'.format(pc_array))
+    sum_variance = sum(pca.explained_variance_ratio_)
+    logger.debug('PCA explained variance ratio: {}, sum({})'.format(pca.explained_variance_ratio_, sum_variance))
+    if sum_variance < 0.80:
+        logger.warning('cumulative variance for PCA ({}) < 0.80'.format(sum_variance))
+    return (pc_array, pca.explained_variance_ratio_)

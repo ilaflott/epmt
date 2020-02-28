@@ -17,7 +17,7 @@ epmt_output_prefix = os.path.expandvars("$TMPDIR/epmt")
 # stage_command = "mv"
 # stage_command_dest = "./"
 stage_command_dest = os.path.expandvars("/nbhome/$USER")
-# verbose = 1
+# verbose = 0
 # input_pattern = "*-papiex-*-[0-9]*.csv"
 install_prefix = "/home/Jeffrey.Durachta/workflowDB/EPMT/epmt-2.1.0-centos-6/papiex-epmt-install/"
 # logfile = path.dirname(path.abspath(__file__)) + '/epmt.log'
@@ -29,14 +29,23 @@ install_prefix = "/home/Jeffrey.Durachta/workflowDB/EPMT/epmt-2.1.0-centos-6/pap
 # DO NOT EDIT BELOW UNLESS YOU KNOW WHAT YOU ARE DOING!
 # #
 # job_tags_env = 'EPMT_JOB_TAGS'
-# per_process_fields = ["tags","hostname","exename","path","args","exitcode","pid","generation","ppid","pgid","sid","numtids"]
+# per_process_fields = ["tags","hostname","exename","path","args","exitcode","pid","generation","ppid","pgid","sid","numtids", "mpinumranks", "mpirank", "exitsignal"]
 # skip_for_thread_sums = ["tid", "start", "end", "num_threads", "starttime"]
-# all_tags_field = 'all_proc_tags'
 # 
 # # outlier detection
 # outlier_thresholds = { 'modified_z_score': 2.5, 'iqr': [20,80], 'z_score': 3.0 }
 # outlier_features = ['duration', 'cpu_time', 'num_procs']
-# outlier_features_blacklist = ['user+system']
+# # blacklist features for outlier detection. These will be skipped.
+# # e.g, outlier_features_blacklist = ['rdtsc_duration', 'vol_ctxsw']
+# outlier_features_blacklist = []
+#
+# data retention
+# You will need to run `epmt retire` in a cron job for this to happen
+# Remember, jobs that have dependent trained models will not be retired
+# retire_jobs_ndays = 0   # specify in number of days; set to 0 to not retire jobs
+# retire_models_ndays = 0 # specify in number of days; set to 0 to not retire models
+#
+#
 #
 # post_process_job_on_ingest = True
 

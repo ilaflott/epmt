@@ -64,8 +64,8 @@ if [ -f settings.py ]; then
     mv -v settings.py $settings_backup
 fi
 
-# echo "Checking code with pylint.."
-# python3 -m pylint -E *.py orm/*.py orm/*/*.py test/*.py
+echo "Checking code with pylint.."
+python3 -m pylint -E *.py orm/*.py orm/*/*.py test/*.py
 
 
 if [ $no_compose -eq 0 ]; then
@@ -81,6 +81,10 @@ for settings_file in preset_settings/{settings_sqlite_inmem_sqlalchemy.py,settin
     echo "using settings_file"
     cp -v $settings_file settings.py
     chmod 0644 settings.py
+
+    # remove stale stuff left behind
+    rm -rf /tmp/epmt
+
     if [ $no_compose -eq 1 ]; then
         make check
     else

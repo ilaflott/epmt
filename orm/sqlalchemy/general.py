@@ -42,7 +42,7 @@ def db_session(func):
             completed = True
         except Exception as e:
             logger.warning('\nAn exception occurred; rolling back session..')
-            logger.warning(e, exc_info=True)
+            # logger.warning(e, exc_info=True)
             # import traceback, sys
             # print('-'*60)
             # traceback.print_exc(file=sys.stdout)
@@ -126,6 +126,14 @@ def setup_db(settings,drop=False,create=True):
 def orm_get(model, pk=None, **kwargs):
     return Session.query(model).get(pk) if (pk != None) else Session.query(model).filter_by(**kwargs).one_or_none()
 
+# def orm_get_or_create(model, **kwargs):
+#     o = Session.query(model).with_for_update(of=model).filter_by(**kwargs).one()
+#     if not o:
+#         o = model(**kwargs)
+#         Session.add(o)
+#         Session.commit()
+#     return o
+ 
 
 def orm_findall(model, **kwargs):
     return Session.query(model).filter_by(**kwargs)
@@ -152,10 +160,10 @@ def orm_delete_jobs(jobs, use_orm = False):
         stmts = []
         for j in jobs:
             jobid = j.jobid
-            stmts.append('DELETE FROM ancestor_descendant_associations WHERE EXISTS (SELECT ad.* from ancestor_descendant_associations ad INNER JOIN processes p ON (ad.ancestor = p.id OR ad.descendant = p.id) WHERE p.jobid = \'{0}\')'.format(jobid))
-            stmts.append('DELETE FROM host_job_associations WHERE host_job_associations.jobid = \'{0}\''.format(jobid))
-            stmts.append('DELETE FROM refmodel_job_associations WHERE refmodel_job_associations.jobid = \'{0}\''.format(jobid))
-            stmts.append('DELETE FROM processes WHERE processes.jobid = \'{0}\''.format(jobid))
+            #stmts.append('DELETE FROM ancestor_descendant_associations WHERE EXISTS (SELECT ad.* from ancestor_descendant_associations ad INNER JOIN processes p ON (ad.ancestor = p.id OR ad.descendant = p.id) WHERE p.jobid = \'{0}\')'.format(jobid))
+            #stmts.append('DELETE FROM host_job_associations WHERE host_job_associations.jobid = \'{0}\''.format(jobid))
+            #stmts.append('DELETE FROM refmodel_job_associations WHERE refmodel_job_associations.jobid = \'{0}\''.format(jobid))
+            #stmts.append('DELETE FROM processes WHERE processes.jobid = \'{0}\''.format(jobid))
             stmts.append('DELETE FROM jobs WHERE jobs.jobid = \'{0}\''.format(jobid))
         try:
             _execute_raw_sql(stmts, commit = True)
@@ -474,7 +482,7 @@ def _analyses_filter(qs, analyses):
     from .models import Job
     return _attribute_filter(qs, 'analyses', analyses, model = Job, conv_to_str = True)
 
-def orm_get_refmodels(name = None, tag = {}, fltr=None, limit=0, order=None, exact_tag_only=False):
+def orm_get_refmodels(name = None, tag = {}, fltr=None, limit=0, order=None, before=None, after=None, exact_tag_only=False):
     from .models import ReferenceModel
 
     qs = Session.query(ReferenceModel).filter_by(name=name) if (name is not None) else Session.query(ReferenceModel)
@@ -485,6 +493,12 @@ def orm_get_refmodels(name = None, tag = {}, fltr=None, limit=0, order=None, exa
     # if fltr is a lambda function or a string apply it
     if not (fltr is None):
         qs = qs.filter(fltr)
+
+    if not (before is None):
+        qs = qs.filter(ReferenceModel.created_at <= before)
+
+    if not (after is None):
+        qs = qs.filter(ReferenceModel.created_at >= after)
 
     if not (order is None):
         qs = qs.order_by(order)

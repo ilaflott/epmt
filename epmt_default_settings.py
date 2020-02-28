@@ -29,16 +29,22 @@ env_blacklist = ["LS_COLORS"]
 
 #
 job_tags_env = 'EPMT_JOB_TAGS'
-per_process_fields = ["tags","hostname","exename","path","args","exitcode","pid","generation","ppid","pgid","sid","numtids"]
+per_process_fields = ["tags","hostname","exename","path","args","exitcode","pid","generation","ppid","pgid","sid","numtids", "mpinumranks", "mpirank", "exitsignal"]
 skip_for_thread_sums = ["tid", "start", "end", "num_threads", "starttime"]
-all_tags_field = 'all_proc_tags'
 
 # outlier detection
 outlier_thresholds = { 'modified_z_score': 2.5, 'iqr': [20,80], 'z_score': 3.0 }
 # default features to use if no features specified
 outlier_features = ['duration', 'cpu_time', 'num_procs']
-# user+system gives trouble in detect_outlier_ops because of the '+'
-outlier_features_blacklist = ['user+system']
+# # blacklist features for outlier detection. These will be skipped.
+# # e.g, outlier_features_blacklist = ['rdtsc_duration', 'vol_ctxsw']
+outlier_features_blacklist = []
+
+# data retention
+# You will need to run `epmt retire` in a cron job for this to happen
+# Remember, jobs that have dependent trained models will not be retired
+retire_jobs_ndays = 0   # specify in number of days; set to 0 to not retire jobs
+retire_models_ndays = 0 # specify in number of days; set to 0 to not retire models
 
 # we expect the settings below to be overriden in settings.py
 # depending on the template of your choice
