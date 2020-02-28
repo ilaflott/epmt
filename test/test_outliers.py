@@ -292,7 +292,18 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(r['info_dict']['pca']['out_features'], ['pca_01', 'pca_02'])
         self.assertEqual(set(r['computed'].keys()), {'{"op": "configure", "op_instance": "3", "op_sequence": "3"}', '{"op": "download", "op_instance": "1", "op_sequence": "1"}', '{"op": "clean", "op_instance": "5", "op_sequence": "5"}', '{"op": "extract", "op_instance": "2", "op_sequence": "2"}', '{"op": "build", "op_instance": "4", "op_sequence": "4"}'})
         self.assertEqual(r['computed'], {'{"op": "build", "op_instance": "4", "op_sequence": "4"}': {'modified_z_score': {'pca_01': (1.5029, 8.0231, 0.0884), 'pca_02': (4.8231, -0.2834, 0.0237)}}, '{"op": "clean", "op_instance": "5", "op_sequence": "5"}': {'modified_z_score': {'pca_01': (2.1959, -2.4257, 0.0036), 'pca_02': (1.6775, -2.1972, 0.0033)}}, '{"op": "configure", "op_instance": "3", "op_sequence": "3"}': {'modified_z_score': {'pca_01': (1.355, -1.6145, 0.0304), 'pca_02': (1.1647, -1.5633, 0.0194)}}, '{"op": "download", "op_instance": "1", "op_sequence": "1"}': {'modified_z_score': {'pca_01': (2.2482, -2.4305, 0.0005), 'pca_02': (0.9081, -0.9759, 0.0013)}}, '{"op": "extract", "op_instance": "2", "op_sequence": "2"}': {'modified_z_score': {'pca_01': (1.7217, -1.5568, 0.1045), 'pca_02': (0.7617, 5.0688, 0.0796)}}})
-
+        df = eod.detect_outlier_ops(['kern-6656-20190614-190245', 'kern-6656-20190614-192044-outlier'], trained_model=r['id'], features=[], pca = True)
+        self.assertEqual(df.shape, (10, 5))
+        self.assertEqual(set(df.jobid.values), {'kern-6656-20190614-190245', 'kern-6656-20190614-192044-outlier'})
+        # kern-6656-20190614-190245 is never an outlier
+        self.assertEqual(df[df.jobid == 'kern-6656-20190614-190245']['pca_weighted'].sum(), 0.0)
+        self.assertEqual(list(df[df.jobid == 'kern-6656-20190614-192044-outlier']['pca_weighted'].values), [3.6, 3.6, 3.6, 3.6, 3.6])
+        self.assertEqual(list(df[df.jobid == 'kern-6656-20190614-192044-outlier']['pca_01'].values), [1, 1, 1, 1, 1])
+        self.assertEqual(list(df[df.jobid == 'kern-6656-20190614-192044-outlier']['pca_02'].values), [1, 1, 1, 1, 1])
+        tags = list(df.tags.values)
+        from epmtlib import frozen_dict
+        tags = [ frozen_dict(t) for t in tags ]
+        self.assertEqual(set(tags), {frozenset({('op', 'configure'), ('op_sequence', '3'), ('op_instance', '3')}), frozenset({('op', 'download'), ('op_sequence', '1'), ('op_instance', '1')}), frozenset({('op_sequence', '4'), ('op_instance', '4'), ('op', 'build')}), frozenset({('op_sequence', '5'), ('op_instance', '5'), ('op', 'clean')}), frozenset({('op', 'extract'), ('op_sequence', '2'), ('op_instance', '2')})})
 
     def test_plot_2d(self):
         plotfile = 'output.png'
