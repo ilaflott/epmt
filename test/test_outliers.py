@@ -281,10 +281,15 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(r['info_dict']['pca']['inp_features'], ['PERF_COUNT_SW_CPU_CLOCK', 'cancelled_write_bytes', 'cpu_time', 'delayacct_blkio_time', 'duration', 'exitcode', 'guest_time', 'inblock', 'invol_ctxsw', 'majflt', 'minflt', 'num_procs', 'num_threads', 'outblock', 'processor', 'rchar', 'rdtsc_duration', 'read_bytes', 'rssmax', 'syscr', 'syscw', 'systemtime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wchar', 'write_bytes'])
         self.assertEqual(r['info_dict']['pca']['out_features'], ['pca_01', 'pca_02'])
         self.assertEqual(list(r['computed']['modified_z_score'].keys()), ['pca_01', 'pca_02'])
-        (df, part) = eod.detect_outlier_jobs(['kern-6656-20190614-192044-outlier'], trained_model = r['id'], features = [], pca=True)
-        self.assertEqual(df.shape, (1, 4))
+        (df, part) = eod.detect_outlier_jobs(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier'], trained_model = r['id'], features = [], pca=True)
+        self.assertEqual(df.shape, (3, 4))
         self.assertEqual(list(df.columns), ['jobid', 'pca_weighted', 'pca_01', 'pca_02'])
-        self.assertEqual(list(df.iloc[0].values), ['kern-6656-20190614-192044-outlier', 2.8, 1, 0])
+        self.assertEqual(set(df.jobid.values), {'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-190245'})
+        self.assertEqual(df[df.jobid == 'kern-6656-20190614-192044-outlier'].shape, (1, 4))
+        self.assertEqual(list(df[df.jobid == 'kern-6656-20190614-192044-outlier'].iloc[0].values), ['kern-6656-20190614-192044-outlier', 2.8, 1, 0])
+        self.assertEqual(df[df.jobid != 'kern-6656-20190614-192044-outlier'].shape, (2, 4))
+        self.assertEqual(df[df.jobid != 'kern-6656-20190614-192044-outlier']['pca_weighted'].sum(), 0.0)
+        
 
     def test_pca_trained_model_ops(self):
         r = eq.create_refmodel(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024'], op_tags='*', features=[], pca=True)

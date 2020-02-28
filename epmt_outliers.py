@@ -274,8 +274,11 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
             # for PCA analysis if we use a trained model, then we need to
             # include the trained model jobs prior to PCA (as the scaling
             # done as part of PCA will need those jobs
+            trained_model_jobs = [j.jobid for j in trained_model.jobs]
             added_model_jobs = []
             jobids_set = set(list(jobs['jobid'].values))
+            if len(jobids_set - set(trained_model_jobs)) > 1:
+                logger.warning('When using a trained-model+PCA, it is recommended that you do outlier detection on a single job at a time for best results')
             for mjob in trained_model.jobs:
                 if mjob.jobid not in jobids_set:
                     added_model_jobs.append(mjob.jobid)
@@ -286,8 +289,8 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
         (jobs_pca_df, pca_variances, pca_features) = pca_feature_combine(jobs, features, desired = 0.85 if pca is True else pca)
 
         # remove the rows of the appended model jobs
-        if trained_model and added_model_jobs:
-            jobs_pca_df = jobs_pca_df[~jobs_pca_df.jobid.isin(added_model_jobs)].reset_index(drop=True)
+        # if trained_model and added_model_jobs:
+        #     jobs_pca_df = jobs_pca_df[~jobs_pca_df.jobid.isin(added_model_jobs)].reset_index(drop=True)
 
         logger.info('{} PCA components obtained: {}'.format(len(pca_features), pca_features))
         logger.info('PCA variances: {} (sum={})'.format(pca_variances, np.sum(pca_variances)))
@@ -297,6 +300,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
     # list of stuff to return from this fn
     retlist = []
 
+    logger.debug('doing outlier detection on:\n{}'.format(jobs[['jobid'] + features]))
     # unfortunately we cannot leverage the same code for
     # univariate and multivariate classifiers, since the 
     # univariate code needs to iterate over the features
@@ -308,14 +312,27 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
             # print('data-type for feature column {0} is {1}'.format(c, jobs[c].dtype))
             for m in uv_methods:
                 m_name = get_classifier_name(m)
-                params = model_params[m].get(c, ())
+                # We ignore params for PCA, as the underlying PCA vector is not stable
+                params = model_params[m].get(c, ()) if not pca else ()
                 if params:
                     logger.debug('params[{0}][{1}]: {2}'.format(m_name, c, params))
                 scores = m(jobs[c], params)[0]
-                # use the max score in the refmodel if we have a trained model
-                # otherwise use the default threshold for the method
-                threshold = params[0] if params else thresholds[m_name]
+                logger.debug('scores: {}'.format(scores))
+                if pca and trained_model:
+                    # when using PCA with trained model, we need to figure the threshold
+                    # from the rows comprising of the model jobs
+                    model_indices = jobs[jobs.jobid.isin(trained_model_jobs)].index.values
+                    logger.debug('trained model job indices: {}'.format(list(model_indices)))
+                    trained_model_scores = np.asarray(scores).take(model_indices)
+                    threshold = trained_model_scores.max()
+                    logger.debug('trained model scores: {}, max: {}'.format(trained_model_scores, threshold))
+                else:
+                    # use the max score in the refmodel if we have a trained model
+                    # otherwise use the default threshold for the method
+                    threshold = params[0] if params else thresholds[m_name]
+                logger.debug('threshold: {}'.format(threshold))
                 outlier_rows = np.where(np.abs(scores) > threshold)[0]
+                logger.debug('outliers for [{}][{}] -> {}'.format(m_name,c,outlier_rows))
                 retval.loc[outlier_rows,c] += 1
 
         # add a jobid column to the output dataframe
@@ -366,11 +383,14 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
         if (len(mv_methods) > 1):
             retlist.append(classfiers_od_dict)
 
-    if pca is not False:
+    if pca:
         logger.info('adjusting the PCA scores based on PCA variances')
         _new_retlist = []
         for arg in retlist:
             if type(arg) == pd.DataFrame:
+                if trained_model:
+                    # remove model rows that we added
+                    arg = retval[~arg.jobid.isin(added_model_jobs)].reset_index(drop=True)
                 adjusted_df = pca_weighted_score(arg, pca_features, pca_variances)[0]
                 _new_retlist.append(adjusted_df)
             else:
@@ -554,6 +574,8 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
         trained_model_jobs = [j.jobid for j in trained_model.jobs]
         added_model_jobs = []
         jobids_set = set(jobids)
+        if len(jobids_set - set(trained_model_jobs)) > 1:
+            logger.warning('When using a trained-model+PCA, it is recommended that you do outlier detection on a single job at a time for best results')
         for mjob in trained_model.jobs:
             if mjob.jobid not in jobids_set:
                 added_model_jobs.append(mjob.jobid)
@@ -578,9 +600,6 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
             logger.warning('Too few input features for PCA. Are you sure you did not want to set features=[] to enable selecting all available features?')
         logger.debug('jobid,tags:\n{}'.format(ops[['jobid','tags']]))
         (ops_pca_df, pca_variances, pca_features) = pca_feature_combine(ops, features, desired = 0.85 if pca is True else pca)
-        # remove the rows of the appended model jobs
-        # if trained_model and added_model_jobs:
-        #     ops_pca_df = ops_pca_df[~ops_pca_df.jobid.isin(added_model_jobs)].reset_index(drop=True)
 
         logger.info('{} PCA components obtained: {}'.format(len(pca_features), pca_features))
         logger.info('PCA variances: {} (sum={})'.format(pca_variances, np.sum(pca_variances)))
@@ -619,8 +638,6 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
                 # We ignore params for PCA, as the underlying PCA vector is not stable
                 params = model_params[t][m].get(c, ()) if not pca else ()
                 m_name = get_classifier_name(m)
-                # if params:
-                #     logger.debug('params[{0}][{1}][{2}]: {3}'.format(t,m.__name__, c, params))
                 logger.debug(rows[c])
                 scores = m(rows[c], params)[0]
                 logger.debug('scores: {}'.format(scores))
