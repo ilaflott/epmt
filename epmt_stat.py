@@ -512,6 +512,59 @@ def check_distribution(data = [], dist='norm', alpha = 0.05):
         alpha: Advanced option that helps set a threshold for null hypothesis
 
     Reference: https://machinelearningmastery.com/a-gentle-introduction-to-normality-tests-in-python/
+
+    >>> check_distribution(np.linspace(-15, 15, 100), 'uniform')                                              
+      DEBUG: epmt_stat: data array shape: (100,)
+      DEBUG: epmt_stat: min=-15.000 max=15.000 mean=0.000 std=8.747
+      DEBUG: epmt_stat: alpha=0.05
+      DEBUG: epmt_stat: Testing for uniform distribution
+      DEBUG: epmt_stat: Doing Kolmogorov-Smirnov (uniform) test..
+      DEBUG: epmt_stat:   statistics=0.010, p=1.000
+      DEBUG: epmt_stat:   Kolmogorov-Smirnov (uniform) test: PASSED
+      DEBUG: epmt_stat: check_distribution: 1 tests PASSED, 0 tests FAILED
+    True
+    >>> check_distribution(np.linspace(-15, 15, 100), 'norm')                                                 
+      DEBUG: epmt_stat: data array shape: (100,)
+      DEBUG: epmt_stat: min=-15.000 max=15.000 mean=0.000 std=8.747
+      DEBUG: epmt_stat: alpha=0.05
+      DEBUG: epmt_stat: Testing for norm distribution
+      DEBUG: epmt_stat: Doing Shapiro-Wilk test..
+      DEBUG: epmt_stat:   statistics=0.955, p=0.002
+      DEBUG: epmt_stat:   Shapiro-Wilk test: FAILED
+      DEBUG: epmt_stat: Doing D'Agostino test..
+      DEBUG: epmt_stat:   statistics=33.630, p=0.000
+      DEBUG: epmt_stat:   D'Agostino test: FAILED
+      DEBUG: epmt_stat: Doing Kolmogorov-Smirnov (norm) test..
+      DEBUG: epmt_stat:   statistics=0.062, p=0.834
+      DEBUG: epmt_stat:   Kolmogorov-Smirnov (norm) test: PASSED
+      DEBUG: epmt_stat: check_distribution: 1 tests PASSED, 2 tests FAILED
+    False
+    >>> check_distribution(np.random.randn(100), 'norm')                                                      
+      DEBUG: epmt_stat: data array shape: (100,)
+      DEBUG: epmt_stat: min=-2.613 max=2.773 mean=-0.096 std=1.049
+      DEBUG: epmt_stat: alpha=0.05
+      DEBUG: epmt_stat: Testing for norm distribution
+      DEBUG: epmt_stat: Doing Shapiro-Wilk test..
+      DEBUG: epmt_stat:   statistics=0.994, p=0.920
+      DEBUG: epmt_stat:   Shapiro-Wilk test: PASSED
+      DEBUG: epmt_stat: Doing D'Agostino test..
+      DEBUG: epmt_stat:   statistics=0.390, p=0.823
+      DEBUG: epmt_stat:   D'Agostino test: PASSED
+      DEBUG: epmt_stat: Doing Kolmogorov-Smirnov (norm) test..
+      DEBUG: epmt_stat:   statistics=0.067, p=0.777
+      DEBUG: epmt_stat:   Kolmogorov-Smirnov (norm) test: PASSED
+      DEBUG: epmt_stat: check_distribution: 3 tests PASSED, 0 tests FAILED
+    True
+    >>> check_distribution(np.random.randn(100), 'uniform')                                                   
+      DEBUG: epmt_stat: data array shape: (100,)
+      DEBUG: epmt_stat: min=-2.207 max=2.165 mean=0.090 std=0.944
+      DEBUG: epmt_stat: alpha=0.05
+      DEBUG: epmt_stat: Testing for uniform distribution
+      DEBUG: epmt_stat: Doing Kolmogorov-Smirnov (uniform) test..
+      DEBUG: epmt_stat:   statistics=0.174, p=0.004
+      DEBUG: epmt_stat:   Kolmogorov-Smirnov (uniform) test: FAILED
+      DEBUG: epmt_stat: check_distribution: 0 tests PASSED, 1 tests FAILED
+    False
     '''
     # Shapiro-Wilk Test
     from scipy.stats import shapiro
@@ -560,4 +613,4 @@ def check_distribution(data = [], dist='norm', alpha = 0.05):
             logger.debug('  {} test: FAILED'.format(test))
 
     logger.debug('check_distribution: {} tests PASSED, {} tests FAILED'.format(passed, failed))
-    return(failed == 0)
+    return(passed > failed)
