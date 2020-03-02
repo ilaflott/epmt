@@ -496,3 +496,68 @@ def pca_stat(inp_features, desired = 2):
     if sum_variance < 0.80:
         logger.warning('cumulative variance for PCA ({}) < 0.80'.format(sum_variance))
     return (pc_array, pca.explained_variance_ratio_)
+
+
+def check_distribution(data = [], dist='norm', alpha = 0.05):
+    '''
+    Returns True if all the tests for "dist" distribution pass,
+    False otherwise.
+        data: numpy 1-d array or list of numbers. If none is provided then
+              one will be generated of the type of distribution to be tested for
+
+        dist: A string representing the distribution from scipy.distributions
+              such as 'norm' or 'uniform'. At present only 'norm' and 'uniform'
+              are supported.
+
+        alpha: Advanced option that helps set a threshold for null hypothesis
+
+    Reference: https://machinelearningmastery.com/a-gentle-introduction-to-normality-tests-in-python/
+    '''
+    # Shapiro-Wilk Test
+    from scipy.stats import shapiro
+    # D'Agostino
+    from scipy.stats import normaltest
+    from scipy.stats import kstest
+
+    if (type(data) != np.ndarray) and not data:
+        from numpy.random import seed
+        from numpy.random import randn
+        # seed the random number generator
+        seed(1)
+        # generate univariate observations
+        if dist == 'uniform':
+            logger.debug('generating random data with uniform distribution')
+            data = np.random.uniform(-1, 1, 100)
+        else:
+            logger.info('generating random data with Gaussian distribution')
+            data = 5 * randn(100) + 50
+    else:
+        data = np.asarray(data)
+    logger.debug('data array shape: {}'.format(data.shape))
+    (_min, _max, _mean, _std) = np.min(data), np.max(data), np.mean(data), np.std(data)
+    logger.debug('min=%.3f max=%.3f mean=%.3f std=%.3f' % (_min, _max, _mean, _std))
+    logger.debug('alpha=%.2f' % alpha)
+    passed = 0
+    failed = 0
+
+    kstest_norm = lambda d: kstest(d, 'norm', (_mean, _std))
+    kstest_uniform = lambda d: kstest(d, 'uniform', (_min, _max - _min))
+    tests = { 'norm': [('Shapiro-Wilk', shapiro), ('D\'Agostino', normaltest), ('Kolmogorov-Smirnov (norm)', kstest_norm)], 'uniform': [('Kolmogorov-Smirnov (uniform)', kstest_uniform)] }
+    if not dist in tests:
+        raise ValueError('We only support the following distributions: {}'.format(tests.keys()))
+    logger.debug('Testing for {} distribution'.format(dist))
+        
+    for (test, f) in tests[dist]:
+        # normality test
+        logger.debug('Doing {} test..'.format(test))
+        stat, p = f(data)
+        logger.debug('  statistics=%.3f, p=%.3f' % (stat, p))
+        if p > alpha:
+            passed += 1
+            logger.debug('  {} test: PASSED'.format(test))
+        else:
+            failed += 1
+            logger.debug('  {} test: FAILED'.format(test))
+
+    logger.debug('check_distribution: {} tests PASSED, {} tests FAILED'.format(passed, failed))
+    return(failed == 0)
