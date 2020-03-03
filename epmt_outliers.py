@@ -1103,6 +1103,14 @@ def get_feature_distributions(jobs, features = []):
     RETURNS: A dictionary indexed by feature where the value is the
              distribution specified as a string. At present, this string
              is one of: ['norm', 'uniform', 'unknown']
+
+    EXAMPLES:
+   
+    # Below we explicitly choose two features: cpu_time and rssmax. If we do not specify
+    # the features, all the numeric features are selected. 
+    >>> eod.get_feature_distributions(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], features=['cpu_time', 'rssmax'])                
+    {'cpu_time': 'unknown', 'rssmax': 'norm'}
+
     '''
     eq._empty_collection_check(jobs)
     eq._warn_incomparable_jobs(jobs)
