@@ -37,6 +37,7 @@ class OutliersAPI(unittest.TestCase):
 ##    def tearDown(self):
 ##        pass
 
+    @db_session
     def test_feature_distributions(self):
         jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='terse')
         fdist = eod.get_feature_distributions(jobs, features = [])
