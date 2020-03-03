@@ -498,7 +498,7 @@ def pca_stat(inp_features, desired = 2):
     return (pc_array, pca.explained_variance_ratio_)
 
 
-def check_distribution(data = [], dist='norm', alpha = 0.05):
+def check_dist(data = [], dist='norm', alpha = 0.05):
     '''
 
         data: numpy 1-d array or list of numbers. If none is provided then
@@ -515,7 +515,7 @@ def check_distribution(data = [], dist='norm', alpha = 0.05):
 
     Reference: https://machinelearningmastery.com/a-gentle-introduction-to-normality-tests-in-python/
 
-    >>> check_distribution(np.linspace(-15, 15, 100), 'uniform')                                              
+    >>> check_dist(np.linspace(-15, 15, 100), 'uniform')                                              
       DEBUG: epmt_stat: data array shape: (100,)
       DEBUG: epmt_stat: min=-15.000 max=15.000 mean=0.000 std=8.747
       DEBUG: epmt_stat: alpha=0.05
@@ -523,9 +523,9 @@ def check_distribution(data = [], dist='norm', alpha = 0.05):
       DEBUG: epmt_stat: Doing Kolmogorov-Smirnov (uniform) test..
       DEBUG: epmt_stat:   statistics=0.010, p=1.000
       DEBUG: epmt_stat:   Kolmogorov-Smirnov (uniform) test: PASSED
-      DEBUG: epmt_stat: check_distribution: 1 tests PASSED, 0 tests FAILED
+      DEBUG: epmt_stat: check_dist: 1 tests PASSED, 0 tests FAILED
     (1, 0)
-    >>> check_distribution(np.random.randn(100), 'norm')                                                      
+    >>> check_dist(np.random.randn(100), 'norm')                                                      
       DEBUG: epmt_stat: data array shape: (100,)
       DEBUG: epmt_stat: min=-2.613 max=2.773 mean=-0.096 std=1.049
       DEBUG: epmt_stat: alpha=0.05
@@ -539,9 +539,9 @@ def check_distribution(data = [], dist='norm', alpha = 0.05):
       DEBUG: epmt_stat: Doing Kolmogorov-Smirnov (norm) test..
       DEBUG: epmt_stat:   statistics=0.067, p=0.777
       DEBUG: epmt_stat:   Kolmogorov-Smirnov (norm) test: PASSED
-      DEBUG: epmt_stat: check_distribution: 3 tests PASSED, 0 tests FAILED
+      DEBUG: epmt_stat: check_dist: 3 tests PASSED, 0 tests FAILED
     (3, 0)
-    >>> check_distribution(np.random.randn(100), 'uniform')                                                   
+    >>> check_dist(np.random.randn(100), 'uniform')                                                   
       DEBUG: epmt_stat: data array shape: (100,)
       DEBUG: epmt_stat: min=-2.207 max=2.165 mean=0.090 std=0.944
       DEBUG: epmt_stat: alpha=0.05
@@ -549,9 +549,13 @@ def check_distribution(data = [], dist='norm', alpha = 0.05):
       DEBUG: epmt_stat: Doing Kolmogorov-Smirnov (uniform) test..
       DEBUG: epmt_stat:   statistics=0.174, p=0.004
       DEBUG: epmt_stat:   Kolmogorov-Smirnov (uniform) test: FAILED
-      DEBUG: epmt_stat: check_distribution: 0 tests PASSED, 1 tests FAILED
+      DEBUG: epmt_stat: check_dist: 0 tests PASSED, 1 tests FAILED
     (0, 1)
     '''
+    # https://stackoverflow.com/questions/40845304/runtimewarning-numpy-dtype-size-changed-may-indicate-binary-incompatibility
+    import warnings
+    warnings.filterwarnings("ignore")
+
     # Shapiro-Wilk Test
     from scipy.stats import shapiro
     # D'Agostino
@@ -601,5 +605,5 @@ def check_distribution(data = [], dist='norm', alpha = 0.05):
             failed += 1
             logger.debug('  {} test: FAILED'.format(test))
 
-    logger.debug('check_distribution: {} tests PASSED, {} tests FAILED'.format(passed, failed))
+    logger.debug('check_dist: {} tests PASSED, {} tests FAILED'.format(passed, failed))
     return(passed, failed)

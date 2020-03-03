@@ -37,6 +37,11 @@ class OutliersAPI(unittest.TestCase):
 ##    def tearDown(self):
 ##        pass
 
+    def test_feature_distributions(self):
+        jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='terse')
+        fdist = eod.get_feature_distributions(jobs, features = [])
+        self.assertEqual(list(zip(fdist.keys(), fdist.values())), [('PERF_COUNT_SW_CPU_CLOCK', 'unknown'), ('cancelled_write_bytes', 'unknown'), ('cpu_time', 'unknown'), ('delayacct_blkio_time', 'unknown'), ('duration', 'unknown'), ('exitcode', 'unknown'), ('guest_time', 'unknown'), ('inblock', 'norm'), ('invol_ctxsw', 'unknown'), ('majflt', 'unknown'), ('minflt', 'norm'), ('num_procs', 'unknown'), ('num_threads', 'unknown'), ('outblock', 'unknown'), ('processor', 'unknown'), ('rchar', 'norm'), ('rdtsc_duration', 'unknown'), ('read_bytes', 'norm'), ('rssmax', 'norm'), ('syscr', 'norm'), ('syscw', 'norm'), ('systemtime', 'unknown'), ('time_oncpu', 'unknown'), ('time_waiting', 'unknown'), ('timeslices', 'unknown'), ('usertime', 'unknown'), ('vol_ctxsw', 'norm'), ('wchar', 'norm'), ('write_bytes', 'norm')])
+
     @db_session
     def test_outlier_jobs(self):
         # with too few jobs and no trained model, outlier detection should fail

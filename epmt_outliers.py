@@ -1113,14 +1113,14 @@ def get_feature_distributions(jobs, features = []):
 
     features = _sanitize_features(features, jobs)
     dist_dict = {}
-    from epmt_stat import check_distribution
+    from epmt_stat import check_dist
     for c in features:
         logger.debug('determining distribution of feature {}'.format(c))
         v = jobs[c].to_numpy()
         logger.debug('feature vector: {}'.format(v))
         v_dist = 'unknown'
         for dist in ['norm', 'uniform']:
-            (passed, failed) = check_distribution(v, dist)
+            (passed, failed) = check_dist(v, dist)
             if passed > failed:
                 v_dist = dist
                 break
