@@ -500,8 +500,7 @@ def pca_stat(inp_features, desired = 2):
 
 def check_distribution(data = [], dist='norm', alpha = 0.05):
     '''
-    Returns True if all the tests for "dist" distribution pass,
-    False otherwise.
+
         data: numpy 1-d array or list of numbers. If none is provided then
               one will be generated of the type of distribution to be tested for
 
@@ -510,6 +509,9 @@ def check_distribution(data = [], dist='norm', alpha = 0.05):
               are supported.
 
         alpha: Advanced option that helps set a threshold for null hypothesis
+
+      RETURNS: A tuple, where the first member is the number of tests that PASSED
+               and the second is the number of tests that FAILED.
 
     Reference: https://machinelearningmastery.com/a-gentle-introduction-to-normality-tests-in-python/
 
@@ -522,23 +524,7 @@ def check_distribution(data = [], dist='norm', alpha = 0.05):
       DEBUG: epmt_stat:   statistics=0.010, p=1.000
       DEBUG: epmt_stat:   Kolmogorov-Smirnov (uniform) test: PASSED
       DEBUG: epmt_stat: check_distribution: 1 tests PASSED, 0 tests FAILED
-    True
-    >>> check_distribution(np.linspace(-15, 15, 100), 'norm')                                                 
-      DEBUG: epmt_stat: data array shape: (100,)
-      DEBUG: epmt_stat: min=-15.000 max=15.000 mean=0.000 std=8.747
-      DEBUG: epmt_stat: alpha=0.05
-      DEBUG: epmt_stat: Testing for norm distribution
-      DEBUG: epmt_stat: Doing Shapiro-Wilk test..
-      DEBUG: epmt_stat:   statistics=0.955, p=0.002
-      DEBUG: epmt_stat:   Shapiro-Wilk test: FAILED
-      DEBUG: epmt_stat: Doing D'Agostino test..
-      DEBUG: epmt_stat:   statistics=33.630, p=0.000
-      DEBUG: epmt_stat:   D'Agostino test: FAILED
-      DEBUG: epmt_stat: Doing Kolmogorov-Smirnov (norm) test..
-      DEBUG: epmt_stat:   statistics=0.062, p=0.834
-      DEBUG: epmt_stat:   Kolmogorov-Smirnov (norm) test: PASSED
-      DEBUG: epmt_stat: check_distribution: 1 tests PASSED, 2 tests FAILED
-    False
+    (1, 0)
     >>> check_distribution(np.random.randn(100), 'norm')                                                      
       DEBUG: epmt_stat: data array shape: (100,)
       DEBUG: epmt_stat: min=-2.613 max=2.773 mean=-0.096 std=1.049
@@ -554,7 +540,7 @@ def check_distribution(data = [], dist='norm', alpha = 0.05):
       DEBUG: epmt_stat:   statistics=0.067, p=0.777
       DEBUG: epmt_stat:   Kolmogorov-Smirnov (norm) test: PASSED
       DEBUG: epmt_stat: check_distribution: 3 tests PASSED, 0 tests FAILED
-    True
+    (3, 0)
     >>> check_distribution(np.random.randn(100), 'uniform')                                                   
       DEBUG: epmt_stat: data array shape: (100,)
       DEBUG: epmt_stat: min=-2.207 max=2.165 mean=0.090 std=0.944
@@ -564,7 +550,7 @@ def check_distribution(data = [], dist='norm', alpha = 0.05):
       DEBUG: epmt_stat:   statistics=0.174, p=0.004
       DEBUG: epmt_stat:   Kolmogorov-Smirnov (uniform) test: FAILED
       DEBUG: epmt_stat: check_distribution: 0 tests PASSED, 1 tests FAILED
-    False
+    (0, 1)
     '''
     # Shapiro-Wilk Test
     from scipy.stats import shapiro
@@ -595,7 +581,10 @@ def check_distribution(data = [], dist='norm', alpha = 0.05):
 
     kstest_norm = lambda d: kstest(d, 'norm', (_mean, _std))
     kstest_uniform = lambda d: kstest(d, 'uniform', (_min, _max - _min))
-    tests = { 'norm': [('Shapiro-Wilk', shapiro), ('D\'Agostino', normaltest), ('Kolmogorov-Smirnov (norm)', kstest_norm)], 'uniform': [('Kolmogorov-Smirnov (uniform)', kstest_uniform)] }
+    tests = { 'norm': [('Shapiro-Wilk', shapiro), ('Kolmogorov-Smirnov (norm)', kstest_norm)], 'uniform': [('Kolmogorov-Smirnov (uniform)', kstest_uniform)] }
+    if data.size > 20:
+        # The test below requires at least 20 elements
+        tests['norm'].append(('D\'Agostino', normaltest))
     if not dist in tests:
         raise ValueError('We only support the following distributions: {}'.format(tests.keys()))
     logger.debug('Testing for {} distribution'.format(dist))
@@ -613,4 +602,4 @@ def check_distribution(data = [], dist='norm', alpha = 0.05):
             logger.debug('  {} test: FAILED'.format(test))
 
     logger.debug('check_distribution: {} tests PASSED, {} tests FAILED'.format(passed, failed))
-    return(passed > failed)
+    return(passed, failed)

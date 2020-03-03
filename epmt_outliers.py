@@ -1086,6 +1086,48 @@ def _sanitize_features(f, df, model = None):
     # print('features: {0}'.format(features))
     return features
 
+
+def get_feature_distributions(jobs, features = []):
+    '''
+    Get the distribution (normal, uniform, etc) of features across
+    a collection of jobs. If features is unspecified, all available
+    numeric features will be used. The function returns a dictionary
+    indexed by feature where the value is a string like 'norm' or
+    'uniform'. The distribution name is a string from scipy.stats.
+
+    jobs: A collection of jobs, such as a list, an ORM or dataframe.
+    features: A list of features for which we want to determine the
+              the distribution. The argument is optional, and if
+              not specified, all available numeric features for the
+              jobs will be used.
+    RETURNS: A dictionary indexed by feature where the value is the
+             distribution specified as a string. At present, this string
+             is one of: ['norm', 'uniform', 'unknown']
+    '''
+    eq._empty_collection_check(jobs)
+    eq._warn_incomparable_jobs(jobs)
+
+    # if we don't have a dataframe, get one
+    if type(jobs) != pd.DataFrame:
+        jobs = eq.conv_jobs(jobs, fmt='pandas')
+
+    features = _sanitize_features(features, jobs)
+    dist_dict = {}
+    from epmt_stat import check_distribution
+    for c in features:
+        logger.debug('determining distribution of feature {}'.format(c))
+        v = jobs[c].to_numpy()
+        logger.debug('feature vector: {}'.format(v))
+        v_dist = 'unknown'
+        for dist in ['norm', 'uniform']:
+            (passed, failed) = check_distribution(v, dist)
+            if passed > failed:
+                v_dist = dist
+                break
+        dist_dict[c] = v_dist
+        logger.debug('{} -> {}'.format(c, v_dist))
+    return dist_dict
+
 # Raise an exception if the length of a collection is less than
 # min_length
 def _err_col_len(c, min_length = 1, msg = None):
