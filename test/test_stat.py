@@ -22,5 +22,11 @@ class EPMTStat(unittest.TestCase):
         (passed, failed) = check_dist(np.random.randn(100), 'uniform')
         self.assertTrue(failed > passed)
 
+    def test_normalize(self):
+        from epmt_stat import normalize
+        x = np.array([[0.0, 10.0], [0.13216, 12.11837], [0.25379, 42.05027], [0.30874, 13.11784]])
+        norm_x = normalize(x)
+        self.assertIsNone(np.testing.assert_almost_equal(norm_x, np.array([[0., 0.], [0.42806245, 0.06609523], [0.82201853, 1.], [1., 0.09727968]])))
+
 if __name__ == '__main__':
     unittest.main()

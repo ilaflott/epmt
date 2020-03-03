@@ -607,3 +607,13 @@ def check_dist(data = [], dist='norm', alpha = 0.05):
 
     logger.debug('check_dist: {} tests PASSED, {} tests FAILED'.format(passed, failed))
     return(passed, failed)
+
+def normalize(v, min_=0, max_=1):
+    '''
+    Performs column-wise min-max scaling of a numpy array (of any dimension)
+    so that the elements of each column range from min_ to max_. 
+
+    Returns a new scaled numpy array of the same shape as the original.
+    '''
+    from sklearn.preprocessing import minmax_scale
+    return minmax_scale(v, feature_range=(min_,max_), axis=0)
