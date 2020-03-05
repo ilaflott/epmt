@@ -7,7 +7,14 @@ Create Date: 2020-03-05 11:18:58.979034
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
+
+from orm import orm_db_provider
+if orm_db_provider() == 'postgres':
+    from sqlalchemy.dialects.postgresql import JSONB as JSON
+    json_args = { 'astext_type': sa.Text() }
+else:
+    from sqlalchemy import JSON
+    json_args = {}
 
 # revision identifiers, used by Alembic.
 revision = '392efb1132ae'
@@ -22,18 +29,18 @@ def upgrade():
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.Column('name', sa.String(), nullable=False),
-    sa.Column('info_dict', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('info_dict', JSON(**json_args), nullable=True),
     sa.PrimaryKeyConstraint('name')
     )
     op.create_table('refmodels',
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('tags', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-    sa.Column('op_tags', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-    sa.Column('computed', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('tags', JSON(**json_args), nullable=True),
+    sa.Column('op_tags', JSON(**json_args), nullable=True),
+    sa.Column('computed', JSON(**json_args), nullable=True),
     sa.Column('enabled', sa.Boolean(), nullable=True),
-    sa.Column('info_dict', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('info_dict', JSON(**json_args), nullable=True),
     sa.Column('name', sa.String(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
@@ -47,28 +54,28 @@ def upgrade():
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.Column('name', sa.String(), nullable=False),
     sa.Column('id', sa.Integer(), nullable=True),
-    sa.Column('info_dict', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('info_dict', JSON(**json_args), nullable=True),
     sa.PrimaryKeyConstraint('name'),
     sa.UniqueConstraint('id')
     )
     op.create_table('jobs',
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
-    sa.Column('info_dict', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-    sa.Column('annotations', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-    sa.Column('analyses', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('info_dict', JSON(**json_args), nullable=True),
+    sa.Column('annotations', JSON(**json_args), nullable=True),
+    sa.Column('analyses', JSON(**json_args), nullable=True),
     sa.Column('start', sa.DateTime(), nullable=True),
     sa.Column('end', sa.DateTime(), nullable=True),
     sa.Column('duration', sa.Float(), nullable=True),
-    sa.Column('proc_sums', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-    sa.Column('env_dict', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-    sa.Column('env_changes_dict', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('proc_sums', JSON(**json_args), nullable=True),
+    sa.Column('env_dict', JSON(**json_args), nullable=True),
+    sa.Column('env_changes_dict', JSON(**json_args), nullable=True),
     sa.Column('submit', sa.DateTime(), nullable=True),
     sa.Column('jobid', sa.String(), nullable=False),
     sa.Column('jobname', sa.String(), nullable=True),
     sa.Column('exitcode', sa.Integer(), nullable=True),
     sa.Column('user_id', sa.String(), nullable=True),
-    sa.Column('tags', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('tags', JSON(**json_args), nullable=True),
     sa.Column('cpu_time', sa.Float(), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['users.name'], ),
     sa.PrimaryKeyConstraint('jobid')
@@ -91,17 +98,17 @@ def upgrade():
     op.create_table('processes',
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
-    sa.Column('info_dict', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('info_dict', JSON(**json_args), nullable=True),
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.String(), nullable=True),
     sa.Column('jobid', sa.String(), nullable=True),
     sa.Column('start', sa.DateTime(), nullable=True),
     sa.Column('end', sa.DateTime(), nullable=True),
     sa.Column('duration', sa.Float(), nullable=True),
-    sa.Column('tags', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('tags', JSON(**json_args), nullable=True),
     sa.Column('host_id', sa.String(), nullable=True),
-    sa.Column('threads_df', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
-    sa.Column('threads_sums', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('threads_df', JSON(**json_args), nullable=True),
+    sa.Column('threads_sums', JSON(**json_args), nullable=True),
     sa.Column('numtids', sa.Integer(), nullable=True),
     sa.Column('cpu_time', sa.Float(), nullable=True),
     sa.Column('inclusive_cpu_time', sa.Float(), nullable=True),
@@ -137,7 +144,7 @@ def upgrade():
     )
     op.create_table('unprocessed_jobs',
     sa.Column('created_at', sa.DateTime(), nullable=True),
-    sa.Column('info_dict', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('info_dict', JSON(**json_args), nullable=True),
     sa.Column('jobid', sa.String(), nullable=False),
     sa.ForeignKeyConstraint(['jobid'], ['jobs.jobid'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('jobid')

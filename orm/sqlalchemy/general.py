@@ -92,10 +92,12 @@ def setup_db(settings,drop=False,create=True):
         # remove alembic version table
         engine.execute('DROP TABLE IF EXISTS alembic_version')
 
-    # We don't use generate_schema_from_models any more.
-    # Instead we use check_and_apply_migrations to check and apply migrations
-    check_and_apply_migrations()
-    # generate_schema_from_models()
+    # migrations won't work with in-memory databases
+    from orm import orm_in_memory
+    if orm_in_memory():
+        generate_schema_from_models()
+    else:
+        check_and_apply_migrations()
 
     logger.debug('Configuring scoped session..')
     # hide useless warning when re-configuring a session
@@ -107,11 +109,8 @@ def setup_db(settings,drop=False,create=True):
     return True
 
 
-# This function should NOT be used any more.
-# We leave it here for reference and for debugging. This function
-# contains code from the former setup_db, wherein we used to 
-# create tables using the truth in models.py. Now we use the
-# alembic baseline migration instead using check_and_apply_migrations/migrate_db
+# This function is only-used for in-memory databases where
+# migrations won't work
 def generate_schema_from_models():
     ins = inspect(engine)
     if len(ins.get_table_names()) >= 8:
@@ -624,17 +623,27 @@ def get_db_schema_version():
 
 
 def migrate_db():
-    import alembic.config
     if engine is None:
         logger.error('You have not connected to a database. Please use setup_db() first')
         return False
+    from alembic import config, script
+    from sqlalchemy import exc
+    alembic_cfg = config.Config('alembic.ini')
+    script_ = script.ScriptDirectory.from_config(alembic_cfg)
+    epmt_schema_head = script_.get_current_head()
+    logger.info('Migrating database to HEAD: {}'.format(epmt_schema_head))
     try:
-        alembic.config.main(argv=['--raiseerr', 'upgrade', 'head',])
-    except Exception as e:
-        logger.warning(e, exc_info=True)
+        config.main(argv=['--raiseerr', 'upgrade', 'head',])
+    except exc.OperationalError as e:
+        logger.warning(e)
         logger.warning('Could not upgrade the database. This likely means that your database schema predates our migration support. The best course would be start with a fresh database.')
         return False
-    return True
+    updated_version = get_db_schema_version()
+    if updated_version != epmt_schema_head:
+        logger.warning('Database migration failed. Current schema version is {}, while head is {}'.format(updated_version, epmt_schema_head))
+    else:
+        logger.info('Database successfully migrated to: {}'.format(epmt_schema_head))
+    return (epmt_schema_head == updated_version)
 
 #@listens_for(Pool, "connect")
 #def connect(dbapi_connection, connection_rec):

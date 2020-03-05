@@ -2,6 +2,7 @@
 
 # the import below is crucial to get a sane test environment
 from . import *
+from orm import orm_in_memory
 
 def setUpModule():
     print('\n' + str(settings.db_params))
@@ -11,11 +12,12 @@ def setUpModule():
 MIGRATION_HEAD = '392efb1132ae'
 
 class EPMTDBMigration(unittest.TestCase):
-    @unittest.skipUnless(settings.orm == 'sqlalchemy', 'requires sqlalchemy')
+    @unittest.skipUnless((settings.orm == 'sqlalchemy') and not(orm_in_memory()), 'requires sqlalchemy with persistent backend')
     def test_baseline_migration(self):
         from orm import get_db_schema_version
         self.assertEqual(get_db_schema_version(), MIGRATION_HEAD)
 
+    @unittest.skipUnless((settings.orm == 'sqlalchemy') and not(orm_in_memory()), 'requires sqlalchemy with persistent backend')
     def test_create_and_apply_migration(self):
         import alembic.config
         from os import path, remove
