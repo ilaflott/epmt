@@ -600,8 +600,12 @@ def check_migrations():
             logger.info('database schema up-to-date (version {})'.format(epmt_schema_head))
 
 def migrate_db():
-    import alembic
-    alembic.config.main(argv=['--raiseerr', 'upgrade', 'head',])
+    import alembic.config
+    try:
+        alembic.config.main(argv=['--raiseerr', 'upgrade', 'head',])
+    except Exception as e:
+        logger.warning(e, exc_info=True)
+        logger.warning('Could not upgrade the database. This likely means that your database schema predates our migration support. The best course would be start with a fresh database.')
 
 #@listens_for(Pool, "connect")
 #def connect(dbapi_connection, connection_rec):
