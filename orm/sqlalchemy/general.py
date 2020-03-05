@@ -596,24 +596,32 @@ def set_sql_debug(discard):
 
 def check_and_apply_migrations():
     from alembic import config, script
+    database_schema_version = get_db_schema_version()
+    alembic_cfg = config.Config('alembic.ini')
+    script_ = script.ScriptDirectory.from_config(alembic_cfg)
+    epmt_schema_head = script_.get_current_head()
+
+    if database_schema_version != epmt_schema_head:
+        logger.debug('database schema version: {}'.format(database_schema_version))
+        logger.debug('EPMT schema HEAD: {}'.format(epmt_schema_head))
+        logger.warning('Database needs to be upgraded..')
+        return migrate_db()
+    else:
+        logger.info('database schema up-to-date (version {})'.format(epmt_schema_head))
+    return True
+
+def get_db_schema_version():
+    from alembic import config
     from alembic.runtime import migration
     if engine is None:
         logger.error('You have not connected to a database. Please use setup_db() first')
         return False
     alembic_cfg = config.Config('alembic.ini')
-    script_ = script.ScriptDirectory.from_config(alembic_cfg)
     with engine.begin() as conn:
         context = migration.MigrationContext.configure(conn)
         database_schema_version = context.get_current_revision()
-        epmt_schema_head = script_.get_current_head()
-        if database_schema_version != epmt_schema_head:
-            logger.debug('database schema version: {}'.format(database_schema_version))
-            logger.debug('EPMT schema HEAD: {}'.format(epmt_schema_head))
-            logger.warning('Database needs to be upgraded..')
-            return migrate_db()
-        else:
-            logger.info('database schema up-to-date (version {})'.format(epmt_schema_head))
-    return True
+    return database_schema_version
+
 
 def migrate_db():
     import alembic.config
