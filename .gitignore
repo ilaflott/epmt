@@ -12,6 +12,7 @@
 *.pyo
 *.py~c
 *.py3~c
+__pycache__
 
 # Packages #
 ############

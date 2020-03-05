@@ -87,29 +87,34 @@ def setup_db(settings,drop=False,create=True):
             Session.flush()
             Session.close()
         Base.metadata.drop_all(engine)
-    ins = inspect(engine)
-    if len(ins.get_table_names()) >= 8:
-        logger.info("Reflecting existing schema..")
-        try:
-            Base.metadata.reflect(bind=engine)
-            #meta = MetaData()
-            #meta.reflect(engine)
-            # we can then produce a set of mappings from this MetaData
-            #Base = automap_base(metadata=meta)
-            #thr_data.Base = Base
-            # calling prepare() just sets up mapped classes and relationships.
-            #Base.prepare()
-            #User, Process, Job = Base.classes.users, Base.classes.processes, Base.classes.jobs
-        except:
-            pass
-    else:
-        logger.info("Generating mapping from schema..")
-        try:
-            Base.metadata.create_all(engine)
-        except Exception as e:
-            #logger.error("Mapping to DB, did the schema change? Perhaps drop and create?")
-            logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
-            return False
+        # for tbl in Base.metadata.sorted_tables:
+        #     engine.execute(tbl.delete())
+        # remove alembic version table
+        engine.execute('DROP TABLE IF EXISTS alembic_version')
+    check_migrations()
+    # ins = inspect(engine)
+    # if len(ins.get_table_names()) >= 8:
+    #     logger.info("Reflecting existing schema..")
+    #     try:
+    #         Base.metadata.reflect(bind=engine)
+    #         #meta = MetaData()
+    #         #meta.reflect(engine)
+    #         # we can then produce a set of mappings from this MetaData
+    #         #Base = automap_base(metadata=meta)
+    #         #thr_data.Base = Base
+    #         # calling prepare() just sets up mapped classes and relationships.
+    #         #Base.prepare()
+    #         #User, Process, Job = Base.classes.users, Base.classes.processes, Base.classes.jobs
+    #     except:
+    #         pass
+    # else:
+    #     logger.info("Generating mapping from schema..")
+    #     try:
+    #         Base.metadata.create_all(engine)
+    #     except Exception as e:
+    #         #logger.error("Mapping to DB, did the schema change? Perhaps drop and create?")
+    #         logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
+    #         return False
 
     logger.debug('Configuring scoped session..')
     # hide useless warning when re-configuring a session
@@ -574,6 +579,29 @@ def set_sql_debug(discard):
     print('setting/unsetting SQL debug is not supported on-the-fly')
     print('Try changing the value of the "echo" key in the settings.py:db_params')
     return False
+
+def check_migrations():
+    from alembic import config, script
+    from alembic.runtime import migration
+    # if engine is None:
+    #     import epmt_query # to initialize stuff
+    alembic_cfg = config.Config('alembic.ini')
+    script_ = script.ScriptDirectory.from_config(alembic_cfg)
+    with engine.begin() as conn:
+        context = migration.MigrationContext.configure(conn)
+        database_schema_version = context.get_current_revision()
+        epmt_schema_head = script_.get_current_head()
+        if database_schema_version != epmt_schema_head:
+            logger.debug('database schema version: {}'.format(database_schema_version))
+            logger.debug('EPMT schema HEAD: {}'.format(epmt_schema_head))
+            logger.warning('Database needs to be upgraded..')
+            migrate_db()
+        else:
+            logger.info('database schema up-to-date (version {})'.format(epmt_schema_head))
+
+def migrate_db():
+    import alembic
+    alembic.config.main(argv=['--raiseerr', 'upgrade', 'head',])
 
 #@listens_for(Pool, "connect")
 #def connect(dbapi_connection, connection_rec):
