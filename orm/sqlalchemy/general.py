@@ -91,30 +91,11 @@ def setup_db(settings,drop=False,create=True):
         #     engine.execute(tbl.delete())
         # remove alembic version table
         engine.execute('DROP TABLE IF EXISTS alembic_version')
-    check_migrations()
-    # ins = inspect(engine)
-    # if len(ins.get_table_names()) >= 8:
-    #     logger.info("Reflecting existing schema..")
-    #     try:
-    #         Base.metadata.reflect(bind=engine)
-    #         #meta = MetaData()
-    #         #meta.reflect(engine)
-    #         # we can then produce a set of mappings from this MetaData
-    #         #Base = automap_base(metadata=meta)
-    #         #thr_data.Base = Base
-    #         # calling prepare() just sets up mapped classes and relationships.
-    #         #Base.prepare()
-    #         #User, Process, Job = Base.classes.users, Base.classes.processes, Base.classes.jobs
-    #     except:
-    #         pass
-    # else:
-    #     logger.info("Generating mapping from schema..")
-    #     try:
-    #         Base.metadata.create_all(engine)
-    #     except Exception as e:
-    #         #logger.error("Mapping to DB, did the schema change? Perhaps drop and create?")
-    #         logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
-    #         return False
+
+    # We don't use generate_schema_from_models any more.
+    # Instead we use check_and_apply_migrations to check and apply migrations
+    check_and_apply_migrations()
+    # generate_schema_from_models()
 
     logger.debug('Configuring scoped session..')
     # hide useless warning when re-configuring a session
@@ -124,6 +105,39 @@ def setup_db(settings,drop=False,create=True):
          Session.configure(bind=engine, expire_on_commit=False, autoflush=True)
     db_setup_complete = True
     return True
+
+
+# This function should NOT be used any more.
+# We leave it here for reference and for debugging. This function
+# contains code from the former setup_db, wherein we used to 
+# create tables using the truth in models.py. Now we use the
+# alembic baseline migration instead using check_and_apply_migrations/migrate_db
+def generate_schema_from_models():
+    ins = inspect(engine)
+    if len(ins.get_table_names()) >= 8:
+        logger.info("Reflecting existing schema..")
+        try:
+            Base.metadata.reflect(bind=engine)
+            #meta = MetaData()
+            #meta.reflect(engine)
+            # we can then produce a set of mappings from this MetaData
+            #Base = automap_base(metadata=meta)
+            #thr_data.Base = Base
+            # calling prepare() just sets up mapped classes and relationships.
+            #Base.prepare()
+            #User, Process, Job = Base.classes.users, Base.classes.processes, Base.classes.jobs
+        except:
+            return False
+    else:
+        logger.info("Generating mapping from schema..")
+        try:
+            Base.metadata.create_all(engine)
+        except Exception as e:
+            #logger.error("Mapping to DB, did the schema change? Perhaps drop and create?")
+            logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
+            return False
+    return True
+
 
 # orm_get(Job, '6355501')
 # or
@@ -580,11 +594,12 @@ def set_sql_debug(discard):
     print('Try changing the value of the "echo" key in the settings.py:db_params')
     return False
 
-def check_migrations():
+def check_and_apply_migrations():
     from alembic import config, script
     from alembic.runtime import migration
-    # if engine is None:
-    #     import epmt_query # to initialize stuff
+    if engine is None:
+        logger.error('You have not connected to a database. Please use setup_db() first')
+        return False
     alembic_cfg = config.Config('alembic.ini')
     script_ = script.ScriptDirectory.from_config(alembic_cfg)
     with engine.begin() as conn:
@@ -595,17 +610,23 @@ def check_migrations():
             logger.debug('database schema version: {}'.format(database_schema_version))
             logger.debug('EPMT schema HEAD: {}'.format(epmt_schema_head))
             logger.warning('Database needs to be upgraded..')
-            migrate_db()
+            return migrate_db()
         else:
             logger.info('database schema up-to-date (version {})'.format(epmt_schema_head))
+    return True
 
 def migrate_db():
     import alembic.config
+    if engine is None:
+        logger.error('You have not connected to a database. Please use setup_db() first')
+        return False
     try:
         alembic.config.main(argv=['--raiseerr', 'upgrade', 'head',])
     except Exception as e:
         logger.warning(e, exc_info=True)
         logger.warning('Could not upgrade the database. This likely means that your database schema predates our migration support. The best course would be start with a fresh database.')
+        return False
+    return True
 
 #@listens_for(Pool, "connect")
 #def connect(dbapi_connection, connection_rec):
