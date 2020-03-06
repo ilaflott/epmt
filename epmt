@@ -81,8 +81,8 @@ if (__name__ == "__main__"):
     dump_parser.add_argument('-k', '--key', help="Only dump the value for the specified key")
 
     # db schema
-    db_schema_parser = subparser.add_parser('schema', help="Dump the database schema (SQLAlchemy only)",
-        description="schema will dump the database schema. At present this is supported for the SQLAlchemy ORM only.")
+    db_schema_parser = subparser.add_parser('schema', help="Dump the database schema",
+        description="schema will dump the database schema")
 
     # Run
     run_parser = subparser.add_parser('run', help="Execute a process",

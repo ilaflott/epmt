@@ -11,7 +11,6 @@ def setUpModule():
 class EPMTDBSchema(unittest.TestCase):
 
     # TODO: We need to make this test work for Pony as well
-    @unittest.skipUnless(settings.orm == 'sqlalchemy', 'requires sqlalchemy')
     def test_schema(self):
         with capture() as (out,err):
             retval = orm_dump_schema()

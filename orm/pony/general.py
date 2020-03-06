@@ -444,5 +444,9 @@ def _url2params(url):
     return dict(provider=provider, host=host, port=port, user=user, password=passwd, dbname=dbname)
 
 def orm_dump_schema(show_attributes=True):
-    logger.warning('This feature has not been implemented for Pony ORM')
-    return False
+    from orm.pony.models import Job, Host, Process, User, Group, Queue, Account, ReferenceModel, UnprocessedJob
+    for t in [Job, Host, Process, User, Group, Queue, Account, ReferenceModel, UnprocessedJob]:
+        print('TABLE {}'.format(t._table_ or t.__name__ or t))
+        show(t)
+        print('\n')
+    return True
