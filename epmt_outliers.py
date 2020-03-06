@@ -286,7 +286,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
             added_model_jobs_df = eq.get_jobs(added_model_jobs, fmt='pandas')[['jobid']+features]
             jobs = pd.concat([jobs[['jobid']+features], added_model_jobs_df], axis=0, ignore_index=True)
 
-        (jobs_pca_df, pca_variances, pca_features) = pca_feature_combine(jobs, features, desired = 0.85 if pca is True else pca)
+        (jobs_pca_df, pca_variances, pca_features, _) = pca_feature_combine(jobs, features, desired = 0.85 if pca is True else pca)
 
         # remove the rows of the appended model jobs
         # if trained_model and added_model_jobs:
@@ -599,7 +599,7 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
         if len(features) < 5:
             logger.warning('Too few input features for PCA. Are you sure you did not want to set features=[] to enable selecting all available features?')
         logger.debug('jobid,tags:\n{}'.format(ops[['jobid','tags']]))
-        (ops_pca_df, pca_variances, pca_features) = pca_feature_combine(ops, features, desired = 0.85 if pca is True else pca)
+        (ops_pca_df, pca_variances, pca_features, _) = pca_feature_combine(ops, features, desired = 0.85 if pca is True else pca)
 
         logger.info('{} PCA components obtained: {}'.format(len(pca_features), pca_features))
         logger.info('PCA variances: {} (sum={})'.format(pca_variances, np.sum(pca_variances)))
@@ -853,11 +853,26 @@ def pca_feature_combine(inp_df, inp_features = [], desired = 2, retain_features 
     retain_features: Defaults to False. If enabled, the input features
              will also be copied into the output dataframe.
 
-    RETURNS: A tuple consisting of (out_df, pca_variance_ratios_list, pca_feature_names)
+    RETURNS: A tuple consisting of (out_df, pca_variance_ratios_list, pca_feature_names, features_df)
+
+             where:
+                 out_df: Output dataframe consisting of the jobids, PCA feature
+                         columns and optionally the original feature columns if
+                         retain_features is set.
+                 pca_variance_ratios_list: List of variance ratios. You should
+                         sum them to ensure they capture the variance of the
+                         original data (ideally 80% or higher)
+                 pca_feature_names: List of PCA component names
+                 features_df: Dataframe of shape (n_pca_components X num_features)
+                         This dataframe can be used to determine the feature
+                         weights used to construct the PCA components. The rows
+                         correspond to the PCA components in order. So the first
+                         row is the most important. You probably want to use
+                         the absolute values of the values in this dataframe.
 
     EXAMPLE:
         >>> jobs = eq.get_jobs(['625151', '627907', '629322', '633114', '675992', '680163', '685001', '691209', '693129'], fmt='pandas')
-        >>> (df, variances, pca_features) = eod.pca_feature_combine(jobs)
+        >>> (df, variances, pca_features, features_df) = eod.pca_feature_combine(jobs)
         >>> df.iloc[:,[0,1,2,3]]
             jobid     pca_01    pca_02                                      all_proc_tags
         0  625151  11.748975 -0.700262  [{'op': 'cp', 'op_instance': '1', 'op_sequence...
@@ -876,6 +891,70 @@ def pca_feature_combine(inp_df, inp_features = [], desired = 2, retain_features 
 
         >>> pca_features
             ['pca_01', 'pca_02']
+
+        # we can determine which features are important and contributed to
+        # creating the pca components:
+        >>> features_df
+        PERF_COUNT_SW_CPU_CLOCK  cancelled_write_bytes  cpu_time  ...  vol_ctxsw     wchar  write_bytes
+     0                 0.232936               0.025472  0.233724  ...   0.236599  0.235911     0.235061
+     1                 0.061551              -0.444676  0.053389  ...  -0.047559 -0.059013     0.007000
+
+        # Above, the first row corresponds to pca_01 the first pca component
+        # and is therefore much more important (0.70 / 0.16 ratio) if you
+        # look at the variances. And in the first row you can see which features
+        # are important:
+
+        >>> abs(features_df.loc[0]).sort_values(ascending = False)[:24]
+        usertime                   0.237337
+        minflt                     0.236682
+        vol_ctxsw                  0.236599
+        timeslices                 0.236405
+        wchar                      0.235911
+        syscw                      0.235876
+        rchar                      0.235857
+        num_threads                0.235837
+        num_procs                  0.235835
+        rssmax                     0.235728
+        syscr                      0.235621
+        time_waiting               0.235487
+        outblock                   0.235061
+        write_bytes                0.235061
+        time_oncpu                 0.233821
+        cpu_time                   0.233724
+        PERF_COUNT_SW_CPU_CLOCK    0.232936
+        systemtime                 0.166972
+        duration                   0.137853
+        rdtsc_duration             0.060931
+        inblock                    0.047433
+        read_bytes                 0.047433
+        invol_ctxsw                0.034819
+        cancelled_write_bytes      0.025472
+        majflt                     8.205073e-03
+        exitcode                   5.236299e-18
+        delayacct_blkio_time       3.434487e-18
+        guest_time                 7.059201e-19
+        processor                  0.000000e+00
+
+
+        As you can see all the features listed above are important and roughly
+        equal in importance (except rdtsc_duration onwards). The irrelevant
+        fetaures are at the bottom of the list. We only check the first PCA
+        component (the first row of features_df) because the other is much
+        lower in importance. On the second PCA component, we might care about
+        the top few features:
+
+        >>> abs(features_df.loc[1]).sort_values(ascending = False)[:10]
+        inblock                  0.472362
+        read_bytes               0.472362
+        majflt                   0.465210
+        cancelled_write_bytes    0.444676
+        systemtime               0.234107
+        rdtsc_duration           0.150492
+        duration                 0.119744
+        invol_ctxsw              0.073167
+        syscr                    0.062168
+        rssmax                   0.061841
+        
 
         >>> x = eod.detect_outlier_jobs(df, features = pca_features)
         >>> x[0]
@@ -917,9 +996,10 @@ def pca_feature_combine(inp_df, inp_features = [], desired = 2, retain_features 
     features = _sanitize_features(inp_features, inp_df)
     logger.debug('PCA input features: {}'.format(features))
     inp_data = inp_df[features].to_numpy()
-    (pca_data, pca_variance_ratios) = pca_stat(inp_data, desired)
+    (pca_data, pca_) = pca_stat(inp_data, desired)
     pca_feature_names = []
-    for i in range(len(pca_variance_ratios)):
+    features_df = pd.DataFrame(data = pca_.components_, columns=features)
+    for i in range(len(pca_.explained_variance_ratio_)):
         pca_feature_names.append('pca_{:02d}'.format(i+1))
     out_df = pd.DataFrame(data = pca_data, columns = pca_feature_names, index = inp_df.index)
 
@@ -934,7 +1014,7 @@ def pca_feature_combine(inp_df, inp_features = [], desired = 2, retain_features 
     if 'jobid' in inp_df.columns.values:
         out_cols = ['jobid'] + pca_feature_names + sorted(list(set(out_df.columns.values) - set(['jobid'] + pca_feature_names)))
         out_df = out_df[out_cols]
-    return (out_df, pca_variance_ratios, pca_feature_names)
+    return (out_df, pca_.explained_variance_ratio_, pca_feature_names, features_df)
 
 
 def pca_weighted_score(pca_df, pca_features, variances, index = 1):
@@ -1008,7 +1088,7 @@ def feature_plot_2d(jobs, features = [], outfile='plot.png', annotate = False):
     pca_variances = None
     if len(features) > 2:
         logger.info('Performing 2-component PCA as input features({}) more than 2'.format(features))
-        (jobs_pca_df, pca_variances, pca_features) = pca_feature_combine(jobs_df, features, desired=2)
+        (jobs_pca_df, pca_variances, pca_features, _) = pca_feature_combine(jobs_df, features, desired=2)
         logger.info('{} PCA components obtained: {}'.format(len(pca_features), pca_features))
         logger.info('PCA variances: {}, sum={})'.format(pca_variances, np.sum(pca_variances)))
         jobs_df = jobs_pca_df

@@ -460,11 +460,7 @@ def pca_stat(inp_features, desired = 2):
 
     Returns: A tuple, the first element is a numpy array of
              new PCA features. The second element of the tuple is
-             the list of explained variance ratios. If you sum this
-             list of explained variance ratios you arrive at the
-             cumumlative variance of the PCA, and is a measure
-             of the extent to which the new PCA features capture
-             the original features information.
+             the PCA transform.
     '''
     from sklearn.preprocessing import StandardScaler
     from sklearn.decomposition import PCA
@@ -491,11 +487,12 @@ def pca_stat(inp_features, desired = 2):
     if desired < 1:
         logger.debug('number of PCA components: {}'.format(pc_array.shape[1]))
     logger.debug('PCA array:\n{}'.format(pc_array))
+    logger.debug('PCA feature weights:\n{}'.format(abs(pca.components_)))
     sum_variance = sum(pca.explained_variance_ratio_)
     logger.debug('PCA explained variance ratio: {}, sum({})'.format(pca.explained_variance_ratio_, sum_variance))
     if sum_variance < 0.80:
         logger.warning('cumulative variance for PCA ({}) < 0.80'.format(sum_variance))
-    return (pc_array, pca.explained_variance_ratio_)
+    return (pc_array, pca)
 
 
 def check_dist(data = [], dist='norm', alpha = 0.05):
