@@ -79,6 +79,11 @@ if (__name__ == "__main__"):
         description="Dump will print to console the metadata of a job directory, job archive or a job in the database")
     dump_parser.add_argument('epmt_cmd_args', default=[], nargs='*', help="Archive or list of archives to dump from file-system, or a list of jobids from database")
     dump_parser.add_argument('-k', '--key', help="Only dump the value for the specified key")
+
+    # db schema
+    db_schema_parser = subparser.add_parser('schema', help="Dump the database schema (SQLAlchemy only)",
+        description="schema will dump the database schema. At present this is supported for the SQLAlchemy ORM only.")
+
     # Run
     run_parser = subparser.add_parser('run', help="Execute a process",
         description="Run will execute a command in shell typically used with the auto -a flag to begin instrumentation\

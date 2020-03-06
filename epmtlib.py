@@ -71,6 +71,8 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
     mpl_logger = logging.getLogger('matplotlib') 
     mpl_logger.setLevel(logging.WARNING) 
 
+    alembic_logger = logging.getLogger('alembic')
+    alembic_logger.setLevel(level)
 
 def init_settings(settings):
     logger = getLogger(__name__)

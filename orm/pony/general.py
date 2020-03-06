@@ -442,3 +442,7 @@ def _url2params(url):
     except:
         raise ValueError('database url ({0}) does not have the right format'.format(url))
     return dict(provider=provider, host=host, port=port, user=user, password=passwd, dbname=dbname)
+
+def orm_dump_schema(show_attributes=True):
+    logger.warning('This feature has not been implemented for Pony ORM')
+    return False

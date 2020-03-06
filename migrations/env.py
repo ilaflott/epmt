@@ -21,7 +21,7 @@ from os.path import dirname
 sys.path.append(dirname(__file__) + "/..")
 from settings import db_params
 db_url = db_params.get('url', 'sqlite:///:memory:')
-print('INFO  [alembic.runtime.migration] Using {0}'.format(db_url))
+# print('INFO  [alembic.runtime.migration] Using {0}'.format(db_url))
 config.set_main_option('sqlalchemy.url', db_url)
 
 # add your model's MetaData object here
