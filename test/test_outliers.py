@@ -238,7 +238,7 @@ class OutliersAPI(unittest.TestCase):
 
     def test_pca(self):
         jobs_df = eq.get_jobs(tags='exp_name:linux_kernel', fmt='pandas')
-        (df_pca, variances, pca_features) = eod.pca_feature_combine(jobs_df, desired=0.80)
+        (df_pca, variances, pca_features, _) = eod.pca_feature_combine(jobs_df, desired=0.80)
         self.assertEqual(pca_features, ['pca_01', 'pca_02'])
         self.assertEqual([round(v, 4) for v in list(variances)], [0.6811, 0.2458])
         (df_outl, _) = eod.detect_outlier_jobs(df_pca, features = pca_features)
@@ -254,7 +254,7 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(list(pca_weighted_df['pca_weighted'].values), [0.0, 0.0, 2.8, 0.0])
 
         # now try with single PCA component
-        (df, variances, pca_features) = eod.pca_feature_combine(jobs_df, desired=1)
+        (df, variances, pca_features, _) = eod.pca_feature_combine(jobs_df, desired=1)
         self.assertEqual([round(v, 4) for v in list(variances)], [0.6811])
         self.assertEqual(pca_features, ['pca_01'])
         (outl, _) = eod.detect_outlier_jobs(df, features = pca_features)
