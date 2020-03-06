@@ -58,14 +58,9 @@ def db_session(func):
         return retval
     return wrapper
 
-def setup_db(settings,drop=False,create=True):
-    global db_setup_complete
+# This is a low-level function, which is meant for internal use only
+def _connect_engine():
     global engine
-
-    if db_setup_complete and not(drop):
-        logger.debug('skipping DB setup as it has already been initialized')
-        return True
-    logger.info("Creating engine with db_params: %s", settings.db_params)
     if engine is None:
         try:
             engine = engine_from_config(settings.db_params, prefix='')
@@ -74,6 +69,17 @@ def setup_db(settings,drop=False,create=True):
             logger.error("create_engine from db_params failed")
             logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
             return False
+    return engine
+
+def setup_db(settings,drop=False,create=True):
+    global db_setup_complete
+    global engine
+
+    if db_setup_complete and not(drop):
+        logger.debug('skipping DB setup as it has already been initialized')
+        return True
+    logger.info("Creating engine with db_params: %s", settings.db_params)
+    _connect_engine()
 
     ## print the compile options
     # with engine.connect() as con:
@@ -533,9 +539,15 @@ def orm_dump_schema(show_attributes=True):
     disabled then the list of tables is returned instead.
     '''
     if show_attributes:
+        # we only use the metadata for in-memory databases. For all
+        # persistent backends, the migration scripts are the source of truth.
+        from orm import orm_in_memory
+        if not orm_in_memory():
+            return alembic_dump_schema()
+
         # alteratively return [t.name for t in Base.metadata.sorted_tables]
         for t in Base.metadata.sorted_tables: 
-            print('\nTable', t.name)
+            print('\nTABLE', t.name)
             for c in t.columns:
                 try:
                     print('%20s\t%10s' % (c.name, str(c.type)))
@@ -612,9 +624,7 @@ def check_and_apply_migrations():
 def get_db_schema_version():
     from alembic import config
     from alembic.runtime import migration
-    if engine is None:
-        logger.error('You have not connected to a database. Please use setup_db() first')
-        return False
+    engine = _connect_engine()
     alembic_cfg = config.Config('alembic.ini')
     with engine.begin() as conn:
         context = migration.MigrationContext.configure(conn)
@@ -623,9 +633,6 @@ def get_db_schema_version():
 
 
 def migrate_db():
-    if engine is None:
-        logger.error('You have not connected to a database. Please use setup_db() first')
-        return False
     from alembic import config, script
     from sqlalchemy import exc
     alembic_cfg = config.Config('alembic.ini')
@@ -644,6 +651,21 @@ def migrate_db():
     else:
         logger.info('Database successfully migrated to: {}'.format(epmt_schema_head))
     return (epmt_schema_head == updated_version)
+
+def alembic_dump_schema(version = ''):
+    '''
+    This functions dumps the raw SQL needed to generate the
+    schema upto the specified schema version. If the version
+    is unspecified HEAD is assumed.
+    '''
+    from alembic import config
+    if not version:
+        version = get_db_schema_version()
+    logger.info('Dumping schema upto version: {}'.format(version))
+    try:
+        config.main(argv=['upgrade', '--sql', version,])
+    except:
+        pass
 
 #@listens_for(Pool, "connect")
 #def connect(dbapi_connection, connection_rec):
