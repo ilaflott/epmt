@@ -888,7 +888,7 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
         ops_df = get_op_metrics(jobs = jobs_orm, tags = op_tags, exact_tags_only = exact_tag_only, fmt='pandas')
         logger.debug('jobid,tags:\n{}'.format(ops_df[['jobid','tags']]))
         if pca:
-            (ops_pca_df, pca_variances, pca_features) = pca_feature_combine(ops_df, features, desired = 0.85 if pca is True else pca)
+            (ops_pca_df, pca_variances, pca_features, _) = pca_feature_combine(ops_df, features, desired = 0.85 if pca is True else pca)
             logger.info('{} PCA components obtained: {}'.format(len(pca_features), pca_features))
             logger.info('PCA variances: {} (sum={})'.format(pca_variances, np.sum(pca_variances)))
             ops_df = ops_pca_df
@@ -905,7 +905,7 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
         # full jobs, no ops
         logger.debug('jobid,tags:\n{}'.format(jobs_df[['jobid','tags']]))
         if pca:
-            (jobs_pca_df, pca_variances, pca_features) = pca_feature_combine(jobs_df, features, desired = 0.85 if pca is True else pca)
+            (jobs_pca_df, pca_variances, pca_features, _) = pca_feature_combine(jobs_df, features, desired = 0.85 if pca is True else pca)
             logger.info('{} PCA components obtained: {}'.format(len(pca_features), pca_features))
             logger.info('PCA variances: {} (sum={})'.format(pca_variances, np.sum(pca_variances)))
             jobs_df = jobs_pca_df
