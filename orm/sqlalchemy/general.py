@@ -615,7 +615,7 @@ def check_and_apply_migrations():
     if database_schema_version != epmt_schema_head:
         logger.debug('database schema version: {}'.format(database_schema_version))
         logger.debug('EPMT schema HEAD: {}'.format(epmt_schema_head))
-        logger.warning('Database needs to be upgraded..')
+        logger.info('Database needs to be upgraded..')
         return migrate_db()
     else:
         logger.info('database schema up-to-date (version {})'.format(epmt_schema_head))

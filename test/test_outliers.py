@@ -273,6 +273,15 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(list(outl['pca_01'].values), [0, 0, 1, 0])
         self.assertEqual(list(outl['pca_02'].values), [0, 0, 0, 0])
 
+    def test_pca_feature_imp(self):
+        jobs_df = eq.get_jobs(tags='exp_name:linux_kernel', fmt='pandas')
+        (_, _, _, features_df) = eod.pca_feature_combine(jobs_df)
+        self.assertEqual(features_df.shape, (2, 29))
+        # check the first row of the dataframe
+        self.assertEqual(set(zip(abs(features_df).iloc[0].index.values, abs(features_df).iloc[0].values.round(4))), {('duration', 0.2618), ('time_oncpu', 0.2612), ('outblock', 0.0), ('systemtime', 0.2621), ('syscr', 0.2351), ('cancelled_write_bytes', 0.261), ('syscw', 0.2166), ('rssmax', 0.2392), ('processor', 0.0), ('exitcode', 0.0), ('wchar', 0.0813), ('time_waiting', 0.2619), ('majflt', 0.0), ('cpu_time', 0.2612), ('num_procs', 0.0), ('rdtsc_duration', 0.2612), ('invol_ctxsw', 0.2605), ('inblock', 0.1209), ('PERF_COUNT_SW_CPU_CLOCK', 0.2612), ('minflt', 0.0422), ('guest_time', 0.0), ('num_threads', 0.0), ('vol_ctxsw', 0.2265), ('usertime', 0.261), ('write_bytes', 0.0822), ('timeslices', 0.2594), ('rchar', 0.061), ('delayacct_blkio_time', 0.0), ('read_bytes', 0.0758)})
+        # check the second row of the dataframe
+        self.assertEqual(set(zip(abs(features_df).iloc[1].index.values, abs(features_df).iloc[1].values.round(4))), {('duration', 0.062), ('time_waiting', 0.0575), ('outblock', 0.0), ('vol_ctxsw', 0.0195), ('syscw', 0.1484), ('usertime', 0.0693), ('rssmax', 0.1546), ('time_oncpu', 0.0671), ('processor', 0.0), ('exitcode', 0.0), ('read_bytes', 0.4215), ('majflt', 0.0), ('num_procs', 0.0), ('rdtsc_duration', 0.0685), ('syscr', 0.005), ('systemtime', 0.0572), ('cancelled_write_bytes', 0.0688), ('wchar', 0.4183), ('num_threads', 0.0), ('guest_time', 0.0), ('write_bytes', 0.4179), ('cpu_time', 0.0672), ('timeslices', 0.0796), ('rchar', 0.4092), ('invol_ctxsw', 0.074), ('inblock', 0.3839), ('PERF_COUNT_SW_CPU_CLOCK', 0.0669), ('delayacct_blkio_time', 0.0), ('minflt', 0.2482)})
+
     def test_pca_ops(self):
         out_df = eod.detect_outlier_ops(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], features=[], pca = True)
         self.assertEqual(out_df.shape, (20, 5))
