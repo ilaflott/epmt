@@ -1053,6 +1053,56 @@ def pca_weighted_score(pca_df, pca_features, variances, index = 1):
     out_df.insert(index, 'pca_weighted', pca_weighted_vec)
     return (out_df, pca_weighted_vec)
 
+def pca_feature_rank(jobs, inp_features = []):
+    '''
+    This function does a 2-component PCA analysis and returns a dataframe
+    with features sorted by importance. The dataframe consists of 3 rows:
+    The first two rows are the feature coefficients for the two PCA
+    components (the first being more important than the second).
+    The third row uses the PCA variances as weights and determines a
+    composite absolute score for the feature. The dataframe columns
+    are sorted from left-to-right in decreasing feature importance.
+
+    jobs: Collection of jobs
+    inp_features: The list of features to use. If empty, all available
+          input features will be used.
+
+    This function is just a simple wrapper around pca_feature_combine.
+
+    >>> rf = pca_feature_rank(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'])
+    ...
+    DEBUG: epmt_stat: PCA explained variance ratio: [0.68112048 0.24584736], sum(0.9269678411657647)
+    DEBUG: epmt_outliers: normalized weights: [0.734783288753193, 0.2652167112468071]
+    >>> rf
+         rssmax  timeslices  invol_ctxsw  usertime  ...  guest_time  exitcode  delayacct_blkio_time  processor
+    0  0.239197    0.259398     0.260517  0.260960  ...         0.0       0.0                   0.0        0.0
+    1  0.154595   -0.079616    -0.073984 -0.069349  ...        -0.0      -0.0                  -0.0       -0.0
+    2  0.216759    0.211717     0.211045  0.210142  ...         0.0       0.0                   0.0        0.0
+
+    [3 rows x 29 columns]
+
+    # Above you see that the dataframe is sorted on the last row values
+    # The last row is a weighted score determined by multiplying the
+    # first row (abs value) by it's PCA variance ratio, and the second by it's
+    # variance ratio, summing the values and then dividing by the sum of the
+    # variance ratios to normalize the values. Since, the first row's weight is 
+    # significantly higher than the second, the final score is close
+    # to the abs value of the first row to the first order of approximation
+
+
+    >>> list(zip(rf.iloc[-1].index, rf.iloc[-1].round(4)))
+    [('rssmax', 0.2168), ('timeslices', 0.2117), ('invol_ctxsw', 0.211), ('usertime', 0.2101), ('rdtsc_duration', 0.2101), ('cancelled_write_bytes', 0.21), ('cpu_time', 0.2097), ('time_oncpu', 0.2097), ('PERF_COUNT_SW_CPU_CLOCK', 0.2097), ('duration', 0.2088), ('systemtime', 0.2077), ('time_waiting', 0.2077), ('syscw', 0.1985), ('inblock', 0.1906), ('syscr', 0.1741), ('vol_ctxsw', 0.1716), ('write_bytes', 0.1713), ('wchar', 0.1707), ('read_bytes', 0.1675), ('rchar', 0.1534), ('minflt', 0.0968), ('outblock', 0.0), ('num_threads', 0.0), ('num_procs', 0.0), ('majflt', 0.0), ('guest_time', 0.0), ('exitcode', 0.0), ('delayacct_blkio_time', 0.0), ('processor', 0.0)]
+
+    '''
+    from epmt_stat import dframe_append_weighted_row
+
+    jobs_df = eq.get_jobs(jobs, fmt='pandas')
+    (_, variances, _, features_df) = pca_feature_combine(jobs_df, inp_features)
+    weights = variances / variances.sum()
+    logger.debug('normalized weights: {}'.format(list(weights)))
+    # sort dataframe returned by dframe_append_weighted_row based on the values
+    # in the last row
+    return dframe_append_weighted_row(features_df, weights, use_abs = True).sort_values(features_df.shape[0], axis=1, ascending=False)
 
 def feature_plot_2d(jobs, features = [], outfile='plot.png', annotate = False):
     '''
