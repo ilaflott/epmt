@@ -614,3 +614,33 @@ def normalize(v, min_=0, max_=1):
     '''
     from sklearn.preprocessing import minmax_scale
     return minmax_scale(v, feature_range=(min_,max_), axis=0)
+
+def dataframe_append_weighted_row(df, weights, ignore_index = True):
+    '''
+    Returns a dataframe that's a copy of the original dataframe,
+    with an additional row computed by multiplying each element
+    in the same column with its corresponding weight and then
+    summing over the columns.
+
+    df: input dataframe
+    weights: list of weights, with same length as number of rows in df
+    ignore_index = If True (default), index labels are dropped.
+
+    >>> df
+       A  B  C
+    0  1  2  2
+    1  2  3  4
+    >>> dataframe_append_weighted_row(df, [10,20])
+        A   B    C
+    0   1   2    2
+    1   2   3    4
+    
+    '''
+    assert(df.shape[0] == len(weights))
+    weights_array = np.asarray(weights)
+    new_row = []
+    
+    for c in df.columns:
+        new_row.append((df[c].values * np.asarray(weights_array)).sum())
+    return df.append(pd.DataFrame([new_row], columns = df.columns), ignore_index = ignore_index)
+        
