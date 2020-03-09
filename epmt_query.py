@@ -1725,6 +1725,7 @@ def _empty_collection_check(col):
         logger.warning(msg)
         raise ValueError(msg)
 
+@db_session
 def compute_process_trees(jobs):
     '''
     Compute process trees for specified jobs.
