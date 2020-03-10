@@ -259,6 +259,11 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
         logger.error(err_msg)
         raise ValueError(err_msg)
 
+    if mv_methods and pca:
+        err_msg = 'Multivariate classifiers use with PCA is neither advisable nor supported'
+        logger.error(err_msg)
+        raise ValueError(err_msg)
+
     logger.info('outlier detection will be performed using {} univariate and {} multivariate classifiers'.format(len(uv_methods), len(mv_methods)))
 
     # sanitize features list
@@ -566,6 +571,23 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
         for m in methods:
             m_name = get_classifier_name(m)
             model_params[t][m] = trained_model.computed[t][m_name] if trained_model else {}
+
+    (uv_methods, mv_methods) = partition_classifiers_uv_mv(methods)
+
+    if mv_methods:
+        err_msg = 'Multivariate classifiers for operations are not supported at present'
+        logger.error(err_msg)
+        raise ValueError(err_msg)
+
+    if mv_methods and (trained_model is None):
+        err_msg = 'Multivariate classifiers require a trained model for outlier detection'
+        logger.error(err_msg)
+        raise ValueError(err_msg)
+
+    if mv_methods and pca:
+        err_msg = 'Multivariate classifiers use with PCA is neither advisable nor supported'
+        logger.error(err_msg)
+        raise ValueError(err_msg)
 
     if trained_model and pca:
         # for PCA analysis if we use a trained model, then we need to
@@ -1185,17 +1207,19 @@ def feature_plot_2d(jobs, features = [], outfile='plot.png', annotate = False):
 # df: jobs dataframe
 # model: reference model
 def _sanitize_features(f, df, model = None):
+    # logger.debug('dataframe shape: {}'.format(df.shape))
     if f in ([], '', '*', None):
         logger.debug('using all available features in dataframe')
         f = set(df.columns.values)
     else:
+        logger.debug('Choosing common features between: {} and {}'.format(f, df.columns.values))
         f = set(f) & set(df.columns.values)
 
     if model is not None:
         model_id = model.id if (type(model) != int) else model
         model_metrics = eq.refmodel_get_metrics(model_id, active_only = True)
-        # print('model metrics: ', model_metrics)
         # take the intersection set
+        logger.debug('Choosing intersection of features with model metrics ({})'.format(model_metrics))
         f &= model_metrics
 
     # remove blacklisted features

@@ -719,7 +719,7 @@ def _refmodel_scores(col, outlier_methods, features):
             # and containing the max anomaly score using the classifier
             retval = mvod_scores(nd_array, classifiers = [m])
             if not retval:
-                logger.warning('Could not score using mvod classifier {}. Skipping it.'.format(m_name))
+                logger.warning('Skipped mvod classifier {} as could not score using it'.format(m_name))
                 del ret[m_name]
                 continue
             (full_scores, max_score) = retval
@@ -857,6 +857,9 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
     jobs_df = conv_jobs(jobs_orm, fmt='pandas')
     jobs = jobs_orm[:]
     from epmt_outliers import _sanitize_features
+    if (len(jobs) < 3):
+        logger.error('You cannot create a model with less than 3 jobs. Your chosen jobs: {}'.format(jobs))
+        return False
 
     if sanity_check:
         _warn_incomparable_jobs(jobs)

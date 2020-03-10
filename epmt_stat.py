@@ -115,7 +115,7 @@ def mvod_classifiers(contamination = 0.1, warnopts='ignore'):
     #from pyod.models.cblof import CBLOF
     #from pyod.models.loci import LOCI # wrong result
     from pyod.models.ocsvm import OCSVM
-    from pyod.models.iforest import IForest
+    # from pyod.models.iforest import IForest # not stable, repeated calls give different scores
 
     classifiers = [
                       ABOD(contamination=contamination), 
@@ -125,7 +125,7 @@ def mvod_classifiers(contamination = 0.1, warnopts='ignore'):
                       HBOS(contamination=contamination), 
                       PCA(contamination=contamination), 
                       OCSVM(contamination=contamination), 
-                      IForest(contamination=contamination),
+                      # IForest(contamination=contamination), # unstable, repeated calls give diff scores
                   ]
     return classifiers
 
@@ -232,14 +232,13 @@ def mvod_scores(X = None, classifiers = [], warnopts = 'ignore'):
             # fit the dataset to the model
             clf.fit(X)
             # predict raw anomaly score
-            _clf_scores = clf.decision_function(X)
+            _clf_scores = clf.decision_function(X).round(4)
         except Exception as e:
-            logger.warning('Could not score using classifier {}'.format(clf_name))
-            logger.warning('Exception follows below: ')
-            logger.warning(e, exc_info=True)
+            logger.warning('Could not score using classifier {}: {}'.format(clf_name, e))
+            # logger.warning(e, exc_info=True)
             continue
         if not check_finite(_clf_scores):
-            logger.warning('Could not score using classifier {} -- got NaNs or Inf'.format(clf_name))
+            logger.warning('Could not score using classifier {}: got NaN or Inf'.format(clf_name))
             continue
         scores[clf_name] = _clf_scores
         max_score_for_cf[clf_name] = _clf_scores.max()

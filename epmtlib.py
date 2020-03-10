@@ -18,7 +18,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (3,5,11)
+_version = (3,5,12)
 
 def version():
     return _version
@@ -70,6 +70,10 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
     # matplotlib generates a ton of debug messages
     mpl_logger = logging.getLogger('matplotlib') 
     mpl_logger.setLevel(logging.WARNING) 
+
+    # numba.byteflow generates a ton of debug messages
+    numba_logger = logging.getLogger('numba') 
+    numba_logger.setLevel(logging.WARNING) 
 
     alembic_logger = logging.getLogger('alembic')
     alembic_logger.setLevel(level)
