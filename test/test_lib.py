@@ -35,6 +35,13 @@ class EPMTLib(unittest.TestCase):
         merged = merge_intervals([[-25, -14], [-21, -16], [-20, -15], [-10, -7], [-8, -5], [-6, -3], [2, 4], [2, 3], [3, 6], [12, 15], [13, 18], [14, 17], [22, 27], [25, 30], [26, 29]])
         self.assertEqual(merged, [[-25, -14], [-10, -3], [2, 6], [12, 18], [22, 30]])
 
+    def test_encode_strings(self):
+        v = ['ABC', 'ABC', 'DEF', '', 'abcd']
+        from epmtlib import encode2ints, decode2strings
+        x = encode2ints(v)
+        self.assertEqual(x, [4407873, 4407873, 4605252, 0, 1684234849])
+        self.assertEqual(decode2strings(x), v)
+
 
 if __name__ == '__main__':
     unittest.main()

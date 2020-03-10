@@ -18,7 +18,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (3,5,13)
+_version = (3,5,14)
 
 def version():
     return _version
@@ -692,6 +692,37 @@ def natural_keys(text):
     '''
     import re
     return [ atoi(c) for c in re.split(r'(\d+)', text) ]
+
+
+
+
+def encode2ints(v):
+    '''
+    Encodes a vector of strings to a vector of ints
+    https://stackoverflow.com/questions/53420705/python-reversibly-encode-alphanumeric-string-to-integer
+    '''
+    def encode_string_to_int(s):
+        '''
+        Encodes a string as an int
+        '''
+        mBytes = s.encode("utf-8")
+        return int.from_bytes(mBytes, byteorder="little")
+    return [ encode_string_to_int(s) for s in v ]
+
+def decode2strings(v):
+    '''
+    Decodes a vector of ints to a vector of strings.
+    The vector of ints MUST have been encoded using
+    "encode_strings"
+    '''
+    def decode_string_from_int(n):
+        '''
+        Decodes a string from an int. The int MUST have
+        been encoded using encode_string_to_int
+        '''
+        mBytes = n.to_bytes(((n.bit_length() + 7) // 8), byteorder="little")
+        return mBytes.decode("utf-8")
+    return [ decode_string_from_int(n) for n in v ]
 
 if __name__ == "__main__":
     print(version_str(True))

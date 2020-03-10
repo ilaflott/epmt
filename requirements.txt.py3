@@ -26,6 +26,7 @@ jupyter-client==5.3.4
 jupyter-console==6.0.0
 jupyter-core==4.6.1
 kiwisolver==1.1.0
+kmodes==0.10.2
 lazy-object-proxy==1.4.3
 llvmlite==0.31.0
 lockfile==0.12.2
