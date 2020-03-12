@@ -35,12 +35,23 @@ class EPMTLib(unittest.TestCase):
         merged = merge_intervals([[-25, -14], [-21, -16], [-20, -15], [-10, -7], [-8, -5], [-6, -3], [2, 4], [2, 3], [3, 6], [12, 15], [13, 18], [14, 17], [22, 27], [25, 30], [26, 29]])
         self.assertEqual(merged, [[-25, -14], [-10, -3], [2, 6], [12, 18], [22, 30]])
 
-    def test_encode_strings(self):
+    def test_encode_decode(self):
         v = ['ABC', 'ABC', 'DEF', '', 'abcd']
         from epmtlib import encode2ints, decode2strings
         x = encode2ints(v)
         self.assertEqual(x, [4407873, 4407873, 4605252, 0, 1684234849])
         self.assertEqual(decode2strings(x), v)
+
+    def test_encode_decode_dframe(self):
+        import pandas as pd
+        from epmtlib import dframe_encode_features, dframe_decode_features
+        df = pd.DataFrame([['hello', 1, 2, 'My Name'], ['def', 2, 100, "Your Name"], ['', 0, 45, "No name"]], columns = ['A', 'B', 'C', 'D'])
+        (encdf, encf) = dframe_encode_features(df)
+        self.assertEqual(set(encf), {'D', 'A'})
+        self.assertFalse(encdf.equals(df))
+        (decdf, decf) = dframe_decode_features(encdf, encf)
+        self.assertEqual(set(decf), {'D', 'A'})
+        self.assertTrue(decdf.equals(df))
 
 
 if __name__ == '__main__':

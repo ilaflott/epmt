@@ -1302,6 +1302,7 @@ def get_feature_distributions(jobs, features = []):
         logger.debug('{} -> {}'.format(c, v_dist))
     return dist_dict
 
+
 # Raise an exception if the length of a collection is less than
 # min_length
 def _err_col_len(c, min_length = 1, msg = None):

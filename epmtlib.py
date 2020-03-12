@@ -18,7 +18,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (3,5,14)
+_version = (3,5,15)
 
 def version():
     return _version
@@ -720,9 +720,85 @@ def decode2strings(v):
         Decodes a string from an int. The int MUST have
         been encoded using encode_string_to_int
         '''
+        n = int(n) # in case n is an int64
         mBytes = n.to_bytes(((n.bit_length() + 7) // 8), byteorder="little")
         return mBytes.decode("utf-8")
     return [ decode_string_from_int(n) for n in v ]
+
+def dframe_encode_features(df, features = []):
+    '''
+    Replaces feature columns containing string/object (non-numeric)
+    values with columns containing encoded integers. 
+
+         df: Input dataframe possibly containing non-numeric feature columns
+
+   features: If supplied, only these columns will be assumed to have
+             non-numeric values, and hence only these columns will be
+             mapped.
+
+    RETURNS: (encoded_df, mapped_features)
+
+         encoded_df: Output dataframe which contains non-numeric
+                     feature columns replaced with encoded integer features.
+   encoded_features: List of feature column names that were replaced with
+                     encoded integers.
+
+    NOTE: If encoded_features is empty, no features were encoded.
+    '''
+    logger = getLogger(__name__)
+    features = features or list(set(df.select_dtypes(include='object').columns.values) - {'jobid'})
+    if not features:
+        logger.warning('No non-numeric feature columns found in the dataframe; none encoded')
+        return (df, [])
+    encoded_df = df.copy()
+    encoded_features = []
+    logger.debug('encoding feature columns: {}'.format(features))
+    for c in features:
+        str_vec = df[c].to_numpy()
+        int_vec = encode2ints(str_vec)
+        encoded_df[c] = int_vec
+        logger.debug('mapped feature {}: {} -> {}'.format(c, str_vec, int_vec))
+        encoded_features.append(c)
+    logger.info('Encoded features: {}'.format(encoded_features))
+    return (encoded_df, encoded_features)
+
+
+def dframe_decode_features(df, features):
+    '''
+    Decodes features in dataframe that were previously encoded
+    using dframe_encode_features. 
+
+           df: Input dataframe containing one or more feature columns
+               that were encoded using dframe_encode_features
+
+     features: List of feature names that need to be decoded
+
+      RETURNS: (decoded_df, decoded_features)
+
+               decoded_df: Dataframe with decoded features
+         decoded_features: List of features that were decoded
+
+        NOTE: Please check restored_features to ensure that the features
+              were indeed decoded
+    '''
+    logger = getLogger(__name__)
+    decoded_df = df.copy()
+    decoded_features = []
+    for c in features:
+        int_vec = df[c].to_numpy()
+        str_vec = decode2strings(int_vec)
+        decoded_df[c] = str_vec
+        logger.debug('decoded {}: {} -> {}'.format(c, int_vec, str_vec))
+        decoded_features.append(c)
+    if decoded_features != features:
+        logger.warning('decoded features list is not identical to requested features')
+    if not decoded_features:
+        logger.warning('No features were decoded')
+    else:
+        logger.info('Decoded features: {}'.format(decoded_features))
+    return (decoded_df, decoded_features)
+    
+
 
 if __name__ == "__main__":
     print(version_str(True))
