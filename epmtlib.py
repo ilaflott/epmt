@@ -18,7 +18,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (3,5,16)
+_version = (3,5,17)
 
 def version():
     return _version
@@ -134,7 +134,7 @@ def init_settings(settings):
         settings.outlier_features = ['duration', 'cpu_time', 'num_procs']
     if not hasattr(settings, 'outlier_features_blacklist'):
         logger.warning("missing settings.outlier_features_blacklist")
-        settings.outlier_features_blacklist = []
+        settings.outlier_features_blacklist = ['env_dict', 'tags', 'info_dict', 'env_changes_dict', 'annotations', 'analyses', 'jobid', 'jobname', 'user', 'all_proc_tags']
     if not hasattr(settings, 'retire_jobs_ndays'):
         logger.warning("missing settings.retire_jobs_ndays")
         settings.retire_jobs_ndays = 0
@@ -699,7 +699,8 @@ def hash_strings(v):
     Hashes a vector of strings and returns a vector of integers
     '''
     import hashlib
-    return [ int(hashlib.sha256((s).encode('utf-8')).hexdigest(), 16) % 10**8 for s in v ]
+    x = [ dumps(s, sort_keys=True) if (type(s) != str) else s  for s in v ]
+    return [ int(hashlib.sha256((s).encode('utf-8')).hexdigest(), 16) % 10**8 for s in x ]
 
 
 def encode2ints(v):
@@ -707,13 +708,15 @@ def encode2ints(v):
     Encodes a vector of strings to a vector of ints
     https://stackoverflow.com/questions/53420705/python-reversibly-encode-alphanumeric-string-to-integer
     '''
-    def encode_string_to_int(s):
+    def encode_to_int(s):
         '''
         Encodes a string as an int
         '''
+        if type(s) != str:
+            s = dumps(s, sort_keys=True)
         mBytes = s.encode("utf-8")
         return int.from_bytes(mBytes, byteorder="little")
-    return [ encode_string_to_int(s) for s in v ]
+    return [ encode_to_int(s) for s in v ]
 
 def decode2strings(v):
     '''
@@ -757,10 +760,18 @@ def dframe_encode_features(df, features = [], reversible = False):
     NOTE: If encoded_features is empty, no features were encoded.
     '''
     logger = getLogger(__name__)
-    features = features or list(set(df.select_dtypes(include='object').columns.values) - {'jobid'})
     if not features:
-        logger.warning('No non-numeric feature columns found in the dataframe; none encoded')
+        import epmt_settings as settings
+        logger.debug('Selecting non-numeric columns from dataframe and then pruning out blacklisted features')
+        obj_features = list(df.select_dtypes(include='object').columns.values)
+        logger.debug('Non-numeric features in dataframe: {}'.format(obj_features))
+        logger.debug('Blacklisted features to prune: {}'.format(settings.outlier_features_blacklist))
+        features = list(set(df.select_dtypes(include='object').columns.values) - set(settings.outlier_features_blacklist))
+
+    if not features:
+        logger.warning('No non-numeric, eligible, feature columns found in the dataframe; none encoded')
         return (df, [])
+
     if reversible:
         logger.warning('You have enabled "reversible". Be warned that the encoded feature columns can contain some very large integers')
     encoded_df = df.copy()

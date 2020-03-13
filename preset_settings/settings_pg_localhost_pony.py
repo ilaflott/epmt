@@ -32,7 +32,7 @@ db_params = { 'url': 'postgresql://postgres:example@localhost:5432/EPMT' }
 # outlier_features = ['duration', 'cpu_time', 'num_procs']
 # # blacklist features for outlier detection. These will be skipped.
 # # e.g, outlier_features_blacklist = ['rdtsc_duration', 'vol_ctxsw']
-# outlier_features_blacklist = []
+# outlier_features_blacklist = ['env_dict', 'tags', 'info_dict', 'env_changes_dict', 'annotations', 'analyses', 'jobid', 'jobname', 'user', 'all_proc_tags']
 #
 # data retention
 # You will need to run `epmt retire` in a cron job for this to happen

@@ -269,7 +269,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
     # sanitize features list
     if pca and features and (features != '*'):
         logger.warning('It is strongly recommended to set features=[] when doing PCA')
-    features = _sanitize_features(features, jobs, trained_model)
+    features = sanitize_features(features, jobs, trained_model)
 
     if pca is not False:
         logger.info("request to do PCA (pca={}). Input features: {}".format(pca, features))
@@ -614,7 +614,7 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
         return (None, {})
     if pca and features and (features != '*'):
         logger.warning('It is strongly recommended to set features=[] when doing PCA')
-    features = _sanitize_features(features, ops, trained_model)
+    features = sanitize_features(features, ops, trained_model)
 
     if pca:
         logger.info("request to do PCA (pca={}). Input features: {}".format(pca, features))
@@ -1015,7 +1015,7 @@ def pca_feature_combine(inp_df, inp_features = [], desired = 2, retain_features 
         logger.error('Input needs to be a pandas dataframe')
         return False
 
-    features = _sanitize_features(inp_features, inp_df)
+    features = sanitize_features(inp_features, inp_df)
     logger.debug('PCA input features: {}'.format(features))
     inp_data = inp_df[features].to_numpy()
     (pca_data, pca_) = pca_stat(inp_data, desired)
@@ -1167,7 +1167,7 @@ def feature_plot_2d(jobs, features = [], outfile='plot.png', annotate = False):
     >>> feature_plot_2d(['625151', '627907', '629322', '633114', '675992', '680163', '685001', '691209', '693129'], features=['cpu_time', 'duration'])
     '''
     jobs_df = eq.get_jobs(jobs, fmt='pandas')
-    features = _sanitize_features(features, jobs_df)
+    features = sanitize_features(features, jobs_df)
     title_ex = ''  # extention to append to the title on the plot
     pca_variances = None
     if len(features) > 2:
@@ -1218,7 +1218,7 @@ def feature_plot_2d(jobs, features = [], outfile='plot.png', annotate = False):
 # f: feature list
 # df: jobs dataframe
 # model: reference model
-def _sanitize_features(f, df, model = None):
+def sanitize_features(f, df, model = None):
     # logger.debug('dataframe shape: {}'.format(df.shape))
     if f in ([], '', '*', None):
         logger.debug('using all available features in dataframe')
@@ -1235,7 +1235,10 @@ def _sanitize_features(f, df, model = None):
         f &= model_metrics
 
     # remove blacklisted features
-    f -= set(settings.outlier_features_blacklist)
+    _blacklisted_features = f & set(settings.outlier_features_blacklist)
+    if _blacklisted_features:
+        logger.debug('Pruning blacklisted features: {}'.format(_blacklisted_features))
+        f -= set(settings.outlier_features_blacklist)
 
     features = []
     # only allow features that have int/float types
@@ -1285,7 +1288,7 @@ def get_feature_distributions(jobs, features = []):
     if type(jobs) != pd.DataFrame:
         jobs = eq.conv_jobs(jobs, fmt='pandas')
 
-    features = _sanitize_features(features, jobs)
+    features = sanitize_features(features, jobs)
     dist_dict = {}
     from epmt_stat import check_dist
     for c in features:

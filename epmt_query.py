@@ -856,7 +856,7 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
     jobs_orm = orm_jobs_col(jobs)
     jobs_df = conv_jobs(jobs_orm, fmt='pandas')
     jobs = jobs_orm[:]
-    from epmt_outliers import _sanitize_features
+    from epmt_outliers import sanitize_features
     if (len(jobs) < 3):
         logger.error('You cannot create a model with less than 3 jobs. Your chosen jobs: {}'.format(jobs))
         return False
@@ -866,7 +866,7 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
 
     if pca and features and (features != '*'):
         logger.warning('It is strongly recommended to set features=[] when doing PCA')
-    features = _sanitize_features(features, jobs_df)
+    features = sanitize_features(features, jobs_df)
     orig_features = features  # keep a copy as features might be reassigned below
     if pca:
         logger.info("request to do PCA (pca={}). Input features: {}".format(pca, features))
@@ -1827,3 +1827,26 @@ def exp_explore(exp_name, order_key = 'duration', op = 'sum', limit=10):
             idx += 1
     return True
 
+
+@db_session
+def procs_histogram(jobs, attr = 'exename'):
+    '''
+    Gets a processes histogram for a collection of jobs
+
+    jobs: collection of one or more jobs or jobids
+    attr: the attribute from the process model that is the basis of
+          the histogram. Defaults to 'exename'
+
+    RETURNS: A dictionary of the form:
+             { 'bash': 1256, 'cmp': 10, ... }
+            where the key is a process executable and its value is the number
+            of the times the executable was executed.
+    '''
+    logger = getLogger(__name__)  # you can use other name
+    procs_dict = {}
+    procs = get_procs(jobs, fmt='orm')
+    logger.debug('{} processes found'.format(procs.count()))
+    for p in procs:
+        attr_val = getattr(p, attr)
+        procs_dict[attr_val] = procs_dict.get(attr_val, 0) + 1
+    return procs_dict
