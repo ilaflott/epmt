@@ -7,6 +7,20 @@ import numpy as np
 from epmt_stat import check_dist
 
 class EPMTStat(unittest.TestCase):
+
+    def test_outliers_iqr(self):
+        from epmt_stat import outliers_iqr
+        vec = [100, 100, 100, 45, 100]
+        r = outliers_iqr(vec)
+        self.assertEqual(list(r), [3])
+
+    def test_outliers_iqr_strings(self):
+        import epmtlib as el
+        from epmt_stat import outliers_iqr
+        int_vec = el.hash_strings(['ABC', 'ABC', "ABC", 'DEF'])
+        r = outliers_iqr(int_vec)
+        self.assertEqual(list(r), [3])
+
     def test_check_dist(self):
         np.random.seed(1)
         (passed, failed) = check_dist(range(100), 'norm')

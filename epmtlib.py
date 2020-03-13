@@ -18,7 +18,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (3,5,15)
+_version = (3,5,16)
 
 def version():
     return _version
@@ -694,6 +694,12 @@ def natural_keys(text):
     return [ atoi(c) for c in re.split(r'(\d+)', text) ]
 
 
+def hash_strings(v):
+    '''
+    Hashes a vector of strings and returns a vector of integers
+    '''
+    import hashlib
+    return [ int(hashlib.sha256((s).encode('utf-8')).hexdigest(), 16) % 10**8 for s in v ]
 
 
 def encode2ints(v):
@@ -725,7 +731,7 @@ def decode2strings(v):
         return mBytes.decode("utf-8")
     return [ decode_string_from_int(n) for n in v ]
 
-def dframe_encode_features(df, features = []):
+def dframe_encode_features(df, features = [], reversible = False):
     '''
     Replaces feature columns containing string/object (non-numeric)
     values with columns containing encoded integers. 
@@ -735,6 +741,11 @@ def dframe_encode_features(df, features = []):
    features: If supplied, only these columns will be assumed to have
              non-numeric values, and hence only these columns will be
              mapped.
+
+ reversible: If set, a reversible encoding is done so that the integer
+             columns can be converted to the original strings if needed.
+             It is not recommended that you enable this option as the 
+             resultant integers can be inordinately long for long strings
 
     RETURNS: (encoded_df, mapped_features)
 
@@ -750,12 +761,14 @@ def dframe_encode_features(df, features = []):
     if not features:
         logger.warning('No non-numeric feature columns found in the dataframe; none encoded')
         return (df, [])
+    if reversible:
+        logger.warning('You have enabled "reversible". Be warned that the encoded feature columns can contain some very large integers')
     encoded_df = df.copy()
     encoded_features = []
     logger.debug('encoding feature columns: {}'.format(features))
     for c in features:
         str_vec = df[c].to_numpy()
-        int_vec = encode2ints(str_vec)
+        int_vec = encode2ints(str_vec) if reversible else hash_strings(str_vec)
         encoded_df[c] = int_vec
         logger.debug('mapped feature {}: {} -> {}'.format(c, str_vec, int_vec))
         encoded_features.append(c)
@@ -766,7 +779,7 @@ def dframe_encode_features(df, features = []):
 def dframe_decode_features(df, features):
     '''
     Decodes features in dataframe that were previously encoded
-    using dframe_encode_features. 
+    using dframe_encode_features(..., reversible=True)
 
            df: Input dataframe containing one or more feature columns
                that were encoded using dframe_encode_features
@@ -779,7 +792,9 @@ def dframe_decode_features(df, features):
          decoded_features: List of features that were decoded
 
         NOTE: Please check restored_features to ensure that the features
-              were indeed decoded
+              were indeed decoded. Ensure reversible is set True, when
+              calling dframe_encode_features, as otherwise the strings
+              are hashed and not encoded (hashed strings cannot be decoded).
     '''
     logger = getLogger(__name__)
     decoded_df = df.copy()

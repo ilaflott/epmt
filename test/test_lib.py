@@ -46,13 +46,32 @@ class EPMTLib(unittest.TestCase):
         import pandas as pd
         from epmtlib import dframe_encode_features, dframe_decode_features
         df = pd.DataFrame([['hello', 1, 2, 'My Name'], ['def', 2, 100, "Your Name"], ['', 0, 45, "No name"]], columns = ['A', 'B', 'C', 'D'])
-        (encdf, encf) = dframe_encode_features(df)
+        (encdf, encf) = dframe_encode_features(df, reversible = True)
         self.assertEqual(set(encf), {'D', 'A'})
         self.assertFalse(encdf.equals(df))
         (decdf, decf) = dframe_decode_features(encdf, encf)
         self.assertEqual(set(decf), {'D', 'A'})
         self.assertTrue(decdf.equals(df))
 
+    def test_hash_strings(self):
+        from epmtlib import hash_strings
+        import numpy as np
+        int_vec = hash_strings(['ABC', 'ABC', "ABC", 'DEF'])
+        self.assertTrue(int_vec[0] == int_vec[1] == int_vec[2])
+        self.assertEqual(np.array(int_vec).dtype, np.dtype('int64'))
+
+    def test_hash_strings_encode_dframe(self):
+        import pandas as pd
+        import numpy as np
+        from epmtlib import dframe_encode_features
+        _s = 'hello'
+        df = pd.DataFrame([[_s, 1, 2, 'My Name'], [_s, 2, 100, "Your Name"], ['', 0, 45, "No name"]], columns = ['A', 'B', 'C', 'D'])
+        (encdf, encf) = dframe_encode_features(df)
+        self.assertEqual(set(encf), {'D', 'A'})
+        self.assertFalse(encdf.equals(df))
+        self.assertEqual(encdf['A'].dtype, np.dtype('int64'))
+        self.assertEqual(encdf['D'].dtype, np.dtype('int64'))
+        self.assertTrue(encdf['A'][0] == encdf['A'][1])
 
 if __name__ == '__main__':
     unittest.main()
