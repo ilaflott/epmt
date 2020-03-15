@@ -1026,14 +1026,22 @@ def epmt_dbsize(findwhat=['database','table','index','tablespace'], usejson=Fals
 # Absolutely all argument checking should go here, specifically the findwhat stuff
     return(get_db_size(findwhat,usejson,usebytes))
 
-def epmt_shell():
+# Start a shell. if ipython is True (default) start a powerful
+# ipython shell, otherwise a vanilla python shell
+def epmt_shell(ipython = True):
     # we import builtins so pyinstaller will use the full builtins module
     # instead of a sketchy replacement. Also we need help from pydoc
     # since the builtins module included by pydoc doesn't have help
     import builtins
     from pydoc import help
-    from code import interact
-    interact(local=locals())
+    if ipython:
+        # ipython shell
+        from IPython import embed
+        embed(local=locals())
+    else:
+        # regular python shell
+        from code import interact
+        interact(local=locals())
 
 
 def epmt_entrypoint(args):
@@ -1067,7 +1075,7 @@ def epmt_entrypoint(args):
                     f = open(script_file)
             exec(f.read())
         else:
-            epmt_shell()
+            epmt_shell(ipython = False)
         return 0
     if args.command == 'explore':
         from epmt_query import exp_explore

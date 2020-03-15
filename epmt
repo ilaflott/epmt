@@ -104,11 +104,11 @@ if (__name__ == "__main__"):
     daemon_parser.add_argument('-D', '--foreground',action='store_true',help="Start the daemon in foreground")
     daemon_parser.set_defaults(start_daemon=False, stop_daemon=False, foreground=False)
     # shell
-    shell_parser = subparser.add_parser('shell', help = "Run an interactive Python shell",
-       description = "shell runs an interactive python shell")
+    shell_parser = subparser.add_parser('shell', help = "Run an interactive IPython shell. For a regular python shell, use 'epmt python'",
+       description = "shell runs an interactive IPython shell")
     # python
     py_parser = subparser.add_parser('python', help = "Run a Python script under the python interpreter",
-       description = "python runs an executable python script under the python interpreter. If no script is provided as an argument, an interactive python shell is executed")
+       description = "python runs an executable python script under the python interpreter. If no script is provided as an argument, an interactive python shell is executed. If you want an IPython shell, try 'epmt shell'")
     py_parser.add_argument('epmt_cmd_args', nargs='?', help="python script to execute")
     # ui
     gui_parser = subparser.add_parser('gui', help = "Run the EPMT dashboard GUI",
