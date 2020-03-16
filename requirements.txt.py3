@@ -66,6 +66,7 @@ pyzmq==18.1.1
 qtconsole==4.6.0
 scikit-learn==0.22.1
 scipy==1.4.1
+seaborn==0.10.0
 Send2Trash==1.5.0
 six==1.12.0
 SQLAlchemy==1.3.8
