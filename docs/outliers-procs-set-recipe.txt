@@ -1,0 +1,36 @@
+>>> jobs_df = eq.get_jobs(['625151', '627907', '629322', '633114', '675992', '680163', '685001', '691209', '693129'], fmt='pandas')
+>>> new_df, added_features = eq.add_features_df(jobs_df)
+  INFO: epmt_query: Added features: ['procs_histogram', 'procs_set']
+>>> encoded_df, _ = el.dframe_encode_features(new_df)
+  INFO: epmtlib: Encoded features: ['procs_histogram', 'procs_set']
+>>> encoded_df[added_features]                                                                                  
+   procs_histogram  procs_set
+0         46829739    8019831
+1         24481739   23095560
+2         24481739   23095560
+3         35167011   91524886
+4         24481739   23095560
+5         24481739   23095560
+6         37594067   91524886
+7         24481739   23095560
+8         24481739   23095560
+
+>>> outliers, parts = eod.detect_outlier_jobs(encoded_df, features = ['duration', 'num_procs', 'cpu_time', 'procs_histogram', 'procs_set'])
+
+# add a score column for the cumulative score for each job
+>>> outliers['score'] = outliers.sum(axis=1)
+
+# now check out the 'score' column
+>>> outliers
+    jobid  cpu_time  duration  num_procs  procs_histogram  procs_set  score
+0  625151         1         1          1                1          0      4
+1  627907         0         0          0                0          0      0
+2  629322         0         0          0                0          0      0
+3  633114         0         0          0                0          1      1
+4  675992         0         0          0                0          0      0
+5  680163         0         0          0                0          0      0
+6  685001         0         0          0                0          1      1
+7  691209         0         1          0                0          0      1
+8  693129         0         1          0                0          0      1
+
+

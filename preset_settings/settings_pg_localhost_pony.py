@@ -28,7 +28,7 @@ db_params = { 'url': 'postgresql://postgres:example@localhost:5432/EPMT' }
 # skip_for_thread_sums = ["tid", "start", "end", "num_threads", "starttime"]
 # 
 # # outlier detection
-# outlier_thresholds = { 'modified_z_score': 2.5, 'iqr': [20,80], 'z_score': 3.0 }
+# outlier_thresholds = { 'modified_z_score': 2.5, 'iqr': [25,75], 'z_score': 3.0 }
 # outlier_features = ['duration', 'cpu_time', 'num_procs']
 # # blacklist features for outlier detection. These will be skipped.
 # # e.g, outlier_features_blacklist = ['rdtsc_duration', 'vol_ctxsw']

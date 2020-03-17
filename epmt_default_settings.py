@@ -33,7 +33,7 @@ per_process_fields = ["tags","hostname","exename","path","args","exitcode","pid"
 skip_for_thread_sums = ["tid", "start", "end", "num_threads", "starttime"]
 
 # outlier detection
-outlier_thresholds = { 'modified_z_score': 2.5, 'iqr': [20,80], 'z_score': 3.0 }
+outlier_thresholds = { 'modified_z_score': 2.5, 'iqr': [25,75], 'z_score': 3.0 }
 # default features to use if no features specified
 outlier_features = ['duration', 'cpu_time', 'num_procs']
 # # blacklist features for outlier detection. These will be skipped.

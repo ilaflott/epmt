@@ -1843,10 +1843,80 @@ def procs_histogram(jobs, attr = 'exename'):
             of the times the executable was executed.
     '''
     logger = getLogger(__name__)  # you can use other name
-    procs_dict = {}
+    procs_hist = {}
     procs = get_procs(jobs, fmt='orm')
     logger.debug('{} processes found'.format(procs.count()))
     for p in procs:
         attr_val = getattr(p, attr)
-        procs_dict[attr_val] = procs_dict.get(attr_val, 0) + 1
-    return procs_dict
+        procs_hist[attr_val] = procs_hist.get(attr_val, 0) + 1
+    return procs_hist
+
+def procs_set(jobs, attr = 'exename'):
+    '''
+    Gets the set of unique values of attributes for the collection of jobs
+    '''
+    phist = procs_histogram(jobs, attr)
+    return sorted(phist.keys())
+
+@db_session
+def add_features_df(jobs_df, features = [procs_histogram, procs_set], key = 'jobid'):
+    '''
+    Includes columns for synthetic metrics such as process histogram, 
+    processes set and returns a new dataframe with the added columns.
+
+    jobs_df: Input dataframe (will not be modified)
+
+    features: List of callables. Each callable will be called with the
+             value of "key" to compute the metric value for the row.
+
+        key: The dataframe column to use to get value that will be
+             passed as an argument to each of the callables
+
+    RETURNS: (df, added_features), where
+
+                df: A new dataframe, which will contain the columns from
+                    jobs_df, alongwith new columns (one for each callable,
+                    whose names are derived from the callables)
+    added_features: List of new features added to dataframe
+
+    EXAMPLES:
+
+    >>> jobs_df = eq.get_jobs(['625151', '627907', '629322', '633114', '675992', '680163', '685001', '691209', '693129'], fmt='pandas')
+    >>> new_df, added_features = eq.add_features_df(jobs_df) 
+    >>> added_features
+    ['procs_histogram', 'procs_set']
+    >>> new_df
+                      created_at  ...                                          procs_set
+    0 2020-03-17 12:57:54.464202  ...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    1 2020-03-17 12:58:03.451079  ...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    2 2020-03-17 12:58:06.245651  ...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    3 2020-03-17 12:58:09.038631  ...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    4 2020-03-17 12:58:11.850036  ...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    5 2020-03-17 12:58:14.622092  ...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    6 2020-03-17 12:58:17.418585  ...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    7 2020-03-17 12:58:20.212817  ...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    8 2020-03-17 12:58:23.041036  ...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    
+    [9 rows x 46 columns]
+    >>> new_df[added_features]
+                                         procs_histogram                                          procs_set
+    0  {'tcsh': 4056, 'perl': 296, 'bash': 330, 'grep...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    1  {'tcsh': 1099, 'perl': 101, 'bash': 100, 'grep...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    2  {'arch': 46, 'grid-proxy-info': 71, 'which': 4...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    3  {'id': 6, 'bash': 100, 'date': 30, 'modulecmd'...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    4  {'tcsh': 1099, 'perl': 101, 'bash': 100, 'grep...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    5  {'rm': 197, 'cut': 240, 'du': 7, 'date': 30, '...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    6  {'tcsh': 1109, 'perl': 102, 'bash': 100, 'grep...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    7  {'tcsh': 1099, 'perl': 101, 'bash': 100, 'grep...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    8  {'mv': 118, 'perl': 101, 'globus-url-copy': 76...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    
+    '''
+    logger = getLogger(__name__)  # you can use other name
+    out_df = jobs_df.copy()
+    keys = list(jobs_df[key].values)
+    added_features = []
+    for c in features:
+        out_df[c.__name__] = [ c(k) for k in keys ]
+        added_features.append(c.__name__)
+    logger.info('Added features: {}'.format(added_features))
+    return out_df, added_features
