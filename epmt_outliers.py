@@ -1314,6 +1314,8 @@ def feature_plot_2d(jobs, features = [], outfile='plot.png', annotate = False):
     if len(features) != 2:
         logger.error('Cannot generate scatter plot as requested features ({}) < 2'.format(features))
         return False
+    import matplotlib as mpl
+    mpl.use('agg')
     import matplotlib.pyplot as plt
     import matplotlib.colors as pltc
     from random import sample

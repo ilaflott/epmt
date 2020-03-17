@@ -173,6 +173,25 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(parts[frozen_dict({"op_instance": "4", "op_sequence": "4", "op": "build"})], (set([u'kern-6656-20190614-194024', u'kern-6656-20190614-190245', u'kern-6656-20190614-191138']), set([u'kern-6656-20190614-192044-outlier'])))
 
     @db_session
+    def test_outlier_ops_trained_mvod(self):
+        from epmt_stat import mvod_classifiers
+        jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='terse')
+        model_jobs = [ j for j in jobs if not 'outlier' in j ]
+        self.assertEqual(set(model_jobs), set(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024']))
+        r = eq.create_refmodel(model_jobs, op_tags='*', outlier_methods = mvod_classifiers())
+        self.assertEqual(set(r['jobs']), set(model_jobs))
+        df, part = eod.detect_outlier_ops(jobs, methods = mvod_classifiers(), trained_model = r['id'])
+        self.assertEqual(df.shape, (20, 3))
+        outliers = df[df.outlier > 0]
+        self.assertEqual(outliers.shape, (5, 3))
+        # only the outlier jobid is found in the outliers df
+        self.assertEqual(set(outliers.jobid.values), {'kern-6656-20190614-192044-outlier'})
+        self.assertEqual(list(outliers.outlier.values), [3, 3, 3, 3, 3])
+        self.assertEqual(set([ dumps(x) for x in outliers.tags.values ]), {'{"op": "build", "op_instance": "4", "op_sequence": "4"}', '{"op": "clean", "op_instance": "5", "op_sequence": "5"}', '{"op": "configure", "op_instance": "3", "op_sequence": "3"}', '{"op": "download", "op_instance": "1", "op_sequence": "1"}', '{"op": "extract", "op_instance": "2", "op_sequence": "2"}'})
+        self.assertEqual(part, {'{"op": "build", "op_instance": "4", "op_sequence": "4"}': {'pyod.models.cof': [0, 0, 1, 0], 'pyod.models.hbos': [0, 0, 1, 0], 'pyod.models.mcd': [0, 0, 1, 0], 'pyod.models.ocsvm': [0, 0, 0, 0]}, '{"op": "clean", "op_instance": "5", "op_sequence": "5"}': {'pyod.models.cof': [0, 0, 1, 0], 'pyod.models.hbos': [0, 0, 1, 0], 'pyod.models.mcd': [0, 0, 1, 0], 'pyod.models.ocsvm': [0, 0, 0, 0]}, '{"op": "configure", "op_instance": "3", "op_sequence": "3"}': {'pyod.models.cof': [0, 0, 1, 0], 'pyod.models.hbos': [0, 0, 1, 0], 'pyod.models.mcd': [0, 0, 1, 0], 'pyod.models.ocsvm': [0, 0, 0, 0]}, '{"op": "download", "op_instance": "1", "op_sequence": "1"}': {'pyod.models.cof': [0, 0, 1, 0], 'pyod.models.hbos': [0, 0, 1, 0], 'pyod.models.mcd': [0, 0, 1, 0], 'pyod.models.ocsvm': [0, 0, 0, 0]}, '{"op": "extract", "op_instance": "2", "op_sequence": "2"}': {'pyod.models.cof': [0, 0, 1, 0], 'pyod.models.hbos': [0, 0, 1, 0], 'pyod.models.mcd': [0, 0, 1, 0], 'pyod.models.ocsvm': [0, 0, 0, 0]}})
+
+
+    @db_session
     def test_outlier_ops(self):
         # with too few jobs and no trained model, outlier detection should fail
         too_few_jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='terse')[:3]
@@ -210,7 +229,7 @@ class OutliersAPI(unittest.TestCase):
 
 
     @db_session
-    def test_outlier_ops_trained_mvod(self):
+    def test_ops_refmodel_mvod(self):
         from epmt_stat import mvod_classifiers
         with capture() as (out, err):
             r = eq.create_refmodel(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024'], op_tags = [{'op': 'build'}, {'op': 'configure'}], features = ['cpu_time', 'num_procs', 'duration'], outlier_methods = mvod_classifiers())
