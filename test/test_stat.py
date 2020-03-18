@@ -11,14 +11,25 @@ class EPMTStat(unittest.TestCase):
     def test_outliers_iqr(self):
         from epmt_stat import outliers_iqr
         vec = [100, 100, 100, 45, 100]
-        r = outliers_iqr(vec)
+        r = outliers_iqr(vec)[0]
         self.assertEqual(list(r), [3])
+        # now let's do a more involved test
+        vec = [1,2,3,4,3,2,1,10]
+        (outliers, q1, q3) = outliers_iqr(vec)
+        self.assertEqual(list(outliers), [7])
+        self.assertEqual((q1, q3), (4.375, 6.625))
+        # q1 and q3 are such that if provided as arguments
+        # to another call of outliers_iqr with the same input
+        # will *just* fit the vector and find no outliers
+        (outliers_r, q1_r, q3_r) = outliers_iqr(vec, (q1, q3))
+        self.assertFalse(list(outliers_r))
+        self.assertEqual((q1_r, q3_r), (q1, q3))
 
     def test_outliers_iqr_strings(self):
         import epmtlib as el
         from epmt_stat import outliers_iqr
         int_vec = el.hash_strings(['ABC', 'ABC', "ABC", 'DEF'])
-        r = outliers_iqr(int_vec)
+        r = outliers_iqr(int_vec)[0]
         self.assertEqual(list(r), [3])
 
     def test_check_dist(self):

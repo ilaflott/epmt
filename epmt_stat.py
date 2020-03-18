@@ -49,12 +49,58 @@ def outliers_z_score(ys, threshold=thresholds['z_score']):
     z_scores = [(y - mean_y) / stdev_y for y in ys]
     return np.where(np.abs(z_scores) > threshold)[0]
 
-def outliers_iqr(ys, span=thresholds['iqr']):
-    quartile_1, quartile_3 = np.percentile(ys, span)
+def outliers_iqr(ys, params = ()):
+    '''
+    Detects outliers using the 1.5 IQR rule.
+
+        ys: Input vector
+    params: If params is provided it should be of the form
+            (lower_bound, upper_bound). In which case, we use
+            the bounds provided for outlier detection, rather
+            than computing the quartiles on the input vector.
+            If not provided (default), the 25% and 75% quartiles
+            are computed on the input vector.
+
+   RETURNS: A tuple (outliers, Q1, Q3), where:
+            outliers is a vector of indices that are outliers,
+            Q1: A theoretical value of Q1 is computed so that
+                the input vector just fits on the lower side
+            Q3: A theoretical value of Q3 is computed so that
+                the input vector just fits on the upper side.
+
+     NOTES: The motivation to return a theoretical value of Q1
+            and Q3 stems from being able to use a trained model. We want
+            to return some measure from the model run that can
+            then be used later. The Q1 and Q3 are derived by solving
+            a simutaneous equations such that the min of the input
+            vector fits in the lower bound and the max in the upper
+            bound. IOW:
+            Ymin = Q1 - 1.5 * (Q3 - Q1)
+            Ymax = Q3 + 1.5 * (Q3 - Q1)
+
+            Solving the equations yeilds:
+            Q1 = 3*Ymax/8 + 5*Ymin/8
+            Q3 = 5*Ymax/8 + 3*Ymin/8
+    '''
+    ys = np.array(ys)
+    span = thresholds['iqr']
+    if not params:
+        # usual case: no model params
+        quartile_1, quartile_3 = np.percentile(ys, span)
+    else:
+        # we have the lower and upper quartiles from a model
+        quartile_1, quartile_3 = params
     iqr = quartile_3 - quartile_1
     lower_bound = quartile_1 - (iqr * 1.5)
     upper_bound = quartile_3 + (iqr * 1.5)
-    return np.where((ys > upper_bound) | (ys < lower_bound))[0]
+    outliers = np.where((ys > upper_bound) | (ys < lower_bound))[0]
+
+    # If this vector were to be fitted, we can compute artifical
+    # values of Q1 and Q3 based on the equation (see NOTES in the
+    # documentation)
+    fitted_Q1 = 3*ys.max()/8 + 5*ys.min()/8
+    fitted_Q3 = 5*ys.max()/8 + 3*ys.min()/8
+    return (outliers, fitted_Q1, fitted_Q3)
 
 # this function returns a tuple consisting of:
 #  (scores, worst_score, median, median_absolute_deviation)
