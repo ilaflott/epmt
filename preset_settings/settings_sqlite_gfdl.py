@@ -2,7 +2,7 @@
 # cp preset_settings/settings_xxxxxxx.py settings.py
 # Then feel free to edit the file to suit you.
 from pathlib import Path
-import os.path
+from os import path
 
 orm = 'sqlalchemy'
 db_params = { 'url': 'sqlite:///{HOME}/EPMT_DB.sqlite'.format(HOME=str(Path.home())), 'echo': False }
@@ -13,14 +13,17 @@ bulk_insert = True
 # jobid_env_list = [ "SLURM_JOB_ID", "SLURM_JOBID", "PBS_JOB_ID" ]
 # papiex_options = "PERF_COUNT_SW_CPU_CLOCK"
 # epmt_output_prefix = "/tmp/epmt/"
-epmt_output_prefix = os.path.expandvars("$TMPDIR/epmt")
+epmt_output_prefix = path.expandvars("$TMPDIR/epmt")
 # stage_command = "mv"
 # stage_command_dest = "./"
-stage_command_dest = os.path.expandvars("/nbhome/$USER")
+stage_command_dest = path.expandvars("/nbhome/$USER")
 # verbose = 0
 # input_pattern = "*-papiex-*-[0-9]*.csv"
 install_prefix = "/home/Jeffrey.Durachta/workflowDB/EPMT/epmt-2.1.0-centos-6/papiex-epmt-install/"
-# logfile = path.dirname(path.abspath(__file__)) + '/epmt.log'
+
+# when we are not attached to a terminal we log to the file below
+# logfile = path.expandvars("/tmp/epmt_$USER.log")
+
 #
 # blacklist for environment filter (in addition to all keys with
 # leading underscores)

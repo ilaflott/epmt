@@ -1,6 +1,7 @@
 # Copy this file and edit it as follows:
 # cp preset_settings/settings_xxxxxxx.py settings.py
 # Then feel free to edit the file to suit you.
+from os import path
 
 orm = 'pony'
 db_params = { 'url': 'postgresql://postgres:example@postgres:5432/EPMT' }
@@ -15,7 +16,9 @@ db_params = { 'url': 'postgresql://postgres:example@postgres:5432/EPMT' }
 # verbose = 0
 # input_pattern = "*-papiex-*-[0-9]*.csv"
 # install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-oss-install/"
-# logfile = path.dirname(path.abspath(__file__)) + '/epmt.log'
+
+# when we are not attached to a terminal we log to the file below
+# logfile = path.expandvars("/tmp/epmt_$USER.log")
 #
 # blacklist for environment filter (in addition to all keys with
 # leading underscores)

@@ -21,7 +21,10 @@ verbose = 0
 profile = False
 input_pattern = "*-papiex-*-[0-9]*.csv"
 install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-oss-install/"
-logfile = path.dirname(path.abspath(__file__)) + '/epmt.log'
+
+# when we are not attached to a terminal we log to the file below
+# logfile = path.expandvars("/tmp/epmt_$USER.log")
+logfile = path.expandvars("/tmp/epmt.log")
 
 # blacklist for environment filter (in addition to all keys with
 # leading underscores)
