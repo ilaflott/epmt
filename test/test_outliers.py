@@ -14,6 +14,8 @@ def setUpModule():
     print('setUpModule: importing {0}'.format(datafiles))
     environ['EPMT_TZ'] = 'Asia/Kolkata'
     epmt_submit(glob(datafiles), dry_run=False)
+    # set MADZ threshold to a lower value to generate outliers
+    settings.outlier_thresholds['modified_z_score'] = 2.5
 
 def tearDownModule():
     pass

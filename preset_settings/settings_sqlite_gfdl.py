@@ -33,7 +33,7 @@ install_prefix = "/home/Jeffrey.Durachta/workflowDB/EPMT/epmt-2.1.0-centos-6/pap
 # skip_for_thread_sums = ["tid", "start", "end", "num_threads", "starttime"]
 # 
 # # outlier detection
-# outlier_thresholds = { 'modified_z_score': 2.5, 'iqr': [25,75], 'z_score': 3.0 }
+# outlier_thresholds = { 'modified_z_score': 3.5, 'iqr': [25,75], 'z_score': 3.0 }
 # outlier_features = ['duration', 'cpu_time', 'num_procs']
 # # blacklist features for outlier detection. These will be skipped.
 # # e.g, outlier_features_blacklist = ['rdtsc_duration', 'vol_ctxsw']
