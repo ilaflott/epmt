@@ -69,6 +69,7 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(sum(list(df.iloc[2].values)[1:]), 11) # 11 features marked this as an outlier
         self.assertEqual(sum(list(df.iloc[3].values)[1:]), 0) # not an outlier by any feature
 
+
     @db_session
     def test_outlier_jobs_multimode(self):
         import epmt_stat as es
@@ -116,6 +117,13 @@ class OutliersAPI(unittest.TestCase):
         (df, _) = eod.detect_outlier_jobs(all_jobs, features='*', trained_model=r)
         # now check that we used *all* the features
         self.assertEqual(set(df.columns.values) & all_features, all_features)
+        #
+        # let's test using IQR
+        import epmt_stat as es
+        r = eq.create_refmodel(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024'], outlier_methods = [es.outliers_iqr])
+        df, _ = eod.detect_outlier_jobs(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], methods = [es.outliers_iqr], trained_model=r['id'])
+        self.assertEqual(df.shape, (4,4))
+        self.assertEqual(list(zip(df.jobid.values, df.cpu_time.values, df.duration.values, df.num_procs.values)), [('kern-6656-20190614-190245', 0, 0, 0), ('kern-6656-20190614-192044-outlier', 1, 1, 0), ('kern-6656-20190614-194024', 0, 0, 0), ('kern-6656-20190614-191138', 0, 0, 0)])
 
     @db_session
     def test_outlier_jobs_trained_mvod(self):

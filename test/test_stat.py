@@ -15,13 +15,13 @@ class EPMTStat(unittest.TestCase):
         self.assertEqual(list(r), [0, 0, 0, 1, 0])
         # now let's do a more involved test
         vec = [1,2,3,4,3,2,1,10]
-        (outliers, q1, q3) = outliers_iqr(vec)
+        (outliers, discard, q1, q3) = outliers_iqr(vec)
         self.assertEqual(list(outliers), [0, 0, 0, 0, 0, 0, 0, 1])
-        self.assertEqual((q1, q3), (4.375, 6.625))
+        self.assertEqual((discard, q1, q3), (0, 4.375, 6.625))
         # q1 and q3 are such that if provided as arguments
         # to another call of outliers_iqr with the same input
         # will *just* fit the vector and find no outliers
-        (outliers_r, q1_r, q3_r) = outliers_iqr(vec, (q1, q3))
+        (outliers_r, _, q1_r, q3_r) = outliers_iqr(vec, (discard, q1, q3))
         self.assertEqual(list(outliers_r), [0]*8)
         self.assertEqual((q1_r, q3_r), (q1, q3))
 

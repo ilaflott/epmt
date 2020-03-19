@@ -55,13 +55,15 @@ def outliers_iqr(ys, params = ()):
 
         ys: Input vector
     params: If params is provided it should be of the form
-            (lower_bound, upper_bound). In which case, we use
+            (0, lower_bound, upper_bound). In which case, we use
             the bounds provided for outlier detection, rather
             than computing the quartiles on the input vector.
             If not provided (default), the 25% and 75% quartiles
-            are computed on the input vector.
+            are computed on the input vector. You should only
+            be prividing params when using this method against
+            a trained model.
 
-   RETURNS: A tuple (outliers, Q1, Q3), where:
+   RETURNS: A tuple (outliers, 0, Q1, Q3), where:
             outliers is a mask with the same length as the input,
                 and contains 0 if the element is an inlier and 1
                 if the element is an outlier
@@ -69,6 +71,11 @@ def outliers_iqr(ys, params = ()):
                 the input vector just fits on the lower side
             Q3: A theoretical value of Q3 is computed so that
                 the input vector just fits on the upper side.
+
+            0, which is the second element of the tuple is for
+            compatibility with other outlier detection routines.
+            Unless you care about training a model, you should
+            ignore all return values except the first.
 
      NOTES: The motivation to return a theoretical value of Q1
             and Q3 stems from being able to use a trained model. We want
@@ -89,10 +96,11 @@ def outliers_iqr(ys, params = ()):
 
     # in the simplest case we only care about the outliers vector
     # not the other two return values (those are used for trained models)
-    >>> (outliers, _, _) = es.outliers_iqr([1,1,2,3,4,1,100])                                             
+    >>> (outliers, _, _, _) = es.outliers_iqr([1,1,2,3,4,1,100])                                             
     >>> outliers
         array([0, 0, 0, 0, 0, 0, 1])
     '''
+    logger = getLogger(__name__)  # you can use other name
     ys = np.array(ys)
     span = thresholds['iqr']
     if not params:
@@ -100,19 +108,22 @@ def outliers_iqr(ys, params = ()):
         quartile_1, quartile_3 = np.percentile(ys, span)
     else:
         # we have the lower and upper quartiles from a model
-        quartile_1, quartile_3 = params
+        _, quartile_1, quartile_3 = params
     iqr = quartile_3 - quartile_1
+    logger.debug('Q1, Q3, IQR: {}, {}, {}'.format(quartile_1, quartile_3, iqr))
     lower_bound = quartile_1 - (iqr * 1.5)
     upper_bound = quartile_3 + (iqr * 1.5)
+    logger.debug('lower_bound, upper_bound: {}, {}'.format(lower_bound, upper_bound))
     # the + 0 below makes boolean array a numeric array of 0s and 1s
     outliers = ((ys > upper_bound) | (ys < lower_bound)) + 0
+    logger.debug('outliers vec: {}'.format(outliers))
 
     # If this vector were to be fitted, we can compute artifical
     # values of Q1 and Q3 based on the equation (see NOTES in the
     # documentation)
     fitted_Q1 = 3*ys.max()/8 + 5*ys.min()/8
     fitted_Q3 = 5*ys.max()/8 + 3*ys.min()/8
-    return (outliers, fitted_Q1, fitted_Q3)
+    return (outliers, 0, fitted_Q1, fitted_Q3)
 
 # this function returns a tuple consisting of:
 #  (scores, worst_score, median, median_absolute_deviation)
@@ -122,6 +133,7 @@ def outliers_iqr(ys, params = ()):
 # params if passed in, is of the form (max, median, median_abs_dev)
 # We will ignore params(0) as that's the max z_score in the ref_model
 def modified_z_score(ys, params=()):
+    logger = getLogger(__name__)  # you can use other name
     median_y = params[1] if params else np.median(ys)
     if params:
         median_absolute_deviation_y = params[2]
