@@ -3,6 +3,7 @@
 # Then feel free to edit the file to suit you.
 from pathlib import Path
 from os import path
+from getpass import getuser
 
 orm = 'sqlalchemy'
 db_params = { 'url': 'sqlite:///{HOME}/EPMT_DB.sqlite'.format(HOME=str(Path.home())), 'echo': False }
@@ -16,13 +17,13 @@ bulk_insert = True
 epmt_output_prefix = path.expandvars("$TMPDIR/epmt")
 # stage_command = "mv"
 # stage_command_dest = "./"
-stage_command_dest = path.expandvars("/nbhome/$USER")
+stage_command_dest = "/nbhome/" + getuser()
 # verbose = 0
 # input_pattern = "*-papiex-*-[0-9]*.csv"
 install_prefix = "/home/Jeffrey.Durachta/workflowDB/EPMT/epmt-2.1.0-centos-6/papiex-epmt-install/"
 
 # when we are not attached to a terminal we log to the file below
-# logfile = path.expandvars("/tmp/epmt_$USER.log")
+# logfile = path.expandvars("/tmp/epmt_{}.log".format(getuser() or "unknown"))
 
 #
 # blacklist for environment filter (in addition to all keys with

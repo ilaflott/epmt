@@ -10,6 +10,7 @@
 #
 
 from os import path
+from getpass import getuser
 
 jobid_env_list = [ "SLURM_JOB_ID", "SLURM_JOBID", "PBS_JOB_ID" ]
 papiex_options = "PERF_COUNT_SW_CPU_CLOCK"
@@ -23,8 +24,7 @@ input_pattern = "*-papiex-*-[0-9]*.csv"
 install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-oss-install/"
 
 # when we are not attached to a terminal we log to the file below
-# logfile = path.expandvars("/tmp/epmt_$USER.log")
-logfile = path.expandvars("/tmp/epmt.log")
+logfile = path.expandvars("/tmp/epmt_{}.log".format(getuser() or "unknown"))
 
 # blacklist for environment filter (in addition to all keys with
 # leading underscores)
