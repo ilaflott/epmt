@@ -69,7 +69,13 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(sum(list(df.iloc[2].values)[1:]), 11) # 11 features marked this as an outlier
         self.assertEqual(sum(list(df.iloc[3].values)[1:]), 0) # not an outlier by any feature
 
-
+    @db_session
+    def test_outlier_jobs_multimode(self):
+        import epmt_stat as es
+        df, parts = eod.detect_outlier_jobs(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], methods = [es.outliers_iqr, es.modified_z_score])
+        self.assertEqual(df.shape, (4,4))
+        self.assertEqual(list(zip(df.jobid.values, df.cpu_time.values, df.duration.values, df.num_procs.values)), [('kern-6656-20190614-190245', 0, 0, 0), ('kern-6656-20190614-192044-outlier', 2, 2, 0), ('kern-6656-20190614-194024', 0, 0, 0), ('kern-6656-20190614-191138', 0, 0, 0)])
+        self.assertEqual(parts, {'cpu_time': ({'kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024'}, {'kern-6656-20190614-192044-outlier'}), 'duration': ({'kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024'}, {'kern-6656-20190614-192044-outlier'}), 'num_procs': ({'kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'}, set())})
 
     @db_session
     def test_outlier_jobs_trained(self):

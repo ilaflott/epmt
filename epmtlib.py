@@ -79,6 +79,10 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
     numba_logger = logging.getLogger('numba') 
     numba_logger.setLevel(logging.WARNING) 
 
+    # ipython's parso logger has too many debug messages
+    parso_logger = logging.getLogger('parso') 
+    parso_logger.setLevel(logging.WARNING) 
+
     alembic_logger = logging.getLogger('alembic')
     alembic_logger.setLevel(level)
 

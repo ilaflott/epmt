@@ -62,7 +62,9 @@ def outliers_iqr(ys, params = ()):
             are computed on the input vector.
 
    RETURNS: A tuple (outliers, Q1, Q3), where:
-            outliers is a vector of indices that are outliers,
+            outliers is a mask with the same length as the input,
+                and contains 0 if the element is an inlier and 1
+                if the element is an outlier
             Q1: A theoretical value of Q1 is computed so that
                 the input vector just fits on the lower side
             Q3: A theoretical value of Q3 is computed so that
@@ -81,6 +83,15 @@ def outliers_iqr(ys, params = ()):
             Solving the equations yeilds:
             Q1 = 3*Ymax/8 + 5*Ymin/8
             Q3 = 5*Ymax/8 + 3*Ymin/8
+
+
+  EXAMPLES: 
+
+    # in the simplest case we only care about the outliers vector
+    # not the other two return values (those are used for trained models)
+    >>> (outliers, _, _) = es.outliers_iqr([1,1,2,3,4,1,100])                                             
+    >>> outliers
+        array([0, 0, 0, 0, 0, 0, 1])
     '''
     ys = np.array(ys)
     span = thresholds['iqr']
@@ -93,7 +104,8 @@ def outliers_iqr(ys, params = ()):
     iqr = quartile_3 - quartile_1
     lower_bound = quartile_1 - (iqr * 1.5)
     upper_bound = quartile_3 + (iqr * 1.5)
-    outliers = np.where((ys > upper_bound) | (ys < lower_bound))[0]
+    # the + 0 below makes boolean array a numeric array of 0s and 1s
+    outliers = ((ys > upper_bound) | (ys < lower_bound)) + 0
 
     # If this vector were to be fitted, we can compute artifical
     # values of Q1 and Q3 based on the equation (see NOTES in the

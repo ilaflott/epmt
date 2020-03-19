@@ -226,6 +226,37 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
         7  691209           0.0       0       0
         8  693129           0.0       0       0
 
+
+
+    # Now, lets do a multimode outlier detection (multimode here means
+    # using multiple univariate classifiers)
+    >>> (outliers, parts) = eod.detect_outlier_jobs(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], methods = [es.outliers_iqr, es.modified_z_score])
+   INFO: epmt_outliers: outlier detection provided 2 classifiers
+   INFO: epmt_outliers: 2 classifiers eligible
+   INFO: epmt_outliers: outlier detection will be performed using 2 univariate and 0 multivariate classifiers
+   >>> outliers
+                                      jobid  cpu_time  duration  num_procs
+       0          kern-6656-20190614-190245         0         0          0
+       1  kern-6656-20190614-192044-outlier         2         2          0
+       2          kern-6656-20190614-194024         0         0          0
+       3          kern-6656-20190614-191138         0         0          0
+
+   >>> parts
+       {'cpu_time': ({'kern-6656-20190614-190245',
+          'kern-6656-20190614-191138',
+          'kern-6656-20190614-194024'},
+         {'kern-6656-20190614-192044-outlier'}),
+        'duration': ({'kern-6656-20190614-190245',
+          'kern-6656-20190614-191138',
+          'kern-6656-20190614-194024'},
+         {'kern-6656-20190614-192044-outlier'}),
+        'num_procs': ({'kern-6656-20190614-190245',
+          'kern-6656-20190614-191138',
+          'kern-6656-20190614-192044-outlier',
+          'kern-6656-20190614-194024'},
+         set())}
+
+
     # TODO: Provide examples with multivariate classifiers
 
     """
@@ -359,7 +390,10 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
                 else:
                     # use the max score in the refmodel if we have a trained model
                     # otherwise use the default threshold for the method
-                    threshold = params[0] if params else thresholds[m_name]
+                    # For some methods like outliers_iqr we purposely don't
+                    # have thresholds, instead those methods return a mask.
+                    # So for such methods that return a mask we use a threshold of 0
+                    threshold = params[0] if params else thresholds.get(m_name, 0)
                 logger.debug('threshold: {}'.format(threshold))
                 outlier_rows = np.where(np.abs(scores) > threshold)[0]
                 logger.debug('outliers for [{}][{}] -> {}'.format(m_name,c,outlier_rows))
