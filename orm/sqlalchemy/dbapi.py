@@ -12,11 +12,11 @@ import epmt_settings as settings
 
 def get_db_size(findwhat=['database','table','index','tablespace'], usejson=False, usebytes=False):
     """
-    Used in finding size of database,tables,index,tablespace storage 
+    Print size of database,tables,index,tablespace storage 
         usage and row count
 
     Can return both bytes and autosized units determined by database.
-        JSON will return if requested.
+
     get_db_size(['tablespace index database'],usejson=True, usebytes=True)
 
     findwhat: List of entities to find the size of.  
@@ -197,48 +197,40 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
     """
     from orm.sqlalchemy.general import _execute_raw_sql
     from sqlalchemy import exc
-    # Test if provider is supported
     from orm import orm_db_provider
+
     # Test if provider is supported
-    if (orm_db_provider() != 'postgres'):
-        logger.warning("%s Not supported",str(settings.db_params.get('provider','Provider settings key missing')))
-        return(False,"Not supported")
-    if usejson:
-        import json
-        jsonlist = []
-    #Sanitizing
-    options = ['tablespace', 'table', 'index', 'database']
-    cleanList = []
-    for test in findwhat:
-        cleaner = ''.join(e for e in test if e.isalnum())
-        if cleaner.lower() not in options:
-            logger.warning("Ignoring %s Not a valid option",cleaner)
-        else:
-            if cleaner not in cleanList:
-                cleanList.append(cleaner)
-    logger.info("epmt dbsize: %s",str(findwhat))
-    logger.info("epmt dbsize: bytes:%s, json:%s",str(usebytes),str(usejson))
-    every = False
+    provider = orm_db_provider()
+    if provider != 'postgres':
+        logger.error("%s not supported for dbsize",provider)
+        return(False)
+
     # Load ORM and Connect to DB for query
+    # Why is this causing an exception just on load?
+    # Why is this a warning?
     try:
         from orm import orm_dump_schema, setup_db
     except (ImportError, Exception) as e:
         raise
-        logger.warning("Could Not connect to orm")
-        return(False,"Not connected")
+        logger.error("Could not connect to orm")
+        return(False)
+
+    # Also why is this necessary here?
     try:
         if setup_db(settings) == False:
-            logger.warning("Could Not connect to db")
-            return(False,"Not connected")
+            logger.error("Could not connect to db")
+            return(False)
+    # ????
     except exc.SQLAlchemyError as e:
-        logger.warning("Could Not connect to db"+str(e))
-        return(False,"Not connected")
-    if len(cleanList) < 1:
-        logger.info("Displaying all options")
-        every = True
-        cleanList = range(1)
-    for arg in cleanList:
-        if every or arg.lower() == 'database':
+        logger.error("Could not connect to db"+str(e))
+        return(False)
+
+    if usejson:
+        import json
+        jsonlist = []
+
+    for arg in findwhat:
+        if arg == 'database':
             databased = {}
             cmd = 'SELECT pg_database.datname, pg_size_pretty(pg_database_size(pg_database.datname)) AS size FROM pg_database'
             if usebytes:
@@ -251,7 +243,7 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
                         databased[name]=size
                     jsonlist.append({"DatabaseSize":databased})
                 except exc.SQLAlchemyError:
-                    logger.warning("Db size query failed")
+                    logger.warning("Postgres size query failed")
 
             print("\n ------------------------Database------------------------")
             units = "DB Size"
@@ -267,7 +259,7 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
             except exc.SQLAlchemyError:
                 logger.warning("Db size query failed")
 
-        if every or arg.lower() == 'table':
+        if arg == 'table':
             print("\n ------------------------Table---({})---------------------".format(settings.db_params.get('dbname','nodb')))
             units = "Table Size"
             if usebytes:
@@ -298,7 +290,7 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
             except exc.SQLAlchemyError:
                 logger.warning("Table query failed")
 
-        if every or arg.lower() == 'index':
+        if arg == 'index':
             print("\n ------------------------Index---({})---------------------".format(settings.db_params.get('dbname','nodb')))
             units = "Index Size"
             if usebytes:
@@ -323,7 +315,7 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
             except exc.SQLAlchemyError:
                 logger.warning("Index query failed")
 
-        if every or arg.lower() == 'tablespace':
+        if arg == 'tablespace':
             print("\n ------------------------Tablespace------------------------")
             units = "Size"
             tablespaced = {}
@@ -361,9 +353,10 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
                         "DB Params":printsettings}
             jsonlist.append({"Metadata":metadata})
             print(json.dumps(jsonlist,indent=4))
-            return(True, json.dumps(jsonlist))
+            return(True)
         else:
             logger.warning("No valid Json")
-            return(False, json.dumps(False))
+            return(False)
     else:
-        return(True, "")
+# One should return the string here!!!
+        return(True)

@@ -435,14 +435,14 @@ def epmt_stop_job(other=[]):
     return retval
 
 def epmt_dump_metadata(filelist, key = None):
+    rc_final = True
     if not filelist:
         global_jobid,global_datadir,global_metadatafile = setup_vars()
         if not (global_jobid and global_datadir and global_metadatafile):
             return False
-        infile = [global_metadatafile]
-    else:
-        infile = filelist
-    if not infile or len(infile) < 1:
+        filelist = [global_metadatafile]
+
+    if len(filelist) < 1:
         logger.error("Could not identify your job id")
         return False
 
@@ -457,7 +457,7 @@ def epmt_dump_metadata(filelist, key = None):
             # if the file does not exist then we 
             rc = epmt_show_job(file, key = key)
             if not(rc):
-                return False
+                rc_final = False
             continue
 
         err,tar = compressed_tar(file)
@@ -482,7 +482,7 @@ def epmt_dump_metadata(filelist, key = None):
         else:
             for d in sorted(metadata.keys()):
                 print("%-24s%-56s" % (d,str(metadata[d])))
-    return True
+    return rc_final
 
 
 # args list is one of the following forms:
@@ -1024,6 +1024,8 @@ def epmt_stage(dirs, keep_going=True):
 def epmt_dbsize(findwhat=['database','table','index','tablespace'], usejson=False, usebytes=False):
     from orm import get_db_size
 # Absolutely all argument checking should go here, specifically the findwhat stuff
+    if findwhat == "all":
+        findwhat = ['database','table','index','tablespace']
     return(get_db_size(findwhat,usejson,usebytes))
 
 # Start a shell. if ipython is True (default) start a powerful
