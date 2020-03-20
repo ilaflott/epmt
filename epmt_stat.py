@@ -41,13 +41,49 @@ def partition_classifiers_uv_mv(classifiers):
     uv_set = set(classifiers) - mv_set
     return (uv_set, mv_set)
 
-# These all return a tuple containing a list of indicies
-# For 1-D this is just a tuple with one element that is a list of rows
-def outliers_z_score(ys, threshold=thresholds['z_score']):
-    mean_y = np.mean(ys)
-    stdev_y = np.std(ys)
-    z_scores = [(y - mean_y) / stdev_y for y in ys]
-    return np.where(np.abs(z_scores) > threshold)[0]
+def z_score(ys, params = ()):
+    '''
+    Computes the *absolute* z-scores for an input vector.
+
+        ys: Input vector
+    params: Usually not provided. It's only of significance when
+            computing z-scores against a trained model. In which
+            case, it is of the form:
+              (z_max, mean_y, stdev_y)
+            where z_max: is the max absolute z-score in the model
+                 mean_y: is the mean of the trained model input
+                stdev_y: is the std. deviation of the trained model input
+
+   RETURNS: (abs_z_scores, z_score_max, mean_ys, stdev_ys), where:
+
+            abs_z_scores: Array of abs. values of z-scores (same shape as ys)
+             z_score_max: Max absolute z-score
+                 mean_ys: Mean of ys
+                stdev_ys: Std. dev of ys
+
+     NOTES: Unless you care about trained models you should ignore
+            all return values except the first, and 'params' argument.
+
+  EXAMPLES:
+
+  >>> es.z_score([1,2,3,4,5,6,7,8,9,10, 1000])                                                          
+      (array([0.332 , 0.3285, 0.325 , 0.3215, 0.318 , 0.3145, 0.311 , 0.3075,
+              0.304 , 0.3005, 3.1621]), 3.1621, 95.9091, 285.9118)
+    '''
+    # suppress divide by 0 warnings. We handle the actual division
+    # issue by using np.nan_to_num
+    import warnings
+    warnings.filterwarnings("ignore",category=RuntimeWarning)
+
+    ys = np.array(ys)
+    if params:
+        # if params is set, we use it to get the mean and stdev
+        _, mean_y, stdev_y = params
+    else:
+        mean_y = np.mean(ys).round(4)
+        stdev_y = np.std(ys).round(4)
+    abs_z_scores = np.nan_to_num(np.abs((ys - mean_y) / stdev_y).round(4))
+    return (abs_z_scores, abs_z_scores.max(), mean_y, stdev_y) 
 
 def outliers_iqr(ys, params = ()):
     '''
@@ -123,7 +159,7 @@ def outliers_iqr(ys, params = ()):
     # documentation)
     fitted_Q1 = 3*ys.max()/8 + 5*ys.min()/8
     fitted_Q3 = 5*ys.max()/8 + 3*ys.min()/8
-    return (outliers, 0, fitted_Q1, fitted_Q3)
+    return (outliers, 0, round(fitted_Q1, 4), round(fitted_Q3, 4))
 
 # this function returns a tuple consisting of:
 #  (scores, worst_score, median, median_absolute_deviation)

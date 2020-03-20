@@ -14,8 +14,9 @@ def setUpModule():
     print('setUpModule: importing {0}'.format(datafiles))
     environ['EPMT_TZ'] = 'Asia/Kolkata'
     epmt_submit(glob(datafiles), dry_run=False)
-    # set MADZ threshold to a lower value to generate outliers
+    # set lower madz and z-score thresholds to easily detect outliers
     settings.outlier_thresholds['modified_z_score'] = 2.5
+    settings.outlier_thresholds['z_score'] = 1.5 
 
 def tearDownModule():
     pass
@@ -73,9 +74,9 @@ class OutliersAPI(unittest.TestCase):
     @db_session
     def test_outlier_jobs_multimode(self):
         import epmt_stat as es
-        df, parts = eod.detect_outlier_jobs(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], methods = [es.outliers_iqr, es.modified_z_score])
+        df, parts = eod.detect_outlier_jobs(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], methods = [es.outliers_iqr, es.modified_z_score, es.z_score])
         self.assertEqual(df.shape, (4,4))
-        self.assertEqual(list(zip(df.jobid.values, df.cpu_time.values, df.duration.values, df.num_procs.values)), [('kern-6656-20190614-190245', 0, 0, 0), ('kern-6656-20190614-192044-outlier', 2, 2, 0), ('kern-6656-20190614-194024', 0, 0, 0), ('kern-6656-20190614-191138', 0, 0, 0)])
+        self.assertEqual(list(zip(df.jobid.values, df.cpu_time.values, df.duration.values, df.num_procs.values)), [('kern-6656-20190614-190245', 0, 0, 0), ('kern-6656-20190614-192044-outlier', 3, 3, 0), ('kern-6656-20190614-194024', 0, 0, 0), ('kern-6656-20190614-191138', 0, 0, 0)])
         self.assertEqual(parts, {'cpu_time': ({'kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024'}, {'kern-6656-20190614-192044-outlier'}), 'duration': ({'kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024'}, {'kern-6656-20190614-192044-outlier'}), 'num_procs': ({'kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'}, set())})
 
     @db_session
@@ -118,12 +119,13 @@ class OutliersAPI(unittest.TestCase):
         # now check that we used *all* the features
         self.assertEqual(set(df.columns.values) & all_features, all_features)
         #
-        # let's test using IQR
+        # let's test using IQR and z-score
         import epmt_stat as es
-        r = eq.create_refmodel(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024'], outlier_methods = [es.outliers_iqr])
-        df, _ = eod.detect_outlier_jobs(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], methods = [es.outliers_iqr], trained_model=r['id'])
-        self.assertEqual(df.shape, (4,4))
-        self.assertEqual(list(zip(df.jobid.values, df.cpu_time.values, df.duration.values, df.num_procs.values)), [('kern-6656-20190614-190245', 0, 0, 0), ('kern-6656-20190614-192044-outlier', 1, 1, 0), ('kern-6656-20190614-194024', 0, 0, 0), ('kern-6656-20190614-191138', 0, 0, 0)])
+        for m in [es.outliers_iqr, es.z_score]:
+            r = eq.create_refmodel(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024'], outlier_methods = [m])
+            df, _ = eod.detect_outlier_jobs(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], methods = [m], trained_model=r['id'])
+            self.assertEqual(df.shape, (4,4))
+            self.assertEqual(list(zip(df.jobid.values, df.cpu_time.values, df.duration.values, df.num_procs.values)), [('kern-6656-20190614-190245', 0, 0, 0), ('kern-6656-20190614-192044-outlier', 1, 1, 0), ('kern-6656-20190614-194024', 0, 0, 0), ('kern-6656-20190614-191138', 0, 0, 0)])
 
     @db_session
     def test_outlier_jobs_trained_mvod(self):

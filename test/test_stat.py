@@ -32,6 +32,12 @@ class EPMTStat(unittest.TestCase):
         r = outliers_iqr(int_vec)[0]
         self.assertEqual(list(r), [0, 0, 0, 1])
 
+    def test_z_score(self):
+        import epmt_stat as es
+        (scores, max_score, mean_y, stdev_y) = es.z_score([1,2,3,4,5,6,7,8,9,10, 1000])
+        self.assertEqual(list(scores),[0.332 , 0.3285, 0.325 , 0.3215, 0.318 , 0.3145, 0.311 , 0.3075, 0.304 , 0.3005, 3.1621])
+        self.assertEqual((max_score, mean_y, stdev_y), (3.1621, 95.9091, 285.9118))
+
     def test_check_dist(self):
         np.random.seed(1)
         (passed, failed) = check_dist(range(100), 'norm')
