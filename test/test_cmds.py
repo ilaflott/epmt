@@ -102,7 +102,7 @@ class EPMTCmds(unittest.TestCase):
     def test_dbsize_provider(self):
         with capture() as (out, err):
             from epmt_cmds import epmt_dbsize
-            retval, val = epmt_dbsize()
+            retval = epmt_dbsize()
         isPG = (orm_db_provider() == 'postgres')
         self.assertEqual(retval, isPG, 'wrong database return value')
 
@@ -111,7 +111,7 @@ class EPMTCmds(unittest.TestCase):
         with capture() as (out, err):
             import json
             from epmt_cmds import epmt_dbsize
-            retval, out = epmt_dbsize(
+            retval = epmt_dbsize(
                 ['database', 'table', 'index', 'tablespace'], usejson=True)
             throws = True
             json.loads(out)

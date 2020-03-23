@@ -1365,8 +1365,11 @@ def delete_jobs(jobs, force = False, before=None, after=None):
         jobs = get_jobs(jobs, before=before, after=after, fmt='orm')
 
     num_jobs = jobs.count()
+    if num_jobs == 0:
+        logger.error('No jobs matched')
+        return 0
     if num_jobs > 1 and not force:
-        logger.warning('You must set force=True when calling this function as you want to delete more than one job')
+        logger.warning('set force=True when calling this function if deleting more than one job')
         return 0
 
     # make sure we aren't trying to delete jobs with models associated with them

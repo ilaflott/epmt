@@ -13,7 +13,6 @@ def epmt_delete_jobs(joblist):
 # Delete jobs should return which ones don't get deleted if it cannot
 # guarantee atomicity
     if delete_jobs(joblist, force=True) != len(joblist):
-        logger.error("delete_jobs %s failed",str(joblist))
         return False
     logger.info("deleted jobs %s",str(joblist))
     return True
