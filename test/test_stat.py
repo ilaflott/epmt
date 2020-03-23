@@ -9,19 +9,19 @@ from epmt_stat import check_dist
 class EPMTStat(unittest.TestCase):
 
     def test_outliers_iqr(self):
-        from epmt_stat import outliers_iqr
+        from epmt_stat import outliers_iqr, iqr
         vec = [100, 100, 100, 45, 100]
-        r = outliers_iqr(vec)[0]
+        r = outliers_iqr(vec)
         self.assertEqual(list(r), [0, 0, 0, 1, 0])
         # now let's do a more involved test
         vec = [1,2,3,4,3,2,1,10]
-        (outliers, discard, q1, q3) = outliers_iqr(vec)
+        (outliers, discard, q1, q3) = iqr(vec)
         self.assertEqual(list(outliers), [0, 0, 0, 0, 0, 0, 0, 1])
         self.assertEqual((discard, q1, q3), (0, 4.375, 6.625))
         # q1 and q3 are such that if provided as arguments
-        # to another call of outliers_iqr with the same input
+        # to another call of iqr with the same input
         # will *just* fit the vector and find no outliers
-        (outliers_r, _, q1_r, q3_r) = outliers_iqr(vec, (discard, q1, q3))
+        (outliers_r, _, q1_r, q3_r) = iqr(vec, (discard, q1, q3))
         self.assertEqual(list(outliers_r), [0]*8)
         self.assertEqual((q1_r, q3_r), (q1, q3))
 
@@ -29,8 +29,15 @@ class EPMTStat(unittest.TestCase):
         import epmtlib as el
         from epmt_stat import outliers_iqr
         int_vec = el.hash_strings(['ABC', 'ABC', "ABC", 'DEF'])
-        r = outliers_iqr(int_vec)[0]
+        r = outliers_iqr(int_vec)
         self.assertEqual(list(r), [0, 0, 0, 1])
+
+    def test_outliers_uv(self):
+        from epmt_stat import outliers_uv
+        r = outliers_uv([1,2,1,1,1,1,2,1,0,2,100,100])
+        self.assertEqual(list(r), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2])
+        r = outliers_uv([1,2,1,1,1,1,2,1,0,2,100])
+        self.assertEqual(list(r), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3])
 
     def test_z_score(self):
         import epmt_stat as es

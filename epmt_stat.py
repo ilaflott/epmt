@@ -85,7 +85,7 @@ def z_score(ys, params = ()):
     abs_z_scores = np.nan_to_num(np.abs((ys - mean_y) / stdev_y).round(4))
     return (abs_z_scores, abs_z_scores.max(), mean_y, stdev_y) 
 
-def outliers_iqr(ys, params = ()):
+def iqr(ys, params = ()):
     '''
     Detects outliers using the 1.5 IQR rule.
 
@@ -132,7 +132,7 @@ def outliers_iqr(ys, params = ()):
 
     # in the simplest case we only care about the outliers vector
     # not the other two return values (those are used for trained models)
-    >>> (outliers, _, _, _) = es.outliers_iqr([1,1,2,3,4,1,100])                                             
+    >>> (outliers, _, _, _) = es.iqr([1,1,2,3,4,1,100])                                             
     >>> outliers
         array([0, 0, 0, 0, 0, 0, 1])
     '''
@@ -189,15 +189,61 @@ def modified_z_score(ys, params=()):
     logger.debug('madz scores: {}'.format(madz))
     return (madz, round(max(madz), 4), round(median_y, 4), round(median_absolute_deviation_y, 4))
 
+# All outliers_* methods return a vector mask that indicates
+# whether an element is an outlier or not. They are wrappers
+# around scoring methods -- z_score, modified_z_score, iqr
+
+def outliers_iqr(ys):
+    '''
+    Returns a vector mask that identifies outliers using IQR
+    '''
+    return iqr(ys)[0]
 
 def outliers_modified_z_score(ys,threshold=thresholds['modified_z_score']):
+    '''
+    Returns a vector mask that identifies outliers using MADZ
+    '''
     scores = modified_z_score(ys)[0]
-    return np.where(np.abs(scores) > threshold)[0]
+    # return np.where(np.abs(scores) > threshold)[0]
+    # the + 0 will make it a numeric bitmask
+    return (np.abs(scores) > threshold) + 0
 
-def get_outlier_1d(df,column,func=outliers_iqr):
-    if column not in df:
-        return None
-    return(func(df[column]))
+def outliers_z_score(ys,threshold=thresholds['z_score']):
+    '''
+    Returns a vector mask that identifies outliers using z-score
+    '''
+    scores = z_score(ys)[0]
+    # return np.where(np.abs(scores) > threshold)[0]
+    # the + 0 will make it a numeric bitmask
+    return (np.abs(scores) > threshold) + 0
+
+def outliers_uv(ys, methods = [outliers_iqr, outliers_z_score, outliers_modified_z_score]):
+    '''
+    Returns a vector that identifies outliers using the argument
+    methods. For each element the returned vector indicates the
+    number of outlier methods that considered that element to be
+    an outlier.
+
+         ys: Input vector (numpy 1-d array)
+    methods: List of univariate classifiers to use. If unset all 
+             supported UV classifiers will be used. The classifiers
+             must all return the outliers bitmask as their sole return
+             value. So, use the outliers_* wrappers instead of methods
+             such as iqr, z_score, modified_z_score
+    '''
+    logger = getLogger(__name__)  # you can use other name
+    ys = np.array(ys)
+    logger.debug('input vector: {}'.format(ys))
+    out_vec = np.zeros_like(ys)
+    if not methods:
+        raise ValueError("'methods' needs to contain one or more univariate classifiers")
+    logger.debug('outlier detection using {} methods'.format(len(methods)))
+    for m in methods:
+        outliers = m(ys)
+        logger.debug('outliers using {}: {}'.format(m.__name__, outliers))
+        out_vec += outliers
+    logger.info('outliers using {} classifiers: {}'.format(len(methods), out_vec))
+    return out_vec
 
 
 def mvod_classifiers(contamination = 0.1, warnopts='ignore'):

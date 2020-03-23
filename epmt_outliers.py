@@ -10,7 +10,7 @@ from orm import db_session, ReferenceModel, orm_get, orm_col_len
 # the first epmt import must be epmt_query as it sets up logging
 import epmt_query as eq
 from epmtlib import tags_list, tag_from_string, dict_in_list, isString
-from epmt_stat import thresholds, modified_z_score,outliers_iqr,outliers_modified_z_score,rca, get_classifier_name, is_classifier_mv, partition_classifiers_uv_mv, mvod_scores_using_model
+from epmt_stat import thresholds, modified_z_score,iqr,outliers_iqr,outliers_modified_z_score,rca, get_classifier_name, is_classifier_mv, partition_classifiers_uv_mv, mvod_scores_using_model
 
 logger = getLogger(__name__)  # you can use other name
 import epmt_settings as settings
@@ -230,7 +230,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
 
     # Now, lets do a multimode outlier detection (multimode here means
     # using multiple univariate classifiers)
-    >>> (outliers, parts) = eod.detect_outlier_jobs(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], methods = [es.outliers_iqr, es.modified_z_score])
+    >>> (outliers, parts) = eod.detect_outlier_jobs(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], methods = [es.iqr, es.modified_z_score])
    INFO: epmt_outliers: outlier detection provided 2 classifiers
    INFO: epmt_outliers: 2 classifiers eligible
    INFO: epmt_outliers: outlier detection will be performed using 2 univariate and 0 multivariate classifiers
@@ -390,7 +390,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
                 else:
                     # use the max score in the refmodel if we have a trained model
                     # otherwise use the default threshold for the method
-                    # For some methods like outliers_iqr we purposely don't
+                    # For some methods like es.iqr we purposely don't
                     # have thresholds, instead those methods return a mask.
                     # So for such methods that return a mask we use a threshold of 0
                     threshold = params[0] if params else thresholds.get(m_name, 0)
@@ -906,33 +906,37 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
         logger.info(mvod_df)
         return(mvod_df, classfiers_od_dict)
 
-    
-def detect_outlier_processes(processes, trained_model=None, 
-                             features=['duration','exclusive_cpu_time'],
-                             methods=[outliers_iqr,outliers_modified_z_score]):
-    """
-    This function detects outlier processes using either a trained model
-    or from within the input set.
-    """
-    eq._empty_collection_check(processes)
-    retval = pd.DataFrame(0, columns=features, index=processes.index)
-    for c in features:
-        for m in methods:
-            m_name = get_classifier_name(m)
-            outlier_rows = m(processes[c])
-            print(m_name,c,len(outlier_rows),"outliers")
-            retval.loc[outlier_rows,c] += 1
+
+# TODO: This function needs to be fixed to handle changed return formats
+#       of outliers_iqr and outliers_modified_z_score
+#    
+# def detect_outlier_processes(processes, trained_model=None, 
+#                              features=['duration','exclusive_cpu_time'],
+#                              methods=[outliers_iqr,outliers_modified_z_score]):
+#     """
+#     This function detects outlier processes using either a trained model
+#     or from within the input set.
+#     """
+#     eq._empty_collection_check(processes)
+#     retval = pd.DataFrame(0, columns=features, index=processes.index)
+#     for c in features:
+#         for m in methods:
+#             m_name = get_classifier_name(m)
+#             outlier_rows = m(processes[c])
+#             print(m_name,c,len(outlier_rows),"outliers")
+#             retval.loc[outlier_rows,c] += 1
+#
 #
 #   Here we can demand that more than one detector signal an outlier, currently only 1 is required.
 #
-    # print(retval.describe())
-    print(retval.head())
-    retval = retval.gt(.99)
-    retval['id'] = processes['id']
-    retval['exename'] = processes['exename']
-    retval['tags'] = processes['tags']
-    retval = retval[['id','exename','tags']+features]
-    return retval
+#     # print(retval.describe())
+#     print(retval.head())
+#     retval = retval.gt(.99)
+#     retval['id'] = processes['id']
+#     retval['exename'] = processes['exename']
+#     retval['tags'] = processes['tags']
+#     retval = retval[['id','exename','tags']+features]
+#     return retval
 
 
 
@@ -1486,16 +1490,16 @@ def _err_col_len(c, min_length = 1, msg = None):
         raise RuntimeError(msg)
 
 
-if (__name__ == "__main__"):
-    np.random.seed(101)
-    random_data = np.random.randn(100,2)
-    random_proc_df = pd.DataFrame(random_data, columns=['duration','exclusive_cpu_time'])
-    random_proc_df['id'] = ""
-    random_proc_df['exename'] = ""
-    random_proc_df['tags'] = ""
-    retval = detect_outlier_processes(random_proc_df)
-    print(retval.head())
-#
-# Here we print a boolean if any metric barfed at us
-#
-    print ((retval[['duration','exclusive_cpu_time']] == True).any(axis=1).head())
+# if (__name__ == "__main__"):
+#     np.random.seed(101)
+#     random_data = np.random.randn(100,2)
+#     random_proc_df = pd.DataFrame(random_data, columns=['duration','exclusive_cpu_time'])
+#     random_proc_df['id'] = ""
+#     random_proc_df['exename'] = ""
+#     random_proc_df['tags'] = ""
+#     retval = detect_outlier_processes(random_proc_df)
+#     print(retval.head())
+# #
+# # Here we print a boolean if any metric barfed at us
+# #
+#     print ((retval[['duration','exclusive_cpu_time']] == True).any(axis=1).head())

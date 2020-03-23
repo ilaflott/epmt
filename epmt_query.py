@@ -1750,10 +1750,12 @@ def compute_process_trees(jobs):
         mk_process_tree(j)
 
 @db_session
-def exp_explore(exp_name, order_key = 'duration', op = 'sum', limit=10):
+def exp_explore(exp_name, metric = 'duration', op = 'sum', limit=10):
+    '''
+    '''
     from epmtlib import ranges, natural_keys
     import numpy as np
-    order_key = order_key or 'duration' # defaults when using with command-line
+    metric = metric or 'duration' # defaults when using with command-line
     limit = limit or 10 # defaults when using with command-line
     exp_jobs = get_jobs(tags = { 'exp_name': exp_name }, fmt = 'orm' )
     exp_jobids = sorted([j.jobid for j in exp_jobs], key=natural_keys)
@@ -1772,7 +1774,7 @@ def exp_explore(exp_name, order_key = 'duration', op = 'sum', limit=10):
     for j in exp_jobs:
         c = j.tags['exp_component']
         entry = c_dict.get(c, {'data': []})
-        entry['data'].append((j.tags.get('exp_time', ''), j.jobid, getattr(j, order_key)))
+        entry['data'].append((j.tags.get('exp_time', ''), j.jobid, getattr(j, metric)))
         c_dict[c] = entry
 
     c_list = []
@@ -1784,26 +1786,26 @@ def exp_explore(exp_name, order_key = 'duration', op = 'sum', limit=10):
         f_vals = [d[2] for d in v['data']]
         outliers_vec = np.abs(modified_z_score(f_vals)[0]) > settings.outlier_thresholds['modified_z_score']
         v['outliers'] = outliers_vec
-        v['sum_' + order_key ] = sum(f_vals)
-        agg_f += v['sum_' + order_key ]
-        v['min_' + order_key ] = min(f_vals)
-        v['max_' + order_key ] = max(f_vals)
-        v['avg_' + order_key ] = v['sum_' + order_key ]/len(f_vals)
-        v['stddev_' + order_key ] = np.std(f_vals)
-        v['cv_' + order_key ] = round(v['stddev_' + order_key ]/v['avg_' + order_key ], 2)
+        v['sum_' + metric ] = sum(f_vals)
+        agg_f += v['sum_' + metric ]
+        v['min_' + metric ] = min(f_vals)
+        v['max_' + metric ] = max(f_vals)
+        v['avg_' + metric ] = v['sum_' + metric ]/len(f_vals)
+        v['stddev_' + metric ] = np.std(f_vals)
+        v['cv_' + metric ] = round(v['stddev_' + metric ]/v['avg_' + metric ], 2)
         c_list.append(v)
     
-    ordered_c_list = sorted(c_list, key = lambda v: v[op+'_' + order_key], reverse=True)[:limit]
+    ordered_c_list = sorted(c_list, key = lambda v: v[op+'_' + metric], reverse=True)[:limit]
 
 
-    print('\ntop {} components by {}({}):'.format(limit, op, order_key))
+    print('\ntop {} components by {}({}):'.format(limit, op, metric))
     print("%16s  %12s         %12s %12s %4s" % ("component", "sum", "min", "max", "cv"))
     for v in ordered_c_list:
-        print("%16.16s: %12d [%4.1f%%] %12d %12d %4.1f" % (v['exp_component'], v[op+'_' + order_key], 100*v['sum_' + order_key ]/agg_f, v['min_' + order_key ],  v['max_' + order_key ], v['cv_' + order_key ]))
+        print("%16.16s: %12d [%4.1f%%] %12d %12d %4.1f" % (v['exp_component'], v[op+'_' + metric], 100*v['sum_' + metric ]/agg_f, v['min_' + metric ],  v['max_' + metric ], v['cv_' + metric ]))
 
     # now let's the variations within a component across different time segments
     print('\nvariations across time segments:')
-    print("%16s %12s %12s %16s" % ("component", "exp_time", "jobid", order_key))
+    print("%16s %12s %12s %16s" % ("component", "exp_time", "jobid", metric))
 
     for v in ordered_c_list:
         outliers = v['outliers']
@@ -1817,7 +1819,7 @@ def exp_explore(exp_name, order_key = 'duration', op = 'sum', limit=10):
     # time segment we can spot something interesting
     time_seg_dict = {}
     for j in exp_jobs:
-        m = getattr(j, order_key)
+        m = getattr(j, metric)
         exp_time = j.tags.get('exp_time', '')
         if not exp_time: continue
         m_total = time_seg_dict.get(exp_time, 0)
@@ -1828,7 +1830,7 @@ def exp_explore(exp_name, order_key = 'duration', op = 'sum', limit=10):
         inp_vec.append(time_seg_dict[t])
     if inp_vec:
         out_vec = np.abs(modified_z_score(inp_vec)[0]) > settings.outlier_thresholds['modified_z_score']
-        print('{} by time segment:'.format(order_key))
+        print('{} by time segment:'.format(metric))
         idx = 0
         for t in sorted(list(time_seg_dict.keys())):
             print("%12s %16d %4s" % (t, time_seg_dict[t], "****" if out_vec[idx] else ""))
