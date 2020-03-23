@@ -128,7 +128,7 @@ class Operation(dict):
 
     def to_dict(self, full = False):
         d = dict(self)
-        d['jobs'] = self.jobs[:]
+        d['jobs'] = [ j.jobid for j in self.jobs ]
         d['duration'] = self.duration
         d['proc_sums'] = self.proc_sums
         # d['processes'] = self.processes[:]

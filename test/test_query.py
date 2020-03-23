@@ -365,6 +365,9 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual((ops[0]['proc_sums']['num_procs'], ops[1]['proc_sums']['num_procs']), (428, 190))
         self.assertEqual((ops[0]['proc_sums']['cpu_time'], ops[1]['proc_sums']['cpu_time']), (32325636.0, 6484854.0))
         self.assertEqual((ops[0]['duration'], ops[1]['duration']), (67847274.0, 4787122.0))
+        ops = eq.get_ops(['685000', '685003'], tags = ['op:timavg', 'op:ncks'], fmt='pandas')
+        self.assertEqual(ops.shape, (2, 8))
+
         ops = eq.get_ops(['685000', '685003'], tags = ['op:timavg', 'op:ncks'], op_duration_method="sum-minus-overlap")
         self.assertEqual((ops[0]['duration'], ops[1]['duration']), (36053215.0, 4773815.0))
         ops = eq.get_ops(['685000', '685003'], tags = ['op:timavg', 'op:ncks'], op_duration_method="finish-minus-start")

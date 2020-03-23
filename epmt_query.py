@@ -1073,8 +1073,8 @@ def __unique_proc_tags_for_job(job, exclude=[], fold=True):
 @db_session
 def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict', op_duration_method = "sum", full= False):
     '''
-    Returns a list of "Operations", where each Operation is either
-    an object or a dict, depending on 'fmt'. An operation represents a collection
+    Returns a collection of "Operations", where each Operation is either
+    an object, a dict, or a dataframe row, depending on 'fmt'. An operation represents a collection
     of processes that share a tag. 
 
     jobs: Collection of jobs. For e.g., a list of jobids, etc.
@@ -1093,9 +1093,12 @@ def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict', 
           considered to be a match for a tag, t, if the process tag is a superset
           of t.
 
-    fmt: Output format for each operation in the list. By default, a dict,
-          but it can also be set to 'orm', in which case each operation is
-          an object.
+    fmt: Output format for each operation in the returned collection.
+         If set to 'dict' a list of dictionaries is returned. If 'orm'
+         then a list of ORM Operation objects are returned. If 'pandas'
+         a dataframe is returned, where each row represents an operation.
+         'terse' format is not supported, and will be silently translated
+         to 'dict'.
 
     combine: If combine is set to True, then the returned list of operations
           will be combined into a single high-level operation. In this case
@@ -1193,8 +1196,10 @@ def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict', 
             op = Operation(jobs, t, exact_tag_only, op_duration_method = op_duration_method)
             if op: ops.append(op)
 
-    if fmt == 'dict':
+    if fmt != 'orm':
         ops = [ op.to_dict(full=full) for op in ops ]
+        if fmt == 'pandas':
+            ops = pd.DataFrame(ops)
     return ops
 
 @db_session
