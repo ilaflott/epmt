@@ -367,7 +367,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
     # while the multivariate code takes them in one go
     if uv_methods:
         # initialize a df with all values set to False
-        logger.debug('OD using UV classifiers: {}'.format(uv_methods))
+        logger.debug('OD using UV classifiers: {}'.format([ m.__name__ for m in uv_methods]))
         retval = pd.DataFrame(0, columns=features, index=jobs.index)
         for c in features:
             # print('data-type for feature column {0} is {1}'.format(c, jobs[c].dtype))

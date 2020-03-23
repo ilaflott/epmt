@@ -74,7 +74,8 @@ def z_score(ys, params = ()):
     # issue by using np.nan_to_num
     import warnings
     warnings.filterwarnings("ignore",category=RuntimeWarning)
-
+    logger = getLogger(__name__)  # you can use other name
+    logger.debug('scoring using {}'.format('z_score'))
     ys = np.array(ys)
     if params:
         # if params is set, we use it to get the mean and stdev
@@ -137,8 +138,9 @@ def iqr(ys, params = ()):
         array([0, 0, 0, 0, 0, 0, 1])
     '''
     logger = getLogger(__name__)  # you can use other name
+    logger.debug('scoring using {}'.format('iqr'))
     ys = np.array(ys)
-    span = thresholds['iqr']
+    span = [25, 75]
     if not params:
         # usual case: no model params
         quartile_1, quartile_3 = np.percentile(ys, span)
@@ -170,6 +172,7 @@ def iqr(ys, params = ()):
 # We will ignore params(0) as that's the max z_score in the ref_model
 def modified_z_score(ys, params=()):
     logger = getLogger(__name__)  # you can use other name
+    logger.debug('scoring using {}'.format('modified_z_score'))
     median_y = params[1] if params else np.median(ys)
     if params:
         median_absolute_deviation_y = params[2]
