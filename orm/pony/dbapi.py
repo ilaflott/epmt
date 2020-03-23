@@ -212,8 +212,8 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
     from orm import orm_db_provider
     # Test if provider is supported
     if (orm_db_provider() != 'postgres'):
-        logger.warning("%s Not supported",str(settings.db_params.get('provider','Provider settings key missing')))
-        return(False,"")
+        logger.warning("%s is not supported for dbsize",str(settings.db_params.get('provider','Provider settings key missing')))
+        return(False)
     # Connect to db for querying
     if setup_db(settings) == False:
         logger.warning("Could Not connect to db")

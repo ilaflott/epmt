@@ -202,7 +202,7 @@ def get_db_size(findwhat=['database','table','index','tablespace'], usejson=Fals
     # Test if provider is supported
     provider = orm_db_provider()
     if provider != 'postgres':
-        logger.error("%s not supported for dbsize",provider)
+        logger.warning("%s not supported for dbsize",provider)
         return(False)
 
     # Load ORM and Connect to DB for query

@@ -97,7 +97,6 @@ class EPMTSubmit(unittest.TestCase):
         else:
             self.assertTrue(is_pt_computed)
             self.assertTrue(p.inclusive_cpu_time)
-            self.assertTrue(p.parent or p.children)
             self.assertTrue(is_process_tree_computed(j))
 
 

@@ -99,25 +99,19 @@ class EPMTCmds(unittest.TestCase):
         self.assertEqual(type(retval), bool, 'wrong list jobs return type')
         self.assertEqual(retval, True, 'wrong list jobs return value')
 
-    def test_dbsize_provider(self):
-        with capture() as (out, err):
-            from epmt_cmds import epmt_dbsize
-            retval = epmt_dbsize()
-        isPG = (orm_db_provider() == 'postgres')
-        self.assertEqual(retval, isPG, 'wrong database return value')
 
-    @unittest.skipUnless(orm_db_provider() == 'postgres', 'requires postgres')
     def test_dbsize_json(self):
+        from epmt_cmds import epmt_dbsize
         with capture() as (out, err):
-            import json
-            from epmt_cmds import epmt_dbsize
-            retval = epmt_dbsize(
-                ['database', 'table', 'index', 'tablespace'], usejson=True)
-            throws = True
-            json.loads(out)
-            if len(out) > 1:
-                throws = False
-        self.assertEqual(throws, False, 'JSON not loaded successfully')
+            retval = epmt_dbsize(['database', 'table', 'index', 'tablespace'], usejson=True)
+        s = out.getvalue()
+        isPG = (orm_db_provider() == 'postgres')
+        self.assertEqual(retval, isPG, 'wrong epmt_dbsize() return value')
+        # on postgres we actually get a long string output
+        if isPG:
+            self.assertTrue(s.count('Table') >= 8)
+        else:
+            self.assertFalse(s)
 
     def test_yy_retire(self):
         from datetime import datetime, timedelta
