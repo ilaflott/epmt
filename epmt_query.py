@@ -1366,7 +1366,7 @@ def delete_jobs(jobs, force = False, before=None, after=None):
 
     num_jobs = jobs.count()
     if num_jobs == 0:
-        logger.error('No jobs matched')
+        logger.warning('No jobs matched')
         return 0
     if num_jobs > 1 and not force:
         logger.warning('set force=True when calling this function if deleting more than one job')
