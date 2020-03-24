@@ -15,7 +15,7 @@ epmt_logging_init(settings.verbose if hasattr(settings, 'verbose') else 0, check
 
 ### Put EPMT imports below, after logging is set up
 from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key, stringify_dicts, version, version_str, conv_to_datetime
-from epmt_stat import modified_z_score, get_classifier_name, is_classifier_mv, mvod_scores
+from epmt_stat import modified_z_score, get_classifier_name, is_classifier_mv, mvod_scores, outliers_uv
 
 init_settings(settings) # type: ignore
 setup_db(settings) # type: ignore
@@ -1784,8 +1784,7 @@ def exp_explore(exp_name, metric = 'duration', op = 'sum', limit=10):
         jobids = [d[1] for d in v['data']]
         v['jobids'] = jobids
         f_vals = [d[2] for d in v['data']]
-        outliers_vec = np.abs(modified_z_score(f_vals)[0]) > settings.outlier_thresholds['modified_z_score']
-        v['outliers'] = outliers_vec
+        v['outliers'] = outliers_uv(f_vals)
         v['sum_' + metric ] = sum(f_vals)
         agg_f += v['sum_' + metric ]
         v['min_' + metric ] = min(f_vals)
@@ -1811,7 +1810,7 @@ def exp_explore(exp_name, metric = 'duration', op = 'sum', limit=10):
         outliers = v['outliers']
         idx = 0
         for d in v['data']:
-            print("%16.16s %12s %12s %16d %4s" % (v['exp_component'], d[0], d[1], d[2], "****" if outliers[idx] else ""))
+            print("%16.16s %12s %12s %16d %6s" % (v['exp_component'], d[0], d[1], d[2], "**" * int(outliers[idx])))
             idx += 1
         print()
 
