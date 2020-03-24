@@ -6,6 +6,7 @@ from json import loads, dumps
 from os import environ
 from logging import getLogger
 import epmt_settings as settings
+import numpy as np
 
 # do NOT do any epmt imports until logging is set up
 # using epmt_logging_init, other than import epmt_logging_init
@@ -1749,14 +1750,40 @@ def compute_process_trees(jobs):
     for j in jobs:
         mk_process_tree(j)
 
-@db_session
-def exp_explore(exp_name, metric = 'duration', op = 'sum', limit=10):
+
+def exp_comp_stats(exp_name, metric = 'duration', op = np.sum, limit = 10):
     '''
+    Computes an ordered list of components by aggregate metric value
+    across jobs of that component.
+
+    exp_name: Experiment name
+      metric: A metric from the job model (duration, cpu_time, etc)
+          op: A callable that performs a reduction on a numpy vector or list
+              For e.g., np.sum, or np.mean, etc
+       limit: Restrict the output to the top N components
+
+     RETURNS:
+        Returns a list of components reverse sorted in the decreasing
+        order of op(metric), where op is generally np.sum and metric
+        is something like "duration". The returned list is of the form:
+
+        [
+          { 
+            "exp_component" : <component-name>, 
+            "jobids": [ list of jobids for component ],
+            "metrics" : [ list of metric values corresponding to the jobids (same order) ],
+            "exp_times" : [ list of exp_time values corresponding to the jobids (same order) ],
+            "outliers" : [ indices in the metrics array that are outliers ]
+          },
+          ...
+        ]
+
+        The ordering of the list is in decreasing order op(metric). For the defaults,
+        this translates to decreasing order of cumulative sums of duration across all
+        jobs of a component.
     '''
     from epmtlib import ranges, natural_keys
     import numpy as np
-    metric = metric or 'duration' # defaults when using with command-line
-    limit = limit or 10 # defaults when using with command-line
     exp_jobs = get_jobs(tags = { 'exp_name': exp_name }, fmt = 'orm' )
     exp_jobids = sorted([j.jobid for j in exp_jobs], key=natural_keys)
     if not exp_jobids:
@@ -1764,12 +1791,31 @@ def exp_explore(exp_name, metric = 'duration', op = 'sum', limit=10):
         return False
     try:
         job_ranges_str = ",".join(["{}..{}".format(a, b) if (a != b) else "{}".format(a) for (a,b) in ranges([int(x) for x in exp_jobids])])
-        print('Experiment {} contains {} jobs: {}'.format(exp_name, exp_jobs.count(), job_ranges_str))
+        logger.info('Experiment {} contains {} jobs: {}'.format(exp_name, exp_jobs.count(), job_ranges_str))
     except:
         # the ranges function can fail for non-integer jobids, so here
         # we simply print the job count, and not actually list the jobids
-        print('Experiment {} contains {} jobs'.format(exp_name, exp_jobs.count()))
+        logger.info('Experiment {} contains {} jobs'.format(exp_name, exp_jobs.count()))
 
+    # we create a dict of dicts. The top-level dict is indexed by component name
+    # Effecttively we get to know for each component, the jobs and the time-segment
+    # for the job, as well as the metric value for the job
+    # {
+    #      'ocean_annual_z_1x1deg': {'data': [('18540101', '625151', 10425623185.0), 
+    #                                         ('18590101', '627907', 6589174875.0), 
+    #                                         ('18640101', '629322', 7286331754.0), 
+    #                                         ('18690101', '633114', 6036720046.0), 
+    #                                         ('18740101', '675992', 9114150525.0), 
+    #                                         ('18790101', '680163', 6156192011.0), 
+    #                                         ('18840101', '685001', 6815710476.0), 
+    #                                         ('18890101', '691209', 860163243.0), 
+    #                                         ('18940101', '693129', 3619324767.0)]}, 
+    #   'ocean_annual_rho2_1x1deg': {'data': [('18840101', '685000', 6460243317.0)]}, 
+    #      'ocean_cobalt_fdet_100': {'data': [('18840101', '685003', 6615525773.0)]}, 
+    #    'ocean_month_rho2_1x1deg': {'data': [('18840101', '685016', 7005618511.0)]}, 
+    #     'ocean_monthly_z_1x1deg': {'data': [('18890101', '692500', 1663860093.0)]}
+    # }
+    # More keys (other than data will be added later)
     c_dict = {}
     for j in exp_jobs:
         c = j.tags['exp_component']
@@ -1778,40 +1824,62 @@ def exp_explore(exp_name, metric = 'duration', op = 'sum', limit=10):
         c_dict[c] = entry
 
     c_list = []
-    agg_f = 0
     for c, v in c_dict.items():
         v['exp_component'] = c
+        v['exp_times'] = [ d[0] for d in v['data']]
         jobids = [d[1] for d in v['data']]
         v['jobids'] = jobids
-        f_vals = [d[2] for d in v['data']]
-        v['outliers'] = outliers_uv(f_vals)
-        v['sum_' + metric ] = sum(f_vals)
-        agg_f += v['sum_' + metric ]
-        v['min_' + metric ] = min(f_vals)
-        v['max_' + metric ] = max(f_vals)
-        v['avg_' + metric ] = v['sum_' + metric ]/len(f_vals)
-        v['stddev_' + metric ] = np.std(f_vals)
-        v['cv_' + metric ] = round(v['stddev_' + metric ]/v['avg_' + metric ], 2)
+        metric_vec = np.array([d[2] for d in v['data']])
+        # we can remove v['data'] once we have created the above fields
+        del v['data']
+        v['metrics'] = metric_vec
+        v['outliers'] = outliers_uv(metric_vec)
+
+        # we don't compute these anymore as we already return the np array
+        # v['sum_' + metric ] = np.sum(metric_vec)
+        # v['min_' + metric ] = np.min(metric_vec)
+        # v['max_' + metric ] = np.max(metric_vec)
+        # v['avg_' + metric ] = np.mean(metric_vec)
+        # v['std_' + metric ] = np.std(metric_vec)
+        # v['cv_' + metric ] = np.round(np.std(metric_vec)/np.mean(metric_vec), 2)
+
         c_list.append(v)
+   
+    # We generally care about components that have higher duration (metric) summed across
+    # all the jobs of the component. However, we retain flexibility by ordering by
+    # something like min/max/stddev instead by changing op.
+
+    # order the components list by desc. metric sum (op is sum generally, but could be min/max/stddev)
+    ordered_c_list = sorted(c_list, key = lambda v: op(v['metrics']), reverse=True)[:limit]
+    return ordered_c_list
+
+@db_session
+def exp_explore(exp_name, metric = 'duration', op = np.sum, limit=10):
+    '''
+    '''
+    from scipy.stats import variation
+
+    metric = metric or 'duration' # defaults when using with command-line
+    limit = limit or 10 # defaults when using with command-line
     
-    ordered_c_list = sorted(c_list, key = lambda v: v[op+'_' + metric], reverse=True)[:limit]
+    exp_jobs = get_jobs(tags = { 'exp_name': exp_name }, fmt = 'orm' )
+    ordered_comp_list = exp_comp_stats(exp_name, metric, op, limit)
 
+    agg_metric = np.sum([ np.array(d['metrics']).sum() for d in ordered_comp_list ])
 
-    print('\ntop {} components by {}({}):'.format(limit, op, metric))
+    print('\ntop {} components by {}({}):'.format(limit, op.__name__, metric))
     print("%16s  %12s         %12s %12s %4s" % ("component", "sum", "min", "max", "cv"))
-    for v in ordered_c_list:
-        print("%16.16s: %12d [%4.1f%%] %12d %12d %4.1f" % (v['exp_component'], v[op+'_' + metric], 100*v['sum_' + metric ]/agg_f, v['min_' + metric ],  v['max_' + metric ], v['cv_' + metric ]))
+    for v in ordered_comp_list:
+        print("%16.16s: %12d [%4.1f%%] %12d %12d %4.1f" % (v['exp_component'], op(v['metrics']), 100*np.sum(v['metrics'])/agg_metric, np.min(v['metrics']),  np.max(v['metrics']), variation(v['metrics'])))
 
     # now let's the variations within a component across different time segments
     print('\nvariations across time segments:')
     print("%16s %12s %12s %16s" % ("component", "exp_time", "jobid", metric))
 
-    for v in ordered_c_list:
+    for v in ordered_comp_list:
         outliers = v['outliers']
-        idx = 0
-        for d in v['data']:
-            print("%16.16s %12s %12s %16d %6s" % (v['exp_component'], d[0], d[1], d[2], "**" * int(outliers[idx])))
-            idx += 1
+        for idx in range(len(v['metrics'])):
+            print("%16.16s %12s %12s %16d %6s" % (v['exp_component'], v['exp_times'][idx], v['jobids'][idx], v['metrics'][idx], "**" * int(outliers[idx])))
         print()
 
     # finally let's see if by summing the metric across all the jobs in a 
