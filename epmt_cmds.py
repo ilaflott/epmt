@@ -640,7 +640,7 @@ def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run
         if monitor_debug: tmp += "setenv MONITOR_DEBUG $MONITOR_DEBUG;"
         if papiex_debug: tmp += "setenv PAPIEX_DEBUG $PAPIEX_DEBUG;" 
         cmd += "alias epmt_instrument '"+tmp+"';\n"
-        cmd += "alias epmt 'epmt_uninstrument; ( `type -p epmt` \!* ); epmt_instrument;';\n" # 
+        cmd += "alias epmt 'epmt_uninstrument; ( `/usr/bin/which epmt` \!* ); epmt_instrument;';\n" # 
         cmd += "alias epmt_uninstrument 'unsetenv MONITOR_DEBUG PAPIEX_OUTPUT PAPIEX_DEBUG PAPIEX_OPTIONS"
         if not oldp:
             cmd += " LD_PRELOAD';"
@@ -656,7 +656,7 @@ def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run
         cmd += "epmt_push_preload;\n};\n"
         cmd += "epmt_uninstrument () {\nexport -n MONITOR_DEBUG PAPIEX_OUTPUT PAPIEX_DEBUG PAPIEX_OPTIONS;\n"
         cmd += "epmt_pop_preload;\n};\n"
-        cmd += "epmt () {\nepmt_pop_preload;\n cmd=`type -p epmt`;\nif [ $? -eq 0 ]; then $cmd $* ; else \"epmt not in \$PATH\"; fi\n;epmt_push_preload;\n};\n"
+        cmd += "epmt () {\nepmt_pop_preload;\n cmd=`/usr/bin/which epmt`;\nif [ $? -eq 0 ]; then $cmd $* ; else \"epmt not in \$PATH\"; fi\n;epmt_push_preload;\n};\n"
         # Now enable instrumentation
         cmd +="epmt_instrument;\n"
 
