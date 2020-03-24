@@ -625,12 +625,12 @@ def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run
     cmd = add_var(cmd,"PAPIEX_OUTPUT"+equals+global_datadir) 
     cmd = add_var(cmd,"PAPIEX_OPTIONS"+equals+settings.papiex_options)
     oldp = environ.get("LD_PRELOAD")
-    if oldp: cmd = add_var(cmd,"OLD_LD_PRELOAD"+equals+oldp)
-    cmd = add_var(cmd,"LD_PRELOAD"+equals+
+    cmd = add_var(cmd,"PAPIEX_OLD_LD_PRELOAD"+equals+oldp)
+    cmd = add_var(cmd,"PAPIEX_LD_PRELOAD"+equals+
                   settings.install_prefix+"lib/libpapiex.so:"+
                   settings.install_prefix+"lib/libpapi.so:"+
                   settings.install_prefix+"lib/libpfm.so:"+
-                  settings.install_prefix+"lib/libmonitor.so"+((":"+oldp) if oldp else ""))
+                  settings.install_prefix+"lib/libmonitor.so")
 #
 # Use export -n which keeps the variable but prevents it from being exported
 #
@@ -648,13 +648,16 @@ def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run
         # CSH won't let an alias used in eval be used in the same eval, so we repeat this
         cmd +="\n"+tmp+"\n"
     elif not run_cmd and not slurm_prolog:
-        cmd += "epmt_instrument ()\n{\nexport MONITOR_DEBUG PAPIEX_OUTPUT PAPIEX_DEBUG PAPIEX_OPTIONS LD_PRELOAD;\n};\n"
-        cmd += "epmt_uninstrument ()\n{\nexport -n MONITOR_DEBUG PAPIEX_OUTPUT PAPIEX_DEBUG PAPIEX_OPTIONS"
-        if not oldp:
-            cmd += " LD_PRELOAD;\n"
-        else:
-            cmd += "\nexport LD_PRELOAD=$OLD_LD_PRELOAD;\n"
-        cmd +="};\nepmt_instrument;\n"
+# set up functions
+        cmd += "epmt_push_preload ()\n{\nif [ -z \"$PAPIEX_OLD_LD_PRELOAD\" ]; then export LD_PRELOAD=$PAPIEX_LD_PRELOAD ; else export LD_PRELOAD=$PAPIEX_LD_PRELOAD:$PAPIEX_OLD_LD_PRELOAD ; fi\n};\n"
+        cmd += "epmt_pop_preload ()\n{\nif [ -z \"$PAPIEX_OLD_LD_PRELOAD\" ]; then export -n LD_PRELOAD ; else export LD_PRELOAD=$PAPIEX_OLD_LD_PRELOAD ; fi\n};\n"
+        cmd += "epmt_instrument () {\nexport MONITOR_DEBUG PAPIEX_OUTPUT PAPIEX_DEBUG PAPIEX_OPTIONS LD_PRELOAD;\n"
+        cmd += "epmt_push_preload;\n};\n"
+        cmd += "epmt_uninstrument () {\nexport -n MONITOR_DEBUG PAPIEX_OUTPUT PAPIEX_DEBUG PAPIEX_OPTIONS;\n"
+        cmd += "epmt_pop_preload;\n};\n"
+        cmd += "epmt () {\nepmt_pop_preload;\n cmd=`which epmt`;\nif [ $? -eq 0 ]; then $cmd $* ; else \"epmt not in \$PATH\"; fi\n;epmt_push_preload;\n};\n"
+        # Now enable instrumentation
+        cmd +="epmt_instrument;\n"
 
     return cmd
 
@@ -1021,12 +1024,12 @@ def epmt_stage(dirs, keep_going=True):
             return False
     return r
 
-def epmt_dbsize(findwhat=['database','table','index','tablespace'], usejson=False, usebytes=False):
-    from orm import get_db_size
+def epmt_dbsize(findwhat=['database','table','index','tablespace'], usejson=True, usebytes=True):
+    from orm import orm_db_size
 # Absolutely all argument checking should go here, specifically the findwhat stuff
     if findwhat == "all":
         findwhat = ['database','table','index','tablespace']
-    return(get_db_size(findwhat,usejson,usebytes))
+    return(orm_db_size(findwhat,usejson,usebytes))
 
 # Start a shell. if ipython is True (default) start a powerful
 # ipython shell, otherwise a vanilla python shell
@@ -1135,7 +1138,7 @@ def epmt_entrypoint(args):
         orm_drop_db()
         return 0
     if args.command == 'dbsize':
-        return(epmt_dbsize(args.epmt_cmd_args, usejson=args.json, usebytes=args.bytes) == False)
+        return(epmt_dbsize(args.epmt_cmd_args) == False)
     if args.command == 'start':
         return(epmt_start_job(other=args.epmt_cmd_args) == False)
     if args.command == 'stop':

@@ -190,7 +190,7 @@ def orm_delete_jobs(jobs, use_orm = False):
             #stmts.append('DELETE FROM processes WHERE processes.jobid = \'{0}\''.format(jobid))
             stmts.append('DELETE FROM jobs WHERE jobs.jobid = \'{0}\''.format(jobid))
         try:
-            _execute_raw_sql(stmts, commit = True)
+            orm_raw_sql(stmts, commit = True)
             return
         except Exception as e:
             logger.warning("Could not execute delete SQL: {0}".format(str(e)))
@@ -582,21 +582,22 @@ def get_mapper(tbl):
 # This function is vulnerable to injection attacks. It's expected that
 # the orm API will define a higher-level function to use this
 # function after guarding against injection and dangerous sql commands
-def _execute_raw_sql(sql, commit = False):
-    connection = engine.connect()
+def orm_raw_sql(sql, commit = False):
     logger.debug('Executing: {0}'.format(sql))
+    connection = engine.connect()
     trans = connection.begin()
     if type(sql) != list:
         sql = [sql]
-    try:
-        for s in sql:
+    for s in sql:
+        try:
             res = connection.execute(s)
-        if commit:
-            trans.commit()
-            return True
-    except:
-        trans.rollback()
-        raise
+            if commit:
+                trans.commit()
+                return True
+        except:
+            logger.warning("Failed raw sql: %s", s)
+            trans.rollback()
+            raise
     connection.close()
     return res
 

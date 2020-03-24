@@ -139,8 +139,8 @@ if (__name__ == "__main__"):
         description="Prints the on-disk size of different constructs in the database. Not supported for all databases.")
     dbsize_parser.add_argument('epmt_cmd_args', default='all', const='all', nargs='?', choices=["all", "database","table","index","tablespace"], metavar="dbitem", help='%(choices)s')
     
-    dbsize_parser.add_argument('--bytes',action='store_true',help="Output size in bytes")
-    dbsize_parser.add_argument('--json',action='store_true',help="Format output in JSON")
+    #dbsize_parser.add_argument('--bytes',action='store_true',help="Output size in bytes")
+    #dbsize_parser.add_argument('--json',action='store_true',help="Format output in JSON")
     # Check
     check_parser = subparser.add_parser('check', help='Verify EPMT Installation',
         description="Check will verify basic epmt configuration and functionality.")
