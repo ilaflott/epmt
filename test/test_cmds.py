@@ -108,12 +108,13 @@ class EPMTCmds(unittest.TestCase):
         isPG = (orm_db_provider() == 'postgres')
         self.assertEqual(retval, isPG, 'wrong epmt_dbsize() return value')
         # on postgres we actually get a long string output
-        from json import loads
-        self.assertTrue(s)
-        d = loads(s)
-        self.assertTrue(d != False)
-        self.assertEqual(type(d), dict, "wrong return type")
-        self.assertTrue(len(d.keys()) > 0)
+        if isPG:
+            self.assertTrue(len(s) > 0)
+            from json import loads
+            d = loads(s)
+            self.assertTrue(d != False)
+            self.assertEqual(type(d), dict, "wrong return type")
+            self.assertTrue(len(d.keys()) > 0)
 
     def test_yy_retire(self):
         from datetime import datetime, timedelta
