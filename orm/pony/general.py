@@ -458,7 +458,7 @@ def orm_dump_schema(show_attributes=True):
             show(t)
             print('\n')
         else:
-            print(t._table_,t.__name__)
+            # print(t._table_,t.__name__)
             retval.append(t._table_)
     if not show_attributes:
         return retval
