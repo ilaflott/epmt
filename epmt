@@ -40,12 +40,19 @@ if (__name__ == "__main__"):
 
     subparser = parser.add_subparsers(title="EPMT Commands", dest="command")
     # Source
-    source_parser = subparser.add_parser('source', help="Environment variables for performance monitoring",
-        description="Source provides commands to begin epmt performance monitoring or instrumentation. \
-            Instrumentation is automatically called when eval on source is done. Two functions are created \
-                for starting of instrumentation epmt_instrument and stopping of instrumentation epmt_uninstrument")
+    source_parser = subparser.add_parser('source', help="Enable instrumentation of subsequent shell commands",
+                                         formatter_class=argparse.RawTextHelpFormatter,
+                                         description=
+                                         "Source provides commands to begin automatic performance instrumentation of all\n"
+                                         "subsequent shell commands. Standard use of this is via the shell's eval method\n"
+                                         "inside job scripts or batch system wrappers. For example:\n\n"
+                                         "\teval `epmt source` in Bash or Csh\n"
+                                         "\teval `epmt source --slurm` for a SLURM prolog.\n\n"
+                                         "Two shell functions/aliases are created to pause/restart instrumentation:\n\n\tepmt_uninstrument - to pause automatic instrumentation\n\tepmt_instrument - to renable automatic instruction.\n\n\n"
+                                         "**SLURM USERS NOTE** Use in SLURM's prolog, requires a special syntax\n"
+                                         "enabled here with the -s or --slurm option. For more info, see:\n"
+                                         "https://slurm.schedmd.com/prolog_epilog.html")
     source_parser.add_argument('-s','--slurm', action='store_true',help="Generate shell code for a SLURM prolog, https://slurm.schedmd.com/prolog_epilog.html")
-    source_parser._action_groups.pop()
     # Start
     start_parser = subparser.add_parser('start', help="Begin EPMT job data collection",
         description="Start creates directory and metadata file for data collection of a job.")
@@ -104,7 +111,7 @@ if (__name__ == "__main__"):
     daemon_parser.add_argument('-D', '--foreground',action='store_true',help="Start the daemon in foreground")
     daemon_parser.set_defaults(start_daemon=False, stop_daemon=False, foreground=False)
     # shell
-    shell_parser = subparser.add_parser('shell', help = "Run an interactive IPython shell. For a regular python shell, use 'epmt python'",
+    shell_parser = subparser.add_parser('shell', help = "Start an interactive IPython shell, see 'epmt python'",
        description = "shell runs an interactive IPython shell")
     # python
     py_parser = subparser.add_parser('python', help = "Run a Python script under the python interpreter",
@@ -117,10 +124,10 @@ if (__name__ == "__main__"):
     unit_test_parser = subparser.add_parser('unittest', help="Run EPMT unit test suite",
         description = "runs unit tests")
     # drop
-    drop_parser = subparser.add_parser('drop', help="Drop the entire database. Caution!! This action is irreversible.")
+    drop_parser = subparser.add_parser('drop', help="Drop the entire database, Caution!! Irreversible!")
     drop_parser.add_argument('-f', '--force', action='store_true',help="Do not prompt to confirm")
     # retire
-    retire_parser = subparser.add_parser('retire', help="Delete jobs and models (based on the data retention policy in settings.py)")
+    retire_parser = subparser.add_parser('retire', help="Delete jobs/models, retention policy in settings.py")
     # Submit
     submit_parser = subparser.add_parser('submit', help="Commit completed job to database",
         description="Submit accepts job directories and updates the database configured with \
@@ -164,7 +171,7 @@ if (__name__ == "__main__"):
     exp_explore_parser.add_argument('--limit', type=int, help="number of components to show (default: 10)")
 
 # Dummy Help for ./epmt help
-    help_parser = subparser.add_parser('help', help="Display this help with extended configuration information")
+    help_parser = subparser.add_parser('help', help="Display help with extended configuration information")
 
     # Print help without dump config
     if len(argv) == 1:

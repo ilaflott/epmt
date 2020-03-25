@@ -1,5 +1,10 @@
 #!/bin/bash
-unset LD_PRELOAD
+# This is not necessary, all variables set in SLURM prolog will not be carried over to here
+# unset LD_PRELOAD
+#
+# See https://slurm.schedmd.com/prolog_epilog.html
+#
+
 EPMT=/opt/epmt/epmt-install/epmt/epmt
 
 err_report() {

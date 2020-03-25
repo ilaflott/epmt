@@ -624,17 +624,19 @@ def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run
     if papiex_debug: cmd = add_var(cmd,"PAPIEX_DEBUG"+equals+"TRUE")
     cmd = add_var(cmd,"PAPIEX_OUTPUT"+equals+global_datadir) 
     cmd = add_var(cmd,"PAPIEX_OPTIONS"+equals+settings.papiex_options)
-    oldp = environ.get("LD_PRELOAD","")
-    cmd = add_var(cmd,"PAPIEX_OLD_LD_PRELOAD"+equals+oldp)
-    cmd = add_var(cmd,"PAPIEX_LD_PRELOAD"+equals+
-                  settings.install_prefix+"lib/libpapiex.so:"+
-                  settings.install_prefix+"lib/libpapi.so:"+
-                  settings.install_prefix+"lib/libpfm.so:"+
-                  settings.install_prefix+"lib/libmonitor.so")
+    old_pl_libs = environ.get("LD_PRELOAD","")
+    cmd = add_var(cmd,"PAPIEX_OLD_LD_PRELOAD"+equals+old_pl_libs)
+    papiex_pl_libs = settings.install_prefix+"lib/libpapiex.so:"+settings.install_prefix+"lib/libpapi.so:"+settings.install_prefix+"lib/libpfm.so:"+settings.install_prefix+"lib/libmonitor.so"
+    cmd = add_var(cmd,"PAPIEX_LD_PRELOAD"+equals+papiex_pl_libs)
 #
 # Use export -n which keeps the variable but prevents it from being exported
 #
-    if undercsh:
+    if slurm_prolog:
+        cmd += "export LD_PRELOAD="+papiex_pl_libs
+        if len(old_pl_libs) > 0:
+            cmd += ":"+old_pl_libs
+        cmd += "\n"
+    elif undercsh:
         tmp = "setenv PAPIEX_OPTIONS $PAPIEX_OPTIONS; setenv LD_PRELOAD $PAPIEX_LD_PRELOAD;"
         tmp += "setenv PAPIEX_OUTPUT $PAPIEX_OUTPUT;"
         if monitor_debug: tmp += "setenv MONITOR_DEBUG $MONITOR_DEBUG;"
@@ -642,13 +644,13 @@ def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run
         cmd += "alias epmt_instrument '"+tmp+"';\n"
 #        cmd += "alias epmt 'epmt_uninstrument; ( command epmt \!* ); epmt_instrument;';\n"  
         cmd += "alias epmt_uninstrument 'unsetenv MONITOR_DEBUG PAPIEX_OUTPUT PAPIEX_DEBUG PAPIEX_OPTIONS"
-        if not oldp:
+        if not old_pl_libs:
             cmd += " LD_PRELOAD';"
         else:
             cmd += "';\nsetenv LD_PRELOAD $PAPIEX_OLD_LD_PRELOAD;"
         # CSH won't let an alias used in eval be used in the same eval, so we repeat this
         cmd +="\n"+tmp+"\n"
-    elif not run_cmd and not slurm_prolog:
+    elif not run_cmd:
 # set up functions
         cmd += "epmt_push_preload ()\n{\nif [ -z \"$PAPIEX_OLD_LD_PRELOAD\" ]; then export LD_PRELOAD=$PAPIEX_LD_PRELOAD ; else export LD_PRELOAD=$PAPIEX_LD_PRELOAD:$PAPIEX_OLD_LD_PRELOAD ; fi\n};\n"
         cmd += "epmt_pop_preload ()\n{\nif [ -z \"$PAPIEX_OLD_LD_PRELOAD\" ]; then export -n LD_PRELOAD ; else export LD_PRELOAD=$PAPIEX_OLD_LD_PRELOAD ; fi\n};\n"
@@ -656,10 +658,9 @@ def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run
         cmd += "epmt_push_preload;\n};\n"
         cmd += "epmt_uninstrument () {\nexport -n MONITOR_DEBUG PAPIEX_OUTPUT PAPIEX_DEBUG PAPIEX_OPTIONS;\n"
         cmd += "epmt_pop_preload;\n};\n"
-#        cmd += "epmt () {\nepmt_pop_preload;\n cmd=`command epmt`;\nif [ $? -eq 0 ]; then $cmd $* ; else \"epmt not in \$PATH\"; fi\n;epmt_push_preload;\n};\n"
+        #        cmd += "epmt () {\nepmt_pop_preload;\n cmd=`command epmt`;\nif [ $? -eq 0 ]; then $cmd $* ; else \"epmt not in \$PATH\"; fi\n;epmt_push_preload;\n};\n"
         # Now enable instrumentation
         cmd +="epmt_instrument;\n"
-
     return cmd
 
 def epmt_run(cmdline, wrapit=False, dry_run=False, debug=False):
