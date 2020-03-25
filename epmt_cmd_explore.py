@@ -33,23 +33,12 @@ def exp_explore(exp_name, metric = 'duration', op = np.sum, limit=10):
 
     # finally let's see if by summing the metric across all the jobs in a 
     # time segment we can spot something interesting
-    time_seg_dict = {}
-    for j in exp_jobs:
-        m = getattr(j, metric)
-        exp_time = j.tags.get('exp_time', '')
-        if not exp_time: continue
-        m_total = time_seg_dict.get(exp_time, 0)
-        m_total += m
-        time_seg_dict[exp_time] = m_total
-    inp_vec = []
-    for t in sorted(list(time_seg_dict.keys())):
-        inp_vec.append(time_seg_dict[t])
-    if inp_vec:
-        out_vec = np.abs(es.modified_z_score(inp_vec)[0]) > settings.outlier_thresholds['modified_z_score']
-        print('{} by time segment:'.format(metric))
-        idx = 0
-        for t in sorted(list(time_seg_dict.keys())):
-            print("%12s %16d %4s" % (t, time_seg_dict[t], "****" if out_vec[idx] else ""))
-            idx += 1
+    od = eq.exp_time_segment_stats(exp_name, metric)
+    time_segments = list(od.keys())
+    metric_sums = [np.sum(od[t]['metrics']) for t in time_segments]
+    outlier_scores = es.outliers_uv(metric_sums)
+    print('{} by time segment:'.format(metric))
+    for idx in range(len(time_segments)):
+        print("%12s %16d %6s" % (time_segments[idx], metric_sums[idx], "**" * int(outlier_scores[idx])))
     return True
 

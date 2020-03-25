@@ -18,6 +18,6 @@ setup() {
   assert_output --partial "ocean_annual_z_1     18890101       691209        860163243   ****"
   assert_output --partial "ocean_annual_z_1     18940101       693129       3619324767     **"
   assert_output --partial "18540101      10425623185"
-  assert_output --partial "18840101      26897098077 ****"
+  assert_output --partial "18840101      26897098077   ****"
 }
 

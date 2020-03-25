@@ -1881,6 +1881,54 @@ def exp_comp_stats(exp_name, metric = 'duration', op = np.sum, limit = 10):
 
 
 @db_session
+def exp_time_segment_stats(exp_name, metric = 'duration'):
+    '''
+    Computes statistics by time-segment for an experiment
+
+    exp_name: Experiment name
+      metric: A field of the job model such as duration or cpu_time
+
+     RETURNS: A an OrderedDict of the form:
+              {
+                '18540101': { 
+                               'jobids': [list of jobids],
+                              'metrics': [vector of metric values corresponding to the jobids]
+                            }
+                '18590101': {
+                               ...
+                            }
+              }
+
+   EXAMPLES:
+   >>> eq.exp_time_segment_stats('ESM4_historical_D151')                                                 
+OrderedDict([('18540101', {'jobids': ['625151'], 'metrics': [10425623185.0]}),
+             ('18590101', {'jobids': ['627907'], 'metrics': [6589174875.0]}),
+             ('18640101', {'jobids': ['629322'], 'metrics': [7286331754.0]}),
+             ('18690101', {'jobids': ['633114'], 'metrics': [6036720046.0]}),
+             ('18740101', {'jobids': ['675992'], 'metrics': [9114150525.0]}),
+             ('18790101', {'jobids': ['680163'], 'metrics': [6156192011.0]}),
+             ('18840101', {'jobids': ['685000', '685001', '685003', '685016'],
+                           'metrics': [6460243317.0, 6815710476.0, 6615525773.0, 7005618511.0]}), 
+             ('18890101', {'jobids': ['691209', '692500'], 'metrics': [860163243.0, 1663860093.0]}),
+             ('18940101', {'jobids': ['693129'], 'metrics': [3619324767.0]})])
+    '''
+    from collections import OrderedDict
+    od = OrderedDict()
+    exp_jobs = get_jobs(tags = { 'exp_name': exp_name }, fmt = 'orm' )
+    # because jobs are ordered in increasing start time, we we will
+    # end up creating a dictionary with time-segments in increasing order
+    for j in exp_jobs:
+        exp_time = j.tags.get('exp_time', '')
+        if exp_time:
+            if not exp_time in od:
+                od[exp_time] = { 'jobids': [], 'metrics': [] }
+            od[exp_time]['jobids'].append(j.jobid)
+            od[exp_time]['metrics'].append(getattr(j, metric))
+    return od
+
+
+
+@db_session
 def procs_histogram(jobs, attr = 'exename'):
     '''
     Gets a processes histogram for a collection of jobs
