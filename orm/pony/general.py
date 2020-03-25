@@ -453,8 +453,13 @@ def orm_dump_schema(show_attributes=True):
     from orm.pony.models import Job, Host, Process, User, Group, Queue, Account, ReferenceModel, UnprocessedJob
     retval=[]
     for t in [Job, Host, Process, User, Group, Queue, Account, ReferenceModel, UnprocessedJob]:
-#        print(t._table_,t.__name__)
-        retval.append(t._table_)
+        if show_attributes:
+            print('TABLE {}'.format(t._table_ or t.__name__ or t))
+            show(t)
+            print('\n')
+        else:
+            # print(t._table_,t.__name__)
+            retval.append(t._table_)
     if not show_attributes:
         return retval
     return True;

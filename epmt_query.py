@@ -1773,7 +1773,7 @@ def exp_comp_stats(exp_name, metric = 'duration', op = np.sum, limit = 10):
             "jobids": [ list of jobids for component ],
             "metrics" : [ list of metric values corresponding to the jobids (same order) ],
             "exp_times" : [ list of exp_time values corresponding to the jobids (same order) ],
-            "outliers" : [ indices in the metrics array that are outliers ]
+            "outlier_scores" : [ list of outlier scores corresponding to the jobids (same order)]
           },
           ...
         ]
@@ -1781,6 +1781,32 @@ def exp_comp_stats(exp_name, metric = 'duration', op = np.sum, limit = 10):
         The ordering of the list is in decreasing order op(metric). For the defaults,
         this translates to decreasing order of cumulative sums of duration across all
         jobs of a component.
+
+       NOTES: Outlier scores represent the number of methods that indicated that
+              an element is an outlier. The higher the number, the greater the likelihood
+              of the element being an outlier. A score of zero for an element means
+              the corresponding jobid was not an outlier. We do multimode outlier
+              detection using all available univariate classifiers.
+
+    EXAMPLES:
+    >>> eq.exp_comp_stats('ESM4_historical_D151', 'duration')
+    INFO: epmt_query: Experiment ESM4_historical_D151 contains 13 jobs: 625151,627907,629322,633114,675992, 680163,685000..685001,685003,685016,691209,692500,693129
+    [{
+         'exp_component': 'ocean_annual_z_1x1deg', 
+          'exp_times': ['18540101','18590101','18640101','18690101','18740101','18790101','18840101','18890101','18940101'], 
+          'jobids': ['625151','627907','629322','633114','675992','680163','685001','691209','693129'], 
+          'metrics': array([1.04256232e+10, 6.58917488e+09, 7.28633175e+09, 6.03672005e+09, 9.11415052e+09, 6.15619201e+09, 6.81571048e+09, 8.60163243e+08, 3.61932477e+09]), 
+          'outlier_scores': array([2., 0., 0., 0., 0., 0., 0., 2., 1.])
+     }, 
+     {
+          'exp_component': 'ocean_month_rho2_1x1deg', 
+          'exp_times': ['18840101'], 
+          'jobids': ['685016'], 
+          'metrics': array([7.00561851e+09]), 
+          'outlier_scores': array([0.])
+     }, 
+     ...
+    ]
     '''
     from epmtlib import ranges, natural_keys
     import numpy as np
@@ -1833,7 +1859,7 @@ def exp_comp_stats(exp_name, metric = 'duration', op = np.sum, limit = 10):
         # we can remove v['data'] once we have created the above fields
         del v['data']
         v['metrics'] = metric_vec
-        v['outliers'] = outliers_uv(metric_vec)
+        v['outlier_scores'] = outliers_uv(metric_vec)
 
         # we don't compute these anymore as we already return the np array
         # v['sum_' + metric ] = np.sum(metric_vec)
@@ -1853,56 +1879,53 @@ def exp_comp_stats(exp_name, metric = 'duration', op = np.sum, limit = 10):
     ordered_c_list = sorted(c_list, key = lambda v: op(v['metrics']), reverse=True)[:limit]
     return ordered_c_list
 
+
 @db_session
-def exp_explore(exp_name, metric = 'duration', op = np.sum, limit=10):
+def exp_time_segment_stats(exp_name, metric = 'duration'):
     '''
-    '''
-    from scipy.stats import variation
+    Computes statistics by time-segment for an experiment
 
-    metric = metric or 'duration' # defaults when using with command-line
-    limit = limit or 10 # defaults when using with command-line
-    
+    exp_name: Experiment name
+      metric: A field of the job model such as duration or cpu_time
+
+     RETURNS: A an OrderedDict of the form:
+              {
+                '18540101': { 
+                               'jobids': [list of jobids],
+                              'metrics': [vector of metric values corresponding to the jobids]
+                            }
+                '18590101': {
+                               ...
+                            }
+              }
+
+   EXAMPLES:
+   >>> eq.exp_time_segment_stats('ESM4_historical_D151')                                                 
+OrderedDict([('18540101', {'jobids': ['625151'], 'metrics': [10425623185.0]}),
+             ('18590101', {'jobids': ['627907'], 'metrics': [6589174875.0]}),
+             ('18640101', {'jobids': ['629322'], 'metrics': [7286331754.0]}),
+             ('18690101', {'jobids': ['633114'], 'metrics': [6036720046.0]}),
+             ('18740101', {'jobids': ['675992'], 'metrics': [9114150525.0]}),
+             ('18790101', {'jobids': ['680163'], 'metrics': [6156192011.0]}),
+             ('18840101', {'jobids': ['685000', '685001', '685003', '685016'],
+                           'metrics': [6460243317.0, 6815710476.0, 6615525773.0, 7005618511.0]}), 
+             ('18890101', {'jobids': ['691209', '692500'], 'metrics': [860163243.0, 1663860093.0]}),
+             ('18940101', {'jobids': ['693129'], 'metrics': [3619324767.0]})])
+    '''
+    from collections import OrderedDict
+    od = OrderedDict()
     exp_jobs = get_jobs(tags = { 'exp_name': exp_name }, fmt = 'orm' )
-    ordered_comp_list = exp_comp_stats(exp_name, metric, op, limit)
-
-    agg_metric = np.sum([ np.array(d['metrics']).sum() for d in ordered_comp_list ])
-
-    print('\ntop {} components by {}({}):'.format(limit, op.__name__, metric))
-    print("%16s  %12s         %12s %12s %4s" % ("component", "sum", "min", "max", "cv"))
-    for v in ordered_comp_list:
-        print("%16.16s: %12d [%4.1f%%] %12d %12d %4.1f" % (v['exp_component'], op(v['metrics']), 100*np.sum(v['metrics'])/agg_metric, np.min(v['metrics']),  np.max(v['metrics']), variation(v['metrics'])))
-
-    # now let's the variations within a component across different time segments
-    print('\nvariations across time segments:')
-    print("%16s %12s %12s %16s" % ("component", "exp_time", "jobid", metric))
-
-    for v in ordered_comp_list:
-        outliers = v['outliers']
-        for idx in range(len(v['metrics'])):
-            print("%16.16s %12s %12s %16d %6s" % (v['exp_component'], v['exp_times'][idx], v['jobids'][idx], v['metrics'][idx], "**" * int(outliers[idx])))
-        print()
-
-    # finally let's see if by summing the metric across all the jobs in a 
-    # time segment we can spot something interesting
-    time_seg_dict = {}
+    # because jobs are ordered in increasing start time, we we will
+    # end up creating a dictionary with time-segments in increasing order
     for j in exp_jobs:
-        m = getattr(j, metric)
         exp_time = j.tags.get('exp_time', '')
-        if not exp_time: continue
-        m_total = time_seg_dict.get(exp_time, 0)
-        m_total += m
-        time_seg_dict[exp_time] = m_total
-    inp_vec = []
-    for t in sorted(list(time_seg_dict.keys())):
-        inp_vec.append(time_seg_dict[t])
-    if inp_vec:
-        out_vec = np.abs(modified_z_score(inp_vec)[0]) > settings.outlier_thresholds['modified_z_score']
-        print('{} by time segment:'.format(metric))
-        idx = 0
-        for t in sorted(list(time_seg_dict.keys())):
-            print("%12s %16d %4s" % (t, time_seg_dict[t], "****" if out_vec[idx] else ""))
-            idx += 1
-    return True
+        if exp_time:
+            if not exp_time in od:
+                od[exp_time] = { 'jobids': [], 'metrics': [] }
+            od[exp_time]['jobids'].append(j.jobid)
+            od[exp_time]['metrics'].append(getattr(j, metric))
+    return od
+
 
 
 @db_session

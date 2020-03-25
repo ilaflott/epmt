@@ -8,7 +8,7 @@ JOBS_LIST = ['685016', '685003', '685000']
 @timing
 def setUpModule():
     print('\n' + str(settings.db_params))
-    setup_db(settings)
+    setup_db(settings, drop = True)
     datafiles='test/data/query/*.tgz'
     print('setUpModdule: importing {0}'.format(datafiles))
     epmt_submit(sorted(glob(datafiles)), dry_run=False)
