@@ -744,7 +744,14 @@ def get_filedict(dirname,pattern,tar=False):
     return filedict
 
 def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1):
-    logger.debug("epmt_submit(%s,dry_run=%s,drop=%s,keep_going=%s)",dirs,dry_run,drop,keep_going)
+    logger.debug("epmt_submit(%s,dry_run=%s,drop=%s,keep_going=%s,ncpus=%d)",dirs,dry_run,drop,keep_going,ncpus)
+    if dry_run and drop:
+        logger.error("You can't drop tables and do a dry run")
+        return(False)
+    from orm import orm_db_provider
+    if (ncpus > 1) and ((settings.orm != 'sqlalchemy') or (orm_db_provider() != "postgres")):
+        logger.error('Parallel submit is only supported for Postgres + SQLAlchemy at present')
+        return False
     if not dirs:
         global_jobid,global_datadir,global_metadatafile = setup_vars()
         if not (global_jobid and global_datadir and global_metadatafile):
@@ -752,12 +759,6 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1):
         dirs  = [global_datadir]
     if not dirs or len(dirs) < 1:
         logger.error("Could not identify your job id")
-        return False
-    if dry_run and drop:
-        logger.error("You can't drop tables and do a dry run")
-        return(False)
-    if (ncpus > 1) and (settings.orm != 'sqlalchemy'):
-        logger.error('Parallel submit is only supported for SQLAlchemy at present')
         return False
     if drop and (ncpus > 1):
         # FIX:
