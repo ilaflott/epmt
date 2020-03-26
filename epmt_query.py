@@ -6,7 +6,6 @@ from json import loads, dumps
 from os import environ
 from logging import getLogger
 import epmt_settings as settings
-import numpy as np
 
 # do NOT do any epmt imports until logging is set up
 # using epmt_logging_init, other than import epmt_logging_init
@@ -16,7 +15,7 @@ epmt_logging_init(settings.verbose if hasattr(settings, 'verbose') else 0, check
 
 ### Put EPMT imports below, after logging is set up
 from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key, stringify_dicts, version, version_str, conv_to_datetime
-from epmt_stat import modified_z_score, get_classifier_name, is_classifier_mv, mvod_scores, outliers_uv
+from epmt_stat import modified_z_score, get_classifier_name, is_classifier_mv, mvod_scores
 
 init_settings(settings) # type: ignore
 setup_db(settings) # type: ignore
@@ -1749,183 +1748,6 @@ def compute_process_trees(jobs):
     jobs = orm_jobs_col(jobs)
     for j in jobs:
         mk_process_tree(j)
-
-
-def exp_comp_stats(exp_name, metric = 'duration', op = np.sum, limit = 10):
-    '''
-    Computes an ordered list of components by aggregate metric value
-    across jobs of that component.
-
-    exp_name: Experiment name
-      metric: A metric from the job model (duration, cpu_time, etc)
-          op: A callable that performs a reduction on a numpy vector or list
-              For e.g., np.sum, or np.mean, etc
-       limit: Restrict the output to the top N components
-
-     RETURNS:
-        Returns a list of components reverse sorted in the decreasing
-        order of op(metric), where op is generally np.sum and metric
-        is something like "duration". The returned list is of the form:
-
-        [
-          { 
-            "exp_component" : <component-name>, 
-            "jobids": [ list of jobids for component ],
-            "metrics" : [ list of metric values corresponding to the jobids (same order) ],
-            "exp_times" : [ list of exp_time values corresponding to the jobids (same order) ],
-            "outlier_scores" : [ list of outlier scores corresponding to the jobids (same order)]
-          },
-          ...
-        ]
-
-        The ordering of the list is in decreasing order op(metric). For the defaults,
-        this translates to decreasing order of cumulative sums of duration across all
-        jobs of a component.
-
-       NOTES: Outlier scores represent the number of methods that indicated that
-              an element is an outlier. The higher the number, the greater the likelihood
-              of the element being an outlier. A score of zero for an element means
-              the corresponding jobid was not an outlier. We do multimode outlier
-              detection using all available univariate classifiers.
-
-    EXAMPLES:
-    >>> eq.exp_comp_stats('ESM4_historical_D151', 'duration')
-    INFO: epmt_query: Experiment ESM4_historical_D151 contains 13 jobs: 625151,627907,629322,633114,675992, 680163,685000..685001,685003,685016,691209,692500,693129
-    [{
-         'exp_component': 'ocean_annual_z_1x1deg', 
-          'exp_times': ['18540101','18590101','18640101','18690101','18740101','18790101','18840101','18890101','18940101'], 
-          'jobids': ['625151','627907','629322','633114','675992','680163','685001','691209','693129'], 
-          'metrics': array([1.04256232e+10, 6.58917488e+09, 7.28633175e+09, 6.03672005e+09, 9.11415052e+09, 6.15619201e+09, 6.81571048e+09, 8.60163243e+08, 3.61932477e+09]), 
-          'outlier_scores': array([2., 0., 0., 0., 0., 0., 0., 2., 1.])
-     }, 
-     {
-          'exp_component': 'ocean_month_rho2_1x1deg', 
-          'exp_times': ['18840101'], 
-          'jobids': ['685016'], 
-          'metrics': array([7.00561851e+09]), 
-          'outlier_scores': array([0.])
-     }, 
-     ...
-    ]
-    '''
-    from epmtlib import ranges, natural_keys
-    import numpy as np
-    exp_jobs = get_jobs(tags = { 'exp_name': exp_name }, fmt = 'orm' )
-    exp_jobids = sorted([j.jobid for j in exp_jobs], key=natural_keys)
-    if not exp_jobids:
-        logger.warning('Could not find any jobs with an "exp_name" tag matching {}'.format(exp_name))
-        return False
-    try:
-        job_ranges_str = ",".join(["{}..{}".format(a, b) if (a != b) else "{}".format(a) for (a,b) in ranges([int(x) for x in exp_jobids])])
-        logger.info('Experiment {} contains {} jobs: {}'.format(exp_name, exp_jobs.count(), job_ranges_str))
-    except:
-        # the ranges function can fail for non-integer jobids, so here
-        # we simply print the job count, and not actually list the jobids
-        logger.info('Experiment {} contains {} jobs'.format(exp_name, exp_jobs.count()))
-
-    # we create a dict of dicts. The top-level dict is indexed by component name
-    # Effecttively we get to know for each component, the jobs and the time-segment
-    # for the job, as well as the metric value for the job
-    # {
-    #      'ocean_annual_z_1x1deg': {'data': [('18540101', '625151', 10425623185.0), 
-    #                                         ('18590101', '627907', 6589174875.0), 
-    #                                         ('18640101', '629322', 7286331754.0), 
-    #                                         ('18690101', '633114', 6036720046.0), 
-    #                                         ('18740101', '675992', 9114150525.0), 
-    #                                         ('18790101', '680163', 6156192011.0), 
-    #                                         ('18840101', '685001', 6815710476.0), 
-    #                                         ('18890101', '691209', 860163243.0), 
-    #                                         ('18940101', '693129', 3619324767.0)]}, 
-    #   'ocean_annual_rho2_1x1deg': {'data': [('18840101', '685000', 6460243317.0)]}, 
-    #      'ocean_cobalt_fdet_100': {'data': [('18840101', '685003', 6615525773.0)]}, 
-    #    'ocean_month_rho2_1x1deg': {'data': [('18840101', '685016', 7005618511.0)]}, 
-    #     'ocean_monthly_z_1x1deg': {'data': [('18890101', '692500', 1663860093.0)]}
-    # }
-    # More keys (other than data will be added later)
-    c_dict = {}
-    for j in exp_jobs:
-        c = j.tags['exp_component']
-        entry = c_dict.get(c, {'data': []})
-        entry['data'].append((j.tags.get('exp_time', ''), j.jobid, getattr(j, metric)))
-        c_dict[c] = entry
-
-    c_list = []
-    for c, v in c_dict.items():
-        v['exp_component'] = c
-        v['exp_times'] = [ d[0] for d in v['data']]
-        jobids = [d[1] for d in v['data']]
-        v['jobids'] = jobids
-        metric_vec = np.array([d[2] for d in v['data']])
-        # we can remove v['data'] once we have created the above fields
-        del v['data']
-        v['metrics'] = metric_vec
-        v['outlier_scores'] = outliers_uv(metric_vec)
-
-        # we don't compute these anymore as we already return the np array
-        # v['sum_' + metric ] = np.sum(metric_vec)
-        # v['min_' + metric ] = np.min(metric_vec)
-        # v['max_' + metric ] = np.max(metric_vec)
-        # v['avg_' + metric ] = np.mean(metric_vec)
-        # v['std_' + metric ] = np.std(metric_vec)
-        # v['cv_' + metric ] = np.round(np.std(metric_vec)/np.mean(metric_vec), 2)
-
-        c_list.append(v)
-   
-    # We generally care about components that have higher duration (metric) summed across
-    # all the jobs of the component. However, we retain flexibility by ordering by
-    # something like min/max/stddev instead by changing op.
-
-    # order the components list by desc. metric sum (op is sum generally, but could be min/max/stddev)
-    ordered_c_list = sorted(c_list, key = lambda v: op(v['metrics']), reverse=True)[:limit]
-    return ordered_c_list
-
-
-@db_session
-def exp_time_segment_stats(exp_name, metric = 'duration'):
-    '''
-    Computes statistics by time-segment for an experiment
-
-    exp_name: Experiment name
-      metric: A field of the job model such as duration or cpu_time
-
-     RETURNS: A an OrderedDict of the form:
-              {
-                '18540101': { 
-                               'jobids': [list of jobids],
-                              'metrics': [vector of metric values corresponding to the jobids]
-                            }
-                '18590101': {
-                               ...
-                            }
-              }
-
-   EXAMPLES:
-   >>> eq.exp_time_segment_stats('ESM4_historical_D151')                                                 
-OrderedDict([('18540101', {'jobids': ['625151'], 'metrics': [10425623185.0]}),
-             ('18590101', {'jobids': ['627907'], 'metrics': [6589174875.0]}),
-             ('18640101', {'jobids': ['629322'], 'metrics': [7286331754.0]}),
-             ('18690101', {'jobids': ['633114'], 'metrics': [6036720046.0]}),
-             ('18740101', {'jobids': ['675992'], 'metrics': [9114150525.0]}),
-             ('18790101', {'jobids': ['680163'], 'metrics': [6156192011.0]}),
-             ('18840101', {'jobids': ['685000', '685001', '685003', '685016'],
-                           'metrics': [6460243317.0, 6815710476.0, 6615525773.0, 7005618511.0]}), 
-             ('18890101', {'jobids': ['691209', '692500'], 'metrics': [860163243.0, 1663860093.0]}),
-             ('18940101', {'jobids': ['693129'], 'metrics': [3619324767.0]})])
-    '''
-    from collections import OrderedDict
-    od = OrderedDict()
-    exp_jobs = get_jobs(tags = { 'exp_name': exp_name }, fmt = 'orm' )
-    # because jobs are ordered in increasing start time, we we will
-    # end up creating a dictionary with time-segments in increasing order
-    for j in exp_jobs:
-        exp_time = j.tags.get('exp_time', '')
-        if exp_time:
-            if not exp_time in od:
-                od[exp_time] = { 'jobids': [], 'metrics': [] }
-            od[exp_time]['jobids'].append(j.jobid)
-            od[exp_time]['metrics'].append(getattr(j, metric))
-    return od
-
 
 
 @db_session
