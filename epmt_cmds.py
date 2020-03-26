@@ -1125,7 +1125,11 @@ def epmt_entrypoint(args):
     if args.command == 'daemon':
         from epmt_daemon import start_daemon, stop_daemon, daemon_loop, print_daemon_status
         if args.start or args.foreground:
-            return daemon_loop() if args.foreground else start_daemon()
+            if ((not(args.post_process)) and (not(args.ingest))):
+                # if no command is set, default to post-process
+                args.post_process = True
+            daemon_args = { 'post_process': args.post_process, 'ingest': args.ingest, 'recursive': args.recursive }
+            return daemon_loop(**daemon_args) if args.foreground else start_daemon(**daemon_args)
         elif args.stop:
             return stop_daemon()
         else:

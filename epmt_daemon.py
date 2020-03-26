@@ -17,7 +17,7 @@ sig_count = 0
 
 
 
-def start_daemon(lockfile = PID_FILE):
+def start_daemon(lockfile = PID_FILE, **daemon_args):
     import logging
     logger = getLogger(__name__)  # you can use other name
     from os import path
@@ -58,7 +58,7 @@ def start_daemon(lockfile = PID_FILE):
     logger.info('Starting the EPMT daemon (lock file: {0})..'.format(lockfile))
     print('Starting the EPMT daemon..')
     with context:
-        daemon_loop()
+        daemon_loop(**daemon_args)
     return 0
 
 def _get_daemon_pid(pidfile = PID_FILE):
@@ -124,17 +124,43 @@ def print_daemon_status(pidfile = PID_FILE):
 
 # if niters is set, then the daemon loop will end after 'niters' iterations
 # otherwise loop forever or until we get interrupted by a signal
-def daemon_loop(niters = 0):
+def daemon_loop(niters = 0, post_process = True, ingest = False, recursive = False):
+    '''
+    Runs a daemon loop niters times, performing enabled actions
+    such as post-processing, ingestion, etc.
+
+          niters: Number of times to run the daemon loop
+    post_process: Perform post-process and analysis of unprocessed
+                  jobs in the database. Default True.
+          ingest: Perform ingestion from the "ingest" directory into
+                  the database. Default is disabled.
+       recursive: Only meaningful when ingest is set. It indicates whether
+                  EPMT should descend into subdirectories to find staged files
+                  or not. Default False.
+    '''
     global sig_count
     sig_count = 0
     logger = getLogger(__name__)  # you can use other name
     from time import sleep, time
     from epmt_query import analyze_pending_jobs
     from epmt_job import post_process_pending_jobs
-    logger.debug('starting daemon loop..')
     tot_pp_runs = 0
     tot_ua_runs = 0
     iters = 0
+
+    if ingest:
+        logger.info('ingestion mode enabled for daemon (recurse={})'.format(recursive))
+        from os import path
+        if not (path.isdir(ingest)):
+            logger.error('Ingest path ({}) does not exist'.format(ingest))
+            return False
+        from epmtlib import find_files_in_dir
+        from epmt_cmds import epmt_submit
+
+    if post_process:
+        logger.info('post-process mode enabled for daemon')
+
+    logger.debug('starting daemon loop..')
     while (True):
         if (sig_count > 0):
             logger.warning('Terminating EPMT daemon gracefully..')
@@ -142,16 +168,24 @@ def daemon_loop(niters = 0):
             exit(0)
         delay = 10 # in seconds
         _t1 = time()
-        # unprocessed jobs (these are jobs on whom post-processing
-        # pipeline hasn't run; these are different from jobs on whom
-        # the analysis pipeline hasn't run)
-        # The post-processing pipeline computes the process tree
-        num_pp_run = len(post_process_pending_jobs())
-        tot_pp_runs += num_pp_run
-        # now run the analyses pipelines (outlier detection, etc)
-        num_analyses_run = analyze_pending_jobs()
-        tot_ua_runs += num_analyses_run
-        logger.debug('{0} jobs post-processed; {1} analyses filters run'.format(num_pp_run, num_analyses_run))
+        if ingest:
+            logger.debug('checking {} for new jobs to ingest..'.format(ingest))
+            tgz_files = find_files_in_dir(ingest, '*.tgz', recursive = recursive)
+            logger.debug('{} staged files found to ingest'.format(len(tgz_files)))
+            submit_retval = epmt_submit(tgz_files, dry_run = False)
+            print(submit_retval)
+
+        if post_process:
+            # unprocessed jobs (these are jobs on whom post-processing
+            # pipeline hasn't run; these are different from jobs on whom
+            # the analysis pipeline hasn't run)
+            # The post-processing pipeline computes the process tree
+            num_pp_run = len(post_process_pending_jobs())
+            tot_pp_runs += num_pp_run
+            # now run the analyses pipelines (outlier detection, etc)
+            num_analyses_run = analyze_pending_jobs()
+            tot_ua_runs += num_analyses_run
+            logger.debug('{0} jobs post-processed; {1} analyses filters run'.format(num_pp_run, num_analyses_run))
         iters += 1
         if niters and (iters > niters):
             logger.debug('ending daemon loop, as requested iterations completed')
@@ -159,7 +193,7 @@ def daemon_loop(niters = 0):
         _loop_time = (time() - _t1)
         delay = delay - _loop_time
         if delay > 0:
-            logger.debug('sleeping for {0} sec'.format(delay))
+            logger.debug('sleeping for {0:.3f} sec'.format(delay))
             sleep(delay)
         else:
             logger.warning("daemon loop took {0} seconds. No sleep for me!".format(_loop_time))
@@ -177,3 +211,4 @@ def signal_handler(signum, frame):
         # logger.warning('Received signal; will terminate shortly..')
         sig_count = 1
     return None
+

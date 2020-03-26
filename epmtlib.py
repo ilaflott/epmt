@@ -18,7 +18,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (3,5,37)
+_version = (3,6,0)
 
 def version():
     return _version
@@ -833,6 +833,19 @@ def dframe_decode_features(df, features):
     return (decoded_df, decoded_features)
     
 
+def find_files_in_dir(path, pattern = '*.tgz', recursive = False):
+    '''
+    Find files matching a pattern under a directory.
+
+       path: Top-level directory to scan
+    pattern: glob pattern to match. Defaults to '*.tgz'
+  recursive: Scan recursively down or not
+
+    RETURNS: List of files that match
+    '''
+    from glob import glob
+    pathname = '{}/{}{}'.format(path, '**/' if recursive else '', pattern)
+    return glob(pathname, recursive=recursive)
 
 if __name__ == "__main__":
     print(version_str(True))
