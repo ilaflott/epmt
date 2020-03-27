@@ -21,7 +21,21 @@ def setUpModule():
 class EPMTCmds(unittest.TestCase):
 
     @db_session
-    def test_daemon(self):
+    def test_daemon_ingest(self):
+        from epmt_daemon import daemon_loop
+        from os import path
+        self.assertFalse(eq.get_jobs(['691201', '692544'], fmt='terse'))
+        # now start the daemon and make it watch the directory containing the .tgz
+        with capture() as (out,err):
+            daemon_loop(1, ingest='./test/data/daemon/ingest', post_process=False, keep=True, recursive=False)
+        # by now the files should be in the DB
+        self.assertEqual(set(eq.get_jobs(['691201', '692544'], fmt='terse')), {'691201', '692544'})
+        # make sure the files aren't removed (since we used the "keep" option)
+        self.assertTrue(path.exists('test/data/daemon/ingest/691201.tgz') and path.exists('test/data/daemon/ingest/692544.tgz'))
+
+
+    @db_session
+    def test_daemon_post_process(self):
         # We first make sure the DB has one more unanalyzed and
         # and unprocessed jobs. Then we run the daemon loop once.
         # That should clear the backlog of unprocessed and 
