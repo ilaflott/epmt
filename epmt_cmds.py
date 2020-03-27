@@ -743,8 +743,9 @@ def get_filedict(dirname,pattern,tar=False):
 
     return filedict
 
-def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1):
-    logger.debug("epmt_submit(%s,dry_run=%s,drop=%s,keep_going=%s,ncpus=%d)",dirs,dry_run,drop,keep_going,ncpus)
+# if remove_file is set, then on successful ingest the .tgz file will be removed
+def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1, remove_file=False):
+    logger.debug("epmt_submit(%s,dry_run=%s,drop=%s,keep_going=%s,ncpus=%d,remove_file=%s)",dirs,dry_run,drop,keep_going,ncpus,remove_file)
     if dry_run and drop:
         logger.error("You can't drop tables and do a dry run")
         return(False)
@@ -784,7 +785,7 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1):
         logger.debug('Worker %d, PID %d', tid, getpid())
         retval = {}
         for f in work_list:
-            r = submit_to_db(f,settings.input_pattern,dry_run=dry_run)
+            r = submit_to_db(f,settings.input_pattern,dry_run=dry_run, remove_file=remove_file)
             retval[f] = r
             if r[0] is False and not keep_going:
                 break
@@ -835,7 +836,7 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1):
                 logger.error('Error in importing: %s: %s', f, res[1])
                 error_occurred = True
             elif res[0] is None:
-                logger.warning('%s: %s', res[1], f)
+                logger.info('%s: %s', res[1], f)
             else:
                 (jobid, process_count) = res[-1]
                 jobs_imported.append(jobid)
@@ -869,8 +870,9 @@ def compressed_tar(input):
 # Check for Experiment related variables
 #    metadata = check_and_add_workflowdb_envvars(metadata,total_env)
 
-def submit_to_db(input, pattern, dry_run=True):
-    logger.info("submit_to_db(%s,%s,dry_run=%s)",input,pattern,str(dry_run))
+# remove_file is set, then we will delete the file on success
+def submit_to_db(input, pattern, dry_run=True, remove_file=False):
+    logger.info("submit_to_db(%s,%s,dry_run=%s,remove_file=%s)",input,pattern,str(dry_run),str(remove_file))
 
     err,tar = compressed_tar(input)
     if err:
@@ -921,6 +923,12 @@ def submit_to_db(input, pattern, dry_run=True):
         return (False, 'Error in DB setup')
     from epmt_job import ETL_job_dict
     r = ETL_job_dict(metadata,filedict,settings,tarfile=tar)
+    if remove_file:
+        if r[0]:
+            logger.info('Removing {} on successful ingest into db'.format(input))
+            unlink(input)
+        else:
+            logger.debug('Not removing {} as ingest failed'.format(input))
     # if not r[0]:
     return r
     # (j, process_count) = r[-1]
@@ -1128,7 +1136,7 @@ def epmt_entrypoint(args):
             if ((not(args.post_process)) and (not(args.ingest))):
                 # if no command is set, default to post-process
                 args.post_process = True
-            daemon_args = { 'post_process': args.post_process, 'ingest': args.ingest, 'recursive': args.recursive }
+            daemon_args = { 'post_process': args.post_process, 'ingest': args.ingest, 'recursive': args.recursive, 'keep': args.keep }
             return daemon_loop(**daemon_args) if args.foreground else start_daemon(**daemon_args)
         elif args.stop:
             return stop_daemon()

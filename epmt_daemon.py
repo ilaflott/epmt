@@ -24,7 +24,6 @@ def start_daemon(lockfile = PID_FILE, **daemon_args):
     if (path.exists(lockfile)):
         logger.warning('Lock file exists. Perhaps a daemon is already running. If not, please remove the lock file ({0}) and try again'.format(lockfile))
         return(-1)
-
     # set up signal handlers
     # from signal import SIGHUP, SIGTERM, SIGQUIT, SIGINT, SIGUSR1, signal
     # for sig in [SIGHUP, SIGTERM, SIGQUIT, SIGINT, SIGUSR1]:
@@ -124,7 +123,7 @@ def print_daemon_status(pidfile = PID_FILE):
 
 # if niters is set, then the daemon loop will end after 'niters' iterations
 # otherwise loop forever or until we get interrupted by a signal
-def daemon_loop(niters = 0, post_process = True, ingest = False, recursive = False):
+def daemon_loop(niters = 0, post_process = True, ingest = False, recursive = False, keep = False):
     '''
     Runs a daemon loop niters times, performing enabled actions
     such as post-processing, ingestion, etc.
@@ -137,10 +136,15 @@ def daemon_loop(niters = 0, post_process = True, ingest = False, recursive = Fal
        recursive: Only meaningful when ingest is set. It indicates whether
                   EPMT should descend into subdirectories to find staged files
                   or not. Default False.
+            keep: Only meaningful when ingest is set. It indicates whether
+                  on successful ingest the file should be retained or not.
+                  By default, False; meaning the files will be removed on
+                  successful submission to the database.
     '''
     global sig_count
     sig_count = 0
     logger = getLogger(__name__)  # you can use other name
+    logger.debug('daemon_loop(niters=%d,post_process=%s,ingest=%s,recursive=%s,keep=%s)', niters, post_process, ingest, recursive, keep)
     from time import sleep, time
     from epmt_query import analyze_pending_jobs
     from epmt_job import post_process_pending_jobs
@@ -171,9 +175,9 @@ def daemon_loop(niters = 0, post_process = True, ingest = False, recursive = Fal
         if ingest:
             logger.debug('checking {} for new jobs to ingest..'.format(ingest))
             tgz_files = find_files_in_dir(ingest, '*.tgz', recursive = recursive)
-            logger.debug('{} staged files found to ingest'.format(len(tgz_files)))
-            submit_retval = epmt_submit(tgz_files, dry_run = False)
-            print(submit_retval)
+            if tgz_files:
+                logger.info('{} staged files found (to ingest)'.format(len(tgz_files)))
+                epmt_submit(tgz_files, dry_run = False, remove_file=not(keep))
 
         if post_process:
             # unprocessed jobs (these are jobs on whom post-processing
@@ -193,7 +197,7 @@ def daemon_loop(niters = 0, post_process = True, ingest = False, recursive = Fal
         _loop_time = (time() - _t1)
         delay = delay - _loop_time
         if delay > 0:
-            logger.debug('sleeping for {0:.3f} sec'.format(delay))
+            logger.info('sleeping for {0:.3f} sec'.format(delay))
             sleep(delay)
         else:
             logger.warning("daemon loop took {0} seconds. No sleep for me!".format(_loop_time))

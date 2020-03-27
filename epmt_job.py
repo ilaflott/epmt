@@ -45,7 +45,7 @@ def create_job(jobid,user):
         logger.info("Creating job %s",jobid)
         job = orm_create(Job, jobid=jobid,user=user)
     else:
-        logger.warning("Job %s (at %s) is already in the database",job.jobid,job.start)
+        logger.info("Job %s (at %s) is already in the database",job.jobid,job.start)
         return None
     return job
 
