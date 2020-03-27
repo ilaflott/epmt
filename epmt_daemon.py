@@ -153,7 +153,7 @@ def daemon_loop(niters = 0, post_process = True, ingest = False, recursive = Fal
     iters = 0
 
     if ingest:
-        logger.info('ingestion mode enabled for daemon (recurse={})'.format(recursive))
+        logger.info('ingestion mode enabled for daemon (recursive={},keep={})'.format(recursive, keep))
         from os import path
         if not (path.isdir(ingest)):
             logger.error('Ingest path ({}) does not exist'.format(ingest))

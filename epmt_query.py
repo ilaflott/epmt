@@ -347,11 +347,14 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
              tag a match will considered.
     """
     from datetime import datetime
+    # Customer feedback strongly indicated that limits on the job table were
+    # a strong no-no. So, commenting out the code below:
+    #
     # set defaults for limit and ordering only if the user doesn't specify jobs
-    if (not(orm_is_query(jobs))) and (type(jobs) != pd.DataFrame) and (jobs in [[], '', None]):
-        if (fmt != 'orm') and (limit == None): 
-            limit = 10000
-            logger.warning('No limit set, defaults to {0}. Set limit=0 to avoid limits'.format(limit))
+    # if (not(orm_is_query(jobs))) and (type(jobs) != pd.DataFrame) and (jobs in [[], '', None]):
+    #     if (fmt != 'orm') and (limit == None): 
+    #         limit = 10000
+    #         logger.warning('No limit set, defaults to {0}. Set limit=0 to avoid limits'.format(limit))
 
     if order is None: order = Job.start
       
