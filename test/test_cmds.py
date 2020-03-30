@@ -24,7 +24,7 @@ class EPMTCmds(unittest.TestCase):
     def test_daemon_ingest(self):
         from epmt_daemon import daemon_loop
         from os import path
-        self.assertFalse(eq.get_jobs(['691201', '692544'], fmt='terse'))
+        self.assertFalse(eq.orm_get(eq.Job, '691201') or eq.orm_get(eq.Job, '692544'))
         # now start the daemon and make it watch the directory containing the .tgz
         with capture() as (out,err):
             daemon_loop(1, ingest='./test/data/daemon/ingest', post_process=False, keep=True, recursive=False)
