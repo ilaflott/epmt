@@ -145,7 +145,7 @@ def daemon_loop(niters = 0, post_process = True, retire = False, ingest = False,
     global sig_count
     sig_count = 0
     logger = getLogger(__name__)  # you can use other name
-    logger.debug('daemon_loop(niters=%d,post_process=%s,ingest=%s,recursive=%s,keep=%s)', niters, post_process, ingest, recursive, keep)
+    logger.debug('daemon_loop(niters=%d,post_process=%s,retire=%s,ingest=%s,recursive=%s,keep=%s)', niters, post_process, retire, ingest, recursive, keep)
     from time import sleep, time
     from epmt_query import analyze_pending_jobs
     from epmt_job import post_process_pending_jobs

@@ -1331,7 +1331,7 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=F
 op_metrics = get_op_metrics
 
 @db_session
-def delete_jobs(jobs, force = False, before=None, after=None):
+def delete_jobs(jobs, force = False, before=None, after=None, warn = True):
     """
     Deletes one or more jobs and returns the number of jobs deleted.
 
@@ -1344,6 +1344,12 @@ def delete_jobs(jobs, force = False, before=None, after=None):
     before,
     after : time specified as cutoff. See 'get_jobs' to see how to specify
             these options.
+
+     warn : This option is only used in daemon mode where we want to 
+            disable unnecessary copious warnings in logs.
+            Default True. When disabled, no warnings will be given about attempting
+            to delete jobs that have models associated with them. Instead
+            those jobs will be skipped.
             
 
     The function will either delete all requested jobs or none. The delete
@@ -1374,7 +1380,8 @@ def delete_jobs(jobs, force = False, before=None, after=None):
 
     num_jobs = jobs.count()
     if num_jobs == 0:
-        logger.warning('No jobs matched')
+        if warn:
+            logger.warning('No jobs matched; none deleted')
         return 0
     if num_jobs > 1 and not force:
         logger.warning('set force=True when calling this function if deleting more than one job')
@@ -1389,7 +1396,8 @@ def delete_jobs(jobs, force = False, before=None, after=None):
         else:
             jobs_to_delete.append(j.jobid)
     if jobs_with_models:
-        logger.warning('The following jobs have models (their IDs have been mentioned in square brackets) associated with them and these jobs will not be deleted:\n\t%s\n', str(jobs_with_models))
+        if warn:
+            logger.warning('The following jobs have models (their IDs have been mentioned in square brackets) associated with them and these jobs will not be deleted:\n\t%s\n', str(jobs_with_models))
         if not jobs_to_delete:
             logger.info('No jobs match criteria to delete. Bailing..')
             return 0
@@ -1408,7 +1416,7 @@ def retire_jobs(ndays = settings.retire_jobs_ndays):
     are retired.
     """
     if ndays <= 0: return 0
-    return delete_jobs([], force=True, before = -ndays)
+    return delete_jobs([], force=True, before = -ndays, warn = False)
 
 @db_session
 def dm_calc(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op:dmput', 'op:hsmget', 'op:rm', 'op:cp']):

@@ -588,18 +588,18 @@ def orm_raw_sql(sql, commit = False):
     trans = connection.begin()
     if type(sql) != list:
         sql = [sql]
-    for s in sql:
-        try:
+    try:
+        for s in sql:
             res = connection.execute(s)
-            if commit:
-                trans.commit()
-                return True
-        except:
-            logger.warning("Failed raw sql: %s", s)
-            trans.rollback()
-            raise
+        if commit:
+            trans.commit()
+            return True
+    except:
+        trans.rollback()
+        raise
     connection.close()
     return res
+
 
 def set_sql_debug(discard):
     print('setting/unsetting SQL debug is not supported on-the-fly')

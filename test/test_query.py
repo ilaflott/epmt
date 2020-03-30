@@ -581,6 +581,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(n, 0)
         n = eq.delete_jobs(['685000', '685016'], force=True)
         self.assertEqual(n, 2)
+        self.assertFalse(eq.orm_get(eq.Job, '685000') or eq.orm_get(eq.Job, '685016'))
         # n = eq.delete_jobs([], force=True, before=-(ndays-1))
         # self.assertTrue(n >= 1)
 
