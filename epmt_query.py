@@ -1387,10 +1387,11 @@ def delete_jobs(jobs, force = False, before=None, after=None):
         if j.ref_models: 
             jobs_with_models[j.jobid] = [r.id for r in j.ref_models]
         else:
-            jobs_to_delete.append(j)
+            jobs_to_delete.append(j.jobid)
     if jobs_with_models:
-        logger.error('The following jobs have models (their IDs have been mentioned in square brackets) associated with them and will not be deleted. Please remove the reference models before deleting these jobs:\n\t%s\n', str(jobs_with_models))
+        logger.warning('The following jobs have models (their IDs have been mentioned in square brackets) associated with them and these jobs will not be deleted:\n\t%s\n', str(jobs_with_models))
         if not jobs_to_delete:
+            logger.info('No jobs match criteria to delete. Bailing..')
             return 0
         jobs = orm_jobs_col(jobs_to_delete)
         num_jobs = len(jobs_to_delete)
