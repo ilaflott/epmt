@@ -50,7 +50,12 @@ def conv_jobs(jobs, fmt='dict', merge_sums = True):
         return [ j.jobid for j in jobs ]
 
     # convert the ORM into a list of dictionaries, excluding blacklisted fields
-    out_list = [ orm_to_dict(j, exclude = 'processes') for j in jobs ]
+    # and then filter None/empty dicts.
+    # It seems in complex error cases we end up with a list containing
+    # None items in the list. It's safest to filter them
+    # See bug:
+    # https://trello.com/c/HfEoCxYU/100-bug-testdaemon-gave-an-exception
+    out_list = list(filter(None, [ orm_to_dict(j, exclude = 'processes') for j in jobs ]))
 
     # do we need to merge process' sum fields into the job?
     if merge_sums:
