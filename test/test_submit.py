@@ -111,5 +111,18 @@ class EPMTSubmit(unittest.TestCase):
         self.check_lazy_compute(Job['804268'], not(orig_lazy_eval))
         settings.lazy_compute_process_tree = orig_lazy_eval # restore old setting
 
+    def test_submit_remove(self):
+        from shutil import copyfile
+        from os import path
+        target = '/tmp/692500.tgz'
+        copyfile('test/data/submit/692500.tgz', target)
+        self.assertTrue(path.isfile(target))
+        self.assertFalse('692500' in eq.get_jobs(fmt='terse'))
+        with capture() as (out,err):
+            epmt_submit([target], dry_run=False, remove_file=True)
+        self.assertTrue('692500' in eq.get_jobs(fmt='terse'))
+        self.assertFalse(path.isfile(target))
+
+
 if __name__ == '__main__':
     unittest.main()
