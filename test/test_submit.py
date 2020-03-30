@@ -73,13 +73,18 @@ class EPMTSubmit(unittest.TestCase):
 
     @db_session
     def test_corrupted_csv(self):
-        datafiles='test/data/misc/corrupted-csv.tgz'
+        datafile='test/data/misc/corrupted-csv.tgz'
         # quell the error message
         epmt_logging_init(-2)
         with self.assertRaises(ValueError):
-            epmt_submit(glob(datafiles), dry_run=False)
+            epmt_submit([datafile], dry_run=False, remove_file = True)
         # restore logging level
         epmt_logging_init(-1)
+        from os import path
+        # make sure submit did not remove the input .tgz
+        # (for failed submission input is never removed, even if
+        # remove_file is set for submit
+        self.assertTrue(path.isfile(datafile))
 
     def check_lazy_compute(self, j, lazy_eval):
         from epmt_job import is_process_tree_computed, mk_process_tree
