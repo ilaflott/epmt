@@ -1182,7 +1182,7 @@ def epmt_entrypoint(args):
     if args.command == 'dump':
         return(epmt_dump_metadata(args.epmt_cmd_args, key = args.key) == False)
     if args.command == 'submit':
-        return(epmt_submit(args.epmt_cmd_args,dry_run=args.dry_run,drop=args.drop,keep_going=not args.error, ncpus = args.num_cpus) == False)
+        return(epmt_submit(args.epmt_cmd_args,dry_run=args.dry_run,drop=args.drop,keep_going=not args.error, ncpus = args.num_cpus, remove_file=args.remove) == False)
     if args.command == 'check':
         return(epmt_check() == False)
     if args.command == 'delete':

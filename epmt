@@ -139,6 +139,7 @@ if (__name__ == "__main__"):
                 up to submission.")
     submit_parser.add_argument('epmt_cmd_args', nargs='*', help="List of job .tgz files or directories", metavar="job_or_dir")
     submit_parser.add_argument('-e', '--error', action='store_true',help="Exit at the first sign of trouble")
+    submit_parser.add_argument('--remove', action='store_true',help="Remove the job .tgz on successful submission")
     submit_parser.add_argument('-n', '--dry-run', action='store_true',help="Don't touch the database")
     submit_parser.add_argument('--drop',action='store_true',help="Drop all tables/data and recreate before importing")
     from epmtlib import suggested_cpu_count_for_submit
