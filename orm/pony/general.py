@@ -406,9 +406,9 @@ def orm_raw_sql(sql, commit = False):
     logger.debug('Executing: {0}'.format(sql))
     if type(sql) != list:
         sql = [sql]
-    for s in sql:
         try:
-            res = db.execute(s)
+            for s in sql:
+                res = db.execute(s)
             if commit:
                 #trans.commit() ??
                 return True
