@@ -7,6 +7,14 @@ import epmt_settings as settings
 if 'postgres' in settings.db_params.get('url', ''):
     from sqlalchemy.dialects.postgresql import JSONB as JSON
 
+
+####### IMPORTANT #########
+# Please do NOT edit any of the models in this file directly.
+# Instead read docs/migration.md and create a migration script.
+# Then run "alembic upgrade head"
+###########################
+
+
 class CommonMeta(DeclarativeMeta):
    def __getitem__(cls, index):
        obj = orm_get(cls, index)

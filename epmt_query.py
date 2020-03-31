@@ -50,7 +50,12 @@ def conv_jobs(jobs, fmt='dict', merge_sums = True):
         return [ j.jobid for j in jobs ]
 
     # convert the ORM into a list of dictionaries, excluding blacklisted fields
-    out_list = [ orm_to_dict(j, exclude = 'processes') for j in jobs ]
+    # and then filter None/empty dicts.
+    # It seems in complex error cases we end up with a list containing
+    # None items in the list. It's safest to filter them
+    # See bug:
+    # https://trello.com/c/HfEoCxYU/100-bug-testdaemon-gave-an-exception
+    out_list = list(filter(None, [ orm_to_dict(j, exclude = 'processes') for j in jobs ]))
 
     # do we need to merge process' sum fields into the job?
     if merge_sums:
@@ -347,11 +352,14 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
              tag a match will considered.
     """
     from datetime import datetime
+    # Customer feedback strongly indicated that limits on the job table were
+    # a strong no-no. So, commenting out the code below:
+    #
     # set defaults for limit and ordering only if the user doesn't specify jobs
-    if (not(orm_is_query(jobs))) and (type(jobs) != pd.DataFrame) and (jobs in [[], '', None]):
-        if (fmt != 'orm') and (limit == None): 
-            limit = 10000
-            logger.warning('No limit set, defaults to {0}. Set limit=0 to avoid limits'.format(limit))
+    # if (not(orm_is_query(jobs))) and (type(jobs) != pd.DataFrame) and (jobs in [[], '', None]):
+    #     if (fmt != 'orm') and (limit == None): 
+    #         limit = 10000
+    #         logger.warning('No limit set, defaults to {0}. Set limit=0 to avoid limits'.format(limit))
 
     if order is None: order = Job.start
       
@@ -719,7 +727,7 @@ def _refmodel_scores(col, outlier_methods, features):
             # and containing the max anomaly score using the classifier
             retval = mvod_scores(nd_array, classifiers = [m])
             if not retval:
-                logger.warning('Could not score using mvod classifier {}. Skipping it.'.format(m_name))
+                logger.warning('Skipped mvod classifier {} as could not score using it'.format(m_name))
                 del ret[m_name]
                 continue
             (full_scores, max_score) = retval
@@ -856,14 +864,17 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
     jobs_orm = orm_jobs_col(jobs)
     jobs_df = conv_jobs(jobs_orm, fmt='pandas')
     jobs = jobs_orm[:]
-    from epmt_outliers import _sanitize_features
+    from epmt_outliers import sanitize_features
+    if (len(jobs) < 3):
+        logger.error('You cannot create a model with less than 3 jobs. Your chosen jobs: {}'.format(jobs))
+        return False
 
     if sanity_check:
         _warn_incomparable_jobs(jobs)
 
     if pca and features and (features != '*'):
         logger.warning('It is strongly recommended to set features=[] when doing PCA')
-    features = _sanitize_features(features, jobs_df)
+    features = sanitize_features(features, jobs_df)
     orig_features = features  # keep a copy as features might be reassigned below
     if pca:
         logger.info("request to do PCA (pca={}). Input features: {}".format(pca, features))
@@ -888,7 +899,7 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
         ops_df = get_op_metrics(jobs = jobs_orm, tags = op_tags, exact_tags_only = exact_tag_only, fmt='pandas')
         logger.debug('jobid,tags:\n{}'.format(ops_df[['jobid','tags']]))
         if pca:
-            (ops_pca_df, pca_variances, pca_features) = pca_feature_combine(ops_df, features, desired = 0.85 if pca is True else pca)
+            (ops_pca_df, pca_variances, pca_features, _) = pca_feature_combine(ops_df, features, desired = 0.85 if pca is True else pca)
             logger.info('{} PCA components obtained: {}'.format(len(pca_features), pca_features))
             logger.info('PCA variances: {} (sum={})'.format(pca_variances, np.sum(pca_variances)))
             ops_df = ops_pca_df
@@ -905,7 +916,7 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
         # full jobs, no ops
         logger.debug('jobid,tags:\n{}'.format(jobs_df[['jobid','tags']]))
         if pca:
-            (jobs_pca_df, pca_variances, pca_features) = pca_feature_combine(jobs_df, features, desired = 0.85 if pca is True else pca)
+            (jobs_pca_df, pca_variances, pca_features, _) = pca_feature_combine(jobs_df, features, desired = 0.85 if pca is True else pca)
             logger.info('{} PCA components obtained: {}'.format(len(pca_features), pca_features))
             logger.info('PCA variances: {} (sum={})'.format(pca_variances, np.sum(pca_variances)))
             jobs_df = jobs_pca_df
@@ -1070,8 +1081,8 @@ def __unique_proc_tags_for_job(job, exclude=[], fold=True):
 @db_session
 def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict', op_duration_method = "sum", full= False):
     '''
-    Returns a list of "Operations", where each Operation is either
-    an object or a dict, depending on 'fmt'. An operation represents a collection
+    Returns a collection of "Operations", where each Operation is either
+    an object, a dict, or a dataframe row, depending on 'fmt'. An operation represents a collection
     of processes that share a tag. 
 
     jobs: Collection of jobs. For e.g., a list of jobids, etc.
@@ -1090,9 +1101,12 @@ def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict', 
           considered to be a match for a tag, t, if the process tag is a superset
           of t.
 
-    fmt: Output format for each operation in the list. By default, a dict,
-          but it can also be set to 'orm', in which case each operation is
-          an object.
+    fmt: Output format for each operation in the returned collection.
+         If set to 'dict' a list of dictionaries is returned. If 'orm'
+         then a list of ORM Operation objects are returned. If 'pandas'
+         a dataframe is returned, where each row represents an operation.
+         'terse' format is not supported, and will be silently translated
+         to 'dict'.
 
     combine: If combine is set to True, then the returned list of operations
           will be combined into a single high-level operation. In this case
@@ -1190,8 +1204,10 @@ def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict', 
             op = Operation(jobs, t, exact_tag_only, op_duration_method = op_duration_method)
             if op: ops.append(op)
 
-    if fmt == 'dict':
+    if fmt != 'orm':
         ops = [ op.to_dict(full=full) for op in ops ]
+        if fmt == 'pandas':
+            ops = pd.DataFrame(ops)
     return ops
 
 @db_session
@@ -1315,7 +1331,7 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=F
 op_metrics = get_op_metrics
 
 @db_session
-def delete_jobs(jobs, force = False, before=None, after=None):
+def delete_jobs(jobs, force = False, before=None, after=None, warn = True):
     """
     Deletes one or more jobs and returns the number of jobs deleted.
 
@@ -1328,6 +1344,12 @@ def delete_jobs(jobs, force = False, before=None, after=None):
     before,
     after : time specified as cutoff. See 'get_jobs' to see how to specify
             these options.
+
+     warn : This option is only used in daemon mode where we want to 
+            disable unnecessary copious warnings in logs.
+            Default True. When disabled, no warnings will be given about attempting
+            to delete jobs that have models associated with them. Instead
+            those jobs will be skipped.
             
 
     The function will either delete all requested jobs or none. The delete
@@ -1357,8 +1379,12 @@ def delete_jobs(jobs, force = False, before=None, after=None):
         jobs = get_jobs(jobs, before=before, after=after, fmt='orm')
 
     num_jobs = jobs.count()
+    if num_jobs == 0:
+        if warn:
+            logger.warning('No jobs matched; none deleted')
+        return 0
     if num_jobs > 1 and not force:
-        logger.warning('You must set force=True when calling this function as you want to delete more than one job')
+        logger.warning('set force=True when calling this function if deleting more than one job')
         return 0
 
     # make sure we aren't trying to delete jobs with models associated with them
@@ -1368,10 +1394,12 @@ def delete_jobs(jobs, force = False, before=None, after=None):
         if j.ref_models: 
             jobs_with_models[j.jobid] = [r.id for r in j.ref_models]
         else:
-            jobs_to_delete.append(j)
+            jobs_to_delete.append(j.jobid)
     if jobs_with_models:
-        logger.error('The following jobs have models (their IDs have been mentioned in square brackets) associated with them and will not be deleted. Please remove the reference models before deleting these jobs:\n\t%s\n', str(jobs_with_models))
+        if warn:
+            logger.warning('The following jobs have models (their IDs have been mentioned in square brackets) associated with them and these jobs will not be deleted:\n\t%s\n', str(jobs_with_models))
         if not jobs_to_delete:
+            logger.info('No jobs match criteria to delete. Bailing..')
             return 0
         jobs = orm_jobs_col(jobs_to_delete)
         num_jobs = len(jobs_to_delete)
@@ -1388,7 +1416,7 @@ def retire_jobs(ndays = settings.retire_jobs_ndays):
     are retired.
     """
     if ndays <= 0: return 0
-    return delete_jobs([], force=True, before = -ndays)
+    return delete_jobs([], force=True, before = -ndays, warn = False)
 
 @db_session
 def dm_calc(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op:dmput', 'op:hsmget', 'op:rm', 'op:cp']):
@@ -1725,6 +1753,7 @@ def _empty_collection_check(col):
         logger.warning(msg)
         raise ValueError(msg)
 
+@db_session
 def compute_process_trees(jobs):
     '''
     Compute process trees for specified jobs.
@@ -1737,89 +1766,96 @@ def compute_process_trees(jobs):
     for j in jobs:
         mk_process_tree(j)
 
+
 @db_session
-def exp_explore(exp_name, order_key = 'duration', op = 'sum', limit=10):
-    from epmtlib import ranges, natural_keys
-    import numpy as np
-    order_key = order_key or 'duration' # defaults when using with command-line
-    limit = limit or 10 # defaults when using with command-line
-    exp_jobs = get_jobs(tags = { 'exp_name': exp_name }, fmt = 'orm' )
-    exp_jobids = sorted([j.jobid for j in exp_jobs], key=natural_keys)
-    if not exp_jobids:
-        logger.warning('Could not find any jobs with an "exp_name" tag matching {}'.format(exp_name))
-        return False
-    try:
-        job_ranges_str = ",".join(["{}..{}".format(a, b) if (a != b) else "{}".format(a) for (a,b) in ranges([int(x) for x in exp_jobids])])
-        print('Experiment {} contains {} jobs: {}'.format(exp_name, exp_jobs.count(), job_ranges_str))
-    except:
-        # the ranges function can fail for non-integer jobids, so here
-        # we simply print the job count, and not actually list the jobids
-        print('Experiment {} contains {} jobs'.format(exp_name, exp_jobs.count()))
+def procs_histogram(jobs, attr = 'exename'):
+    '''
+    Gets a processes histogram for a collection of jobs
 
-    c_dict = {}
-    for j in exp_jobs:
-        c = j.tags['exp_component']
-        entry = c_dict.get(c, {'data': []})
-        entry['data'].append((j.tags.get('exp_time', ''), j.jobid, getattr(j, order_key)))
-        c_dict[c] = entry
+    jobs: collection of one or more jobs or jobids
+    attr: the attribute from the process model that is the basis of
+          the histogram. Defaults to 'exename'
 
-    c_list = []
-    agg_f = 0
-    for c, v in c_dict.items():
-        v['exp_component'] = c
-        jobids = [d[1] for d in v['data']]
-        v['jobids'] = jobids
-        f_vals = [d[2] for d in v['data']]
-        outliers_vec = np.abs(modified_z_score(f_vals)[0]) > settings.outlier_thresholds['modified_z_score']
-        v['outliers'] = outliers_vec
-        v['sum_' + order_key ] = sum(f_vals)
-        agg_f += v['sum_' + order_key ]
-        v['min_' + order_key ] = min(f_vals)
-        v['max_' + order_key ] = max(f_vals)
-        v['avg_' + order_key ] = v['sum_' + order_key ]/len(f_vals)
-        v['stddev_' + order_key ] = np.std(f_vals)
-        v['cv_' + order_key ] = round(v['stddev_' + order_key ]/v['avg_' + order_key ], 2)
-        c_list.append(v)
+    RETURNS: A dictionary of the form:
+             { 'bash': 1256, 'cmp': 10, ... }
+            where the key is a process executable and its value is the number
+            of the times the executable was executed.
+    '''
+    logger = getLogger(__name__)  # you can use other name
+    procs_hist = {}
+    procs = get_procs(jobs, fmt='orm')
+    logger.debug('{} processes found'.format(procs.count()))
+    for p in procs:
+        attr_val = getattr(p, attr)
+        procs_hist[attr_val] = procs_hist.get(attr_val, 0) + 1
+    return procs_hist
+
+def procs_set(jobs, attr = 'exename'):
+    '''
+    Gets the set of unique values of attributes for the collection of jobs
+    '''
+    phist = procs_histogram(jobs, attr)
+    return sorted(phist.keys())
+
+@db_session
+def add_features_df(jobs_df, features = [procs_histogram, procs_set], key = 'jobid'):
+    '''
+    Includes columns for synthetic metrics such as process histogram, 
+    processes set and returns a new dataframe with the added columns.
+
+    jobs_df: Input dataframe (will not be modified)
+
+    features: List of callables. Each callable will be called with the
+             value of "key" to compute the metric value for the row.
+
+        key: The dataframe column to use to get value that will be
+             passed as an argument to each of the callables
+
+    RETURNS: (df, added_features), where
+
+                df: A new dataframe, which will contain the columns from
+                    jobs_df, alongwith new columns (one for each callable,
+                    whose names are derived from the callables)
+    added_features: List of new features added to dataframe
+
+    EXAMPLES:
+
+    >>> jobs_df = eq.get_jobs(['625151', '627907', '629322', '633114', '675992', '680163', '685001', '691209', '693129'], fmt='pandas')
+    >>> new_df, added_features = eq.add_features_df(jobs_df) 
+    >>> added_features
+    ['procs_histogram', 'procs_set']
+    >>> new_df
+                      created_at  ...                                          procs_set
+    0 2020-03-17 12:57:54.464202  ...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    1 2020-03-17 12:58:03.451079  ...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    2 2020-03-17 12:58:06.245651  ...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    3 2020-03-17 12:58:09.038631  ...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    4 2020-03-17 12:58:11.850036  ...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    5 2020-03-17 12:58:14.622092  ...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    6 2020-03-17 12:58:17.418585  ...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    7 2020-03-17 12:58:20.212817  ...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    8 2020-03-17 12:58:23.041036  ...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
     
-    ordered_c_list = sorted(c_list, key = lambda v: v[op+'_' + order_key], reverse=True)[:limit]
-
-
-    print('\ntop {} components by {}({}):'.format(limit, op, order_key))
-    print("%16s  %12s         %12s %12s %4s" % ("component", "sum", "min", "max", "cv"))
-    for v in ordered_c_list:
-        print("%16.16s: %12d [%4.1f%%] %12d %12d %4.1f" % (v['exp_component'], v[op+'_' + order_key], 100*v['sum_' + order_key ]/agg_f, v['min_' + order_key ],  v['max_' + order_key ], v['cv_' + order_key ]))
-
-    # now let's the variations within a component across different time segments
-    print('\nvariations across time segments:')
-    print("%16s %12s %12s %16s" % ("component", "exp_time", "jobid", order_key))
-
-    for v in ordered_c_list:
-        outliers = v['outliers']
-        idx = 0
-        for d in v['data']:
-            print("%16.16s %12s %12s %16d %4s" % (v['exp_component'], d[0], d[1], d[2], "****" if outliers[idx] else ""))
-            idx += 1
-        print()
-
-    # finally let's see if by summing the metric across all the jobs in a 
-    # time segment we can spot something interesting
-    time_seg_dict = {}
-    for j in exp_jobs:
-        m = getattr(j, order_key)
-        exp_time = j.tags.get('exp_time', '')
-        if not exp_time: continue
-        m_total = time_seg_dict.get(exp_time, 0)
-        m_total += m
-        time_seg_dict[exp_time] = m_total
-    inp_vec = []
-    for t in sorted(list(time_seg_dict.keys())):
-        inp_vec.append(time_seg_dict[t])
-    if inp_vec:
-        out_vec = np.abs(modified_z_score(inp_vec)[0]) > settings.outlier_thresholds['modified_z_score']
-        print('{} by time segment:'.format(order_key))
-        idx = 0
-        for t in sorted(list(time_seg_dict.keys())):
-            print("%12s %16d %4s" % (t, time_seg_dict[t], "****" if out_vec[idx] else ""))
-            idx += 1
-    return True
-
+    [9 rows x 46 columns]
+    >>> new_df[added_features]
+                                         procs_histogram                                          procs_set
+    0  {'tcsh': 4056, 'perl': 296, 'bash': 330, 'grep...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    1  {'tcsh': 1099, 'perl': 101, 'bash': 100, 'grep...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    2  {'arch': 46, 'grid-proxy-info': 71, 'which': 4...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    3  {'id': 6, 'bash': 100, 'date': 30, 'modulecmd'...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    4  {'tcsh': 1099, 'perl': 101, 'bash': 100, 'grep...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    5  {'rm': 197, 'cut': 240, 'du': 7, 'date': 30, '...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    6  {'tcsh': 1109, 'perl': 102, 'bash': 100, 'grep...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    7  {'tcsh': 1099, 'perl': 101, 'bash': 100, 'grep...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    8  {'mv': 118, 'perl': 101, 'globus-url-copy': 76...  [TAVG.exe, arch, basename, bash, cat, chmod, c...
+    
+    '''
+    logger = getLogger(__name__)  # you can use other name
+    out_df = jobs_df.copy()
+    keys = list(jobs_df[key].values)
+    added_features = []
+    for c in features:
+        out_df[c.__name__] = [ c(k) for k in keys ]
+        added_features.append(c.__name__)
+    logger.info('Added features: {}'.format(added_features))
+    return out_df, added_features

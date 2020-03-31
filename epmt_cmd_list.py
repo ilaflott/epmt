@@ -39,7 +39,7 @@ def epmt_list_jobs(arglist):
     jobs = get_jobs(**kwargs)
 #    if type(jobs) == pandas.core.frame.DataFrame:
     if len(jobs) == 0:
-        logger.info("get_jobs %s returned no jobs\n",str(kwargs))
+        logger.info("get_jobs %s returned no jobs",str(kwargs))
         return False
     print(jobs)
     return True
@@ -49,7 +49,7 @@ def epmt_list_procs(arglist):
     kwargs = kwargify(arglist)
     jobs = get_procs(**kwargs)
     if len(jobs) == 0:
-        logger.info("get_procs %s returned no processes\n",str(kwargs))
+        logger.info("get_procs %s returned no processes",str(kwargs))
         return False
     print(jobs)
     return True
@@ -59,7 +59,7 @@ def epmt_list_thread_metrics(arglist):
     arglist = list(map(int, arglist))
     tm = get_thread_metrics(arglist)
     if tm.empty:
-        logger.info("get_thread_metrics %s returned no thread metrics\n",str(arglist))
+        logger.info("get_thread_metrics %s returned no thread metrics",str(arglist))
         return False
     print(tm)
     return True
@@ -72,7 +72,7 @@ def epmt_list_op_metrics(arglist):
     kwargs = kwargify(arglist)
     ops = get_op_metrics(**kwargs)
     if (type(ops) != DataFrame) or (len(ops) == 0):
-        logger.info("get_op_metrics %s returned no op metrics\n",str(kwargs))
+        logger.info("get_op_metrics %s returned no op metrics",str(kwargs))
         return False
     print(ops)
     return True
@@ -82,7 +82,7 @@ def epmt_list_refmodels(arglist):
     kwargs = kwargify(arglist)
     jobs = get_refmodels(**kwargs)
     if len(jobs) == 0:
-        logger.info("get_refmodels %s return no refmodels\n",str(kwargs))
+        logger.info("get_refmodels %s return no refmodels",str(kwargs))
         return False
     print(jobs)
     return True
@@ -92,7 +92,7 @@ def epmt_list_job_proc_tags(arglist):
     kwargs = kwargify(arglist)
     jobs = get_job_proc_tags(**kwargs)
     if len(jobs) == 0:
-        logger.info("get_job_proc_tags %s returned no tags\n",str(kwargs))
+        logger.info("get_job_proc_tags %s returned no tags",str(kwargs))
         return False
     print(jobs)
     return True

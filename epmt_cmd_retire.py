@@ -18,5 +18,6 @@ def epmt_retire():
         num_jobs_retired = retire_jobs(settings.retire_jobs_ndays)
     else:
         logger.debug("Not retiring any jobs (based on the data retention policy in settings.py)")
-    print('\n{0} jobs retired\n{1} models retired'.format(num_jobs_retired, num_models_retired))
+    if num_jobs_retired or num_models_retired:
+        print('\n{0} jobs retired\n{1} models retired'.format(num_jobs_retired, num_models_retired))
     return (num_jobs_retired, num_models_retired)

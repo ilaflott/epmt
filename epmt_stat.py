@@ -41,20 +41,127 @@ def partition_classifiers_uv_mv(classifiers):
     uv_set = set(classifiers) - mv_set
     return (uv_set, mv_set)
 
-# These all return a tuple containing a list of indicies
-# For 1-D this is just a tuple with one element that is a list of rows
-def outliers_z_score(ys, threshold=thresholds['z_score']):
-    mean_y = np.mean(ys)
-    stdev_y = np.std(ys)
-    z_scores = [(y - mean_y) / stdev_y for y in ys]
-    return np.where(np.abs(z_scores) > threshold)[0]
+def z_score(ys, params = ()):
+    '''
+    Computes the *absolute* z-scores for an input vector.
 
-def outliers_iqr(ys, span=thresholds['iqr']):
-    quartile_1, quartile_3 = np.percentile(ys, span)
+        ys: Input vector
+    params: Usually not provided. It's only of significance when
+            computing z-scores against a trained model. In which
+            case, it is of the form:
+              (z_max, mean_y, stdev_y)
+            where z_max: is the max absolute z-score in the model
+                 mean_y: is the mean of the trained model input
+                stdev_y: is the std. deviation of the trained model input
+
+   RETURNS: (abs_z_scores, z_score_max, mean_ys, stdev_ys), where:
+
+            abs_z_scores: Array of abs. values of z-scores (same shape as ys)
+             z_score_max: Max absolute z-score
+                 mean_ys: Mean of ys
+                stdev_ys: Std. dev of ys
+
+     NOTES: Unless you care about trained models you should ignore
+            all return values except the first, and 'params' argument.
+
+  EXAMPLES:
+
+  >>> es.z_score([1,2,3,4,5,6,7,8,9,10, 1000])                                                          
+      (array([0.332 , 0.3285, 0.325 , 0.3215, 0.318 , 0.3145, 0.311 , 0.3075,
+              0.304 , 0.3005, 3.1621]), 3.1621, 95.9091, 285.9118)
+    '''
+    # suppress divide by 0 warnings. We handle the actual division
+    # issue by using np.nan_to_num
+    import warnings
+    warnings.filterwarnings("ignore",category=RuntimeWarning)
+    logger = getLogger(__name__)  # you can use other name
+    logger.debug('scoring using {}'.format('z_score'))
+    ys = np.array(ys)
+    if params:
+        # if params is set, we use it to get the mean and stdev
+        _, mean_y, stdev_y = params
+    else:
+        mean_y = np.mean(ys).round(4)
+        stdev_y = np.std(ys).round(4)
+    abs_z_scores = np.nan_to_num(np.abs((ys - mean_y) / stdev_y).round(4))
+    return (abs_z_scores, abs_z_scores.max(), mean_y, stdev_y) 
+
+def iqr(ys, params = ()):
+    '''
+    Detects outliers using the 1.5 IQR rule.
+
+        ys: Input vector
+    params: If params is provided it should be of the form
+            (0, lower_bound, upper_bound). In which case, we use
+            the bounds provided for outlier detection, rather
+            than computing the quartiles on the input vector.
+            If not provided (default), the 25% and 75% quartiles
+            are computed on the input vector. You should only
+            be prividing params when using this method against
+            a trained model.
+
+   RETURNS: A tuple (outliers, 0, Q1, Q3), where:
+            outliers is a mask with the same length as the input,
+                and contains 0 if the element is an inlier and 1
+                if the element is an outlier
+            Q1: A theoretical value of Q1 is computed so that
+                the input vector just fits on the lower side
+            Q3: A theoretical value of Q3 is computed so that
+                the input vector just fits on the upper side.
+
+            0, which is the second element of the tuple is for
+            compatibility with other outlier detection routines.
+            Unless you care about training a model, you should
+            ignore all return values except the first.
+
+     NOTES: The motivation to return a theoretical value of Q1
+            and Q3 stems from being able to use a trained model. We want
+            to return some measure from the model run that can
+            then be used later. The Q1 and Q3 are derived by solving
+            a simutaneous equations such that the min of the input
+            vector fits in the lower bound and the max in the upper
+            bound. IOW:
+            Ymin = Q1 - 1.5 * (Q3 - Q1)
+            Ymax = Q3 + 1.5 * (Q3 - Q1)
+
+            Solving the equations yeilds:
+            Q1 = 3*Ymax/8 + 5*Ymin/8
+            Q3 = 5*Ymax/8 + 3*Ymin/8
+
+
+  EXAMPLES: 
+
+    # in the simplest case we only care about the outliers vector
+    # not the other two return values (those are used for trained models)
+    >>> (outliers, _, _, _) = es.iqr([1,1,2,3,4,1,100])                                             
+    >>> outliers
+        array([0, 0, 0, 0, 0, 0, 1])
+    '''
+    logger = getLogger(__name__)  # you can use other name
+    logger.debug('scoring using {}'.format('iqr'))
+    ys = np.array(ys)
+    span = [25, 75]
+    if not params:
+        # usual case: no model params
+        quartile_1, quartile_3 = np.percentile(ys, span)
+    else:
+        # we have the lower and upper quartiles from a model
+        _, quartile_1, quartile_3 = params
     iqr = quartile_3 - quartile_1
+    logger.debug('Q1, Q3, IQR: {}, {}, {}'.format(quartile_1, quartile_3, iqr))
     lower_bound = quartile_1 - (iqr * 1.5)
     upper_bound = quartile_3 + (iqr * 1.5)
-    return np.where((ys > upper_bound) | (ys < lower_bound))[0]
+    logger.debug('lower_bound, upper_bound: {}, {}'.format(lower_bound, upper_bound))
+    # the + 0 below makes boolean array a numeric array of 0s and 1s
+    outliers = ((ys > upper_bound) | (ys < lower_bound)) + 0
+    logger.debug('outliers vec: {}'.format(outliers))
+
+    # If this vector were to be fitted, we can compute artifical
+    # values of Q1 and Q3 based on the equation (see NOTES in the
+    # documentation)
+    fitted_Q1 = 3*ys.max()/8 + 5*ys.min()/8
+    fitted_Q3 = 5*ys.max()/8 + 3*ys.min()/8
+    return (outliers, 0, round(fitted_Q1, 4), round(fitted_Q3, 4))
 
 # this function returns a tuple consisting of:
 #  (scores, worst_score, median, median_absolute_deviation)
@@ -64,6 +171,8 @@ def outliers_iqr(ys, span=thresholds['iqr']):
 # params if passed in, is of the form (max, median, median_abs_dev)
 # We will ignore params(0) as that's the max z_score in the ref_model
 def modified_z_score(ys, params=()):
+    logger = getLogger(__name__)  # you can use other name
+    logger.debug('scoring using {}'.format('modified_z_score'))
     median_y = params[1] if params else np.median(ys)
     if params:
         median_absolute_deviation_y = params[2]
@@ -83,15 +192,61 @@ def modified_z_score(ys, params=()):
     logger.debug('madz scores: {}'.format(madz))
     return (madz, round(max(madz), 4), round(median_y, 4), round(median_absolute_deviation_y, 4))
 
+# All outliers_* methods return a vector mask that indicates
+# whether an element is an outlier or not. They are wrappers
+# around scoring methods -- z_score, modified_z_score, iqr
+
+def outliers_iqr(ys):
+    '''
+    Returns a vector mask that identifies outliers using IQR
+    '''
+    return iqr(ys)[0]
 
 def outliers_modified_z_score(ys,threshold=thresholds['modified_z_score']):
+    '''
+    Returns a vector mask that identifies outliers using MADZ
+    '''
     scores = modified_z_score(ys)[0]
-    return np.where(np.abs(scores) > threshold)[0]
+    # return np.where(np.abs(scores) > threshold)[0]
+    # the + 0 will make it a numeric bitmask
+    return (np.abs(scores) > threshold) + 0
 
-def get_outlier_1d(df,column,func=outliers_iqr):
-    if column not in df:
-        return None
-    return(func(df[column]))
+def outliers_z_score(ys,threshold=thresholds['z_score']):
+    '''
+    Returns a vector mask that identifies outliers using z-score
+    '''
+    scores = z_score(ys)[0]
+    # return np.where(np.abs(scores) > threshold)[0]
+    # the + 0 will make it a numeric bitmask
+    return (np.abs(scores) > threshold) + 0
+
+def outliers_uv(ys, methods = [outliers_iqr, outliers_z_score, outliers_modified_z_score]):
+    '''
+    Returns a vector that identifies outliers using the argument
+    methods. For each element the returned vector indicates the
+    number of outlier methods that considered that element to be
+    an outlier.
+
+         ys: Input vector (numpy 1-d array)
+    methods: List of univariate classifiers to use. If unset all 
+             supported UV classifiers will be used. The classifiers
+             must all return the outliers bitmask as their sole return
+             value. So, use the outliers_* wrappers instead of methods
+             such as iqr, z_score, modified_z_score
+    '''
+    logger = getLogger(__name__)  # you can use other name
+    ys = np.array(ys)
+    logger.debug('input vector: {}'.format(ys))
+    out_vec = np.zeros_like(ys)
+    if not methods:
+        raise ValueError("'methods' needs to contain one or more univariate classifiers")
+    logger.debug('outlier detection using {} methods'.format(len(methods)))
+    for m in methods:
+        outliers = m(ys)
+        logger.debug('outliers using {}: {}'.format(m.__name__, outliers))
+        out_vec += outliers
+    logger.info('outliers using {} classifiers: {}'.format(len(methods), out_vec))
+    return out_vec
 
 
 def mvod_classifiers(contamination = 0.1, warnopts='ignore'):
@@ -115,7 +270,7 @@ def mvod_classifiers(contamination = 0.1, warnopts='ignore'):
     #from pyod.models.cblof import CBLOF
     #from pyod.models.loci import LOCI # wrong result
     from pyod.models.ocsvm import OCSVM
-    from pyod.models.iforest import IForest
+    # from pyod.models.iforest import IForest # not stable, repeated calls give different scores
 
     classifiers = [
                       ABOD(contamination=contamination), 
@@ -125,7 +280,7 @@ def mvod_classifiers(contamination = 0.1, warnopts='ignore'):
                       HBOS(contamination=contamination), 
                       PCA(contamination=contamination), 
                       OCSVM(contamination=contamination), 
-                      IForest(contamination=contamination),
+                      # IForest(contamination=contamination), # unstable, repeated calls give diff scores
                   ]
     return classifiers
 
@@ -232,14 +387,13 @@ def mvod_scores(X = None, classifiers = [], warnopts = 'ignore'):
             # fit the dataset to the model
             clf.fit(X)
             # predict raw anomaly score
-            _clf_scores = clf.decision_function(X)
+            _clf_scores = clf.decision_function(X).round(4)
         except Exception as e:
-            logger.warning('Could not score using classifier {}'.format(clf_name))
-            logger.warning('Exception follows below: ')
-            logger.warning(e, exc_info=True)
+            logger.warning('Could not score using classifier {}: {}'.format(clf_name, e))
+            # logger.warning(e, exc_info=True)
             continue
         if not check_finite(_clf_scores):
-            logger.warning('Could not score using classifier {} -- got NaNs or Inf'.format(clf_name))
+            logger.warning('Could not score using classifier {}: got NaN or Inf'.format(clf_name))
             continue
         scores[clf_name] = _clf_scores
         max_score_for_cf[clf_name] = _clf_scores.max()
@@ -460,11 +614,7 @@ def pca_stat(inp_features, desired = 2):
 
     Returns: A tuple, the first element is a numpy array of
              new PCA features. The second element of the tuple is
-             the list of explained variance ratios. If you sum this
-             list of explained variance ratios you arrive at the
-             cumumlative variance of the PCA, and is a measure
-             of the extent to which the new PCA features capture
-             the original features information.
+             the PCA transform.
     '''
     from sklearn.preprocessing import StandardScaler
     from sklearn.decomposition import PCA
@@ -491,8 +641,177 @@ def pca_stat(inp_features, desired = 2):
     if desired < 1:
         logger.debug('number of PCA components: {}'.format(pc_array.shape[1]))
     logger.debug('PCA array:\n{}'.format(pc_array))
+    logger.debug('PCA feature weights:\n{}'.format(abs(pca.components_)))
     sum_variance = sum(pca.explained_variance_ratio_)
     logger.debug('PCA explained variance ratio: {}, sum({})'.format(pca.explained_variance_ratio_, sum_variance))
     if sum_variance < 0.80:
         logger.warning('cumulative variance for PCA ({}) < 0.80'.format(sum_variance))
-    return (pc_array, pca.explained_variance_ratio_)
+    return (pc_array, pca)
+
+
+def check_dist(data = [], dist='norm', alpha = 0.05):
+    '''
+
+        data: numpy 1-d array or list of numbers. If none is provided then
+              one will be generated of the type of distribution to be tested for
+
+        dist: A string representing the distribution from scipy.distributions
+              such as 'norm' or 'uniform'. At present only 'norm' and 'uniform'
+              are supported.
+
+        alpha: Advanced option that helps set a threshold for null hypothesis
+
+      RETURNS: A tuple, where the first member is the number of tests that PASSED
+               and the second is the number of tests that FAILED.
+
+    Reference: https://machinelearningmastery.com/a-gentle-introduction-to-normality-tests-in-python/
+
+    >>> check_dist(np.linspace(-15, 15, 100), 'uniform')                                              
+      DEBUG: epmt_stat: data array shape: (100,)
+      DEBUG: epmt_stat: min=-15.000 max=15.000 mean=0.000 std=8.747
+      DEBUG: epmt_stat: alpha=0.05
+      DEBUG: epmt_stat: Testing for uniform distribution
+      DEBUG: epmt_stat: Doing Kolmogorov-Smirnov (uniform) test..
+      DEBUG: epmt_stat:   statistics=0.010, p=1.000
+      DEBUG: epmt_stat:   Kolmogorov-Smirnov (uniform) test: PASSED
+      DEBUG: epmt_stat: check_dist: 1 tests PASSED, 0 tests FAILED
+    (1, 0)
+    >>> check_dist(np.random.randn(100), 'norm')                                                      
+      DEBUG: epmt_stat: data array shape: (100,)
+      DEBUG: epmt_stat: min=-2.613 max=2.773 mean=-0.096 std=1.049
+      DEBUG: epmt_stat: alpha=0.05
+      DEBUG: epmt_stat: Testing for norm distribution
+      DEBUG: epmt_stat: Doing Shapiro-Wilk test..
+      DEBUG: epmt_stat:   statistics=0.994, p=0.920
+      DEBUG: epmt_stat:   Shapiro-Wilk test: PASSED
+      DEBUG: epmt_stat: Doing D'Agostino test..
+      DEBUG: epmt_stat:   statistics=0.390, p=0.823
+      DEBUG: epmt_stat:   D'Agostino test: PASSED
+      DEBUG: epmt_stat: Doing Kolmogorov-Smirnov (norm) test..
+      DEBUG: epmt_stat:   statistics=0.067, p=0.777
+      DEBUG: epmt_stat:   Kolmogorov-Smirnov (norm) test: PASSED
+      DEBUG: epmt_stat: check_dist: 3 tests PASSED, 0 tests FAILED
+    (3, 0)
+    >>> check_dist(np.random.randn(100), 'uniform')                                                   
+      DEBUG: epmt_stat: data array shape: (100,)
+      DEBUG: epmt_stat: min=-2.207 max=2.165 mean=0.090 std=0.944
+      DEBUG: epmt_stat: alpha=0.05
+      DEBUG: epmt_stat: Testing for uniform distribution
+      DEBUG: epmt_stat: Doing Kolmogorov-Smirnov (uniform) test..
+      DEBUG: epmt_stat:   statistics=0.174, p=0.004
+      DEBUG: epmt_stat:   Kolmogorov-Smirnov (uniform) test: FAILED
+      DEBUG: epmt_stat: check_dist: 0 tests PASSED, 1 tests FAILED
+    (0, 1)
+    '''
+    # https://stackoverflow.com/questions/40845304/runtimewarning-numpy-dtype-size-changed-may-indicate-binary-incompatibility
+    import warnings
+    warnings.filterwarnings("ignore")
+
+    # Shapiro-Wilk Test
+    from scipy.stats import shapiro
+    # D'Agostino
+    from scipy.stats import normaltest
+    from scipy.stats import kstest
+
+    if (type(data) != np.ndarray) and not data:
+        from numpy.random import seed
+        from numpy.random import randn
+        # seed the random number generator
+        seed(1)
+        # generate univariate observations
+        if dist == 'uniform':
+            logger.debug('generating random data with uniform distribution')
+            data = np.random.uniform(-1, 1, 100)
+        else:
+            logger.info('generating random data with Gaussian distribution')
+            data = 5 * randn(100) + 50
+    else:
+        data = np.asarray(data)
+    logger.debug('data array shape: {}'.format(data.shape))
+    (_min, _max, _mean, _std) = np.min(data), np.max(data), np.mean(data), np.std(data)
+    logger.debug('min=%.3f max=%.3f mean=%.3f std=%.3f' % (_min, _max, _mean, _std))
+    logger.debug('alpha=%.2f' % alpha)
+    passed = 0
+    failed = 0
+
+    kstest_norm = lambda d: kstest(d, 'norm', (_mean, _std))
+    kstest_uniform = lambda d: kstest(d, 'uniform', (_min, _max - _min))
+    tests = { 'norm': [('Shapiro-Wilk', shapiro), ('Kolmogorov-Smirnov (norm)', kstest_norm)], 'uniform': [('Kolmogorov-Smirnov (uniform)', kstest_uniform)] }
+    if data.size > 20:
+        # The test below requires at least 20 elements
+        tests['norm'].append(('D\'Agostino', normaltest))
+    if not dist in tests:
+        raise ValueError('We only support the following distributions: {}'.format(tests.keys()))
+    logger.debug('Testing for {} distribution'.format(dist))
+        
+    for (test, f) in tests[dist]:
+        # normality test
+        logger.debug('Doing {} test..'.format(test))
+        stat, p = f(data)
+        logger.debug('  statistics=%.3f, p=%.3f' % (stat, p))
+        if p > alpha:
+            passed += 1
+            logger.debug('  {} test: PASSED'.format(test))
+        else:
+            failed += 1
+            logger.debug('  {} test: FAILED'.format(test))
+
+    logger.debug('check_dist: {} tests PASSED, {} tests FAILED'.format(passed, failed))
+    return(passed, failed)
+
+def normalize(v, min_=0, max_=1):
+    '''
+    Performs column-wise min-max scaling of a numpy array (of any dimension)
+    so that the elements of each column range from min_ to max_. 
+
+    Returns a new scaled numpy array of the same shape as the original.
+    '''
+    from sklearn.preprocessing import minmax_scale
+    return minmax_scale(v, feature_range=(min_,max_), axis=0)
+
+def dframe_append_weighted_row(df, weights, ignore_index = True, use_abs = False):
+    '''
+    Returns a dataframe that's a copy of the original dataframe,
+    with an additional row computed by multiplying each element
+    in the same column with its corresponding weight and then
+    summing over the columns.
+
+    df: input dataframe
+    weights: list of weights, with same length as number of rows in df
+    ignore_index = If True (default), index labels are dropped.
+    use_abs: If set, use absolute values of all values when computing
+             row to append
+
+    NOTE: The dtype will be upgraded to float64 if weights are floats.
+    >>> df
+       A  B  C
+    0  1  2  2
+    1  2  3  4
+
+    # Notice the return dtype is float64 if the weights are floats
+    >>> dframe_append_weighted_row(df, [1.5,0.1])
+         A    B    C
+    0  1.0  2.0  2.0
+    1  2.0  3.0  4.0
+    2  1.7  3.3  3.4
+
+    >>> dframe_append_weighted_row(df, [0, 1])
+       A  B  C
+    0  1  2  2
+    1  2  3  4
+    2  2  3  4
+    >>> dframe_append_weighted_row(df, [1, 0])
+       A  B  C
+    0  1  2  2
+    1  2  3  4
+    2  1  2  2
+
+    '''
+    assert(df.shape[0] == len(weights))
+    weights_array = np.asarray(weights)
+    new_row = []
+    
+    for c in df.columns:
+        new_row.append(((abs(df[c].values) if use_abs else df[c].values) * np.asarray(weights_array)).sum())
+    return df.append(pd.DataFrame([new_row], columns = df.columns), ignore_index = ignore_index)
+        

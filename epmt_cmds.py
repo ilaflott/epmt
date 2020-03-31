@@ -435,14 +435,14 @@ def epmt_stop_job(other=[]):
     return retval
 
 def epmt_dump_metadata(filelist, key = None):
+    rc_final = True
     if not filelist:
         global_jobid,global_datadir,global_metadatafile = setup_vars()
         if not (global_jobid and global_datadir and global_metadatafile):
             return False
-        infile = [global_metadatafile]
-    else:
-        infile = filelist
-    if not infile or len(infile) < 1:
+        filelist = [global_metadatafile]
+
+    if len(filelist) < 1:
         logger.error("Could not identify your job id")
         return False
 
@@ -457,7 +457,7 @@ def epmt_dump_metadata(filelist, key = None):
             # if the file does not exist then we 
             rc = epmt_show_job(file, key = key)
             if not(rc):
-                return False
+                rc_final = False
             continue
 
         err,tar = compressed_tar(file)
@@ -482,7 +482,7 @@ def epmt_dump_metadata(filelist, key = None):
         else:
             for d in sorted(metadata.keys()):
                 print("%-24s%-56s" % (d,str(metadata[d])))
-    return True
+    return rc_final
 
 
 # args list is one of the following forms:
@@ -624,38 +624,43 @@ def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run
     if papiex_debug: cmd = add_var(cmd,"PAPIEX_DEBUG"+equals+"TRUE")
     cmd = add_var(cmd,"PAPIEX_OUTPUT"+equals+global_datadir) 
     cmd = add_var(cmd,"PAPIEX_OPTIONS"+equals+settings.papiex_options)
-    oldp = environ.get("LD_PRELOAD")
-    if oldp: cmd = add_var(cmd,"OLD_LD_PRELOAD"+equals+oldp)
-    cmd = add_var(cmd,"LD_PRELOAD"+equals+
-                  settings.install_prefix+"lib/libpapiex.so:"+
-                  settings.install_prefix+"lib/libpapi.so:"+
-                  settings.install_prefix+"lib/libpfm.so:"+
-                  settings.install_prefix+"lib/libmonitor.so"+((":"+oldp) if oldp else ""))
+    old_pl_libs = environ.get("LD_PRELOAD","")
+    cmd = add_var(cmd,"PAPIEX_OLD_LD_PRELOAD"+equals+old_pl_libs)
+    papiex_pl_libs = settings.install_prefix+"lib/libpapiex.so:"+settings.install_prefix+"lib/libpapi.so:"+settings.install_prefix+"lib/libpfm.so:"+settings.install_prefix+"lib/libmonitor.so"
+    cmd = add_var(cmd,"PAPIEX_LD_PRELOAD"+equals+papiex_pl_libs)
 #
 # Use export -n which keeps the variable but prevents it from being exported
 #
-    if undercsh:
-        tmp = "setenv PAPIEX_OPTIONS $PAPIEX_OPTIONS; setenv LD_PRELOAD $LD_PRELOAD;"
+    if slurm_prolog:
+        cmd += "export LD_PRELOAD="+papiex_pl_libs
+        if len(old_pl_libs) > 0:
+            cmd += ":"+old_pl_libs
+        cmd += "\n"
+    elif undercsh:
+        tmp = "setenv PAPIEX_OPTIONS $PAPIEX_OPTIONS; setenv LD_PRELOAD $PAPIEX_LD_PRELOAD;"
         tmp += "setenv PAPIEX_OUTPUT $PAPIEX_OUTPUT;"
         if monitor_debug: tmp += "setenv MONITOR_DEBUG $MONITOR_DEBUG;"
         if papiex_debug: tmp += "setenv PAPIEX_DEBUG $PAPIEX_DEBUG;" 
         cmd += "alias epmt_instrument '"+tmp+"';\n"
+#        cmd += "alias epmt 'epmt_uninstrument; ( command epmt \!* ); epmt_instrument;';\n"  
         cmd += "alias epmt_uninstrument 'unsetenv MONITOR_DEBUG PAPIEX_OUTPUT PAPIEX_DEBUG PAPIEX_OPTIONS"
-        if not oldp:
+        if not old_pl_libs:
             cmd += " LD_PRELOAD';"
         else:
-            cmd += "';\nsetenv LD_PRELOAD=$OLD_LD_PRELOAD;"
+            cmd += "';\nsetenv LD_PRELOAD $PAPIEX_OLD_LD_PRELOAD;"
         # CSH won't let an alias used in eval be used in the same eval, so we repeat this
         cmd +="\n"+tmp+"\n"
-    elif not run_cmd and not slurm_prolog:
-        cmd += "epmt_instrument ()\n{\nexport MONITOR_DEBUG PAPIEX_OUTPUT PAPIEX_DEBUG PAPIEX_OPTIONS LD_PRELOAD;\n};\n"
-        cmd += "epmt_uninstrument ()\n{\nexport -n MONITOR_DEBUG PAPIEX_OUTPUT PAPIEX_DEBUG PAPIEX_OPTIONS"
-        if not oldp:
-            cmd += " LD_PRELOAD;\n"
-        else:
-            cmd += "\nexport LD_PRELOAD=$OLD_LD_PRELOAD;\n"
-        cmd +="};\nepmt_instrument;\n"
-
+    elif not run_cmd:
+# set up functions
+        cmd += "epmt_push_preload ()\n{\nif [ -z \"$PAPIEX_OLD_LD_PRELOAD\" ]; then export LD_PRELOAD=$PAPIEX_LD_PRELOAD ; else export LD_PRELOAD=$PAPIEX_LD_PRELOAD:$PAPIEX_OLD_LD_PRELOAD ; fi\n};\n"
+        cmd += "epmt_pop_preload ()\n{\nif [ -z \"$PAPIEX_OLD_LD_PRELOAD\" ]; then export -n LD_PRELOAD ; else export LD_PRELOAD=$PAPIEX_OLD_LD_PRELOAD ; fi\n};\n"
+        cmd += "epmt_instrument () {\nexport MONITOR_DEBUG PAPIEX_OUTPUT PAPIEX_DEBUG PAPIEX_OPTIONS LD_PRELOAD;\n"
+        cmd += "epmt_push_preload;\n};\n"
+        cmd += "epmt_uninstrument () {\nexport -n MONITOR_DEBUG PAPIEX_OUTPUT PAPIEX_DEBUG PAPIEX_OPTIONS;\n"
+        cmd += "epmt_pop_preload;\n};\n"
+        #        cmd += "epmt () {\nepmt_pop_preload;\n cmd=`command epmt`;\nif [ $? -eq 0 ]; then $cmd $* ; else \"epmt not in \$PATH\"; fi\n;epmt_push_preload;\n};\n"
+        # Now enable instrumentation
+        cmd +="epmt_instrument;\n"
     return cmd
 
 def epmt_run(cmdline, wrapit=False, dry_run=False, debug=False):
@@ -738,8 +743,16 @@ def get_filedict(dirname,pattern,tar=False):
 
     return filedict
 
-def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1):
-    logger.debug("epmt_submit(%s,dry_run=%s,drop=%s,keep_going=%s)",dirs,dry_run,drop,keep_going)
+# if remove_file is set, then on successful ingest the .tgz file will be removed
+def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1, remove_file=False):
+    logger.debug("epmt_submit(%s,dry_run=%s,drop=%s,keep_going=%s,ncpus=%d,remove_file=%s)",dirs,dry_run,drop,keep_going,ncpus,remove_file)
+    if dry_run and drop:
+        logger.error("You can't drop tables and do a dry run")
+        return(False)
+    from orm import orm_db_provider
+    if (ncpus > 1) and ((settings.orm != 'sqlalchemy') or (orm_db_provider() != "postgres")):
+        logger.error('Parallel submit is only supported for Postgres + SQLAlchemy at present')
+        return False
     if not dirs:
         global_jobid,global_datadir,global_metadatafile = setup_vars()
         if not (global_jobid and global_datadir and global_metadatafile):
@@ -747,12 +760,6 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1):
         dirs  = [global_datadir]
     if not dirs or len(dirs) < 1:
         logger.error("Could not identify your job id")
-        return False
-    if dry_run and drop:
-        logger.error("You can't drop tables and do a dry run")
-        return(False)
-    if (ncpus > 1) and (settings.orm != 'sqlalchemy'):
-        logger.error('Parallel submit is only supported for SQLAlchemy at present')
         return False
     if drop and (ncpus > 1):
         # FIX:
@@ -778,7 +785,7 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1):
         logger.debug('Worker %d, PID %d', tid, getpid())
         retval = {}
         for f in work_list:
-            r = submit_to_db(f,settings.input_pattern,dry_run=dry_run)
+            r = submit_to_db(f,settings.input_pattern,dry_run=dry_run, remove_file=remove_file)
             retval[f] = r
             if r[0] is False and not keep_going:
                 break
@@ -829,7 +836,7 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1):
                 logger.error('Error in importing: %s: %s', f, res[1])
                 error_occurred = True
             elif res[0] is None:
-                logger.warning('%s: %s', res[1], f)
+                logger.info('%s: %s', res[1], f)
             else:
                 (jobid, process_count) = res[-1]
                 jobs_imported.append(jobid)
@@ -863,8 +870,9 @@ def compressed_tar(input):
 # Check for Experiment related variables
 #    metadata = check_and_add_workflowdb_envvars(metadata,total_env)
 
-def submit_to_db(input, pattern, dry_run=True):
-    logger.info("submit_to_db(%s,%s,dry_run=%s)",input,pattern,str(dry_run))
+# remove_file is set, then we will delete the file on success
+def submit_to_db(input, pattern, dry_run=True, remove_file=False):
+    logger.info("submit_to_db(%s,%s,dry_run=%s,remove_file=%s)",input,pattern,str(dry_run),str(remove_file))
 
     err,tar = compressed_tar(input)
     if err:
@@ -915,6 +923,12 @@ def submit_to_db(input, pattern, dry_run=True):
         return (False, 'Error in DB setup')
     from epmt_job import ETL_job_dict
     r = ETL_job_dict(metadata,filedict,settings,tarfile=tar)
+    if remove_file:
+        if r[0]:
+            logger.info('Removing {} on successful ingest into db'.format(input))
+            unlink(input)
+        else:
+            logger.debug('Not removing {} as ingest failed'.format(input))
     # if not r[0]:
     return r
     # (j, process_count) = r[-1]
@@ -1021,27 +1035,29 @@ def epmt_stage(dirs, keep_going=True):
             return False
     return r
 
-def epmt_dbsize(findwhat=['database','table','index','tablespace'], usejson=False, usebytes=False):
-    from orm import get_db_size
-    options = ['tablespace', 'table', 'index', 'database']
-    cleanList = []
-    for test in findwhat:
-        cleaner = ''.join(e for e in test if e.isalnum())
-        if cleaner.lower() not in options:
-            logger.warning("Ignoring %s Not a valid option",cleaner)
-        else:
-            if cleaner not in cleanList:
-                cleanList.append(cleaner)
-    return(get_db_size(cleanList,usejson,usebytes))
+def epmt_dbsize(findwhat=['database','table','index','tablespace'], usejson=True, usebytes=True):
+    from orm import orm_db_size
+# Absolutely all argument checking should go here, specifically the findwhat stuff
+    if findwhat == "all":
+        findwhat = ['database','table','index','tablespace']
+    return(orm_db_size(findwhat,usejson,usebytes))
 
-def epmt_shell():
+# Start a shell. if ipython is True (default) start a powerful
+# ipython shell, otherwise a vanilla python shell
+def epmt_shell(ipython = True):
     # we import builtins so pyinstaller will use the full builtins module
     # instead of a sketchy replacement. Also we need help from pydoc
     # since the builtins module included by pydoc doesn't have help
     import builtins
     from pydoc import help
-    from code import interact
-    interact(local=locals())
+    if ipython:
+        # ipython shell
+        from IPython import embed
+        embed(local=locals())
+    else:
+        # regular python shell
+        from code import interact
+        interact(local=locals())
 
 
 def epmt_entrypoint(args):
@@ -1075,11 +1091,11 @@ def epmt_entrypoint(args):
                     f = open(script_file)
             exec(f.read())
         else:
-            epmt_shell()
+            epmt_shell(ipython = False)
         return 0
     if args.command == 'explore':
-        from epmt_query import exp_explore
-        exp_explore(args.epmt_cmd_args, order_key = args.metric, limit = args.limit)
+        from epmt_exp_explore import exp_explore
+        exp_explore(args.epmt_cmd_args, metric = args.metric, limit = args.limit)
         return 0
     if args.command == 'gui':
         from ui import init_app, app
@@ -1117,7 +1133,11 @@ def epmt_entrypoint(args):
     if args.command == 'daemon':
         from epmt_daemon import start_daemon, stop_daemon, daemon_loop, print_daemon_status
         if args.start or args.foreground:
-            return daemon_loop() if args.foreground else start_daemon()
+            if ((not(args.post_process)) and (not(args.ingest))):
+                # if no command is set, default to post-process
+                args.post_process = True
+            daemon_args = { 'post_process': args.post_process, 'ingest': args.ingest, 'recursive': args.recursive, 'keep': args.keep, 'retire': args.retire }
+            return (daemon_loop(**daemon_args) == False) if args.foreground else start_daemon(**daemon_args)
         elif args.stop:
             return stop_daemon()
         else:
@@ -1133,7 +1153,7 @@ def epmt_entrypoint(args):
         orm_drop_db()
         return 0
     if args.command == 'dbsize':
-        return(epmt_dbsize(args.size_of, usejson=args.json, usebytes=args.bytes) == False)
+        return(epmt_dbsize(args.epmt_cmd_args) == False)
     if args.command == 'start':
         return(epmt_start_job(other=args.epmt_cmd_args) == False)
     if args.command == 'stop':
@@ -1144,6 +1164,11 @@ def epmt_entrypoint(args):
         return(epmt_run(args.epmt_cmd_args,wrapit=args.auto,dry_run=args.dry_run,debug=(args.verbose > 2)))
     if args.command == 'annotate':
         return(epmt_annotate(args.epmt_cmd_args, args.replace) == False)
+
+    if args.command == 'schema':
+        from orm import orm_dump_schema
+        return (orm_dump_schema() == False)
+
     # show functionality is now handled in the 'dump' command
     # if args.command == 'show':
     #     from epmt_cmd_show import epmt_show_job
@@ -1157,7 +1182,7 @@ def epmt_entrypoint(args):
     if args.command == 'dump':
         return(epmt_dump_metadata(args.epmt_cmd_args, key = args.key) == False)
     if args.command == 'submit':
-        return(epmt_submit(args.epmt_cmd_args,dry_run=args.dry_run,drop=args.drop,keep_going=not args.error, ncpus = args.num_cpus) == False)
+        return(epmt_submit(args.epmt_cmd_args,dry_run=args.dry_run,drop=args.drop,keep_going=not args.error, ncpus = args.num_cpus, remove_file=args.remove) == False)
     if args.command == 'check':
         return(epmt_check() == False)
     if args.command == 'delete':

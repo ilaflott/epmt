@@ -402,15 +402,21 @@ def orm_get_refmodels(name = None, tag = {}, fltr=None, limit=0, order='', befor
 # the orm API will define a higher-level function to use this
 # function after guarding against injection and dangerous sql commands
 @db_session
-def _execute_raw_sql(sql, commit = False):
+def orm_raw_sql(sql, commit = False):
     logger.debug('Executing: {0}'.format(sql))
-    try:
-        out = db.execute(sql).fetchall()
-    except:
-        logger.warn(("Failed raw sql: ", sql))
-        rollback()
-        return 1
-    return out
+    if type(sql) != list:
+        sql = [sql]
+        try:
+            for s in sql:
+                res = db.execute(s)
+            if commit:
+                #trans.commit() ??
+                return True
+        except:
+            logger.warning("Failed raw sql: %s", sql)
+            rollback()
+            raise
+    return res
 
 # convert a url string to a dictionary of parameters
 # suitable for establishing a database connection
@@ -442,3 +448,18 @@ def _url2params(url):
     except:
         raise ValueError('database url ({0}) does not have the right format'.format(url))
     return dict(provider=provider, host=host, port=port, user=user, password=passwd, dbname=dbname)
+
+def orm_dump_schema(show_attributes=True):
+    from orm.pony.models import Job, Host, Process, User, Group, Queue, Account, ReferenceModel, UnprocessedJob
+    retval=[]
+    for t in [Job, Host, Process, User, Group, Queue, Account, ReferenceModel, UnprocessedJob]:
+        if show_attributes:
+            print('TABLE {}'.format(t._table_ or t.__name__ or t))
+            show(t)
+            print('\n')
+        else:
+            # print(t._table_,t.__name__)
+            retval.append(t._table_)
+    if not show_attributes:
+        return retval
+    return True;

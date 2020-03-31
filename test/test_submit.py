@@ -7,7 +7,7 @@ from . import *
 @timing
 def setUpModule():
     print('\n' + str(settings.db_params))
-    setup_db(settings)
+    setup_db(settings, drop=True)
     datafiles='test/data/misc/685000.tgz'
     print('setUpModule: importing {0}'.format(datafiles))
     epmt_submit(glob(datafiles), dry_run=False)
@@ -73,13 +73,18 @@ class EPMTSubmit(unittest.TestCase):
 
     @db_session
     def test_corrupted_csv(self):
-        datafiles='test/data/misc/corrupted-csv.tgz'
+        datafile='test/data/misc/corrupted-csv.tgz'
         # quell the error message
         epmt_logging_init(-2)
         with self.assertRaises(ValueError):
-            epmt_submit(glob(datafiles), dry_run=False)
+            epmt_submit([datafile], dry_run=False, remove_file = True)
         # restore logging level
         epmt_logging_init(-1)
+        from os import path
+        # make sure submit did not remove the input .tgz
+        # (for failed submission input is never removed, even if
+        # remove_file is set for submit
+        self.assertTrue(path.isfile(datafile))
 
     def check_lazy_compute(self, j, lazy_eval):
         from epmt_job import is_process_tree_computed, mk_process_tree
@@ -97,7 +102,6 @@ class EPMTSubmit(unittest.TestCase):
         else:
             self.assertTrue(is_pt_computed)
             self.assertTrue(p.inclusive_cpu_time)
-            self.assertTrue(p.parent or p.children)
             self.assertTrue(is_process_tree_computed(j))
 
 
@@ -111,6 +115,19 @@ class EPMTSubmit(unittest.TestCase):
             epmt_submit(glob(datafiles), dry_run=False)
         self.check_lazy_compute(Job['804268'], not(orig_lazy_eval))
         settings.lazy_compute_process_tree = orig_lazy_eval # restore old setting
+
+    def test_submit_remove(self):
+        from shutil import copyfile
+        from os import path
+        target = '/tmp/692500.tgz'
+        copyfile('test/data/submit/692500.tgz', target)
+        self.assertTrue(path.isfile(target))
+        self.assertFalse('692500' in eq.get_jobs(fmt='terse'))
+        with capture() as (out,err):
+            epmt_submit([target], dry_run=False, remove_file=True)
+        self.assertTrue('692500' in eq.get_jobs(fmt='terse'))
+        self.assertFalse(path.isfile(target))
+
 
 if __name__ == '__main__':
     unittest.main()

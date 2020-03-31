@@ -11,7 +11,7 @@ from epmt_cmd_list import  epmt_list_jobs, epmt_list_procs, epmt_list_job_proc_t
 @timing
 def setUpModule():
     print('\n' + str(settings.db_params))
-    setup_db(settings)
+    setup_db(settings, drop=True)
     datafiles='test/data/misc/685000.tgz'
     print('setUpModule: importing {0}'.format(datafiles))
     epmt_submit(glob(datafiles), dry_run=False)
@@ -21,7 +21,21 @@ def setUpModule():
 class EPMTCmds(unittest.TestCase):
 
     @db_session
-    def test_daemon(self):
+    def test_daemon_ingest(self):
+        from epmt_daemon import daemon_loop
+        from os import path
+        self.assertFalse(eq.orm_get(eq.Job, '691201') or eq.orm_get(eq.Job, '692544'))
+        # now start the daemon and make it watch the directory containing the .tgz
+        with capture() as (out,err):
+            daemon_loop(1, ingest='./test/data/daemon/ingest', post_process=False, keep=True, recursive=False)
+        # by now the files should be in the DB
+        self.assertEqual(set(eq.get_jobs(['691201', '692544'], fmt='terse')), {'691201', '692544'})
+        # make sure the files aren't removed (since we used the "keep" option)
+        self.assertTrue(path.exists('test/data/daemon/ingest/691201.tgz') and path.exists('test/data/daemon/ingest/692544.tgz'))
+
+
+    @db_session
+    def test_daemon_post_process(self):
         # We first make sure the DB has one more unanalyzed and
         # and unprocessed jobs. Then we run the daemon loop once.
         # That should clear the backlog of unprocessed and 
@@ -99,25 +113,22 @@ class EPMTCmds(unittest.TestCase):
         self.assertEqual(type(retval), bool, 'wrong list jobs return type')
         self.assertEqual(retval, True, 'wrong list jobs return value')
 
-    def test_dbsize_provider(self):
-        with capture() as (out, err):
-            from epmt_cmds import epmt_dbsize
-            retval, val = epmt_dbsize()
-        isPG = (orm_db_provider() == 'postgres')
-        self.assertEqual(retval, isPG, 'wrong database return value')
 
-    @unittest.skipUnless(orm_db_provider() == 'postgres', 'requires postgres')
     def test_dbsize_json(self):
+        from epmt_cmds import epmt_dbsize
         with capture() as (out, err):
-            import json
-            from epmt_cmds import epmt_dbsize
-            retval, out = epmt_dbsize(
-                ['database', 'table', 'index', 'tablespace'], usejson=True)
-            throws = True
-            json.loads(out)
-            if len(out) > 1:
-                throws = False
-        self.assertEqual(throws, False, 'JSON not loaded successfully')
+            retval = epmt_dbsize(['database', 'table', 'index', 'tablespace'], usejson=True)
+        s = out.getvalue()
+        isPG = (orm_db_provider() == 'postgres')
+        self.assertEqual(retval, isPG, 'wrong epmt_dbsize() return value')
+        # on postgres we actually get a long string output
+        if isPG:
+            self.assertTrue(len(s) > 0)
+            from json import loads
+            d = loads(s)
+            self.assertTrue(d != False)
+            self.assertEqual(type(d), dict, "wrong return type")
+            self.assertTrue(len(d.keys()) > 0)
 
     def test_yy_retire(self):
         from datetime import datetime, timedelta

@@ -26,6 +26,7 @@ jupyter-client==5.3.4
 jupyter-console==6.0.0
 jupyter-core==4.6.1
 kiwisolver==1.1.0
+kmodes==0.10.2
 lazy-object-proxy==1.4.3
 llvmlite==0.31.0
 lockfile==0.12.2
@@ -65,6 +66,7 @@ pyzmq==18.1.1
 qtconsole==4.6.0
 scikit-learn==0.22.1
 scipy==1.4.1
+seaborn==0.10.0
 Send2Trash==1.5.0
 six==1.12.0
 SQLAlchemy==1.3.8

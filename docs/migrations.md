@@ -12,9 +12,22 @@ alembic for migrations.
    in-memory configurations.
 
 # Initial DB setup
-We rely on the code in `setup_db` to do the initial setup of the
-database. Once the database is setup, you can apply migrations as
-explained below.
+We have used alembic's auto-generate feature to create a baseline
+migration using the model definitions in `orm/sqlalchemy/models.py`.
+
+To achieve the automigration, we had to set `target_metadata` in
+`migrations/env.py`, and then run:
+
+```
+alembic revision --autogenerate -m "baseline"
+```
+
+This created `migrations/versions/392efb1132ae_baseline.py`.
+
+`setup_db` checks and applies this baseline migration if the database
+is empty.
+
+Once the database is setup, you can apply migrations as explained below.
 
 ### Creating a migration
 

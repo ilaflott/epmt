@@ -1,6 +1,8 @@
 # Copy this file and edit it as follows:
 # cp preset_settings/settings_xxxxxxx.py settings.py
 # Then feel free to edit the file to suit you.
+from os import path
+from getpass import getuser
 
 orm = 'sqlalchemy'
 db_params = { 'url': 'postgresql://postgres:example@localhost:5432/EPMT', 'echo': False }
@@ -16,8 +18,10 @@ bulk_insert = True
 # verbose = 0
 # input_pattern = "*-papiex-*-[0-9]*.csv"
 # install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-oss-install/"
-# logfile = path.dirname(path.abspath(__file__)) + '/epmt.log'
-#
+
+# when we are not attached to a terminal we log to the file below
+# logfile = path.expandvars("/tmp/epmt_{}.log".format(getuser() or "unknown"))
+
 # blacklist for environment filter (in addition to all keys with
 # leading underscores)
 # env_blacklist = ["LS_COLORS"]
@@ -29,11 +33,11 @@ bulk_insert = True
 # skip_for_thread_sums = ["tid", "start", "end", "num_threads", "starttime"]
 # 
 # # outlier detection
-# outlier_thresholds = { 'modified_z_score': 2.5, 'iqr': [20,80], 'z_score': 3.0 }
+# outlier_thresholds = { 'modified_z_score': 3.5, 'z_score': 3.0 }
 # outlier_features = ['duration', 'cpu_time', 'num_procs']
 # # blacklist features for outlier detection. These will be skipped.
 # # e.g, outlier_features_blacklist = ['rdtsc_duration', 'vol_ctxsw']
-# outlier_features_blacklist = []
+# outlier_features_blacklist = ['env_dict', 'tags', 'info_dict', 'env_changes_dict', 'annotations', 'analyses', 'jobid', 'jobname', 'user', 'all_proc_tags']
 #
 # data retention
 # You will need to run `epmt retire` in a cron job for this to happen

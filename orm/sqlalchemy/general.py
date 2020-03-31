@@ -58,14 +58,9 @@ def db_session(func):
         return retval
     return wrapper
 
-def setup_db(settings,drop=False,create=True):
-    global db_setup_complete
+# This is a low-level function, which is meant for internal use only
+def _connect_engine():
     global engine
-
-    if db_setup_complete and not(drop):
-        logger.debug('skipping DB setup as it has already been initialized')
-        return True
-    logger.info("Creating engine with db_params: %s", settings.db_params)
     if engine is None:
         try:
             engine = engine_from_config(settings.db_params, prefix='')
@@ -74,6 +69,17 @@ def setup_db(settings,drop=False,create=True):
             logger.error("create_engine from db_params failed")
             logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
             return False
+    return engine
+
+def setup_db(settings,drop=False,create=True):
+    global db_setup_complete
+    global engine
+
+    if db_setup_complete and not(drop):
+        logger.debug('skipping DB setup as it has already been initialized')
+        return True
+    logger.info("Creating engine with db_params: %s", settings.db_params)
+    _connect_engine()
 
     ## print the compile options
     # with engine.connect() as con:
@@ -87,6 +93,31 @@ def setup_db(settings,drop=False,create=True):
             Session.flush()
             Session.close()
         Base.metadata.drop_all(engine)
+        # for tbl in Base.metadata.sorted_tables:
+        #     engine.execute(tbl.delete())
+        # remove alembic version table
+        engine.execute('DROP TABLE IF EXISTS alembic_version')
+
+    # migrations won't work with in-memory databases
+    from orm import orm_in_memory
+    if orm_in_memory():
+        generate_schema_from_models()
+    else:
+        check_and_apply_migrations()
+
+    logger.debug('Configuring scoped session..')
+    # hide useless warning when re-configuring a session
+    # sqlalchemy/orm/scoping.py:107: SAWarning: At least one scoped session is already present.  configure() can not affect sessions that have already been created.  "At least one scoped session is already present. "
+    from epmtlib import capture
+    with capture() as (out,err):
+         Session.configure(bind=engine, expire_on_commit=False, autoflush=True)
+    db_setup_complete = True
+    return True
+
+
+# This function is only-used for in-memory databases where
+# migrations won't work
+def generate_schema_from_models():
     ins = inspect(engine)
     if len(ins.get_table_names()) >= 8:
         logger.info("Reflecting existing schema..")
@@ -101,7 +132,7 @@ def setup_db(settings,drop=False,create=True):
             #Base.prepare()
             #User, Process, Job = Base.classes.users, Base.classes.processes, Base.classes.jobs
         except:
-            pass
+            return False
     else:
         logger.info("Generating mapping from schema..")
         try:
@@ -110,15 +141,8 @@ def setup_db(settings,drop=False,create=True):
             #logger.error("Mapping to DB, did the schema change? Perhaps drop and create?")
             logger.error("Exception(%s): %s",type(e).__name__,str(e).strip())
             return False
-
-    logger.debug('Configuring scoped session..')
-    # hide useless warning when re-configuring a session
-    # sqlalchemy/orm/scoping.py:107: SAWarning: At least one scoped session is already present.  configure() can not affect sessions that have already been created.  "At least one scoped session is already present. "
-    from epmtlib import capture
-    with capture() as (out,err):
-         Session.configure(bind=engine, expire_on_commit=False, autoflush=True)
-    db_setup_complete = True
     return True
+
 
 # orm_get(Job, '6355501')
 # or
@@ -166,7 +190,7 @@ def orm_delete_jobs(jobs, use_orm = False):
             #stmts.append('DELETE FROM processes WHERE processes.jobid = \'{0}\''.format(jobid))
             stmts.append('DELETE FROM jobs WHERE jobs.jobid = \'{0}\''.format(jobid))
         try:
-            _execute_raw_sql(stmts, commit = True)
+            orm_raw_sql(stmts, commit = True)
             return
         except Exception as e:
             logger.warning("Could not execute delete SQL: {0}".format(str(e)))
@@ -515,9 +539,15 @@ def orm_dump_schema(show_attributes=True):
     disabled then the list of tables is returned instead.
     '''
     if show_attributes:
+        # we only use the metadata for in-memory databases. For all
+        # persistent backends, the migration scripts are the source of truth.
+        from orm import orm_in_memory
+        if not orm_in_memory():
+            return alembic_dump_schema()
+
         # alteratively return [t.name for t in Base.metadata.sorted_tables]
         for t in Base.metadata.sorted_tables: 
-            print('\nTable', t.name)
+            print('\nTABLE', t.name)
             for c in t.columns:
                 try:
                     print('%20s\t%10s' % (c.name, str(c.type)))
@@ -552,9 +582,9 @@ def get_mapper(tbl):
 # This function is vulnerable to injection attacks. It's expected that
 # the orm API will define a higher-level function to use this
 # function after guarding against injection and dangerous sql commands
-def _execute_raw_sql(sql, commit = False):
-    connection = engine.connect()
+def orm_raw_sql(sql, commit = False):
     logger.debug('Executing: {0}'.format(sql))
+    connection = engine.connect()
     trans = connection.begin()
     if type(sql) != list:
         sql = [sql]
@@ -570,10 +600,73 @@ def _execute_raw_sql(sql, commit = False):
     connection.close()
     return res
 
+
 def set_sql_debug(discard):
     print('setting/unsetting SQL debug is not supported on-the-fly')
     print('Try changing the value of the "echo" key in the settings.py:db_params')
     return False
+
+def check_and_apply_migrations():
+    from alembic import config, script
+    database_schema_version = get_db_schema_version()
+    alembic_cfg = config.Config('alembic.ini')
+    script_ = script.ScriptDirectory.from_config(alembic_cfg)
+    epmt_schema_head = script_.get_current_head()
+
+    if database_schema_version != epmt_schema_head:
+        logger.debug('database schema version: {}'.format(database_schema_version))
+        logger.debug('EPMT schema HEAD: {}'.format(epmt_schema_head))
+        logger.info('Database needs to be upgraded..')
+        return migrate_db()
+    else:
+        logger.info('database schema up-to-date (version {})'.format(epmt_schema_head))
+    return True
+
+def get_db_schema_version():
+    from alembic import config
+    from alembic.runtime import migration
+    engine = _connect_engine()
+    alembic_cfg = config.Config('alembic.ini')
+    with engine.begin() as conn:
+        context = migration.MigrationContext.configure(conn)
+        database_schema_version = context.get_current_revision()
+    return database_schema_version
+
+
+def migrate_db():
+    from alembic import config, script
+    from sqlalchemy import exc
+    alembic_cfg = config.Config('alembic.ini')
+    script_ = script.ScriptDirectory.from_config(alembic_cfg)
+    epmt_schema_head = script_.get_current_head()
+    logger.info('Migrating database to HEAD: {}'.format(epmt_schema_head))
+    try:
+        config.main(argv=['--raiseerr', 'upgrade', 'head',])
+    except exc.OperationalError as e:
+        logger.warning(e)
+        logger.warning('Could not upgrade the database. This likely means that your database schema predates our migration support. The best course would be start with a fresh database.')
+        return False
+    updated_version = get_db_schema_version()
+    if updated_version != epmt_schema_head:
+        logger.warning('Database migration failed. Current schema version is {}, while head is {}'.format(updated_version, epmt_schema_head))
+    else:
+        logger.info('Database successfully migrated to: {}'.format(epmt_schema_head))
+    return (epmt_schema_head == updated_version)
+
+def alembic_dump_schema(version = ''):
+    '''
+    This functions dumps the raw SQL needed to generate the
+    schema upto the specified schema version. If the version
+    is unspecified HEAD is assumed.
+    '''
+    from alembic import config
+    if not version:
+        version = get_db_schema_version()
+    logger.info('Dumping schema upto version: {}'.format(version))
+    try:
+        config.main(argv=['upgrade', '--sql', version,])
+    except:
+        pass
 
 #@listens_for(Pool, "connect")
 #def connect(dbapi_connection, connection_rec):

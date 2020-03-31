@@ -6,6 +6,9 @@ EPMT=/opt/epmt/epmt-install/epmt/epmt
 # export name=value sets an environment variable for the user task
 # unset name clears an environment variable from the user task
 # print ... writes to the task's standard output.
+#
+# See https://slurm.schedmd.com/prolog_epilog.html
+#
 
 err_report() {
     echo "print $0: Error at line $1"

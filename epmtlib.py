@@ -18,7 +18,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (3,3,20)
+_version = (3,6,4)
 
 def version():
     return _version
@@ -53,11 +53,15 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
 
     rootLogger = getLogger()
     rootLogger.setLevel(level)
-    # basicConfig(filename='epmt.log', filemode='a', level=level)
-    logFormatter = logging.Formatter("[%(asctime)-19.19s, %(process)6d] %(levelname)-7.7s %(name)s:%(message)s")
-    fileHandler = logging.FileHandler(settings.logfile)
-    fileHandler.setFormatter(logFormatter)
-    rootLogger.addHandler(fileHandler)
+
+    # only log to file if stdout is not a tty
+    from sys import stdout
+    if not stdout.isatty():
+        # basicConfig(filename='epmt.log', filemode='a', level=level)
+        logFormatter = logging.Formatter("[%(asctime)-19.19s, %(process)6d] %(levelname)-7.7s %(name)s:%(message)s")
+        fileHandler = logging.FileHandler(settings.logfile)
+        fileHandler.setFormatter(logFormatter)
+        rootLogger.addHandler(fileHandler)
 
     consoleHandler = logging.StreamHandler()
     consoleFormatter = logging.Formatter("[PID %(process)d] %(levelname)7.7s: %(name)s: %(message)s" if log_pid else "%(levelname)7.7s: %(name)s: %(message)s")
@@ -71,6 +75,16 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
     mpl_logger = logging.getLogger('matplotlib') 
     mpl_logger.setLevel(logging.WARNING) 
 
+    # numba.byteflow generates a ton of debug messages
+    numba_logger = logging.getLogger('numba') 
+    numba_logger.setLevel(logging.WARNING) 
+
+    # ipython's parso logger has too many debug messages
+    parso_logger = logging.getLogger('parso') 
+    parso_logger.setLevel(logging.WARNING) 
+
+    alembic_logger = logging.getLogger('alembic')
+    alembic_logger.setLevel(level)
 
 def init_settings(settings):
     logger = getLogger(__name__)
@@ -128,7 +142,7 @@ def init_settings(settings):
         settings.outlier_features = ['duration', 'cpu_time', 'num_procs']
     if not hasattr(settings, 'outlier_features_blacklist'):
         logger.warning("missing settings.outlier_features_blacklist")
-        settings.outlier_features_blacklist = []
+        settings.outlier_features_blacklist = ['env_dict', 'tags', 'info_dict', 'env_changes_dict', 'annotations', 'analyses', 'jobid', 'jobname', 'user', 'all_proc_tags']
     if not hasattr(settings, 'retire_jobs_ndays'):
         logger.warning("missing settings.retire_jobs_ndays")
         settings.retire_jobs_ndays = 0
@@ -686,6 +700,152 @@ def natural_keys(text):
     '''
     import re
     return [ atoi(c) for c in re.split(r'(\d+)', text) ]
+
+
+def hash_strings(v):
+    '''
+    Hashes a vector of strings and returns a vector of integers
+    '''
+    import hashlib
+    x = [ dumps(s, sort_keys=True) if (type(s) != str) else s  for s in v ]
+    return [ int(hashlib.sha256((s).encode('utf-8')).hexdigest(), 16) % 10**8 for s in x ]
+
+
+def encode2ints(v):
+    '''
+    Encodes a vector of strings to a vector of ints
+    https://stackoverflow.com/questions/53420705/python-reversibly-encode-alphanumeric-string-to-integer
+    '''
+    def encode_to_int(s):
+        '''
+        Encodes a string as an int
+        '''
+        if type(s) != str:
+            s = dumps(s, sort_keys=True)
+        mBytes = s.encode("utf-8")
+        return int.from_bytes(mBytes, byteorder="little")
+    return [ encode_to_int(s) for s in v ]
+
+def decode2strings(v):
+    '''
+    Decodes a vector of ints to a vector of strings.
+    The vector of ints MUST have been encoded using
+    "encode_strings"
+    '''
+    def decode_string_from_int(n):
+        '''
+        Decodes a string from an int. The int MUST have
+        been encoded using encode_string_to_int
+        '''
+        n = int(n) # in case n is an int64
+        mBytes = n.to_bytes(((n.bit_length() + 7) // 8), byteorder="little")
+        return mBytes.decode("utf-8")
+    return [ decode_string_from_int(n) for n in v ]
+
+def dframe_encode_features(df, features = [], reversible = False):
+    '''
+    Replaces feature columns containing string/object (non-numeric)
+    values with columns containing encoded integers. 
+
+         df: Input dataframe possibly containing non-numeric feature columns
+
+   features: If supplied, only these columns will be assumed to have
+             non-numeric values, and hence only these columns will be
+             mapped.
+
+ reversible: If set, a reversible encoding is done so that the integer
+             columns can be converted to the original strings if needed.
+             It is not recommended that you enable this option as the 
+             resultant integers can be inordinately long for long strings
+
+    RETURNS: (encoded_df, mapped_features)
+
+         encoded_df: Output dataframe which contains non-numeric
+                     feature columns replaced with encoded integer features.
+   encoded_features: List of feature column names that were replaced with
+                     encoded integers.
+
+    NOTE: If encoded_features is empty, no features were encoded.
+    '''
+    logger = getLogger(__name__)
+    if not features:
+        import epmt_settings as settings
+        logger.debug('Selecting non-numeric columns from dataframe and then pruning out blacklisted features')
+        obj_features = list(df.select_dtypes(include='object').columns.values)
+        logger.debug('Non-numeric features in dataframe: {}'.format(obj_features))
+        logger.debug('Blacklisted features to prune: {}'.format(settings.outlier_features_blacklist))
+        features = list(set(df.select_dtypes(include='object').columns.values) - set(settings.outlier_features_blacklist))
+
+    if not features:
+        logger.warning('No non-numeric, eligible, feature columns found in the dataframe; none encoded')
+        return (df, [])
+
+    if reversible:
+        logger.warning('You have enabled "reversible". Be warned that the encoded feature columns can contain some very large integers')
+    encoded_df = df.copy()
+    encoded_features = []
+    logger.debug('encoding feature columns: {}'.format(features))
+    for c in features:
+        str_vec = df[c].to_numpy()
+        int_vec = encode2ints(str_vec) if reversible else hash_strings(str_vec)
+        encoded_df[c] = int_vec
+        logger.debug('mapped feature {}: {} -> {}'.format(c, str_vec, int_vec))
+        encoded_features.append(c)
+    logger.info('Encoded features: {}'.format(encoded_features))
+    return (encoded_df, encoded_features)
+
+
+def dframe_decode_features(df, features):
+    '''
+    Decodes features in dataframe that were previously encoded
+    using dframe_encode_features(..., reversible=True)
+
+           df: Input dataframe containing one or more feature columns
+               that were encoded using dframe_encode_features
+
+     features: List of feature names that need to be decoded
+
+      RETURNS: (decoded_df, decoded_features)
+
+               decoded_df: Dataframe with decoded features
+         decoded_features: List of features that were decoded
+
+        NOTE: Please check restored_features to ensure that the features
+              were indeed decoded. Ensure reversible is set True, when
+              calling dframe_encode_features, as otherwise the strings
+              are hashed and not encoded (hashed strings cannot be decoded).
+    '''
+    logger = getLogger(__name__)
+    decoded_df = df.copy()
+    decoded_features = []
+    for c in features:
+        int_vec = df[c].to_numpy()
+        str_vec = decode2strings(int_vec)
+        decoded_df[c] = str_vec
+        logger.debug('decoded {}: {} -> {}'.format(c, int_vec, str_vec))
+        decoded_features.append(c)
+    if decoded_features != features:
+        logger.warning('decoded features list is not identical to requested features')
+    if not decoded_features:
+        logger.warning('No features were decoded')
+    else:
+        logger.info('Decoded features: {}'.format(decoded_features))
+    return (decoded_df, decoded_features)
+    
+
+def find_files_in_dir(path, pattern = '*.tgz', recursive = False):
+    '''
+    Find files matching a pattern under a directory.
+
+       path: Top-level directory to scan
+    pattern: glob pattern to match. Defaults to '*.tgz'
+  recursive: Scan recursively down or not
+
+    RETURNS: List of files that match
+    '''
+    from glob import glob
+    pathname = '{}/{}{}'.format(path, '**/' if recursive else '', pattern)
+    return glob(pathname, recursive=recursive)
 
 if __name__ == "__main__":
     print(version_str(True))
