@@ -1718,7 +1718,10 @@ an_annual_rho2_1x1deg_18840101'}
     l = []
     for k in d.keys():
         l.append((k, d[k]))
-    return sorted(l, key = lambda v: len(v[1]), reverse=True)
+
+    # sort the list in desc. order of cumulative job duration for the component
+    # v[1] is the list of jobids of a component
+    return sorted(l, key = lambda v: sum([Job[jobid].duration for jobid in v[1]]), reverse=True)
 
 def are_jobs_comparable(jobs, matching_keys = ['exp_name', 'exp_component']):
     '''
