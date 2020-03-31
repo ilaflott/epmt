@@ -1,0 +1,11 @@
+site_name: EPMT
+
+nav:
+  - Readme: README.md
+  - INSTALL.md
+  - migrations.md
+  - Notebooks: 
+    - Outliers: http://localhost:8888/notebooks/notebooks/Outliers.ipynb" target="_blank
+    - Query API: http://localhost:8888/notebooks/notebooks/Query-API.ipynb" target="_blank
+  - Interface: http://localhost:8050" target="_blank
+  - Interface Readme: index_ui.md
