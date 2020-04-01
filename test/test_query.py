@@ -36,6 +36,10 @@ class QueryAPI(unittest.TestCase):
 #     def tearDown(self):
 #         pass
 
+    def test_get_features(self):
+        f = eq.get_features(['685000', '685003', '685016'])
+        self.assertEqual(f, ['PERF_COUNT_SW_CPU_CLOCK', 'cancelled_write_bytes', 'cpu_time', 'delayacct_blkio_time', 'duration', 'exitcode', 'guest_time', 'inblock', 'invol_ctxsw', 'majflt', 'minflt', 'num_procs', 'num_threads', 'outblock', 'processor', 'rchar', 'rdtsc_duration', 'read_bytes', 'rssmax', 'submit', 'syscr', 'syscw', 'systemtime', 'time_oncpu', 'time_waiting', 'timeslices', 'updated_at', 'usertime', 'vol_ctxsw', 'wchar', 'write_bytes'])
+
     @db_session
     def test_job(self):
         j = Job['685000']

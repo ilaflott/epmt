@@ -37,8 +37,7 @@ bulk_insert = True
 # outlier_thresholds = { 'modified_z_score': 3.5, 'z_score': 3.0 }
 # outlier_features = ['duration', 'cpu_time', 'num_procs']
 # # blacklist features for outlier detection. These will be skipped.
-# # e.g, outlier_features_blacklist = ['rdtsc_duration', 'vol_ctxsw']
-# outlier_features_blacklist = ['env_dict', 'tags', 'info_dict', 'env_changes_dict', 'annotations', 'analyses', 'jobid', 'jobname', 'user', 'all_proc_tags']
+# outlier_features_blacklist = ['env_dict', 'tags', 'info_dict', 'env_changes_dict', 'annotations', 'analyses', 'jobid', 'jobname', 'user', 'all_proc_tags', 'created_at', 'modified_at', 'start', 'end']
 #
 # data retention
 # You will need to run `epmt retire` in a cron job for this to happen

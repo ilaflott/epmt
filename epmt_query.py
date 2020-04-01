@@ -1862,3 +1862,24 @@ def add_features_df(jobs_df, features = [procs_histogram, procs_set], key = 'job
         added_features.append(c.__name__)
     logger.info('Added features: {}'.format(added_features))
     return out_df, added_features
+
+def get_features(jobs):
+    '''
+    Returns the union of features across the input jobs.
+
+       jobs: Collection of jobs
+
+    RETURNS: The sorted list of features across the jobs. 
+
+      NOTES: Blacklisted features (in settings) will be removed
+             from the returned list.
+
+   EXAMPLES:
+
+     >>> eq.get_features(jobs)
+     ['PERF_COUNT_SW_CPU_CLOCK', 'cancelled_write_bytes', 'cpu_time', 'delayacct_blkio_time', 'duration',  'exitcode', 'guest_time', 'inblock', 'invol_ctxsw', 'majflt', 'minflt', 'num_procs', 'num_threads', 'outblock', 'processor', 'rchar', 'rdtsc_duration', 'read_bytes', 'rssmax', 'submit', 'syscr', 'syscw', 'systemtime', 'time_oncpu', 'time_waiting', 'timeslices', 'updated_at', 'usertime', 'vol_ctxsw', 'wchar', 'write_bytes']
+
+    '''
+    df = get_jobs(jobs, fmt='pandas')
+    all_cols = set(df.columns.values)
+    return sorted(all_cols - set(settings.outlier_features_blacklist))
