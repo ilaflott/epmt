@@ -621,6 +621,10 @@ def pca_stat(inp_features, desired = 2):
 
     logger = getLogger(__name__)  # you can use other name
     logger.debug('input feature array shape: {}'.format(inp_features.shape))
+    if np.isnan(inp_features).any():
+        raise ValueError('input contains at-least one non-numeric (nan) element')
+
+    logger.debug('input:\n{}'.format(inp_features))
 
     # the second paramer denotes the number of components usually
     # however if it is less than 1, then it denotes the desired variance.
@@ -635,6 +639,7 @@ def pca_stat(inp_features, desired = 2):
     assert(n_dim > 1)
 
     x = StandardScaler().fit_transform(inp_features)
+    logger.debug('input after standard scaling:\n{}'.format(x))
 
     pca = PCA(n_components=desired) if (desired >= 1) else PCA(desired)
     pc_array = pca.fit_transform(x)
