@@ -1,8 +1,8 @@
 site_name: EPMT
 
 nav:
-  - Readme: README.md
   - INSTALL.md
+  - Readme: README.md
   - migrations.md
   - Notebooks: 
     - Outliers: http://localhost:8888/notebooks/notebooks/Outliers.ipynb" target="_blank

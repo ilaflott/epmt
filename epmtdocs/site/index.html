@@ -8,7 +8,7 @@
         
         
         <link rel="shortcut icon" href="img/favicon.ico">
-        <title>My Docs</title>
+        <title>EPMT</title>
         <link href="css/bootstrap-custom.min.css" rel="stylesheet">
         <link href="css/font-awesome.min.css" rel="stylesheet">
         <link href="css/base.css" rel="stylesheet">
@@ -39,18 +39,21 @@
                         <span class="icon-bar"></span>
                         <span class="icon-bar"></span>
                     </button>
-                    <a class="navbar-brand" href=".">My Docs</a>
+                    <a class="navbar-brand" href=".">EPMT</a>
                 </div>
 
                 <!-- Expanded navigation -->
                 <div class="navbar-collapse collapse">
                         <!-- Main navigation -->
                         <ul class="nav navbar-nav">
-                            <li >
-                                <a href="README.md">Home</a>
+                            <li class="active">
+                                <a href=".">Readme</a>
                             </li>
                             <li >
                                 <a href="INSTALL/">EPMT Installation</a>
+                            </li>
+                            <li >
+                                <a href="migrations/">Database Migrations</a>
                             </li>
                             <li class="dropdown">
                                 <a href="#" class="dropdown-toggle" data-toggle="dropdown">Notebooks <b class="caret"></b></a>
@@ -71,9 +74,6 @@
                             <li >
                                 <a href="index_ui/">Interface Readme</a>
                             </li>
-                            <li >
-                                <a href="migrations/">Database Migrations</a>
-                            </li>
                         </ul>
 
                     <ul class="nav navbar-nav navbar-right">
@@ -82,6 +82,16 @@
                                 <i class="fa fa-search"></i> Search
                             </a>
                         </li>
+                            <li class="disabled">
+                                <a rel="next" >
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li >
+                                <a rel="prev" href="INSTALL/">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
                     </ul>
                 </div>
             </div>
@@ -90,28 +100,474 @@
         <div class="container">
                 <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
     <ul class="nav bs-sidenav">
-        <li class="main active"><a href="#welcome-to-mkdocs">Welcome to MkDocs</a></li>
-            <li><a href="#commands">Commands</a></li>
-            <li><a href="#project-layout">Project layout</a></li>
+        <li class="main active"><a href="#epmt">EPMT</a></li>
+            <li><a href="#table-of-contents">Table of Contents</a></li>
+            <li><a href="#verifying-installation">Verifying Installation</a></li>
+        <li class="main "><a href="#binbash">!/bin/bash</a></li>
+        <li class="main "><a href="#example-job-script-for-torque-or-slurm">Example job script for Torque or SLURM</a></li>
+        <li class="main "><a href="#binbash_1">!/bin/bash</a></li>
+        <li class="main "><a href="#example-job-script-for-torque-or-slurm_1">Example job script for Torque or SLURM</a></li>
+        <li class="main "><a href="#binbash_2">!/bin/bash</a></li>
+        <li class="main "><a href="#example-job-script-for-torque-or-slurm_2">Example job script for Torque or SLURM</a></li>
+        <li class="main "><a href="#binbash_3">!/bin/bash</a></li>
+        <li class="main "><a href="#example-job-script-for-torque-or-slurm_3">Example job script for Torque or SLURM</a></li>
+        <li class="main "><a href="#binbash_4">!/bin/bash</a></li>
+        <li class="main "><a href="#example-job-script-for-torque-or-slurm_4">Example job script for Torque or SLURM</a></li>
+        <li class="main "><a href="#preamble-collect-job-metadata-and-monitor-all-processesthreads">Preamble, collect job metadata and monitor all processes/threads</a></li>
+        <li class="main "><a href="#postamble-disable-monitoring-and-collect-job-metadata">Postamble, disable monitoring and collect job metadata</a></li>
+        <li class="main "><a href="#binbash_5">!/bin/bash</a></li>
+        <li class="main "><a href="#example-job-script-for-torque-or-slurm_5">Example job script for Torque or SLURM</a></li>
+            <li><a href="#key-source-description">Key                     Source                          Description</a></li>
     </ul>
 </div></div>
                 <div class="col-md-9" role="main">
 
-<h1 id="welcome-to-mkdocs">Welcome to MkDocs</h1>
-<p>For full documentation visit <a href="https://mkdocs.org">mkdocs.org</a>.</p>
-<h2 id="commands">Commands</h2>
+<h1 id="epmt">EPMT</h1>
+<p><strong>Experiment Performance Management Tool</strong>  aka<br />
+<strong>WorkflowDB</strong> aka<br />
+<strong>PerfMiner</strong></p>
+<p>This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes. This tool uses <strong>papiex</strong> to perform the process monitoring. This tool is targeted at batch or ephemeral jobs, not daemon processes. </p>
+<p>The software contained in this repository was written by Philip Mucci of Minimal Metrics LLC.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<div class="toc">
 <ul>
-<li><code>mkdocs new [dir-name]</code> - Create a new project.</li>
-<li><code>mkdocs serve</code> - Start the live-reloading docs server.</li>
-<li><code>mkdocs build</code> - Build the documentation site.</li>
-<li><code>mkdocs help</code> - Print this help message.</li>
+<li><a href="#epmt">EPMT</a><ul>
+<li><a href="#table-of-contents">Table of Contents</a></li>
+<li><a href="#verifying-installation">Verifying Installation</a></li>
 </ul>
-<h2 id="project-layout">Project layout</h2>
-<pre><code>mkdocs.yml    # The configuration file.
-docs/
-    index.md  # The documentation homepage.
-    ...       # Other markdown pages, images and other files.
-</code></pre></div>
+</li>
+<li><a href="#binbash">!/bin/bash</a></li>
+<li><a href="#example-job-script-for-torque-or-slurm">Example job script for Torque or SLURM</a></li>
+<li><a href="#binbash_1">!/bin/bash</a></li>
+<li><a href="#example-job-script-for-torque-or-slurm_1">Example job script for Torque or SLURM</a></li>
+<li><a href="#binbash_2">!/bin/bash</a></li>
+<li><a href="#example-job-script-for-torque-or-slurm_2">Example job script for Torque or SLURM</a></li>
+<li><a href="#binbash_3">!/bin/bash</a></li>
+<li><a href="#example-job-script-for-torque-or-slurm_3">Example job script for Torque or SLURM</a></li>
+<li><a href="#_1"></a></li>
+<li><a href="#binbash_4">!/bin/bash</a></li>
+<li><a href="#example-job-script-for-torque-or-slurm_4">Example job script for Torque or SLURM</a></li>
+<li><a href="#_2"></a></li>
+<li><a href="#preamble-collect-job-metadata-and-monitor-all-processesthreads">Preamble, collect job metadata and monitor all processes/threads</a></li>
+<li><a href="#_3"></a></li>
+<li><a href="#_4"></a></li>
+<li><a href="#postamble-disable-monitoring-and-collect-job-metadata">Postamble, disable monitoring and collect job metadata</a></li>
+<li><a href="#binbash_5">!/bin/bash</a></li>
+<li><a href="#example-job-script-for-torque-or-slurm_5">Example job script for Torque or SLURM</a><ul>
+<li><a href="#key-source-description">Key                     Source                          Description</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<h2 id="verifying-installation">Verifying Installation</h2>
+<p>It is best to check your installation and configuration using the <code>epmt check</code> command. Here is an example run from docker via the source tree. You will notice that we bind-mount the parent-directory of <code>epmt</code> to the container. This allows <code>epmt</code> to find the <code>papiex</code> install directory, lying adjacent to the <code>epmt</code> directory.</p>
+<pre><code>$ docker run --privileged -it --rm -v $PWD/..:/tmp/foo -w /tmp/foo/epmt python-epmt:latest ./epmt check
+settings.db_params = {'filename': ':memory:', 'provider': 'sqlite'}
+           Pass
+settings.install_prefix = ../papiex-oss/papiex-oss-install/
+            ls -l ../papiex-oss/papiex-oss-install/bin/monitor-run&gt;/dev/null
+            ls -l ../papiex-oss/papiex-oss-install/lib/libpapiex.so&gt;/dev/null
+            ls -l ../papiex-oss/papiex-oss-install/lib/libmonitor.so&gt;/dev/null
+            ls -l ../papiex-oss/papiex-oss-install/lib/libpapi.so&gt;/dev/null
+            ls -l ../papiex-oss/papiex-oss-install/lib/libpfm.so&gt;/dev/null
+            ls -l ../papiex-oss/papiex-oss-install/bin/papi_command_line&gt;/dev/null
+            Pass
+settings.epmt_output_prefix = /tmp/epmt/
+           mkdir -p /tmp/epmt/
+           mkdir -p /tmp/epmt/tmp
+           ls -lR /tmp/epmt/ &gt;/dev/null
+           rm -rf /tmp/epmt/tmp
+           Pass
+/proc/sys/kernel/perf_event_paranoid = 2
+WARNING:epmt_cmds:restrictive /proc/sys/kernel/perf_event_paranoid value of 2, should be 0 for non-privileged users
+            Pass
+settings.papiex_options = PERF_COUNT_SW_CPU_CLOCK
+            ../papiex-oss/papiex-oss-install/bin/papi_component_avail| sed -n -e '/Active/,$p' | grep perf_event &gt;/dev/null
+            ../papiex-oss/papiex-oss-install/bin/papi_command_line PERF_COUNT_SW_CPU_CLOCK| sed -n -e '/PERF_COUNT_SW_CPU_CLOCK\ :/,$p' | grep PERF_COUNT_SW_CPU_CLOCK &gt; /dev/null
+            Pass
+WARNING:epmt_cmds:JOB_ID unset: Using session id 1 as JOB_ID
+WARNING:epmt_cmds:JOB_NAME unset: Using job id 1 as JOB_NAME
+WARNING:epmt_cmds:JOB_SCRIPTNAME unset: Using process name 1 as JOB_SCRIPTNAME
+WARNING:epmt_cmds:JOB_USER unset: Using username root as JOB_USER
+collect functionality (papiex+epmt)
+           epmt run -a /bin/sleep 1
+           Pass
+
+### Running unit tests with Python's `unittest` module
+
+We have a comprehensive set of unit tests. Navigate to the top-level folder
+in the installation, and run the following command:
+
+</code></pre>
+
+<p>$ python -m unittest discover</p>
+<p>{'filename': ':memory:', 'provider': 'sqlite'}
+setUpModule: importing test/data/misc/<em>.tgz
+Imported successfully - job: failed-exitcode processes: 1 rate: 54.5643040323
+Imported successfully - job: 685000 processes: 3480 rate: 374.482987496
+'setUpModule' took: 10.2743 sec
+......
+{'filename': ':memory:', 'provider': 'sqlite'}
+setUpModule: importing test/data/misc/685000.tgz
+'setUpModule' took: 0.0117 sec
+..
+{'filename': ':memory:', 'provider': 'sqlite'}
+setUpModdule: importing test/data/query/</em>.tgz
+Imported successfully - job: 685000 processes: 3480 rate: 367.989366376
+Imported successfully - job: 685003 processes: 3785 rate: 368.269617338
+Imported successfully - job: 685016 processes: 3412 rate: 368.965343103
+'setUpModule' took: 31.8878 sec
+...............
+{'filename': ':memory:', 'provider': 'sqlite'}
+setUpModule: importing test/data/outliers/*.tgz
+Imported successfully - job: kern-6656-20190614-190245 processes: 10600 rate: 353.525545172
+Imported successfully - job: kern-6656-20190614-192044-outlier processes: 10600 rate: 351.265328962
+Imported successfully - job: kern-6656-20190614-194024 processes: 10600 rate: 352.45282394
+Imported successfully - job: kern-6656-20190614-191138 processes: 10600 rate: 352.341328069
+'setUpModule' took: 132.7657 sec
+.........</p>
+<hr />
+<p>Ran 32 tests in 215.512s</p>
+<p>OK</p>
+<pre><code>
+## Collecting Performance Data
+
+Assuming you have EPMT installed and in your path, let's modify a job file:
+
+</code></pre>
+
+<p>$ cat my_job.sh</p>
+<h1 id="binbash">!/bin/bash</h1>
+<h1 id="example-job-script-for-torque-or-slurm">Example job script for Torque or SLURM</h1>
+<p>./compute_the_world --debug </p>
+<pre><code>
+This becomes:
+
+</code></pre>
+
+<p>$ cat my_job_epmt.sh</p>
+<h1 id="binbash_1">!/bin/bash</h1>
+<h1 id="example-job-script-for-torque-or-slurm_1">Example job script for Torque or SLURM</h1>
+<p>epmt start
+epmt run ./compute_the_world --debug 
+epmt stop</p>
+<pre><code>
+Or more succintlty by automating the start/stop cycle with the **--auto** or **-a** flag:  
+
+</code></pre>
+
+<p>$ cat my_job_epmt2.sh</p>
+<h1 id="binbash_2">!/bin/bash</h1>
+<h1 id="example-job-script-for-torque-or-slurm_2">Example job script for Torque or SLURM</h1>
+<p>epmt -a run ./compute_the_world --debug</p>
+<pre><code>
+But usually we want to run more than one executable. We could have any number of run statements:
+
+</code></pre>
+
+<p>$ cat my_job_epmt3.sh</p>
+<h1 id="binbash_3">!/bin/bash</h1>
+<h1 id="example-job-script-for-torque-or-slurm_3">Example job script for Torque or SLURM</h1>
+<h1 id="_1"></h1>
+<p>epmt start
+epmt run ./initialize_the_world --random 
+epmt run ./compute_the_world 
+epmt run ./postprocess_the_world 
+epmt stop</p>
+<pre><code>
+Let's skip all the markup, as we can do it with only environment variables. **EPMT** provides the configuration to export to the environment through the **source** command. The use for this is in a job file and is meant to be evaluated by the running shell, be that some form of Bash or Csh. **epmt source** just prints the required environment variables in Bash format **unless either the &quot;SHELL&quot; or &quot;_&quot; environment variable ends in csh**. 
+
+**Note the unset of LD_PRELOAD before stop!** This line is to prevent the data collection routine from running on **epmt stop** itself.
+
+</code></pre>
+
+<p>$ cat my_job_bash.sh</p>
+<h1 id="binbash_4">!/bin/bash</h1>
+<h1 id="example-job-script-for-torque-or-slurm_4">Example job script for Torque or SLURM</h1>
+<h1 id="_2"></h1>
+<h1 id="preamble-collect-job-metadata-and-monitor-all-processesthreads">Preamble, collect job metadata and monitor all processes/threads</h1>
+<p>epmt start
+eval <code>epmt source</code></p>
+<h1 id="_3"></h1>
+<p>./initialize_the_world --random 
+./compute_the_world 
+./postprocess_the_world </p>
+<h1 id="_4"></h1>
+<h1 id="postamble-disable-monitoring-and-collect-job-metadata">Postamble, disable monitoring and collect job metadata</h1>
+<p>unset LD_PRELOAD
+epmt stop</p>
+<pre><code>
+Here's an example for Csh, when run interactively, 
+
+
+</code></pre>
+
+<p>$ /bin/csh</p>
+<blockquote>
+<p>epmt -j1 source
+setenv PAPIEX_OPTIONS PERF_COUNT_SW_CPU_CLOCK;
+setenv PAPIEX_OUTPUT /tmp/epmt/1/;
+setenv LD_PRELOAD /Users/phil/Work/GFDL/epmt.git/../papiex-oss/papiex-oss-install/lib/libpapiex.so:/Users/phil/Work/GFDL/epmt.git/../papiex-oss/papiex-oss-install/lib/libpapi.so:/Users/phil/Work/GFDL/epmt.git/../papiex-oss/papiex-oss-install/lib/libpfm.so:/Users/phil/Work/GFDL/epmt.git/../papiex-oss/papiex-oss-install/lib/libmonitor.so</p>
+</blockquote>
+<pre><code>
+## Importing Data Into the Database
+
+After collecting the data, jobs (groups of processes) are imported into the database with the **submit** command. This command takes arguments in the form of directories or tar files that must contain a *job_metadata* file.   
+
+Normal operation is to submit one or more directories:
+
+```epmt submit &lt;dir1/&gt; [...]```
+
+One can also submit a list of compressed tar files:
+
+```epmt submit &lt;compressed_dir_file.*z&gt; [...]```
+
+There is also a mode where the current environment is used to determine where to find the data.
+
+```epmt submit```
+
+
+### Examples
+
+#### Submitting a directory of compressed job data
+
+This might happen at the end of the day via a cron job:
+
+</code></pre>
+
+<p>$ epmt submit <dir>/*tgz</p>
+<pre><code>
+### Submitting data directly from within a job
+
+These commands could be part of every users job, or in the batch systems configurable preambles/postambles.
+
+</code></pre>
+
+<p>$ cat my_job.sh</p>
+<h1 id="binbash_5">!/bin/bash</h1>
+<h1 id="example-job-script-for-torque-or-slurm_5">Example job script for Torque or SLURM</h1>
+<p>echo "$PBS_JOBID or $SLURM_JOBID"
+epmt start
+epmt run ./compute_the_world --debug 
+epmt stop
+epmt submit</p>
+<pre><code>
+
+The start/stop cycle can be removed with the **--auto** or **-a** flag, which performs start and stop for you.  
+
+</code></pre>
+
+<p>$ epmt -a run ./debug_the_world --outliers
+$ epmt submit</p>
+<pre><code>
+### Submitting data from the current session
+
+If not inside of a batch environment, **epmt** will *attempt to fake-and-bake a job id*. This is quite useful when just performing interactive runs. **Note you may not be able to submit these jobs to a shared database. The session ID is not guaranteed to be unique across reboots, much less other systems** However, this use case is perfectly acceptable when using a private database.
+
+</code></pre>
+
+<p>$ epmt start
+WARNING:epmt_cmds:JOB_ID unset: Using session id 6948 as JOB_ID
+WARNING:epmt_cmds:JOB_NAME unset: Using job id 6948 as JOB_NAME
+WARNING:epmt_cmds:JOB_SCRIPTNAME unset: Using process name 6948 as JOB_SCRIPTNAME
+WARNING:epmt_cmds:JOB_USER unset: Using username phil as JOB_USE$ epmt run ./debug_the_world --outliers
+$ epmt stop
+$ epmt submit</p>
+<pre><code>
+To initialize a new session leader, consider using the **setsid** command. 
+
+## Usage and Configuration
+
+**EPMT** gets all of it's configuration from two places, environment variables and the **settings.py** file. One can examine all the current settings by passing the **--help** option.
+
+</code></pre>
+
+<p>$ ./epmt help
+usage: epmt [-n] [-d] [-h] [-a] [--drop]
+            [epmt_cmd] [epmt_cmd_args [epmt_cmd_args ...]]</p>
+<p>positional arguments:
+  epmt_cmd       start, run, stop, submit, dump
+  epmt_cmd_args  Additional arguments, command dependent</p>
+<p>optional arguments:
+  -n, --dry-run  Don't touch the database
+  -v, --verbose  Increase level of verbosity/debug
+  -h, --help     Show this help message and exit
+  -a, --auto     Do start/stop when running
+  --drop         Drop all tables/data and recreate before importing</p>
+<p>settings.py (overridden by below env. vars):
+db_params               {'host': 'localhost', 'password': 'example', 'user': 'postgres', 'dbname': 'EPMT', 'provider': 'postgres'}
+debug                   False                                                 <br />
+input_pattern           <em>-papiex-[0-9]</em>-[0-9]*.csv                            <br />
+install_prefix          ../papiex-oss/papiex-oss-install/                     <br />
+papiex_options          PERF_COUNT_SW_CPU_CLOCK                               <br />
+epmt_output_prefix      /tmp/epmt/                                              </p>
+<p>environment variables (overrides settings.py):</p>
+<pre><code>
+## Environment Variables
+
+The following variables replace, at run-time, the values in the **db_params** dictionary found in **settings.py**.
+
+</code></pre>
+
+<p>EPMT_DB_PROVIDER
+EPMT_DB_USER
+EPMT_DB_PASSWORD
+EPMT_DB_HOST
+EPMT_DB_DBNAME
+EPMT_DB_FILENAME</p>
+<pre><code>
+## settings.py
+
+There are a number of example files provided. See **INSTALL.md** for more details.
+
+</code></pre>
+
+<p>$ ls settings
+settings_pg_container.py    settings_sqlite_inmem.py
+settings_pg_localhost.py    settings_sqlite_localfile.py
+$
+$ # In memory only, disappears after run
+$ cp /path/to/install/settings/settings_sqlite_inmem.py /path/to/install/settings.py
+$ 
+$ # Persistent and on disk
+$ cp /path/to/install/settings/settings_sqlite_localfile.py /path/to/install/settings.py
+$ epmt -v -v submit /dir/to/jobdata</p>
+<pre><code>
+## Debugging
+
+**EPMT** can be passed noth **-n** (dry-run) and **-v** (verbosity) to help with debugging. Add more **-v** flags to increase the level of information printed.
+
+</code></pre>
+
+<p>$ epmt -v start</p>
+<pre><code>
+Or to attempt a submit without touching the database:
+
+</code></pre>
+
+<p>$ epmt -v -v -n submit /dir/to/jobdata</p>
+<pre><code>
+Also, one can decode and dump the job_metadata file in a dir or compressed dir.
+
+</code></pre>
+
+<p>$ epmt dump ~/Downloads/yrs05-25.20190221/CM4_piControl_C_atmos_00050101.papiex.gfdl.19712961.tgz 
+exp_component           atmos                                                 <br />
+exp_jobname             CM4_piControl_C_atmos_00050101                        <br />
+exp_name                CM4_piControl_C                                       <br />
+exp_oname               00050101                                              <br />
+job_el_env_changes      {}                                                    <br />
+job_el_env_changes_len  0                                                     <br />
+job_el_from_batch       []                                                    <br />
+job_el_status           0                                                     <br />
+job_el_stop             2019-02-20 22:13:23.131187                            <br />
+job_pl_env              {'LANG': 'en_US', 'PBS_QUEUE': 'batch', 'SHELL': '/bin/csh', 'PBS_ENVIRONMENT': 'PBS_BATCH', 'PAPIEX_TAGS': 'atmos', 'SHLVL': '3', 'PBS_WALLTIME': '216000', 'MOAB_NODELIST': 'pp057.princeton.rdhpcs.noaa.gov', 'PBS_VERSION': 'TORQUE-6.0.2', 'PAPIEX_OUTPUT': '/vftmp/Foo.Bar/pbs20345339/papiex',  'LOADEDMODULES': '', 'LC_TIME': 'C', 'MACHTYPE': 'x86_64', 'PAPIEX_OPTIONS': 'PERF_COUNT_SW_CPU_CLOCK', 'MOAB_GROUP': 'f'}
+job_pl_env_len          81                                                    <br />
+job_pl_from_batch       []                                                    <br />
+job_pl_groupnames       ['f', 'f']                                            <br />
+job_pl_hostname         pp057                                                 <br />
+job_pl_id               20345339.moab01.princeton.rdhpcs.noaa.gov             <br />
+job_pl_jobname          CM4_piControl_C_atmos_00050101                        <br />
+job_pl_scriptname       CM4_piControl_C_atmos_00050101                        <br />
+job_pl_start            2019-02-20 19:58:41.274267                            <br />
+job_pl_submit           2019-02-20 19:58:41.274463                            <br />
+job_pl_username         Foo.Bar                                        </p>
+<pre><code>
+## EPMT under Docker 
+
+Using the epmt-command docker image, we run **epmt** on a local directory to submit and set the submission DB host environment variable:
+
+</code></pre>
+
+<p>$ docker run --network=host -ti --rm -v <code>pwd</code>:/app -w /app -e EPMT_DB_HOST=<hostname> epmt-command:latest -v submit <localdir/></p>
+<pre><code>
+This could be easilt aliased for convenience.
+
+# Analysis of EPMT Data 
+
+Current analytics are performed in an iPython notebook, specifically the SciPy-Notebook as described on [their homepage](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html).  
+
+If you have Jupyter installed locally **and** you have installed the prerequisite Python modules (see **INSTALL.md**), there is no need to use the Docker image. You can simply load the **EPMT.ipynb** from the source directory in your environment and begin.
+
+However, for those without an environment, using Docker (and assuming you build the images as described in **INSTALL.md**):
+
+</code></pre>
+
+<p>$ docker-compose up notebook</p>
+<pre><code>
+Follow the instructions printed to the screen to navigate to **EPMT.ipynb** or try this link [http://localhost:8888/notebooks/EPMT.ipynb]() and enter the encryption key. You must be in the directory where EPMT.ipynb exists when you start the notebook service. Further documentation exists in that file.
+
+## Data Dictionary
+
+EPMT collects data both from the job runtime and the applications run in that environment. See the **models/** directory for what fixed data is stored related to each object. Metric data is stored differently and the data collector's data directionary can be found in papiex-oss/README.md. At the time of this writing it looked like this:
+
+</code></pre>
+
+<h2 id="key-source-description">Key                     Source                          Description</h2>
+<p>exename         PAPI                            Name of the application, usually argv[0]
+path            PAPI                            Path to the application
+args            monitor                         All arguments to the application not including argv[0]
+pid         getpid()                        Process id
+generation      monitor                         Incremented after every exec()
+ppid            getppid()                       Parent process id
+pgid            getpgid()                       Process group id
+sid         getsid()                        Process session id
+numtids         monitor                         Number of threads caught by instrumentation
+tid         gettid()                        Thread id
+start           gettimeofday()                      Microsecond timestamp at start
+end         gettimeofday()                      Microsecond timestamp at end
+usertime        getrusage(RUSAGE_THREAD)                Microsecond user time 
+systemtime      getrusage(RUSAGE_THREAD)                Microsecond system time
+rssmax          getrusage(RUSAGE_THREAD)                Kb max resident set size
+minflt          getrusage(RUSAGE_THREAD)                Minor faults (TLB misses/new page frames)
+majflt          getrusage(RUSAGE_THREAD)                Major page faults (requiring I/O)
+inblock         getrusage(RUSAGE_THREAD)                512B blocks read from I/O 
+outblock        getrusage(RUSAGE_THREAD)                512B blocks written to I/O 
+vol_ctxsw       getrusage(RUSAGE_THREAD)                Boluntary context switches (yields)
+invol_ctxsw     getrusage(RUSAGE_THREAD)                Involuntary context switches (preemptions)
+num_threads     /proc/<pid>/task/<tid>/stat field 20                Threads in process at finish
+starttime       /proc/<pid>/task/<tid>/stat field 22                    Timestamp in jiffies after boot thread was started
+processor       /proc/<pid>/task/<tid>/stat field 39                    CPU this thread last ran on
+delayacct_blkio_time    /proc/<pid>/task/<tid>/stat field 42                    Jiffies process was blocked in D state on I/O device
+guest_time      /proc/<pid>/task/<tid>/stat field 43                    Jiffies running a virtual CPU for a guest OS
+rchar           /proc/<pid>/task/<tid>/io line 1                Bytes read via syscall (may come from pagecache not I/O device)
+wchar           /proc/<pid>/task/<tid>/io line 2                Bytes written via syscall (may go to pagecache not I/O device)
+syscr           /proc/<pid>/task/<tid>/io line 3                Read syscalls 
+syscw           /proc/<pid>/task/<tid>/io line 4                Write syscalls
+read_bytes      /proc/<pid>/task/<tid>/io line 4                Bytes read from I/O device
+write_bytes     /proc/<pid>/task/<tid>/io line 4                Bytes written to I/O device
+cancelled_write_bytes   /proc/<pid>/task/<tid>/io line 4                Number of bytes discarded by truncation
+time_oncpu      /proc/<pid>/task/<tid>/schedstat                Time in jiffies spent running the CPI
+time_waiting        /proc/<pid>/task/<tid>/schedstat                Time in jiffies waiting for a run queue while runnable
+timeslices      /proc/<pid>/task/<tid>/schedstat                Number of run periods on CPU
+rdtsc_duration      <Hardware RDTSC>                        Real time cycle counter duration of thread</p>
+<pre><code>
+Additional metrics can be configured either in two ways:
+* The papiex_options string In **settings.py** if using ```epmt run``` or ```epmt source```
+* The value of the **PAPIEX_OPTIONS** environment variable if using ```LD_PRELOAD``` directly.
+
+The value of these should be a comma separated string:
+</code></pre>
+
+<p>$ export PAPIEX_OPTIONS="PERF_COUNT_SW_CPU_CLOCK,PAPI_CYCLES"</p>
+<pre><code>
+To list available and functioning metrics, use one of the included command line tools:
+ * papi_avail
+ * papi_native_avail
+ * check_events (libpfm)
+ * showevtinfo (libpfm)
+ * perf list (linux)
+
+**The PERF_COUNT_SW_* events should work on any system that has the proper /proc/sys/kernel/perf_event_paranoid setting**.
+
+One should verify the functionality of the metric using the ```papi_command_line``` tool:
+
+</code></pre>
+
+<p>$ papi_command_line PERF_COUNT_SW_CPU_CLOCK</p>
+<p>$ papi_command_line CYCLES</p>
+<p>```</p>
+<p>Note that often in virtual environments, hardware counters are not often available in the VM. </p></div>
         </div>
 
         <footer class="col-md-12">
@@ -194,5 +650,5 @@ docs/
 
 <!--
 MkDocs version : 1.0.4
-Build Date UTC : 2020-03-31 23:00:02
+Build Date UTC : 2020-04-02 01:38:23
 -->
