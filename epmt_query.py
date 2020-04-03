@@ -62,11 +62,14 @@ def conv_jobs(jobs, fmt='dict', merge_sums = True):
         for j in out_list:
             # check if dicts have any common fields, if so,
             # warn the user as some fields will get clobbered
-            common_fields = list(set(j) & set(j[PROC_SUMS_FIELD_IN_JOB]))
-            if common_fields:
-                logger.warning('while hoisting proc_sums to job-level, found {0} common fields: {1}'.format(len(common_fields), common_fields))
-            j.update(j[PROC_SUMS_FIELD_IN_JOB])
-            del j[PROC_SUMS_FIELD_IN_JOB]
+            # Note if job hasn't been post-processed it will have an empty (None)
+            # PROC_SUMS_FIELD_IN_JOB field
+            if is_job_post_processed(j['jobid']):
+                common_fields = list(set(j) & set(j[PROC_SUMS_FIELD_IN_JOB]))
+                if common_fields:
+                    logger.warning('while hoisting proc_sums to job-level, found {0} common fields: {1}'.format(len(common_fields), common_fields))
+                j.update(j[PROC_SUMS_FIELD_IN_JOB])
+                del j[PROC_SUMS_FIELD_IN_JOB]
 
     return pd.DataFrame(out_list) if fmt=='pandas' else out_list
 
@@ -1883,3 +1886,20 @@ def get_features(jobs):
     df = get_jobs(jobs, fmt='pandas')
     all_cols = set(df.columns.values)
     return sorted(all_cols - set(settings.outlier_features_blacklist))
+
+
+@db_session
+def is_job_post_processed(job):
+    '''
+    Returns True if the post-processing pipeline has been
+    run on the job. False otherwise.
+
+      job: jobid or ORM job object. The job MUST be in the database.
+
+    '''
+    if type(job) == str:
+        job = Job[job]
+    # only processed jobs have this set
+    info_dict = job.info_dict or {}
+    # we retain the j.proc_sums check to retain backward compatibility
+    return ((info_dict.get('post_processed', 0) > 0) or (job.proc_sums != None))

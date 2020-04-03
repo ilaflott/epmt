@@ -620,8 +620,14 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     for (k, v) in threads_sums_across_procs.items():
         proc_sums[k] = v
     j.proc_sums = proc_sums
+    # we need to create a copy so the ORM actually saves the modifications
+    # Merely updating a dict often confuses the ORM and the changes are lost
+    info_dict = dict.copy(j.info_dict or {})
+    info_dict['post_processed'] = 1
+    j.info_dict = info_dict
     _t5 = time.time()
     logger.debug('  proc_sums calculation took: %2.5f sec', _t5 - _t4)
+    logger.info('marked job as post-processed')
 
     if not settings.lazy_compute_process_tree:
         mk_process_tree(j, all_procs)
