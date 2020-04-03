@@ -1100,7 +1100,7 @@ def epmt_entrypoint(args):
     if args.command == 'gui':
         from ui import init_app, app
         init_app()
-        app.run_server(debug=False, host='0.0.0.0')
+        app.run_server(debug=environ.get("DASH_DEBUG",False), host='0.0.0.0')
         return 0
     if args.command == 'unittest':
         import unittest
