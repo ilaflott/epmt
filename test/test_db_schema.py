@@ -17,7 +17,7 @@ class EPMTDBSchema(unittest.TestCase):
         #print('schema: ', out.getvalue())
         s = out.getvalue()
         #self.assertNotIn('alembic', s)
-        self.assertTrue(s.count('TABLE') >= 9)
+        self.assertTrue(s.count('TABLE') >= 6)
         #check_output("alembic upgrade head", shell=True)
 
 
