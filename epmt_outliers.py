@@ -268,6 +268,11 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
     if type(jobs) != pd.DataFrame:
         jobs = eq.conv_jobs(jobs, fmt='pandas')
 
+    # check if any columns contain nans
+    nan_columns = jobs.columns[jobs.isnull().any()].tolist()
+    if nan_columns:
+        raise ValueError('dataframe columns ({}) contain atlleast one NaN each'.format(nan_columns))
+
     model_params = {}
     if trained_model:
         logger.debug('using a trained model for detecting outliers')
@@ -342,10 +347,10 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
             for mjob in trained_model.jobs:
                 if mjob.jobid not in jobids_set:
                     added_model_jobs.append(mjob.jobid)
-            logger.debug('appending model jobs {} prior to PCA'.format(added_model_jobs))
-            added_model_jobs_df = eq.get_jobs(added_model_jobs, fmt='pandas')[['jobid']+features]
-            jobs = pd.concat([jobs[['jobid']+features], added_model_jobs_df], axis=0, ignore_index=True)
-
+            if added_model_jobs:
+                logger.debug('appending model jobs {} prior to PCA'.format(added_model_jobs))
+                added_model_jobs_df = eq.get_jobs(added_model_jobs, fmt='pandas')[['jobid']+features]
+                jobs = pd.concat([jobs[['jobid']+features], added_model_jobs_df], axis=0, ignore_index=True)
         (jobs_pca_df, pca_variances, pca_features, _) = pca_feature_combine(jobs, features, desired = 0.85 if pca is True else pca)
 
         # remove the rows of the appended model jobs
@@ -453,7 +458,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
         _new_retlist = []
         for arg in retlist:
             if type(arg) == pd.DataFrame:
-                if trained_model:
+                if trained_model and added_model_jobs:
                     # remove model rows that we added
                     arg = retval[~arg.jobid.isin(added_model_jobs)].reset_index(drop=True)
                 adjusted_df = pca_weighted_score(arg, pca_features, pca_variances)[0]
@@ -810,7 +815,7 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
         retval = retval[['jobid', 'tags']+features]
 
         if pca:
-            if trained_model:
+            if trained_model and added_model_jobs:
                 # remove model rows that we added
                 retval = retval[~retval.jobid.isin(added_model_jobs)].reset_index(drop=True)
             logger.info('adjusting the PCA scores based on PCA variances')
@@ -1189,6 +1194,10 @@ def pca_feature_combine(inp_df, inp_features = [], desired = 2, retain_features 
 
     features = sanitize_features(inp_features, inp_df)
     logger.debug('PCA input features: {}'.format(features))
+    # check if df contains nans, if so print out the columns
+    nan_cols = inp_df.columns[inp_df.isnull().any()].tolist()
+    if nan_cols:
+        raise ValueError('PCA input dataframe contains nans in columns: {}'.format(nan_cols))
     inp_data = inp_df[features].to_numpy()
     (pca_data, pca_) = pca_stat(inp_data, desired)
     pca_feature_names = []
@@ -1310,7 +1319,7 @@ def pca_feature_rank(jobs, inp_features = []):
     sorted_features = list(zip(sorted_df.iloc[-1].index, sorted_df.iloc[-1].round(4)))
     return (sorted_df, sorted_features)
 
-def feature_plot_2d(jobs, features = [], outfile='plot.png', annotate = False):
+def feature_plot_2d(jobs, features = [], outfile='', annotate = False):
     '''
     Generates a 2-D scatter plot of jobs with features on two axes.
     If more than 2 features are requested, for example by setting
@@ -1327,7 +1336,8 @@ def feature_plot_2d(jobs, features = [], outfile='plot.png', annotate = False):
               features is set to [], so PCA analysis will be performed
               to reduce the final feature set to 2.
 
-    outfile: Output file to save the plot as (defaults to plot.png)
+    outfile: If this is set, the output is saved in a file. Otherwise
+             matplotlib's standard renderer is used.
 
     annotate: Annotate each datapoint (plot can become cluttered if enabled)
 
@@ -1353,7 +1363,8 @@ def feature_plot_2d(jobs, features = [], outfile='plot.png', annotate = False):
         logger.error('Cannot generate scatter plot as requested features ({}) < 2'.format(features))
         return False
     import matplotlib as mpl
-    mpl.use('agg')
+    if outfile:
+        mpl.use('agg')
     import matplotlib.pyplot as plt
     import matplotlib.colors as pltc
     from random import sample
@@ -1383,8 +1394,11 @@ def feature_plot_2d(jobs, features = [], outfile='plot.png', annotate = False):
     ax.legend(jobids, loc='upper center', bbox_to_anchor=(0.5, 1.05),
           ncol=3, fancybox=True, shadow=True)
     ax.grid()
-    print('plot saved to {}'.format(outfile))
-    plt.savefig(outfile)
+    if outfile:
+        print('plot saved to {}'.format(outfile))
+        plt.savefig(outfile)
+    else:
+        plt.show()
 
     
 # Sanitize feature list by removing blacklisted features
