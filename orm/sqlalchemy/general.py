@@ -315,6 +315,16 @@ def orm_jobs_col(jobs):
 def orm_to_dict(obj, **kwargs):
     from .models import Job, Process, User, Host, ReferenceModel
     from epmtlib import isString
+
+    # we need to make sure jobs are post-processed first and foremost
+    # This step has to be done before we get a dict from the object
+    if type(obj) == Job:
+        from epmt_query import is_job_post_processed
+        if not(is_job_post_processed(obj.jobid)):
+            from epmt_job import post_process_job
+            post_process_job(obj) # as a side-effect obj.proc_sums will be populated
+            assert(obj.proc_sums)
+
     d = obj.__dict__.copy()
     excludes = kwargs['exclude'] if 'exclude' in kwargs else []
     if isString(excludes):

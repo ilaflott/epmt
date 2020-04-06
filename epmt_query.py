@@ -49,6 +49,18 @@ def conv_jobs(jobs, fmt='dict', merge_sums = True):
     if fmt=='terse':
         return [ j.jobid for j in jobs ]
 
+    # at this point the user wants a dict or dataframe output, so
+    # we need to make sure that the jobs have been post-processed
+    # I've commented the section below out, and instead we do this
+    # in orm_to_dict (that way, whenever the user passes in jobids
+    # to convert to dict/pandas, we will make sure proc_sums is 
+    # populated). The code below is only for reference as what we
+    # could alternatively do:
+    # from epmt_job import post_process_job
+    # for j in jobs:
+    #     if not(is_job_post_processed(j.jobid)):
+    #         post_process_job(j)
+
     # convert the ORM into a list of dictionaries, excluding blacklisted fields
     # and then filter None/empty dicts.
     # It seems in complex error cases we end up with a list containing
@@ -63,13 +75,13 @@ def conv_jobs(jobs, fmt='dict', merge_sums = True):
             # check if dicts have any common fields, if so,
             # warn the user as some fields will get clobbered
             # Note if job hasn't been post-processed it will have an empty (None)
-            # PROC_SUMS_FIELD_IN_JOB field
-            if is_job_post_processed(j['jobid']):
-                common_fields = list(set(j) & set(j[PROC_SUMS_FIELD_IN_JOB]))
-                if common_fields:
-                    logger.warning('while hoisting proc_sums to job-level, found {0} common fields: {1}'.format(len(common_fields), common_fields))
-                j.update(j[PROC_SUMS_FIELD_IN_JOB])
-                del j[PROC_SUMS_FIELD_IN_JOB]
+            # PROC_SUMS_FIELD_IN_JOB field. However, orm_to_dict above guarantees
+            # all jobs are already post-processed
+            common_fields = list(set(j) & set(j[PROC_SUMS_FIELD_IN_JOB]))
+            if common_fields:
+                logger.warning('while hoisting proc_sums to job-level, found {0} common fields: {1}'.format(len(common_fields), common_fields))
+            j.update(j[PROC_SUMS_FIELD_IN_JOB])
+            del j[PROC_SUMS_FIELD_IN_JOB]
 
     return pd.DataFrame(out_list) if fmt=='pandas' else out_list
 
