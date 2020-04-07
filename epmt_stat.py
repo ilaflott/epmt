@@ -789,6 +789,19 @@ def normalize(v, min_=0, max_=1):
     from sklearn.preprocessing import minmax_scale
     return minmax_scale(v, feature_range=(min_,max_), axis=0)
 
+
+def standardize(v):
+    '''
+    Performs column-wise standardization (z-score normalization),
+    so that each column has a mean 0, and a standard deviation 1.0.
+
+          v: Input ndarray
+
+    RETURNS: A standardized ndarray of the same shape as the input
+    '''
+    from scipy.stats import zscore
+    return zscore(v, axis=0)
+
 def dframe_append_weighted_row(df, weights, ignore_index = True, use_abs = False):
     '''
     Returns a dataframe that's a copy of the original dataframe,
