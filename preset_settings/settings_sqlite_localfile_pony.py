@@ -33,6 +33,7 @@ db_params = db_params = { 'url': 'sqlite:///{HOME}/EPMT_DB.sqlite'.format(HOME=s
 # skip_for_thread_sums = ["tid", "start", "end", "num_threads", "starttime"]
 # 
 # # outlier detection
+# univariate_classifiers = ['iqr', 'modified_z_score', 'z_score']
 # outlier_thresholds = { 'modified_z_score': 3.5, 'z_score': 3.0 }
 # outlier_features = ['duration', 'cpu_time', 'num_procs']
 # # blacklist features for outlier detection. These will be skipped.

@@ -14,6 +14,8 @@ def setUpModule():
     print('setUpModule: importing {0}'.format(datafiles))
     environ['EPMT_TZ'] = 'Asia/Kolkata'
     epmt_submit(glob(datafiles), dry_run=False)
+    # only use madz for outlier detection by default
+    settings.univariate_classifiers = ['modified_z_score']
     # set lower madz and z-score thresholds to easily detect outliers
     settings.outlier_thresholds['modified_z_score'] = 2.5
     settings.outlier_thresholds['z_score'] = 1.5 

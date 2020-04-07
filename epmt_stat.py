@@ -249,6 +249,20 @@ def outliers_uv(ys, methods = [outliers_iqr, outliers_z_score, outliers_modified
     return out_vec
 
 
+def uvod_classifiers():
+    '''
+    Returns a list of available univariate classifiers based on settings.py
+    If no univariate classifiers are defined in settings, then sensible defaults
+    are returned. The returned list contains one or more callables that support
+    the epmt univariate classifier interface.
+    '''
+    method_names = settings.univariate_classifiers if hasattr(settings, 'univariate_classifiers') else ['iqr', 'modified_z_score', 'z_score']
+    import sys
+    thismodule = sys.modules[__name__]
+    funcs = [ getattr(thismodule, m) for m in method_names ]
+    return funcs
+
+
 def mvod_classifiers(contamination = 0.1, warnopts='ignore'):
     '''
     Returns a list of multivariate classifiers
@@ -522,7 +536,7 @@ def mvod_scores_using_model(inp, model_inp, classifier, threshold = None):
 # match the column labels of the ref dataframe. Similarly if inp is a
 # dataframe then it's column labels must match those of ref and in the
 # same order.
-def rca(ref, inp, features, methods = [modified_z_score]):
+def rca(ref, inp, features, methods = []):
     # API input checking
     if ref.empty or inp.empty:
         return (False, None, None)
@@ -544,6 +558,7 @@ def rca(ref, inp, features, methods = [modified_z_score]):
 
     result_dict = { f: 0 for f in features }
 
+    methods = methods or uvod_classifiers()
     for m in methods:
         c_name = get_classifier_name(m)
         ref_computed.loc['ref_max_' + c_name] = 0
