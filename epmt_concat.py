@@ -130,10 +130,11 @@ def parseLine(infile, line, masterHeader, masterHeaderFile, headerDelimCount, he
         if (lineDelimCount == headerDelimCount):
             return (None, line, headerDelimCount, headerFound, masterHeader, masterHeaderFile)
         else:
-            msg = "Different number of elements in header and data in {0}".format(infile)
-            logger.error(msg)
-            logger.error("Header: {} delimiters, row has {} delimiters".format(str(headerDelimCount), str(lineDelimCount)))
-            raise InvalidFileFormat(msg)
+            logger.error("File: {}, Header: {} delimiters, but this row has {} delimiters".format(infile, str(headerDelimCount), str(lineDelimCount)))
+            logger.error("Row: {}".format(line))
+            logger.error("Master File: {}".format(masterHeaderFile))
+            logger.error("Master header: {}".format(masterHeader))
+            raise InvalidFileFormat()
 
 
 #
