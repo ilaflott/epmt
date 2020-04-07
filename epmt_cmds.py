@@ -1015,7 +1015,7 @@ def stage_job(dir,collate=True,compress_and_tar=True):
         print(settings.stage_command_dest+path.basename(filetostage))
     return True
 
-def epmt_stage(dirs, keep_going=True):
+def epmt_stage(dirs, keep_going=True, collate=True, compress_and_tar=True):
     if not dirs:
         global_jobid,global_datadir,global_metadatafile = setup_vars()
         if not (global_jobid and global_datadir and global_metadatafile):
@@ -1030,7 +1030,7 @@ def epmt_stage(dirs, keep_going=True):
             dir += "/"
         jobid = path.basename(path.dirname(dir))
         file = dir + "job_metadata"
-        r = stage_job(dir)
+        r = stage_job(dir,collate=collate,compress_and_tar=compress_and_tar)
         if r is False and not keep_going:
             return False
     return r
@@ -1159,7 +1159,7 @@ def epmt_entrypoint(args):
     if args.command == 'stop':
         return(epmt_stop_job(other=args.epmt_cmd_args) == False)
     if args.command == "stage":
-        return(epmt_stage(args.epmt_cmd_args,keep_going=not args.error) == False)
+        return(epmt_stage(args.epmt_cmd_args,keep_going=not args.error,collate=not args.no_collate,compress_and_tar=not args.no_compress_and_tar) == False)
     if args.command == 'run':
         return(epmt_run(args.epmt_cmd_args,wrapit=args.auto,dry_run=args.dry_run,debug=(args.verbose > 2)))
     if args.command == 'annotate':

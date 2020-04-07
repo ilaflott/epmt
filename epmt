@@ -64,6 +64,8 @@ if (__name__ == "__main__"):
             original job files and job directory.")
     stage_parser.add_argument('epmt_cmd_args', nargs='*', help="List of directories", metavar="job_dirs")
     stage_parser.add_argument('-e', '--error', action='store_true',help="Exit at the first sign of trouble")
+    stage_parser.add_argument('--no-collate', action='store_true',help="Don't collate the files")
+    stage_parser.add_argument('--no-compress-and-tar', action='store_true',help="Don't compress and tar the output")
     # annotate
     annotate_parser = subparser.add_parser('annotate', help="Annotate a job", formatter_class=argparse.RawTextHelpFormatter, description="Annotates a job with key/value pairs. This call takes three forms:\n\n"
       "To annotate a stopped job within the batch environment: \n"
