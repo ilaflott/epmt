@@ -390,10 +390,10 @@ class OutliersAPI(unittest.TestCase):
         tags = [ frozen_dict(t) for t in tags ]
         self.assertEqual(set(tags), {frozenset({('op', 'configure'), ('op_sequence', '3'), ('op_instance', '3')}), frozenset({('op', 'download'), ('op_sequence', '1'), ('op_instance', '1')}), frozenset({('op_sequence', '4'), ('op_instance', '4'), ('op', 'build')}), frozenset({('op_sequence', '5'), ('op_instance', '5'), ('op', 'clean')}), frozenset({('op', 'extract'), ('op_sequence', '2'), ('op_instance', '2')})})
 
-    def test_plot_2d(self):
+    def test_feature_scatter_plot(self):
         plotfile = 'output.png'
         with capture() as (out, err):
-            eod.feature_plot_2d(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], outfile = plotfile)
+            eod.feature_scatter_plot(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], outfile = plotfile)
         s = out.getvalue()
         from os import path, remove, stat
         self.assertTrue(path.isfile(plotfile))

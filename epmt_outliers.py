@@ -1325,7 +1325,7 @@ def pca_feature_rank(jobs, inp_features = []):
     sorted_features = list(zip(sorted_df.iloc[-1].index, sorted_df.iloc[-1].round(4)))
     return (sorted_df, sorted_features)
 
-def feature_plot_2d(jobs, features = [], outfile='', annotate = False):
+def feature_scatter_plot(jobs, features = [], outfile='', annotate = False):
     '''
     Generates a 2-D scatter plot of jobs with features on two axes.
     If more than 2 features are requested, for example by setting
@@ -1350,9 +1350,9 @@ def feature_plot_2d(jobs, features = [], outfile='', annotate = False):
     EXAMPLE:
 
     # The following does PCA automatically as we select *all* features as input
-    >>> feature_plot_2d(['625151', '627907', '629322', '633114', '675992', '680163', '685001', '691209', '693129'], features=[])
+    >>> feature_scatter_plot(['625151', '627907', '629322', '633114', '675992', '680163', '685001', '691209', '693129'], features=[])
     # The following selects two features
-    >>> feature_plot_2d(['625151', '627907', '629322', '633114', '675992', '680163', '685001', '691209', '693129'], features=['cpu_time', 'duration'])
+    >>> feature_scatter_plot(['625151', '627907', '629322', '633114', '675992', '680163', '685001', '691209', '693129'], features=['cpu_time', 'duration'])
     '''
     jobs_df = eq.get_jobs(jobs, fmt='pandas')
     features = sanitize_features(features, jobs_df)
