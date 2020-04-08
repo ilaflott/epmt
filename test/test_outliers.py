@@ -124,7 +124,7 @@ class OutliersAPI(unittest.TestCase):
         # let's test using IQR and z-score
         import epmt_stat as es
         for m in [es.iqr, es.z_score]:
-            r = eq.create_refmodel(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024'], outlier_methods = [m])
+            r = eq.create_refmodel(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024'], methods = [m])
             df, _ = eod.detect_outlier_jobs(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], methods = [m], trained_model=r['id'])
             self.assertEqual(df.shape, (4,4))
             self.assertEqual(set(zip(df.jobid.values, df.cpu_time.values, df.duration.values, df.num_procs.values)), {('kern-6656-20190614-190245', 0, 0, 0), ('kern-6656-20190614-192044-outlier', 1, 1, 0), ('kern-6656-20190614-194024', 0, 0, 0), ('kern-6656-20190614-191138', 0, 0, 0)})
@@ -132,7 +132,7 @@ class OutliersAPI(unittest.TestCase):
     @db_session
     def test_outlier_jobs_trained_mvod(self):
         from epmt_stat import mvod_classifiers
-        r = eq.create_refmodel(['kern-6656-20190614-190245', 'kern-6656-20190614-191138','kern-6656-20190614-194024'], outlier_methods = mvod_classifiers())
+        r = eq.create_refmodel(['kern-6656-20190614-190245', 'kern-6656-20190614-191138','kern-6656-20190614-194024'], methods = mvod_classifiers())
         (df, _) = eod.detect_outlier_jobs(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], trained_model = r['id'], methods = mvod_classifiers())
         df.sort_values(by=['jobid'], inplace=True)
         self.assertEqual(list(df['outlier'].values), [0, 0, 3, 0])
@@ -198,7 +198,7 @@ class OutliersAPI(unittest.TestCase):
         jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='terse')
         model_jobs = [ j for j in jobs if not 'outlier' in j ]
         self.assertEqual(set(model_jobs), set(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024']))
-        r = eq.create_refmodel(model_jobs, op_tags='*', outlier_methods = mvod_classifiers())
+        r = eq.create_refmodel(model_jobs, op_tags='*', methods = mvod_classifiers())
         self.assertEqual(set(r['jobs']), set(model_jobs))
         df, part = eod.detect_outlier_ops(jobs, methods = mvod_classifiers(), trained_model = r['id'])
         self.assertEqual(df.shape, (20, 3))
@@ -252,7 +252,7 @@ class OutliersAPI(unittest.TestCase):
     def test_ops_refmodel_mvod(self):
         from epmt_stat import mvod_classifiers
         with capture() as (out, err):
-            r = eq.create_refmodel(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024'], op_tags = [{'op': 'build'}, {'op': 'configure'}], features = ['cpu_time', 'num_procs', 'duration'], outlier_methods = mvod_classifiers())
+            r = eq.create_refmodel(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024'], op_tags = [{'op': 'build'}, {'op': 'configure'}], features = ['cpu_time', 'num_procs', 'duration'], methods = mvod_classifiers())
         self.assertEqual(r['op_tags'], [{'op': 'build'}, {'op': 'configure'}])
         self.assertEqual(set(r['jobs']), {'kern-6656-20190614-190245', 'kern-6656-20190614-194024', 'kern-6656-20190614-191138'})
         self.assertEqual(set(r['computed'].keys()), {'{"op": "configure"}', '{"op": "build"}'})

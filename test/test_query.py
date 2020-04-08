@@ -12,6 +12,8 @@ def setUpModule():
     datafiles='test/data/query/*.tgz'
     print('setUpModdule: importing {0}'.format(datafiles))
     epmt_submit(sorted(glob(datafiles)), dry_run=False)
+    # only use madz as the tests are written that way
+    settings.univariate_classifiers = ['modified_z_score']
     
 
 def tearDownModule():

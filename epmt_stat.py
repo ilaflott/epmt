@@ -536,7 +536,7 @@ def mvod_scores_using_model(inp, model_inp, classifier, threshold = None):
 # match the column labels of the ref dataframe. Similarly if inp is a
 # dataframe then it's column labels must match those of ref and in the
 # same order.
-def rca(ref, inp, features, methods = []):
+def rca(ref, inp, features, methods = [modified_z_score]):
     # API input checking
     if ref.empty or inp.empty:
         return (False, None, None)
@@ -544,13 +544,16 @@ def rca(ref, inp, features, methods = []):
     if type(inp) == pd.Series:
         inp = pd.DataFrame(inp).transpose()
 
-    if list(ref.columns.values) != list(inp.columns.values):
-        logger.error('ref and inp MUST have the same columns and in the same order')
-        return (False, None, None)
 
-    if not features:
-        # pick all the numeric columns in the dataframe
-        features = [f for f in list(inp.columns.values) if isinstance(inp[f][0], Number)]
+    # if list(ref.columns.values) != list(inp.columns.values):
+    #     logger.error('ref and inp MUST have the same columns and in the same order')
+    #     logger.error('ref has columns: {}\ninp has columns: {}'.format(ref.columns.values, inp.columns.values))
+    #     return (False, None, None)
+
+    if (not features) or (features == '*'):
+        # pick all the common numeric columns in the dataframe
+        ref_cols_set = set(ref.columns.values)
+        features = [f for f in list(inp.columns.values) if (isinstance(inp[f][0], Number) and (f in ref_cols_set)) ]
         logger.debug('using following features for RCA analysis: ' + str(features))
 
     ref_computed = ref[features].describe()
@@ -558,7 +561,6 @@ def rca(ref, inp, features, methods = []):
 
     result_dict = { f: 0 for f in features }
 
-    methods = methods or uvod_classifiers()
     for m in methods:
         c_name = get_classifier_name(m)
         ref_computed.loc['ref_max_' + c_name] = 0

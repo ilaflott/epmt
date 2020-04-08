@@ -15,7 +15,7 @@ epmt_logging_init(settings.verbose if hasattr(settings, 'verbose') else 0, check
 
 ### Put EPMT imports below, after logging is set up
 from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key, stringify_dicts, version, version_str, conv_to_datetime
-from epmt_stat import modified_z_score, get_classifier_name, is_classifier_mv, mvod_scores
+from epmt_stat import get_classifier_name, is_classifier_mv, mvod_scores, uvod_classifiers
 
 init_settings(settings) # type: ignore
 setup_db(settings) # type: ignore
@@ -726,12 +726,12 @@ def get_refmodels(name=None, tag = {}, fltr=None, limit=0, order=None, before=No
 #   'iqr': {'duration': ...}
 #
 # col: is either a dataframe or a collection of jobs (Query/list of Job objects)
-def _refmodel_scores(col, outlier_methods, features):
+def _refmodel_scores(col, methods, features):
     df = conv_jobs(col, fmt='pandas') if col.__class__.__name__ != 'DataFrame' else col
     ret = {}
-    logger.info('creating trained model using {0} for features {1}'.format([get_classifier_name(c) for c in outlier_methods], features))
+    logger.info('creating trained model using {0} for features {1}'.format([get_classifier_name(c) for c in methods], features))
     logger.info('jobids: {}'.format(df['jobid'].values))
-    for m in outlier_methods:
+    for m in methods:
         m_name = get_classifier_name(m)
         ret[m_name] = {}
         if is_classifier_mv(m):
@@ -766,7 +766,7 @@ def _refmodel_scores(col, outlier_methods, features):
 #
 @db_session
 def create_refmodel(jobs=[], name=None, tag={}, op_tags=[], 
-                    outlier_methods=[modified_z_score], 
+                    methods=[], 
                     features=['duration', 'cpu_time', 'num_procs'], exact_tag_only=False,
                     fmt='dict', sanity_check = True, enabled=True, pca=False):
     """
@@ -789,13 +789,14 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
               obtain the set of processes over which an aggregation
               is performed using op_metrics. 
     
-    outlier_methods: Is a list of methods that are used to obtain
+    methods: Is a list of methods that are used to obtain outlier
              scores. Each method is passed a vector consisting
              of the value of 'feature' for all the jobs. The
              method will return a vector of scores. This
              vector of scores will be saved (or some processed
              form of it). If methods is not specified then it
-             will at present be set to modified_z_score.
+             will be determined using the univariate classifers
+             defined in settings.
     
     features: List of fields of each job that should be used
              for outlier detection. If passed an empty list
@@ -824,7 +825,7 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
     e.g,.
     
     create a job ref model with a list of jobids
-    eq.create_refmodel(jobs=[u'615503', u'625135'])
+    eq.create_refmodel(jobs=[u'615503', u'625135'], methods= [es.modified_z_score])
     
     or use pony orm query result:
     >>> jobs = eq.get_jobs(tags='exp_component:atmos', fmt='orm')
@@ -832,7 +833,7 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
     
     to create a refmodel for ops we need to either set op_tags
     to a list of tags for the ops, or use the wildcard (*):
-    >>> r = eq.create_refmodel(jobs, tag='exp_name:linux_kernel', op_tags='*')
+    >>> r = eq.create_refmodel(jobs, tag='exp_name:linux_kernel', op_tags='*', methods= [es.modified_z_score])
     
     >>> r['id'], r['tags'], r['jobs']
     (11, {'exp_name': 'linux_kernel'}, [u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-192044-outlier', u'kern-6656-20190614-194024'])
@@ -843,7 +844,7 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
     Below is an example of creating a refmodel using MV classifiers
     >>> from pyod.models.knn import KNN
     >>> from pyod.models.abod import ABOD
-    >>> r = eq.create_refmodel(['625172', '627922', '629337', '633144', '676007', '680181', '685000', '685003', '685016', '692544', '693147', '696127'], outlier_methods = [ABOD(), KNN()], features = ['cpu_time', 'duration', 'num_procs'])
+    >>> r = eq.create_refmodel(['625172', '627922', '629337', '633144', '676007', '680181', '685000', '685003', '685016', '692544', '693147', '696127'], methods = [ABOD(), KNN()], features = ['cpu_time', 'duration', 'num_procs'])
     WARNING: epmt_query: The jobs do not share identical tag values for "exp_name" and "exp_component"
     WARNING: The jobs do not share identical tag values for "exp_name" and "exp_component"
         685000 ESM4_historical_D151 ocean_annual_rho2_1x1deg
@@ -868,6 +869,8 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
 
     if type(tag) == str:
         tag = tag_from_string(tag)
+
+    methods = methods or uvod_classifiers()
 
     # do we have a list of jobids?
     # if so, we need to get the actual DB objects for them
@@ -926,7 +929,7 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
             stag = dumps(t, sort_keys=True)
             # pylint: disable=no-member
             logger.debug('scoring op {}'.format(t))
-            scores[stag] = _refmodel_scores(ops_df[ops_df.tags == t], outlier_methods, features)
+            scores[stag] = _refmodel_scores(ops_df[ops_df.tags == t], methods, features)
     else:
         # full jobs, no ops
         logger.debug('jobid,tags:\n{}'.format(jobs_df[['jobid','tags']]))
@@ -936,7 +939,7 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
             logger.info('PCA variances: {} (sum={})'.format(pca_variances, np.sum(pca_variances)))
             jobs_df = jobs_pca_df
             features = pca_features
-        scores = _refmodel_scores(jobs_df, outlier_methods, features)
+        scores = _refmodel_scores(jobs_df, methods, features)
 
     logger.debug('computed scores: {0}'.format(scores))
     computed = scores
