@@ -4,11 +4,11 @@ load 'libs/bats-assert/load'
 setup() {
   # need a persistent db
   if  epmt help| grep db_params| grep postgres > /dev/null; then
-    epmt submit test/data/submit/692500.tgz test/data/query/*.tgz test/data/outliers_nb/*.tgz
+    epmt submit test/data/submit/692500.tgz test/data/query/*.tgz test/data/outliers_nb/{625151,627907,629322,633114,675992,680163,685001,691209,693129}.tgz
   fi
 }
 
-@test "epmt explore" {
+@test "epmt explore (can take a couple of minutes)" {
   # need a persistent db
   epmt help| grep db_params| grep postgres > /dev/null || skip
   run epmt explore ESM4_historical_D151
