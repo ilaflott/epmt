@@ -47,6 +47,7 @@ function finish {
 }
 
 function cleandb {
+    echo -n "Emptying database.. "
     if [ $no_compose -eq 1 ]; then
         # utils/drop_pg_tables
         ./epmt drop --force
@@ -54,6 +55,7 @@ function cleandb {
         # docker-compose $compose_args run test bash -c 'cd /epmt && utils/drop_pg_tables'
         docker-compose $compose_args run test bash -c 'cd /epmt && ./epmt drop --force'
     fi
+    echo "done"
 }
 
 rm -f settings.pyc # remove stale stuff
