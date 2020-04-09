@@ -512,9 +512,11 @@ def get_procs(jobs = [], tags = None, fltr = None, order = None, limit = None, w
     dataframe. The output will be pre-sorted on this field because we have set 'order'
     """
 
-    if (limit is None) and (fmt != 'orm'):
-        limit = 10000
-        logger.warning('No limit set, defaults to {0}. Set limit=0 to avoid limits'.format(limit))
+    # Jeff strongly wanted this removed as it can cause processes
+    # to be left out in queries.
+    # if (limit is None) and (fmt != 'orm'):
+    #     limit = 10000
+    #     logger.warning('No limit set, defaults to {0}. Set limit=0 to avoid limits'.format(limit))
 
     if when:
         if type(when) == str:
