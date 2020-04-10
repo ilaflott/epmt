@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""EPMT Misc. Library
+
+This module provides miscellaneous functions such as those needed
+for manipulating data structures.
+"""
 from functools import wraps
 from time import time
 from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING, CRITICAL
@@ -18,7 +24,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (3,7,0)
+_version = (3,7,1)
 
 def version():
     return _version

@@ -8,8 +8,7 @@ and, finally, to threads.
 Most calls in the API support multiple output formats --
 pandas dataframe, list of python dictionaries, a terse
 list of database IDs, and a powerful ORM object collection.
-The user can select the output format using the 'fmt' argument
-in most calls.
+The format can be selected using the `fmt` argument.
 """
 from __future__ import print_function
 from datetime import datetime, timedelta
@@ -42,18 +41,25 @@ def conv_jobs(jobs, fmt='dict', merge_sums = True):
     Convert jobs from one format to another 
 
     The input format need not be specified (it will be auto-detected).
-    The output format is specified using 'fmt'.
+    The output format is specified using `fmt`.
 
-    jobs: jobs collection (Pony) or a list of Job objects,
-          or a list of jobids, or a pandas dataframe or a dictlist of jobs.
+    Parameters
+    ----------
 
-    fmt: Output format, one of: 'dict', 'orm', 'pandas' or 'terse'
+    jobs : list of jobids or Job objects, or pandas dataframe 
+
+    fmt : string, optional
+          Output format, one of: 'dict', 'orm', 'pandas' or 'terse'
     
-    merge_sums: Is an advanced option. It defaults to True, which means
-                underlying sums across processes for a job are shown
-                as first-class columns rather than a nested dictionary.
-                This option is silently ignored for 'orm' and 'terse' formats.
+    merge_sums : boolean, optional
+          Is an advanced option. It defaults to True, which means
+          underlying sums across processes for a job are shown
+          as first-class columns rather than a nested dictionary.
+          This option is silently ignored for 'orm' and 'terse' formats.
 
+    Returns
+    -------
+    Job collection in the format specified by `fmt`
     """
     _empty_collection_check(jobs)
 
@@ -135,7 +141,23 @@ def conv_procs(procs, fmt='pandas', order=None):
     The input process collection can be specified in any format
     (orm, pandas, dict-list or terse). It will be converted to
     the format specified by 'fmt'.
-    
+
+    Parameters
+    ----------
+    procs : list or ORM query
+            Collection of processes
+    fmt : string, optional
+          Output format. One of 'pandas', 'orm', 'terse' or 'dict'
+
+    order : ORM-specific callable, optional
+            Determines the ordering of the returned processes
+
+    Returns
+    -------
+    Collection of processes in the specified format
+   
+    Notes
+    ----- 
     The function makes no claim on the order of the returned
     processes. If you care about the order, you should set the
     'order' argument. It's worth noting that when 'order' is 
@@ -155,11 +177,35 @@ def timeline(jobs, limit=0, fltr='', when=None, hosts=[], fmt='pandas'):
     """
     Returns a timeline of processes ordered chronologically by start time
 
-    jobs : Is either a collection of jobs or a single job, where 
+    Parameters
+    ----------
+
+    jobs : list or ORM query or pandas dataframe
+           Is either a collection of jobs or a single job, where 
            jobs can be specified as jobids or Job objects.
-    
+
+    limit : int, optional
+            Limits the output processes to `limit`
+
+    fltr : string or ORM-callable, optional
+           Filters the output collection
+
+    when : see `get_procs` for supported options
+           Filter processes to those that were running at the
+           specified time
+
+    hosts : list, optional
+            Filter processes to those that ran on specified hosts
+   
+    Notes
+    ----- 
     The function takes the same arguments as get_procs is a very
     thin wrapper over it, just setting an ordering by start time.
+    You should check `get_procs` for the parameters as they are
+    just passed through.
+
+    Examples
+    --------
     
     >>> eq.timeline([u'685000', u'685016'], limit=5)[['job', 'exename', 'start', 'id']]
           job    exename                      start    id
@@ -186,6 +232,19 @@ def get_roots(jobs, fmt='dict'):
 
     A top-level process is defined as a process with no parent in the
     set of processes that constitute the job.
+
+    Parameters
+    ----------
+    jobs : list or ORM query or pandas dataframe
+    fmt : string, optional
+
+    Returns
+    -------
+    Collection of root processes in the specified format
+
+    Notes
+    -----
+    This function is a thin-wrapper around `get_procs`
     '''
     compute_process_trees(jobs)
     return get_procs(jobs, order=Process.start, fltr=((Process.parent == None) if settings.orm == 'sqlalchemy' else 'p.parent == None'), fmt=fmt)
@@ -195,10 +254,18 @@ def root(job, fmt='dict'):
     """
     Returns the root process of a job
 
-    The job is either a Job object or a jobid. If multiple root 
-    processes exist, then this returns the first of them (by start time)
+    Parameters
+    ----------
+    job : string or Job object
+          job is either a Job object or a jobid
+
+    Notes
+    -----
+    If multiple root processes exist, then this returns the first of them
+    by start time. This function is a thin-wrapper around `get_procs`.
     
-    EXAMPLE:
+    Examples
+    --------
     >>> eq.root('685016',fmt='terse')
     7266
     
