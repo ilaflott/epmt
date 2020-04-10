@@ -1,3 +1,23 @@
+# -*- coding: utf-8 -*-
+"""EPMT Query API
+
+This module provides the EPMT Query API.
+
+The EPMT Query API provides functions to query the database
+in a drilldown fashion from jobs to operations to processes
+and, finally, to threads. 
+
+Most calls in the API support multiple output formats --
+pandas dataframe, list of python dictionaries, a terse
+list of database IDs, and a powerful ORM object collection.
+The user can select the output format using the 'fmt' argument
+in most calls.
+
+Most, but not all calls, in this API are stateless and only
+query the database, but not modify its contents. When calls
+can modify the database, it will be mentioned in the call
+documentation.
+"""
 from __future__ import print_function
 from datetime import datetime, timedelta
 import pandas as pd

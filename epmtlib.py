@@ -18,7 +18,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (3,6,16)
+_version = (3,6,17)
 
 def version():
     return _version
@@ -846,6 +846,89 @@ def find_files_in_dir(path, pattern = '*.tgz', recursive = False):
     from glob import glob
     pathname = '{}/{}{}'.format(path, '**/' if recursive else '', pattern)
     return glob(pathname, recursive=recursive)
+
+# https://www.python.org/dev/peps/pep-0257/
+def docs_trim(docstring):
+    '''
+    Formats a docstring
+    '''
+    if not docstring:
+        return ''
+    # Convert tabs to spaces (following the normal Python rules)
+    # and split into a list of lines:
+    lines = docstring.expandtabs().splitlines()
+    # Determine minimum indentation (first line doesn't count):
+    LARGE_NUMBER = 10000 # just a large number
+    indent = LARGE_NUMBER
+    for line in lines[1:]:
+        stripped = line.lstrip()
+        if stripped:
+            indent = min(indent, len(line) - len(stripped))
+    # Remove indentation (first line is special):
+    trimmed = [lines[0].strip()]
+    if indent < LARGE_NUMBER:
+        for line in lines[1:]:
+            trimmed.append(line[indent:].rstrip())
+    # Strip off trailing and leading blank lines:
+    while trimmed and not trimmed[-1]:
+        trimmed.pop()
+    while trimmed and not trimmed[0]:
+        trimmed.pop(0)
+    # Return a single string:
+    return '\n'.join(trimmed)
+
+def docs_func_summary(func):
+    '''
+    Returns the docstring summary for a function
+    '''
+    return ((func.__doc__ or '').lstrip().split('\n')[0].strip())
+
+def docs_module_index(mod, fmt=None):
+    '''
+    Returns a sorted list of functions and their summaries for a module
+
+    Parameters
+    ----------
+        mod: python module
+        fmt: Format of output. Present an unset or empty fmt means
+             return a list of tuples. fmt == 'string' means returns
+             a string.
+
+    Returns
+    -------
+       A list of the form:
+           [ (func1, summary1), (func2, summary2) ... ]
+
+       where func1, func2,... are function names from the module 
+       sorted alphabetically or according to some other criteria 
+       such as category to which the function. 
+
+    '''
+    from inspect import getmembers, isfunction
+
+    # get sorted list of functions from the module "mod"
+    # We skip functions whose names start with underscore (_)
+    # and also functions that are not actually defined in the module, but
+    # merely imported from some other module
+    funcs = sorted([o[1] for o in getmembers(mod) if isfunction(o[1]) and (not o[1].__name__.startswith('_')) and (o[1].__module__ == mod.__name__)], key = lambda f: f.__name__)
+
+    # prepare a list of tuples; the first tuple number is the 
+    # function name, and the second item is it's one-line summary extracted
+    # from it's docstring. Some functions may have no docstrings, and thats OK
+    out = [ (f.__name__, docs_func_summary(f)) for f in funcs ]
+    if fmt != 'string':
+        # return the list of tuples
+        return out
+
+    # user wants a human-readable string
+    # get the maximum length of function names
+    max_func_name_len = max([len(f.__name__) for f in funcs ])
+
+    # format so we print the function name followed by the summary
+    # with the correct spacing
+    fmt_string = "{:" + str(max_func_name_len) + "s}    {}"
+    return "\n".join([fmt_string.format(o[0], o[1]) for o in out])
+    
 
 if __name__ == "__main__":
     print(version_str(True))
