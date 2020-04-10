@@ -51,7 +51,7 @@ teardown() {
 
 @test "epmt_concat with corrupted csv" {
   test -x epmt_concat.py || skip
-  run epmt_concat.py test/data/corrupted_csv/
+  run epmt_concat.py -e test/data/corrupted_csv/
   assert_failure
   assert_output --partial "File: test/data/corrupted_csv/pp053-papiex-615503-0.csv, Header: 40 delimiters, but this row has 39 delimiters"
   # assert_output --partial "ERROR:epmt_concat:Error concatenating files: Different number of elements in header and data in test/data/corrupted_csv/pp053-papiex-615503-0.csv"
