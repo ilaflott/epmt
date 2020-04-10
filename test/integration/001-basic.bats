@@ -7,6 +7,9 @@ load 'libs/bats-assert/load'
 }
 
 @test "epmt submit" {
+  if epmt list | grep 692500 > /dev/null; then
+      epmt delete 692500
+  fi
   run epmt submit test/data/submit/692500.tgz
   assert_output --partial "Imported successfully - job: 692500 processes: 6486"
 }

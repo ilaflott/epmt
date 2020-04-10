@@ -1,3 +1,15 @@
+# -*- coding: utf-8 -*-
+"""EPMT Query API
+
+The EPMT Query API provides functions to query the database
+in a drilldown fashion from jobs to operations to processes
+and, finally, to threads. 
+
+Most calls in the API support multiple output formats --
+pandas dataframe, list of python dictionaries, a terse
+list of database IDs, and a powerful ORM object collection.
+The format can be selected using the `fmt` argument.
+"""
 from __future__ import print_function
 from datetime import datetime, timedelta
 import pandas as pd
@@ -15,7 +27,7 @@ epmt_logging_init(settings.verbose if hasattr(settings, 'verbose') else 0, check
 
 ### Put EPMT imports below, after logging is set up
 from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key, stringify_dicts, version, version_str, conv_to_datetime
-from epmt_stat import modified_z_score, get_classifier_name, is_classifier_mv, mvod_scores
+from epmt_stat import get_classifier_name, is_classifier_mv, mvod_scores, uvod_classifiers
 
 init_settings(settings) # type: ignore
 setup_db(settings) # type: ignore
@@ -26,20 +38,28 @@ THREAD_SUMS_FIELD_IN_PROC='threads_sums'
 
 def conv_jobs(jobs, fmt='dict', merge_sums = True):
     """
-    conv_jobs will convert 'jobs' from one format to another. 
+    Convert jobs from one format to another 
+
     The input format need not be specified (it will be auto-detected).
-    The output format is specified using 'fmt'.
+    The output format is specified using `fmt`.
 
-    jobs: jobs collection (Pony) or a list of Job objects,
-          or a list of jobids, or a pandas dataframe or a dictlist of jobs.
+    Parameters
+    ----------
 
-    fmt: Output format, one of: 'dict', 'orm', 'pandas' or 'terse'
+    jobs : list of jobids or Job objects, or pandas dataframe 
+
+    fmt : string, optional
+          Output format, one of: 'dict', 'orm', 'pandas' or 'terse'
     
-    merge_sums: Is an advanced option. It defaults to True, which means
-                underlying sums across processes for a job are shown
-                as first-class columns rather than a nested dictionary.
-                This option is silently ignored for 'orm' and 'terse' formats.
+    merge_sums : boolean, optional
+          Is an advanced option. It defaults to True, which means
+          underlying sums across processes for a job are shown
+          as first-class columns rather than a nested dictionary.
+          This option is silently ignored for 'orm' and 'terse' formats.
 
+    Returns
+    -------
+    Job collection in the format specified by `fmt`
     """
     _empty_collection_check(jobs)
 
@@ -116,10 +136,28 @@ def __conv_procs_orm(procs, merge_sums = True, fmt='dict'):
 
 def conv_procs(procs, fmt='pandas', order=None):
     """
-    Converts a collection of processes specified in any format
-    (orm, pandas, dict-list or terse) to the format specified
-    by 'fmt'.
-    
+    Converts a collection of processes from one format to another
+
+    The input process collection can be specified in any format
+    (orm, pandas, dict-list or terse). It will be converted to
+    the format specified by 'fmt'.
+
+    Parameters
+    ----------
+    procs : list or ORM query
+            Collection of processes
+    fmt : string, optional
+          Output format. One of 'pandas', 'orm', 'terse' or 'dict'
+
+    order : ORM-specific callable, optional
+            Determines the ordering of the returned processes
+
+    Returns
+    -------
+    Collection of processes in the specified format
+   
+    Notes
+    ----- 
     The function makes no claim on the order of the returned
     processes. If you care about the order, you should set the
     'order' argument. It's worth noting that when 'order' is 
@@ -137,14 +175,37 @@ def conv_procs(procs, fmt='pandas', order=None):
 
 def timeline(jobs, limit=0, fltr='', when=None, hosts=[], fmt='pandas'):
     """
-    Timeline returns a timeline of processes ordered chronologically 
-    by start time. 
+    Returns a timeline of processes ordered chronologically by start time
 
-    jobs : Is either a collection of jobs or a single job, where 
+    Parameters
+    ----------
+
+    jobs : list or ORM query or pandas dataframe
+           Is either a collection of jobs or a single job, where 
            jobs can be specified as jobids or Job objects.
-    
+
+    limit : int, optional
+            Limits the output processes to `limit`
+
+    fltr : string or ORM-callable, optional
+           Filters the output collection
+
+    when : see `get_procs` for supported options
+           Filter processes to those that were running at the
+           specified time
+
+    hosts : list, optional
+            Filter processes to those that ran on specified hosts
+   
+    Notes
+    ----- 
     The function takes the same arguments as get_procs is a very
     thin wrapper over it, just setting an ordering by start time.
+    You should check `get_procs` for the parameters as they are
+    just passed through.
+
+    Examples
+    --------
     
     >>> eq.timeline([u'685000', u'685016'], limit=5)[['job', 'exename', 'start', 'id']]
           job    exename                      start    id
@@ -167,9 +228,23 @@ def timeline(jobs, limit=0, fltr='', when=None, hosts=[], fmt='pandas'):
 @db_session 
 def get_roots(jobs, fmt='dict'):
     '''
-    Returns the root (top-level) processes of a job (or job collection)
+    Returns the root (top-level) processes of a job (or collection of jobs)
+
     A top-level process is defined as a process with no parent in the
     set of processes that constitute the job.
+
+    Parameters
+    ----------
+    jobs : list or ORM query or pandas dataframe
+    fmt : string, optional
+
+    Returns
+    -------
+    Collection of root processes in the specified format
+
+    Notes
+    -----
+    This function is a thin-wrapper around `get_procs`
     '''
     compute_process_trees(jobs)
     return get_procs(jobs, order=Process.start, fltr=((Process.parent == None) if settings.orm == 'sqlalchemy' else 'p.parent == None'), fmt=fmt)
@@ -177,11 +252,20 @@ def get_roots(jobs, fmt='dict'):
 @db_session
 def root(job, fmt='dict'):
     """
-    Get the root process of a job. The job is either a Job object or a jobid
+    Returns the root process of a job
+
+    Parameters
+    ----------
+    job : string or Job object
+          job is either a Job object or a jobid
+
+    Notes
+    -----
     If multiple root processes exist, then this returns the first of them
-    (by start time)
+    by start time. This function is a thin-wrapper around `get_procs`.
     
-    EXAMPLE:
+    Examples
+    --------
     >>> eq.root('685016',fmt='terse')
     7266
     
@@ -219,11 +303,11 @@ def root(job, fmt='dict'):
 @db_session
 def op_roots(jobs, tag, fmt='dict'):
     """
-    This function returns the root process(es) for an operation
-    for one or more jobs. Ideally, you would use this function with
-    a single job, but we allow a job collection for flexibility.
-    Bear in mind, for a large job collection, op_roots is presently a
-    *slow* query. 
+    Returns the root process(es) for an operation for one or more jobs
+
+    Ideally, you would use this function with a single job, but we 
+    allow a job collection for flexibility. Bear in mind, for a 
+    large job collection, op_roots is presently a *slow* query. 
     
     tag: is a single tag (string or dictionary of key/value pairs)
     
@@ -253,7 +337,8 @@ def op_roots(jobs, tag, fmt='dict'):
 @db_session
 def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offset = 0, when=None, before=None, after=None, hosts=[], fmt='dict', annotations=None, analyses=None, merge_proc_sums=True, exact_tag_only = False):
     """
-    This function returns a list of jobs based on some filtering and ordering.
+    Returns a collection of jobs based on some filtering and ordering criteria
+
     The output format can be set to pandas dataframe, list of dicts or list
     of ORM objects based on the 'fmt' option.
     
@@ -411,9 +496,13 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
 @db_session
 def get_procs(jobs = [], tags = None, fltr = None, order = None, limit = None, when=None, hosts=[], fmt='dict', merge_threads_sums=True, exact_tag_only = False):
     """
-    Filter a supplied list of jobs to find a match
+    Returns a collection of processes for a set of jobs based on filter criteria
+
+    We filter a supplied list of jobs to find a match
     by tag or some primary keys. If no jobs list is provided,
-    then the query will be run against all processes.
+    then the query will be run against all processes. It is
+    *strongly recommended* that you specify a job collection
+    to narrow the search space.
     
     All fields are optional and sensible defaults are assumed.
     
@@ -512,9 +601,11 @@ def get_procs(jobs = [], tags = None, fltr = None, order = None, limit = None, w
     dataframe. The output will be pre-sorted on this field because we have set 'order'
     """
 
-    if (limit is None) and (fmt != 'orm'):
-        limit = 10000
-        logger.warning('No limit set, defaults to {0}. Set limit=0 to avoid limits'.format(limit))
+    # Jeff strongly wanted this removed as it can cause processes
+    # to be left out in queries.
+    # if (limit is None) and (fmt != 'orm'):
+    #     limit = 10000
+    #     logger.warning('No limit set, defaults to {0}. Set limit=0 to avoid limits'.format(limit))
 
     if when:
         if type(when) == str:
@@ -542,8 +633,8 @@ def get_procs(jobs = [], tags = None, fltr = None, order = None, limit = None, w
 def get_thread_metrics(*processes):
     """
     Returns a thread metrics dataframe for one or more processes
-    and None if error,
-    where each process is specified as either as a Process object or 
+
+    Each process is specified as either as a Process object or 
     the database ID of a process.
     If multiple processes are specified then dataframes are concatenated
     using pandas into a single dataframe
@@ -578,7 +669,7 @@ def get_thread_metrics(*processes):
 @db_session
 def job_proc_tags(jobs, exclude=[], fold=False):
     """
-    gets all the unique tags across all processes of a job or collection of jobs
+    Returns the unique tags across all processes of a job or collection of jobs
 
     jobs   : is a single job id or a Job object, or a list of jobids/list of job objects
 
@@ -603,7 +694,8 @@ get_job_proc_tags = job_proc_tags
 
 def rank_proc_tags_keys(jobs, order = 'cardinality', exclude = []):
     '''
-    Returns a sorted list of tag keys across processes of one or more jobs.
+    Returns a sorted list of tag keys across processes of one or more jobs
+
     The sort order by default is in increasing order of cardinality of the key.
     So a key that has a smaller number of unique values would be earlier in
     the returned list. One can also sort by decreasing frequency, so a key that
@@ -644,7 +736,7 @@ def rank_proc_tags_keys(jobs, order = 'cardinality', exclude = []):
 @db_session
 def get_refmodels(name=None, tag = {}, fltr=None, limit=0, order=None, before=None, after=None, exact_tag_only=False, merge_nested_fields=True, fmt='dict'):
     """
-    This function returns reference models filtered using name / tag / fltr
+    Returns collection of reference models filtered using specified criteria
     
     name  : query reference models by name. Usually if you query by name
             you wouldn't need to use tag/fltr/limit/order.
@@ -726,12 +818,12 @@ def get_refmodels(name=None, tag = {}, fltr=None, limit=0, order=None, before=No
 #   'iqr': {'duration': ...}
 #
 # col: is either a dataframe or a collection of jobs (Query/list of Job objects)
-def _refmodel_scores(col, outlier_methods, features):
+def _refmodel_scores(col, methods, features):
     df = conv_jobs(col, fmt='pandas') if col.__class__.__name__ != 'DataFrame' else col
     ret = {}
-    logger.info('creating trained model using {0} for features {1}'.format([get_classifier_name(c) for c in outlier_methods], features))
+    logger.info('creating trained model using {0} for features {1}'.format([get_classifier_name(c) for c in methods], features))
     logger.info('jobids: {}'.format(df['jobid'].values))
-    for m in outlier_methods:
+    for m in methods:
         m_name = get_classifier_name(m)
         ret[m_name] = {}
         if is_classifier_mv(m):
@@ -766,13 +858,11 @@ def _refmodel_scores(col, outlier_methods, features):
 #
 @db_session
 def create_refmodel(jobs=[], name=None, tag={}, op_tags=[], 
-                    outlier_methods=[modified_z_score], 
+                    methods=[], 
                     features=['duration', 'cpu_time', 'num_procs'], exact_tag_only=False,
                     fmt='dict', sanity_check = True, enabled=True, pca=False):
     """
-    This function creates a reference model and returns
-    the ID of the newly-created model in the database
-    
+    Creates a reference model based on a set of reference jobs
     
     jobs:     points to a list of Jobs (or pony JobSet) or jobids
 
@@ -789,13 +879,14 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
               obtain the set of processes over which an aggregation
               is performed using op_metrics. 
     
-    outlier_methods: Is a list of methods that are used to obtain
+    methods: Is a list of methods that are used to obtain outlier
              scores. Each method is passed a vector consisting
              of the value of 'feature' for all the jobs. The
              method will return a vector of scores. This
              vector of scores will be saved (or some processed
              form of it). If methods is not specified then it
-             will at present be set to modified_z_score.
+             will be determined using the univariate classifers
+             defined in settings.
     
     features: List of fields of each job that should be used
              for outlier detection. If passed an empty list
@@ -824,7 +915,7 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
     e.g,.
     
     create a job ref model with a list of jobids
-    eq.create_refmodel(jobs=[u'615503', u'625135'])
+    eq.create_refmodel(jobs=[u'615503', u'625135'], methods= [es.modified_z_score])
     
     or use pony orm query result:
     >>> jobs = eq.get_jobs(tags='exp_component:atmos', fmt='orm')
@@ -832,7 +923,7 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
     
     to create a refmodel for ops we need to either set op_tags
     to a list of tags for the ops, or use the wildcard (*):
-    >>> r = eq.create_refmodel(jobs, tag='exp_name:linux_kernel', op_tags='*')
+    >>> r = eq.create_refmodel(jobs, tag='exp_name:linux_kernel', op_tags='*', methods= [es.modified_z_score])
     
     >>> r['id'], r['tags'], r['jobs']
     (11, {'exp_name': 'linux_kernel'}, [u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-192044-outlier', u'kern-6656-20190614-194024'])
@@ -843,7 +934,7 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
     Below is an example of creating a refmodel using MV classifiers
     >>> from pyod.models.knn import KNN
     >>> from pyod.models.abod import ABOD
-    >>> r = eq.create_refmodel(['625172', '627922', '629337', '633144', '676007', '680181', '685000', '685003', '685016', '692544', '693147', '696127'], outlier_methods = [ABOD(), KNN()], features = ['cpu_time', 'duration', 'num_procs'])
+    >>> r = eq.create_refmodel(['625172', '627922', '629337', '633144', '676007', '680181', '685000', '685003', '685016', '692544', '693147', '696127'], methods = [ABOD(), KNN()], features = ['cpu_time', 'duration', 'num_procs'])
     WARNING: epmt_query: The jobs do not share identical tag values for "exp_name" and "exp_component"
     WARNING: The jobs do not share identical tag values for "exp_name" and "exp_component"
         685000 ESM4_historical_D151 ocean_annual_rho2_1x1deg
@@ -868,6 +959,8 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
 
     if type(tag) == str:
         tag = tag_from_string(tag)
+
+    methods = methods or uvod_classifiers()
 
     # do we have a list of jobids?
     # if so, we need to get the actual DB objects for them
@@ -926,7 +1019,7 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
             stag = dumps(t, sort_keys=True)
             # pylint: disable=no-member
             logger.debug('scoring op {}'.format(t))
-            scores[stag] = _refmodel_scores(ops_df[ops_df.tags == t], outlier_methods, features)
+            scores[stag] = _refmodel_scores(ops_df[ops_df.tags == t], methods, features)
     else:
         # full jobs, no ops
         logger.debug('jobid,tags:\n{}'.format(jobs_df[['jobid','tags']]))
@@ -936,7 +1029,7 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
             logger.info('PCA variances: {} (sum={})'.format(pca_variances, np.sum(pca_variances)))
             jobs_df = jobs_pca_df
             features = pca_features
-        scores = _refmodel_scores(jobs_df, outlier_methods, features)
+        scores = _refmodel_scores(jobs_df, methods, features)
 
     logger.debug('computed scores: {0}'.format(scores))
     computed = scores
@@ -962,9 +1055,11 @@ def create_refmodel(jobs=[], name=None, tag={}, op_tags=[],
 @db_session
 def delete_refmodels(*ref_ids):
     """
-    Deletes one or more reference models. The reference models are specified
-    using their IDs. The functions the returns the number of reference models
-    deleted (either all the requested models will be deleted or none (0))
+    Deletes one or more reference models
+
+    The reference models are specified using their IDs. The function 
+    returns the number of reference models deleted (either all the 
+    requested models will be deleted or none will be deleted (0))
     """
     if not ref_ids:
         logger.warning("You must specify one or more reference model IDs to delete")
@@ -977,9 +1072,12 @@ def delete_refmodels(*ref_ids):
 
 def retire_refmodels(ndays = settings.retire_models_ndays):
     """
-    Retire models older than ndays (ndays > 0). If ndays is
-    specified as <= 0 then it's a nop. On success it returns
-    the number of models deleted.
+    Retire models older than a certain number of days
+
+    ndays should be greater than 0. If ndays is
+    specified as <= 0 then it's a nop. 
+
+    RETURNS: On success it returns the number of models deleted.
     """
     if ndays <= 0: return 0
 
@@ -994,7 +1092,7 @@ def retire_refmodels(ndays = settings.retire_models_ndays):
 
 def refmodel_set_enabled(ref_id, enabled = False):
     """
-    Enable or disable a trained model.
+    Enable or disable a trained model
     """
     r = ReferenceModel[ref_id]
     r.enabled = enabled
@@ -1002,13 +1100,14 @@ def refmodel_set_enabled(ref_id, enabled = False):
 
 def refmodel_is_enabled(ref_id):
     """
-    Get the status (enabled/disabled) of a trained model.
+    Returns the status (enabled/disabled) of a trained model
     """
     return ReferenceModel[ref_id].enabled
 
 def refmodel_get_metrics(model, active_only = False):
     """
-    Get the set of metrics available in a trained model.
+    Returns the set of metrics available in a trained model
+
     If 'active_only' is set then only the active metrics are returned.
     """
     r = ReferenceModel[model] if (type(model) == int) else model
@@ -1053,7 +1152,7 @@ def refmodel_get_metrics(model, active_only = False):
 
 def refmodel_set_active_metrics(ref_id, metrics):
     """
-    Set the active metrics for a trained model to specified list of metrics.
+    Sets the active metrics for a trained model to specified list of metrics
     """
     r = ReferenceModel[ref_id]
     all_metrics = refmodel_get_metrics(ref_id, False)
@@ -1096,9 +1195,9 @@ def __unique_proc_tags_for_job(job, exclude=[], fold=True):
 @db_session
 def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict', op_duration_method = "sum", full= False):
     '''
-    Returns a collection of "Operations", where each Operation is either
-    an object, a dict, or a dataframe row, depending on 'fmt'. An operation represents a collection
-    of processes that share a tag. 
+    Returns a collection of operations for a set of jobs, filtered on the basis of tags
+
+    An operation represents a collection of processes that share a tag. 
 
     jobs: Collection of jobs. For e.g., a list of jobids, etc.
 
@@ -1228,7 +1327,8 @@ def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict', 
 @db_session
 def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=False, fmt='pandas', op_duration_method = "sum"):
     """
-    Aggregates metrics across processes for one or or more operations.
+    Aggregates metrics across processes for one or or more operations
+
     The returned output is of the form:
 
     <job-id>,<tag1>, metric11, metric12, ...
@@ -1249,7 +1349,8 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=F
                   and their column values will be aggregated. As a 
                   consequence, the output will not have job/jobid columns
     
-    fmt:          One of 'dict' or 'pandas'. Defaults to 'pandas'
+    fmt:          One of 'dict' or 'pandas'. Defaults to 'pandas'. The other
+                  formats ('terse' and 'orm') are meaningless not supported.
 
     op_duration_method: One of "sum", "sum-minus-overlap" or "finish-minus-start"
                   sum: signifies a dumb sum of process durations
@@ -1348,7 +1449,7 @@ op_metrics = get_op_metrics
 @db_session
 def delete_jobs(jobs, force = False, before=None, after=None, warn = True):
     """
-    Deletes one or more jobs and returns the number of jobs deleted.
+    Deletes one or more jobs and returns the number of jobs deleted
 
     jobs  : One or more jobs. [] selects all jobs. You would normally
             use [] with 'before' or 'after' options.
@@ -1425,10 +1526,13 @@ def delete_jobs(jobs, force = False, before=None, after=None, warn = True):
 
 def retire_jobs(ndays = settings.retire_jobs_ndays):
     """
-    Retires jobs older than 'ndays' and returns the list of jobs retired.
+    Retires jobs older than specified number of days
+
 
     ndays must be > 0 for any jobs to be retired. For ndays <=0, no jobs
     are retired.
+
+    RETURNS: the number of jobs retired.
     """
     if ndays <= 0: return 0
     return delete_jobs([], force=True, before = -ndays, warn = False)
@@ -1436,6 +1540,8 @@ def retire_jobs(ndays = settings.retire_jobs_ndays):
 @db_session
 def dm_calc(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op:dmput', 'op:hsmget', 'op:rm', 'op:cp']):
     """
+    Data-migration calculation helper for a collection of jobs (deprecated)
+
     This function has a high memory footprint, and you should only use it
     for small collection of jobs (len(jobs) < 100). For large collections
     use dm_calc_iter instead
@@ -1459,6 +1565,8 @@ def dm_calc(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op
 @db_session
 def dm_calc_iter(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op:dmput', 'op:hsmget', 'op:rm', 'op:cp'], features = ['cpu_time']):
     """
+    Data-migration calculation helper
+
     This does the same data movement calculation as dm_calc, but has
     a *far lower memory footprint, and is twice as fast*. Plus it
     produces an additional dataframe that aggregates across tags by job
@@ -1500,7 +1608,9 @@ def dm_calc_iter(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv'
 @db_session
 def get_job_status(jobid):
     '''
-    Returns the job status dictionary, which consists of the following job fields:
+    Returns the job status dictionary
+
+    Status dictionary consists of the following job fields:
       - script_path
       - script
       - stdout
@@ -1517,7 +1627,8 @@ def get_job_status(jobid):
 @db_session
 def annotate_job(jobid, annotation, replace=False):
     '''
-    Annotates a job
+    Annotates a job with the supplied annotation
+
       - annotation is a dictionary of key/value pairs
         If replace is True, then *all* existing annotations
         will be overritten. Normally, this is set to False,
@@ -1538,18 +1649,20 @@ def annotate_job(jobid, annotation, replace=False):
 @db_session
 def get_job_annotations(jobid):
     '''
-    Returns the annotations (if any) for a job
+    Returns the annotations (if any) for the specified job
     '''
     j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
     return j.annotations
 
 def remove_job_annotations(jobid):
+    '''
+    Removes all annotations for the specified job
+    '''
     return annotate_job(jobid, {}, True)
 
 def analyze_pending_jobs(jobs = [], analyses_filter = {}):
     """
-    Analyze all pending jobs. The jobs may or may not be
-    comparable. 
+    Run the analysis pipeline on pending jobs
     
     jobs: Restrict applying the analyses to a subset specified by jobs.
           In the most common usage, you will leave jobs unset.
@@ -1578,8 +1691,9 @@ def analyze_pending_jobs(jobs = [], analyses_filter = {}):
 @db_session
 def analyze_comparable_jobs(jobids, check_comparable = True, keys = ('exp_name', 'exp_component')):
     """
-    Analyzes one or more jobs. The jobs must be comparable; a warning
-    will be issued if they aren't (unless check_comparable is disabled).
+    Analyzes one or more *comparable* jobs
+
+    A warning will be issued if they aren't (unless check_comparable is disabled).
     You may want to use the higher-level function -- analyze_pending_jobs -- instead.
 
     jobids: List of job ids
@@ -1646,7 +1760,8 @@ def analyze_comparable_jobs(jobids, check_comparable = True, keys = ('exp_name',
 @db_session
 def set_job_analyses(jobid, analyses, replace=False):
     '''
-    Saves analyses data/metadata for a job
+    Saves analyses metadata for a job in the database
+
       - analyses is a dictionary of key/value pairs
         If replace is True, then *all* existing analyses
         will be overritten. Normally, this is set to False,
@@ -1665,27 +1780,28 @@ def set_job_analyses(jobid, analyses, replace=False):
 @db_session
 def get_job_analyses(jobid):
     '''  
-    Returns the analyses for a job
+    Returns the analyses metadata for the specified job
     '''
     j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
     return j.analyses
 
 def get_unanalyzed_jobs(jobs = [], analyses_filter = {}, fmt='terse'):
     '''
-    Returns the subset of jobs that have not had any analysis pipeline
-    run on them.
+    Returns the subset of jobs that have not had any analysis pipeline run on them
     '''
     return get_jobs(jobs, analyses = analyses_filter, fmt=fmt)
 
 
 def remove_job_analyses(jobid):
+    '''
+    Removes all analyses metadata for a job
+    '''
     return set_job_analyses(jobid, {}, True)
 
 @db_session
 def get_unprocessed_jobs():
     '''
-    Returns the list of jobids that have not been subjected to
-    post-processing during ingestion
+    Returns the list of jobs that have not been post-processed during ingestion
     '''
     uj = orm_findall(UnprocessedJob)
     return [ u.jobid for u in uj ]
@@ -1693,6 +1809,8 @@ def get_unprocessed_jobs():
 @db_session
 def comparable_job_partitions(jobs, matching_keys = ['exp_name', 'exp_component']):
     '''
+    Partitions a collection of jobs in disjoint partitions of comparable jobs
+
     Given a non-empty list of job ids, the function returns a
     a list of lists, where each sub-list is of the form:
     [(val1, val2,..), { j1, j2,..}]
@@ -1740,9 +1858,10 @@ an_annual_rho2_1x1deg_18840101'}
 
 def are_jobs_comparable(jobs, matching_keys = ['exp_name', 'exp_component']):
     '''
-    Returns True if *all* the supplied jobs are comparable. IOW, they share
-    the same values for *all* the keys specified in matching_keys. Returns
-    False otherwise.
+    Returns True if *all* the specified jobs are comparable
+
+    Comparable jobs share the same values for *all* the keys specified 
+    in matching_keys. Returns False otherwise.
 
     Example:
     >>> eq.are_jobs_comparable(['625151', '627907', '633114', '629322', '685001', '685000', '685003'])
@@ -1774,10 +1893,11 @@ def _empty_collection_check(col):
 @db_session
 def compute_process_trees(jobs):
     '''
-    Compute process trees for specified jobs.
+    Compute process trees for specified jobs
 
+    The process tree sets fields such as depth for each process.
     It is safe to call this function on jobs that already have process trees
-    computed as they will just be skipped.
+    computed as they will just be skipped. 
     '''
     from epmt_job import mk_process_tree
     jobs = orm_jobs_col(jobs)
@@ -1810,7 +1930,7 @@ def procs_histogram(jobs, attr = 'exename'):
 
 def procs_set(jobs, attr = 'exename'):
     '''
-    Gets the set of unique values of attributes for the collection of jobs
+    Returns the set of unique values of attributes for the collection of jobs
     '''
     phist = procs_histogram(jobs, attr)
     return sorted(phist.keys())
@@ -1818,8 +1938,7 @@ def procs_set(jobs, attr = 'exename'):
 @db_session
 def add_features_df(jobs_df, features = [procs_histogram, procs_set], key = 'jobid'):
     '''
-    Includes columns for synthetic metrics such as process histogram, 
-    processes set and returns a new dataframe with the added columns.
+    Appends metrics such as process histogram, processes set to a jobs dataframe
 
     jobs_df: Input dataframe (will not be modified)
 
@@ -1880,7 +1999,7 @@ def add_features_df(jobs_df, features = [procs_histogram, procs_set], key = 'job
 
 def get_features(jobs):
     '''
-    Returns the union of features across the input jobs.
+    Returns the union of features across the input jobs
 
        jobs: Collection of jobs
 
@@ -1903,8 +2022,7 @@ def get_features(jobs):
 @db_session
 def is_job_post_processed(job):
     '''
-    Returns True if the post-processing pipeline has been
-    run on the job. False otherwise.
+    Returns True if the post-processing pipeline has been run on a job
 
       job: jobid or ORM job object. The job MUST be in the database.
 
