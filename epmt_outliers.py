@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+"""EPMT Outliers API
+
+The EPMT Outliers API provides functions to determine outliers
+among a collection of jobs, operations or processes.
+"""
+
+
 from __future__ import print_function
 from os import environ
 import pandas as pd
