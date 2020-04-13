@@ -1237,7 +1237,7 @@ def retire_refmodels(ndays = settings.retire_models_ndays):
 
     Returns
     -------
-    On success it returns the number of models deleted (int)
+    It returns the number of models deleted (int)
     """
     if ndays <= 0: return 0
 
@@ -1402,54 +1402,75 @@ def __unique_proc_tags_for_job(job, exclude=[], fold=True):
 @db_session
 def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict', op_duration_method = "sum", full= False):
     '''
-    Returns a collection of operations for a set of jobs, filtered on the basis of tags
+    Returns a filtered collection of operations for the selected jobs
 
     An operation represents a collection of processes that share a tag. 
+    This function the operations filtered on the basis of `tags`. 
 
-    jobs: Collection of jobs. For e.g., a list of jobids, etc.
+    Parameters
+    ----------
+    jobs: list of strings or list of Job objects or an ORM query
+          Collection of jobs for which we wish to determine underlying
+          operations
 
-    tags: List of tags, where each tag is a dictionary of key/value pairs.
-          As in `get_procs`, a tag may also be specified as a string. Hence,
-          tags can be a list of strings.
+    tags: list of strings or list of dicts, optional
+          The operations are filtered on the basis of these tags. A logical
+          OR is performed across tags in a list, while an AND is performed
+          on the keys of an individual tag. See `get_procs` for examples
+          of `tags` usage
+
           You may also specify a single key, such as 'op' for tags. In this
           case the expansion assumes a wildcard for the key to cover all
-          possible values for that key over the jobs set. If not specified,
-          the jobs will be queried for the tag key with the lowest cardinality
-          and that key will be used.
+          possible values for that key over the jobs set. 
 
-    exact_tag_only: Advanced option, that requires each tag to be exactly
-          matched. By default (exact_tag_only = False), a process tag is
-          considered to be a match for a tag, t, if the process tag is a superset
-          of t.
+          If not specified, the jobs will be queried for the tag key with 
+          the lowest cardinality and that key will be used. Invariably, this
+          will be the `op` key.
 
-    fmt: Output format for each operation in the returned collection.
+    exact_tag_only: boolean, optional
+          Advanced option, that, if set, requires each tag to be exactly
+          matched. By default this is assumed False, a process tag is
+          considered to be a match for a tag (t), if the process tag is a 
+          superset of t.
+
+    fmt: string, optional
+         Output format for each operation in the returned collection.
          If set to 'dict' a list of dictionaries is returned. If 'orm'
          then a list of ORM Operation objects are returned. If 'pandas'
          a dataframe is returned, where each row represents an operation.
          'terse' format is not supported, and will be silently translated
          to 'dict'.
 
-    combine: If combine is set to True, then the returned list of operations
-          will be combined into a single high-level operation. In this case
-          the returned value will a list with a single operation.
-          The main use of this is to merge the execution intervals and proc_sums.
+    combine: boolean, optional
+         If combine is set to True, then the returned list of operations
+         will be combined into a single high-level operation. In this case
+         the returned value will a list with a single operation.
+         The main use of this is to merge the execution intervals and 
+         proc_sums across operations. Defaults to False.
 
-    op_duration_method: One of "sum", "sum-minus-overlap" or "finish-minus-start"
-                  sum: signifies a dumb sum of process durations
-                  sum-minus-overlap: expensive computation that ensures overlapping
-                       processes are not double-counted.
-                  finish-minus-start: operation duration is calculated as the
-                       difference of the last process to finish and the first
-                       process to start. 
-                  Defaults to "sum"
+    op_duration_method: string, optional
+         One of "sum", "sum-minus-overlap" or "finish-minus-start"
 
-    full: This argument is False by default. Its only useful when format is set to
-          dict. With this option enabled, the full Operation object including
-          expensive fields to compute such as intervals, are computed and 
+         sum: signifies a dumb, but fast, sum of process durations
+              No care is taken to avoid double-counting overlaps
+
+         sum-minus-overlap: expensive computation that ensures overlapping
+              processes are not double-counted.
+
+         finish-minus-start: operation duration is calculated as the
+              difference of the last process to finish and the first
+              process to start. 
+         Defaults to "sum". This is an advanced option.
+
+    full: boolean, optional
+          This argument is False by default. Its only useful when format is set to
+          dict or pandas. With this option enabled, the full Operation object
+          including expensive fields to compute such as intervals, are computed and 
           included in the dictionary. This is an expensive option, so it's disabled
-          by default. (ADVANCED)
+          by default. This is an advanced option.
 
-    EXAMPLES:
+    Examples
+    --------
           To get the ops as a list of dicts for two distinct tags, do:
 
           >>> ops = get_ops(['685000', '685003'], tags = ['op:timavg', 'op:ncks'])
@@ -1532,9 +1553,9 @@ def get_ops(jobs, tags = [], exact_tag_only = False, combine=False, fmt='dict', 
     return ops
 
 @db_session
-def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=False, fmt='pandas', op_duration_method = "sum"):
+def get_op_metrics(jobs, tags = [], exact_tags_only = False, group_by_tag=False, fmt='pandas', op_duration_method = "sum"):
     """
-    Aggregates metrics across processes for one or or more operations
+    Aggregates metrics across the processes of one or more operations
 
     The returned output is of the form:
 
@@ -1543,30 +1564,39 @@ def get_op_metrics(jobs = [], tags = [], exact_tags_only = False, group_by_tag=F
 
     where, <metric11> is the sum across process for the tag1 for metric1
 
-    jobs        : Is a single job or a collection of jobs
+    jobs    : Is a single job or a collection of jobs
 
-    tags        : List of strings or a list of dictionaries. You may also
-                  pass a single tag as a string or dict. If no tags are supplied, 
-                  then the set of unique tags for the jobs will be used.
+    tags    : list of strings or list of dictionaries or string or dict, optional
+              If no tags are supplied, then the set of unique tags for the jobs 
+              will be used
     
-    exact_tags  : If exact_tags_only is set (default False), then a match
-                  means there is an exact match of the tag dictionaries.
+exact_tags  : boolean, optional
+              If exact_tags_only is set (default False), then a match
+              means there is an exact match of the tag dictionaries. If False,
+              which is the default, a superset will suffice.
 
-    group_by_tag: If set, rows that have the same tag will be coalesced
-                  and their column values will be aggregated. As a 
-                  consequence, the output will not have job/jobid columns
+group_by_tag: boolean, optional
+              If set, rows that have the same tag will be coalesced
+              and their column values will be aggregated. As a 
+              consequence, the output will not have job/jobid columns
     
-    fmt:          One of 'dict' or 'pandas'. Defaults to 'pandas'. The other
-                  formats ('terse' and 'orm') are meaningless not supported.
+    fmt     : string, optional
+              One of 'dict' or 'pandas'. Defaults to 'pandas'. The other
+              formats ('terse' and 'orm') are meaningless not supported.
 
-    op_duration_method: One of "sum", "sum-minus-overlap" or "finish-minus-start"
-                  sum: signifies a dumb sum of process durations
-                  sum-minus-overlap: expensive computation that ensures overlapping
-                       processes are not double-counted.
-                  finish-minus-start: operation duration is calculated as the
-                       difference of the last process to finish and the first
-                       process to start. 
-                  Defaults to "sum"
+op_duration_method: string, optional
+              One of "sum", "sum-minus-overlap" or "finish-minus-start"
+               sum: signifies a dumb sum of process durations
+               sum-minus-overlap: expensive computation that ensures overlapping
+                    processes are not double-counted.
+               finish-minus-start: operation duration is calculated as the
+                    difference of the last process to finish and the first
+                    process to start. 
+               Defaults to "sum"
+
+    Returns
+    -------
+    A collection of operation metrics in the selected format
     """
     if op_duration_method not in ("sum", "sum-minus-overlap", "finish-minus-start"):
         raise ValueError('op_duration_method must be one of ("sum", "sum-minus-overlap", "finish-minus-start")')
@@ -1658,41 +1688,50 @@ def delete_jobs(jobs, force = False, before=None, after=None, warn = True):
     """
     Deletes one or more jobs and returns the number of jobs deleted
 
-    jobs  : One or more jobs. [] selects all jobs. You would normally
-            use [] with 'before' or 'after' options.
+    Parameters
+    ----------
+    jobs  : list of strings or list of Job objects or ORM query
+            Collection of jobs to delete. [] selects all jobs so
+            use with caution! You would normally use [] with 
+            'before' or 'after' options.
 
-    force : By default, False. 'force' has to be set to True to allow
+    force : boolean, optional
+            By default, False. 'force' has to be set to True to allow
             deletion of multiple jobs.
 
     before,
-    after : time specified as cutoff. See 'get_jobs' to see how to specify
+    after : datetime or string
+            time specified as cutoff. See 'get_jobs' to see how to specify
             these options.
 
-     warn : This option is only used in daemon mode where we want to 
+     warn : boolean, optional
+            This option is only useful in daemon mode where we want to 
             disable unnecessary copious warnings in logs.
             Default True. When disabled, no warnings will be given about attempting
             to delete jobs that have models associated with them. Instead
             those jobs will be skipped.
             
-
+    Notes
+    -----
     The function will either delete all requested jobs or none. The delete
     is done in an atomic transaction.
 
-    EXAMPLE:
+    Example
+    -------
         # to delete multiple jobs
-        delete_jobs(['685003', '685016'], force=True)
+        >>> delete_jobs(['685003', '685016'], force=True)
 
         # to delete ALL jobs. Careful!!
-        delete_jobs([], force=True)
+        >>> delete_jobs([], force=True)
 
         # deletes all jobs older than 30 days
-        delete_jobs([], force=True, before=-30)
+        >>> delete_jobs([], force=True, before=-30)
 
         # delete jobs before Jan 21, 2018 09:55
-        delete_jobs([], force=True, before='01/21/2018 09:55')
+        >>> delete_jobs([], force=True, before='01/21/2018 09:55')
 
         # delete jobs executed in the last 7 days
-        delete_jobs([], force=True, after=-7)
+        >>> delete_jobs([], force=True, after=-7)
 
     """
 
@@ -1735,49 +1774,92 @@ def retire_jobs(ndays = settings.retire_jobs_ndays):
     """
     Retires jobs older than specified number of days
 
+    Parameters
+    ----------
+      ndays : int, optional
+              Jobs older then `ndays` ago will be retired
+              `ndays` must be > 0 for any jobs to be retired. 
+              For ndays <=0, no jobs are retired.
 
-    ndays must be > 0 for any jobs to be retired. For ndays <=0, no jobs
-    are retired.
-
-    RETURNS: the number of jobs retired.
+    Returns
+    -------
+    The number of jobs retired (int)
     """
     if ndays <= 0: return 0
     return delete_jobs([], force=True, before = -ndays, warn = False)
 
+# @db_session
+# def dm_calc(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op:dmput', 'op:hsmget', 'op:rm', 'op:cp']):
+#     """
+#     Data-migration calculation helper for a collection of jobs (deprecated)
+# 
+#     This function has a high memory footprint, and you should only use it
+#     for small collection of jobs (len(jobs) < 100). For large collections
+#     use dm_calc_iter instead
+#     """
+#     _empty_collection_check(jobs)
+#     logger.debug('dm ops: {0}'.format(tags))
+#     jobs = orm_jobs_col(jobs)
+#     num_jobs = jobs.count()
+#     logger.debug('number of jobs: {0}'.format(num_jobs))
+#     if (num_jobs > 100):
+#         logger.warning('job count ({0}) > 100: it is recommended to use dm_calc_iter instead for a lower memory footprint and faster time-to-solution'.format(num_jobs))
+#     tags = tags_list(tags)
+#     dm_ops_df = op_metrics(jobs, tags = tags, group_by_tag = True)
+#     jobs_cpu_time = 0.0
+#     for j in jobs:
+#         jobs_cpu_time += j.cpu_time
+#     dm_cpu_time = dm_ops_df['cpu_time'].sum()
+#     dm_percent = round((100 * dm_cpu_time / jobs_cpu_time), 2)
+#     return (dm_percent, dm_ops_df, jobs_cpu_time)
+
 @db_session
-def dm_calc(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op:dmput', 'op:hsmget', 'op:rm', 'op:cp']):
+def ops_costs(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op:dmput', 'op:hsmget', 'op:rm', 'op:cp'], features = ['cpu_time']):
     """
-    Data-migration calculation helper for a collection of jobs (deprecated)
+    Calculates operation(s) costs as a fraction of total job times
 
-    This function has a high memory footprint, and you should only use it
-    for small collection of jobs (len(jobs) < 100). For large collections
-    use dm_calc_iter instead
-    """
-    _empty_collection_check(jobs)
-    logger.debug('dm ops: {0}'.format(tags))
-    jobs = orm_jobs_col(jobs)
-    num_jobs = jobs.count()
-    logger.debug('number of jobs: {0}'.format(num_jobs))
-    if (num_jobs > 100):
-        logger.warning('job count ({0}) > 100: it is recommended to use dm_calc_iter instead for a lower memory footprint and faster time-to-solution'.format(num_jobs))
-    tags = tags_list(tags)
-    dm_ops_df = op_metrics(jobs, tags = tags, group_by_tag = True)
-    jobs_cpu_time = 0.0
-    for j in jobs:
-        jobs_cpu_time += j.cpu_time
-    dm_cpu_time = dm_ops_df['cpu_time'].sum()
-    dm_percent = round((100 * dm_cpu_time / jobs_cpu_time), 2)
-    return (dm_percent, dm_ops_df, jobs_cpu_time)
+    This function was originally written with the expectation
+    of being used for data-movement costs. However, it's general
+    enough that it can be customized to determine the costs
+    of any set of operations. The operations are selected using
+    tags. The default set of tags, select data-movement operations
 
-@db_session
-def dm_calc_iter(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op:dmput', 'op:hsmget', 'op:rm', 'op:cp'], features = ['cpu_time']):
-    """
-    Data-migration calculation helper
+    Parameters
+    ----------
+      jobs : list of strings or list of Job objects or ORM query
+             Collection of jobs. If empty all jobs will be assumed
+      tags : list of strings or list of dicts, optional
+             The `tags` specify the cumumlative set of operations
+             for which we want to determine the time taken.
+   features: list of strings, optional
+             The metrics to use for calculations. `duration` and
+             `cpu_time` are good candidates. With `duration` beware
+             of double-counting due to backgrounded processes.
 
-    This does the same data movement calculation as dm_calc, but has
-    a *far lower memory footprint, and is twice as fast*. Plus it
-    produces an additional dataframe that aggregates across tags by job
-    allowing us to compute min/max/std_dev across jobs for DM.
+    Returns
+    -------
+      (dm_percent, dm_ops_df, jobs_cpu_time, dm_agg_df_by_job)
+      
+      dm_percent: float
+                  Operations cost as a percent of total cpu cycles
+      dm_ops_df : dataframe
+                  Dataframe of operations showing cost of each operation
+   jobs_cpu_time: float
+                  Total cpu time across the jobs in question
+dm_agg_df_by_job: dataframe
+                  Aggregate rows by job across operations
+
+    Notes
+    -----
+    This is one of the few functions where it's OK to not specify
+    a job collection. It's written to efficiently work across all the
+    jobs in a database, although it will take some time to crunch its
+    numbers. So you may still prefer to narrow the search space by
+    restricting the jobs set.
+
+    As mentioned the functions primary goal was to calculate the
+    fractional time spent in data-movement operations. But the
+    function can be used for any list of operations.
     """
     from datetime import datetime
     logger.debug('dm ops: {0}'.format(tags))
