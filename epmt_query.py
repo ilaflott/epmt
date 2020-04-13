@@ -339,15 +339,19 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
     """
     Returns a collection of jobs based on some filtering and ordering criteria
 
-    The output format can be set to pandas dataframe, list of dicts or list
-    of ORM objects based on the 'fmt' option.
+    Parameters
+    ----------
     
-    jobs   : Optional list of jobs to narrow the search space. The jobs can
+    jobs   : list, optional
+             List of jobids to narrow the search space. The jobs can
              a list of jobids (i.e., list of strings), or the result of a Pony
-             query on Job (i.e., a Query object), or a pandas dataframe of jobs
+             query on Job (i.e., a Query object), or a pandas dataframe of jobs.
+             It is *strongly* recommended that you provide a list of
+             jobids to narrow the search and limit the load on the database.
              
     
-    tags   : Optional dictionary or string of key/value pairs. If set to ''
+    tags   : dict or string, optional
+             Optional dictionary or string of key/value pairs. If set to ''
              or {}, then exact_tag_match will be implicitly set, and only
              those jobs that have an empty tag will match. 
 
@@ -362,16 +366,18 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
              This returns a union of jobs that match 'ocn_res:0.5l75;exp_component:ocean_cobalt_fdet_100'
              and those that match 'ocn_res:0.5l75;exp_component:ocean_annual_rho2_1x1deg'
 
-   fltr   : Optional filter whose format will depend on the ORM. 
+   fltr   :  callable or ORM-specific condition, optional
+             Optional filter whose format will depend on the ORM. 
              For sqlalchemy, you can use something like:
-             fltr(Job.jobid == '685000')
-             fltr(Job.jobid.in_(['685000', '685016']))
+             (Job.jobid == '685000')
+             (Job.jobid.in_(['685000', '685016']))
 
              For Pony, you can use a lamdba function or a string
              e.g., lambda j: count(j.processes) > 100 will filter jobs more than 100 processes
              or, 'j.duration > 100000' will filter jobs whose duration is more than 100000
     
-    order  : Optionally sort the output by setting this to a lambda function or string
+    order  : callable, optional
+             Optionally sort the output by setting this to a lambda function or string
              e.g, to sort by job duration descending:
                   order = desc(Job.created_at)
              If not set, this defaults to Job.start, in other words
@@ -384,21 +390,24 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
              or a string like 'desc(j.created_at)'
 
     
-    limit  : Restrict the output list a specified number of jobs. Defaults to 20.
-             When set to 0, it means no limit. There is not default limit when
-             using the ORM format. The default applies to all other formats.
+    limit  : int, optional
+             Restrict the output list a specified number of jobs.
+             When set to 0 or omitted, it means no limit. 
     
-    offset : When returning query results, skip offset rows. "offset"
-             defaults to 0. 
+    offset : int, optional
+             When returning query results, skip offset rows. 
+             Defaults to 0.
     
-    when   : Restrict the output to jobs running at 'when' time. 'when'
+    when   : datetime or string or Job object, optional
+             Restrict the output to jobs running at 'when' time. 'when'
              can be specified as a Python datetime. You can also choose
              to specify 'when' as jobid or a Job object. In which 
              case the output will be restricted to those jobs that 
              had an overlap with the specified 'when' job. 'when' may also
              be specified as a string of the form: 'mm/dd/YYYY HH:MM'.
 
-    before : Restrict the output to jobs ended before time specified.
+    before : datetime or string or int, optional
+             Restrict the output to jobs ended before time specified.
              'before' can be specified either as a python datetime or
              a Unix timestamp or a string. If a negative integer is specified,
              then the time is interpreted as a negative days offset from
@@ -409,7 +418,8 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
                  -1 => 1 day ago
                  -30 => 30 days ago
 
-    after  : Restrict the output to jobs started after time specified.
+    after  : datetime or string or int, optional
+             Restrict the output to jobs started after time specified.
              'after' can be specified either as a python datetime or
              a Unix timestamp or a string. If a negative integer is specified,
              then the time is interpreted as a negative days offset from
@@ -421,35 +431,60 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
                  -30 => 30 days ago
              
     
-    hosts  : Restrict the output to those jobs that ran on 'hosts'.
+    hosts  : list of strings or a string, optional
+             Restrict the output to those jobs that ran on 'hosts'.
              'hosts' is a list of hostnames specified as a comma-separated
              string, or a list of strings. A job is considered to match if 
              the intersection of j.hosts and hosts is non-empty
     
-    fmt    : Control the output format. One of 'dict', 'pandas', 'orm', 'terse'
+    fmt    : string, optional
+             Controls the output format. 
+             `fmt` must be one of 'dict', 'pandas', 'orm', 'terse':
              'dict': each job object is converted to a dict, and the entire
                      output is a list of dictionaries
              'pandas': Output a pandas dataframe with one row for each matching job
              'orm':  returns a Pony Query object (ADVANCED)
              'terse': In this format only the primary key ID is printed for each job
+             Default is 'dict'
     
-   annotations: Dictionary of key/value pairs that must ALL match the job 
+annotations: dict, optional
+             Dictionary of key/value pairs that must ALL match the job 
              annotations. The matching job may have additional key/values.
 
-   analyses: Dictionary of key/value pairs that must ALL match the job
+   analyses: dict, optional
+             Dictionary of key/value pairs that must ALL match the job
              analyses. The matching job may have additional key/values.
 
-    merge_proc_sums: By default True, which means the fields inside job.proc_sums
+merge_proc_sums: boolean, optional
+             By default True, which means the fields inside job.proc_sums
              will be hoisted up one level to become first-class members of the job.
              This will make aggregates across processes appear as part of the job
              If False, the job will contain job.proc_sums, which will be a dict
              of key/value pairs, where each is an process attribute, such as numtids,
              and the value is the sum acorss all processes of the job.
     
-    exact_tag_only: If set, tag will be considered matched if saved tag
+exact_tag_only: boolean, optional
+             If set, tag will be considered matched if saved tag
              identically matches the passed tag. The default is False, which
              means if the tag in the database are a superset of the passed
              tag a match will considered.
+
+    Returns
+    -------
+    A collection of jobs in the selected format
+
+
+    Examples
+    --------
+
+    # gets a dataframe with two rows
+    >>> df = get_jobs(['68500', '685003'], fmt='pandas')
+
+    # gets a list of job dictionaries of the selected experiment *and* experiment
+    >>> dlist = get_jobs(tags = 'exp_name:ESM4_historical_D151;exp_component=atmos_cmip')
+
+    # same as above except we use the orm format
+    >>> jobs_orm = get_jobs(tags = 'exp_name:ESM4_historical_D151;exp_component=atmos_cmip', fmt='orm')
     """
     from datetime import datetime
     # Customer feedback strongly indicated that limits on the job table were
@@ -498,16 +533,24 @@ def get_procs(jobs = [], tags = None, fltr = None, order = None, limit = None, w
     """
     Returns a collection of processes for a set of jobs based on filter criteria
 
-    We filter a supplied list of jobs to find a match
+    `get_procs` filters a supplied list of jobs to find a match
     by tag or some primary keys. If no jobs list is provided,
     then the query will be run against all processes. It is
     *strongly recommended* that you specify a job collection
-    to narrow the search space.
+    to narrow the search space and reduce the computational overhead.
+
+    Parameters
+    ----------
+    All parameters are optional and sensible defaults are assumed.
+
+    jobs: list or ORM query or dataframe, optional but highly recommended
     
-    All fields are optional and sensible defaults are assumed.
-    
-    tags: is either a single tag specified as a dictionary or string of 
-          key/value pairs, or a list of tags.
+    tags: list or dict or string
+          `tags` is either a single tag specified as a dictionary or string of 
+          key/value pairs, or a list of tags. It is used to restrict the selection
+          to matching processes. Within a dictionary, a logical AND is performed
+          across the keys. On a list of dictionaries a logical OR is performed
+          across dictionaries.
 
           If set to '' or {}, exact_tag_match will be implicitly
           set, and only those processes with an empty tag will match.
@@ -530,30 +573,42 @@ def get_procs(jobs = [], tags = None, fltr = None, order = None, limit = None, w
              and the tag - "op_sequence:5;op_instance:2"
 
     
-    fltr:    is a lambda expression or a string of the form:
+    fltr:    callable or string or ORM-specific conditional expression, optional
+             This argument is ORM-specific. For Pony you can give a
+             lambda function. For SQLA, you can give a condition.
+
+             Pony allows lambda expression or a string of the form:
              lambda p: p.duration > 1000
               OR
              'p.duration > 1000 and p.numtids < 4'
 
-    order:   Order the returned set by the supplied expression.
+             For SQLA, you could give something like:
+             (Process.duration > 1000)
+
+    order:   callable or string or ORM-specific expression, optional
+             Order the returned set by the supplied expression.
              For pony, you can use a expression like 'p.created_at'
-             or a lambda function.
+             or a lambda function. For SQLA, something like Process.created_at
     
-    limit:   If set, limits the total number of results. For formats
-             other than 'orm' this defaults to 10000
+    limit:   int, optional
+             If set, limits the total number of results. A value of
+             zero is the same as not specifying any limits.
     
-    when   : Restrict the output to processes running at 'when' time. 'when'
+    when   : datetime or string or Process object, optional
+             Restrict the output to processes running at 'when' time. 'when'
              can be specified as a Python datetime. You can also choose
              to specify 'when' as process PK or a Process object. In which 
              case the output will be restricted to those processes that 
              had an overlap with the specified 'when' process. 'when' may also
              be specified as a string of the form: 'mm/dd/YYYY HH:MM'
     
-    hosts  : Restrict the output to those processes that ran on 'hosts'.
+    hosts  : list of strings or list of Host objects, optional
+             Restrict the output to those processes that ran on 'hosts'.
              'hosts' is a list of hostnames/Host objects. A process is
              consider to match if process.host is in the list of 'hosts'
     
-    fmt :   Output format, is one of 'dict', 'orm', 'pandas', 'terse'
+    fmt :   string, optional
+            Output format, is one of 'dict', 'orm', 'pandas', 'terse'
             'dict': This is the default, and in this case
                     each process is output as a python dictionary, 
                     and the entire output is a list of dictionaries.
@@ -561,7 +616,8 @@ def get_procs(jobs = [], tags = None, fltr = None, order = None, limit = None, w
             'orm': output is an ORM Query object (ADVANCED)
             'terse': output contains only the database ids of matching processes
     
-    merge_threads_sums: By default, this is True, and this means threads sums are
+    merge_threads_sums: boolean, optional
+             By default, this is True, and this means threads sums are
              are folded into the process. If set to False, the threads'
              sums will be available as a separate field THREAD_SUMS_FIELD_IN_PROC.
              Flattening makes subsequent processing easier as all the
@@ -570,10 +626,19 @@ def get_procs(jobs = [], tags = None, fltr = None, order = None, limit = None, w
              ignored if output format 'fmt' is set to 'orm', and ORM
              objects will not be merge_threads_sumsed.
     
-    exact_tag_only: If set, tag will be considered matched if saved tag
+    exact_tag_only: boolean, optional
+             If set, tag will be considered matched if saved tag
              identically matches the passed tag. The default is False, which
              means if the tag in the database are a superset of the passed
              tag a match will considered.
+
+    Returns
+    -------
+
+    A collection (possibly empty) or processes in the selected format
+
+    Examples
+    --------
     
     For example, to get all processes for a particular Job, with jobid '32046', which
     are multithreaded, you would do:
@@ -607,6 +672,9 @@ def get_procs(jobs = [], tags = None, fltr = None, order = None, limit = None, w
     #     limit = 10000
     #     logger.warning('No limit set, defaults to {0}. Set limit=0 to avoid limits'.format(limit))
 
+    if jobs in (None, [], ''):
+        logger.warning('It is strongly recommended that you specify "jobs" to restrict the query')
+
     if when:
         if type(when) == str:
             try:
@@ -638,6 +706,14 @@ def get_thread_metrics(*processes):
     the database ID of a process.
     If multiple processes are specified then dataframes are concatenated
     using pandas into a single dataframe
+
+    Parameters
+    ----------
+      *processes: One or more int or Process objects
+
+    Returns
+    -------
+    A thread dataframe of all the specified processes, one row per thread.
     """
     # handle the case where the user supplied a python list rather
     # spread out arguments
