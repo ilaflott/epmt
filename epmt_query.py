@@ -745,14 +745,36 @@ def get_thread_metrics(*processes):
 @db_session
 def job_proc_tags(jobs, exclude=[], fold=False):
     """
-    Returns the unique tags across all processes of a job or collection of jobs
+    Returns the unique process tags across all processes of a job or collection of jobs
 
-    jobs   : is a single job id or a Job object, or a list of jobids/list of job objects
+    Parameters
+    ----------
 
-    fold   : if set to True, this will compact the output to make it more readable
-             otherwise, the expanded list of dictionaries is returned
+    jobs   : string or ORM query or list of strings or list of Job objects
+             Collection of jobs across whom you want to get the set of unique
+             process tags
 
-    exclude: an optional list of keys to exclude from each tag (if present)
+    exclude: list of strings, optional
+             a list of keys (strings) to exclude from each tag if present
+
+    fold   : boolean, optional
+             if set to True, this will compact the output to make it more readable
+             for a human at the cost of making the result not usable as input to
+             other calls. If False, an expanded list of dictionaries is returned.
+             You should use False, if you want to feed the result as a `tags`
+             parameter in other functions.
+
+    Returns
+    -------
+    A collection of tags that comrise the the unique set of tags across
+    all the processes in the collecition of jobs.
+
+    A list of dicts (if fold == False) or a dict (if fold == True)
+
+    Notes
+    -----
+    Process tags are very different from job tags. This function returns
+    process tags.
     """
     _empty_collection_check(jobs)
     jobs = orm_jobs_col(jobs)
@@ -777,13 +799,27 @@ def rank_proc_tags_keys(jobs, order = 'cardinality', exclude = []):
     the returned list. One can also sort by decreasing frequency, so a key that
     occurred in the most tags would be at before a key that occurred in more
     tags.
-      jobs: Collection of one or more jobs or jobids
-      order: One of either -- 'cardinality' or 'frequency'. Often they
+
+    Parameters
+    ----------
+      jobs: list of strings or ORM query or list of Job objects
+            Collection of one or more jobs or jobids
+      order: string, optional
+             One of either -- 'cardinality' or 'frequency'. Often they
              will yield the same result as that's the way the tags
              are set in the scripts.
-      exclude: List of keys to exclude
+      exclude: list of strings, optional
+               List of keys to exclude
 
-    e.g.,
+    Returns
+    -------
+    A list of tuples. Each tuple contains two elements. The first is
+    a tag key, and the second is a set of values that the key takes
+    across the processes of the job collection. The list if sorted
+    based on the `order` parameter.
+
+    Examples
+    --------
       >>> eq.rank_proc_tags_keys(['685000'])
           [('op', {'ncatted', 'ncrcat', 'dmput', 'fregrid', 'rm', 'timavg', 'hsmget', 'mv', 'cp', 'splitvars', 'untar'}), ('op_instance', {'9', '19', '6', '4', '20', '12', '8', '16', '2', '15', '5', '13', '10', '3', '11', '7', '14', '1', '18'}), ('op_sequence', {'83', '9', '67', '82', '60', '89', '85', '79', '20', '72', '8', '12', '27', '2', '51', '55', '87', '17', '48', '61', '40', '14', '7', '53', '26', '56', '37', '35', '4', '18', '36', '54', '62', '84', '70', '24', '50', '63', '58', '5', '13', '64', '57', '76', '44', '34', '1', '39', '21', '29', '81', '78', '42', '46', '19', '66', '43', '16', '28', '49', '30', '15', '10', '22', '73', '86', '77', '33', '47', '68', '31', '75', '6', '45', '32', '71', '41', '65', '80', '25', '74', '3', '11', '69', '52', '23', '59', '88', '38'})]
       >>> eq.rank_proc_tags_keys(['685000'], order = 'frequency')
@@ -813,41 +849,62 @@ def rank_proc_tags_keys(jobs, order = 'cardinality', exclude = []):
 def get_refmodels(name=None, tag = {}, fltr=None, limit=0, order=None, before=None, after=None, exact_tag_only=False, merge_nested_fields=True, fmt='dict'):
     """
     Returns collection of reference models filtered using specified criteria
-    
-    name  : query reference models by name. Usually if you query by name
-            you wouldn't need to use tag/fltr/limit/order.
-    tag   : refers to a single dict of key/value pairs or a string
-    fltr  : a lambda function or a string containing a pony expression
-    limit : used to limit the number of output items, 0 means no limit
-    order : used to order the output list, its a lambda function or a string
-    before : Restrict the output to models created before time specified.
-             'before' can be specified either as a python datetime or
-             a Unix timestamp or a string. If a negative integer is specified,
-             then the time is interpreted as a negative days offset from
-             the current time.
-                 '08/13/2019 23:29' (string)
-                 1565606303 (Unix timestamp)
-                 datetime.datetime(2019, 8, 13, 23, 29) (datetime object)
-                 -1 => 1 day ago
-                 -30 => 30 days ago
-    after  : Restrict the output to models created after time specified.
-             'after' can be specified either as a python datetime or
-             a Unix timestamp or a string. If a negative integer is specified,
-             then the time is interpreted as a negative days offset from
-             the current time.
-                 '08/13/2019 23:29' (string)
-                 1565606303 (Unix timestamp)
-                 datetime.datetime(2019, 8, 13, 23, 29) (datetime object)
-                 -1 => 1 day ago
-                 -30 => 30 days ago
-    exact_tag_only: is used to match the DB tag with the supplied tag:
-            the full dictionary must match for a successful match. Default False.
-    merge_nested_fields: used to hoist attributes from the 'computed'
-            fields in the reference model, so they appear as first-class fields.
-    fmt   : one of 'orm', 'pandas', 'dict' or 'terse'. Default is 'dict'
 
-    EXAMPLE:
-      get_refmodels(tag = 'exp_name:ESM4;exp_component:ice_1x1', fmt='pandas')
+    Parameters
+    ----------
+    
+    name  : string, optional
+            Query reference models by name. Usually if you query by name
+            you wouldn't need to use tag/fltr/limit/order.
+    tag   : dict, optional
+            filter models based on supplied key/value pairs. A logical
+            AND is performed across the keys
+    fltr  : callable or string or ORM-specific conditional
+            The filter expression is ORM-dependent. For Pony you can
+            supply a lambda function or a string. For SQLA, something
+            like (ReferenceModel.created_at < datetime(....))
+    limit : int, optional
+            used to limit the number of output items, 0 means no limit
+    order : callable or string, optional
+            ORM-specific expression to order the returned models
+    before : datetime or int or string, optional
+             Restrict the output to models created before time specified.
+             `before` can be specified either as a python datetime or
+             a Unix timestamp or a string. If a negative integer is specified,
+             then the time is interpreted as a negative days offset from
+             the current time.
+                 '08/13/2019 23:29' (string)
+                 1565606303 (Unix timestamp)
+                 datetime.datetime(2019, 8, 13, 23, 29) (datetime object)
+                 -1 => 1 day ago
+                 -30 => 30 days ago
+    after  : datetime or int or string, optional
+             Restrict the output to models created after time specified.
+             `after` can be specified either as a python datetime or
+             a Unix timestamp or a string. If a negative integer is specified,
+             then the time is interpreted as a negative days offset from
+             the current time.
+                 '08/13/2019 23:29' (string)
+                 1565606303 (Unix timestamp)
+                 datetime.datetime(2019, 8, 13, 23, 29) (datetime object)
+                 -1 => 1 day ago
+                 -30 => 30 days ago
+    exact_tag_only: boolean, optional
+            Is used to match the DB tag with the supplied tag:
+            the full dictionary must match for a successful match. Default False.
+    merge_nested_fields: boolean, optional
+            used to hoist attributes from the 'computed'
+            fields in the reference model, so they appear as first-class
+            fields at the top-level. Default True. Most useful for
+            'dict' and 'pandas' formats.
+    fmt   : string, optional
+            one of 'orm', 'pandas', 'dict' or 'terse'. Default is 'dict'
+
+    Example
+    -------
+      # get dataframe of models with specific tags set (the tags are set during 
+      # the model creation phase).
+      >>> get_refmodels(tag = 'exp_name:ESM4;exp_component:ice_1x1', fmt='pandas')
     """
 
     # filter using tag if set
@@ -895,6 +952,9 @@ def get_refmodels(name=None, tag = {}, fltr=None, limit=0, order=None, before=No
 #
 # col: is either a dataframe or a collection of jobs (Query/list of Job objects)
 def _refmodel_scores(col, methods, features):
+    '''
+    Returns computed scores in a dictionary for specified classifiers
+    '''
     df = conv_jobs(col, fmt='pandas') if col.__class__.__name__ != 'DataFrame' else col
     ret = {}
     logger.info('creating trained model using {0} for features {1}'.format([get_classifier_name(c) for c in methods], features))
@@ -933,65 +993,75 @@ def _refmodel_scores(col, methods, features):
     return ret
 #
 @db_session
-def create_refmodel(jobs=[], name=None, tag={}, op_tags=[], 
+def create_refmodel(jobs, name=None, tag={}, op_tags=[], 
                     methods=[], 
                     features=['duration', 'cpu_time', 'num_procs'], exact_tag_only=False,
                     fmt='dict', sanity_check = True, enabled=True, pca=False):
     """
     Creates a reference model based on a set of reference jobs
-    
-    jobs:     points to a list of Jobs (or pony JobSet) or jobids
+   
+    Parameters
+    ----------
+ 
+    jobs: list of strings or list of Job objects or ORM query
+          Reference jobs collection on which to base the model
 
-    name:     An optional string that serves to identify the model
-              that will be created. 
+    name: string, optional
+          An optional string that serves to identify the model to be created
     
-    tag:      A string or dict consisting of key/value pairs. This
-              tag is saved for the refmodel, and may be used
-              in a filter while retrieving the model.
+    tag: dict or string, optional
+         A string or dict consisting of key/value pairs. This tag is saved 
+         for the refmodel, and may be used to query the model
     
-    op_tags:  A list of strings or dicts. This is optional,
-              if set, it will restrict the model to the filtered ops.
-              op_tags are distinct from "tag". op_tags are used to
-              obtain the set of processes over which an aggregation
-              is performed using op_metrics. 
+op_tags: list of dicts or list of strings
+         If set, it will restrict the model to the filtered ops.
+         op_tags are distinct from "tag". op_tags are used to
+         obtain the set of processes over which an aggregation
+         is performed using op_metrics. 
     
-    methods: Is a list of methods that are used to obtain outlier
-             scores. Each method is passed a vector consisting
-             of the value of 'feature' for all the jobs. The
-             method will return a vector of scores. This
-             vector of scores will be saved (or some processed
-             form of it). If methods is not specified then it
-             will be determined using the univariate classifers
-             defined in settings.
+methods: list of callables, optonal
+         Is a list of methods that are used to obtain outlier
+         scores. Each method is passed a vector consisting
+         of the value of 'feature' for all the jobs. The
+         method will return a vector of scores. This
+         vector of scores will be saved (or some processed
+         form of it). If methods is not specified then it
+         will be determined using the univariate classifers
+         defined in settings.
     
-    features: List of fields of each job that should be used
-             for outlier detection. If passed an empty list
-             or a wildcard('*') it will be interpreted as the user
-             wanting to use all available metrics for outlier
-             detection.
-             Defaults to: settings.outlier_features
+features: list of strings or '*', optional
+          List of fields of each job that should be used
+          for outlier detection. If passed an empty list
+          or a wildcard('*') it will be interpreted as the user
+          wanting to use all available metrics for outlier
+          detection.
+          Defaults to: settings.outlier_features
     
-    exact_tag_only: Default False. If set, all tag matches require
-             exact dictionary match, and a superset match won't do.
+exact_tag_only: boolean, optional
+          Default False. If set, all tag matches require
+          exact dictionary match, and a superset match won't do.
 
-    enabled: Allow the trained model to be used for outlier detection.
-             Enabled is set to True by default.
+enabled: boolean, optional
+         Allow the trained model to be used for outlier detection.
+         `enabled` is True by default.
 
-    pca:    False by default. If enabled, the PCA analysis will be done
-            on the features prior to creating the model. Rather than setting
-            this option to True, you may also set this option to something
-            like: pca = 2, in which case it will mean you want two components
-            in the PCA. Or something like, pca = 0.95, which will be 
-            intepreted as meaning do PCA and automatically select the number
-            components to arrive at the number of components in the PCA.
-            If set to True, a 0.85 variance ratio will be set to enable
-            automatic selection of PCA components.
+    pca: boolean or int or float, optional
+         False by default. If enabled, the PCA analysis will be done
+         on the features prior to creating the model. Rather than setting
+         this option to True, you may also set this option to something
+         like: pca = 2, in which case it will mean you want two components
+         in the PCA. Or something like, pca = 0.95, which will be 
+         intepreted as meaning do PCA and automatically select the number
+         components to arrive at the number of components in the PCA.
+         If set to True, a 0.85 variance ratio will be set to enable
+         automatic selection of PCA components.
 
     
-    e.g,.
+    Examples
+    --------
     
     create a job ref model with a list of jobids
-    eq.create_refmodel(jobs=[u'615503', u'625135'], methods= [es.modified_z_score])
+    >>> eq.create_refmodel(jobs=[u'615503', u'625135'], methods= [es.modified_z_score])
     
     or use pony orm query result:
     >>> jobs = eq.get_jobs(tags='exp_component:atmos', fmt='orm')
@@ -1136,6 +1206,15 @@ def delete_refmodels(*ref_ids):
     The reference models are specified using their IDs. The function 
     returns the number of reference models deleted (either all the 
     requested models will be deleted or none will be deleted (0))
+
+    Parameters
+    ----------
+      *ref_ids: one or more int
+                IDs of reference models to delete
+
+    Returns
+    -------
+    Number of models deleted (int)
     """
     if not ref_ids:
         logger.warning("You must specify one or more reference model IDs to delete")
@@ -1150,10 +1229,15 @@ def retire_refmodels(ndays = settings.retire_models_ndays):
     """
     Retire models older than a certain number of days
 
-    ndays should be greater than 0. If ndays is
-    specified as <= 0 then it's a nop. 
+    Parameters
+    ----------
+      ndays: int, optional
+            `ndays` should be greater than 0. If `ndays` is specified as <= 0 
+            then it's a nop. 
 
-    RETURNS: On success it returns the number of models deleted.
+    Returns
+    -------
+    On success it returns the number of models deleted (int)
     """
     if ndays <= 0: return 0
 
@@ -1169,6 +1253,18 @@ def retire_refmodels(ndays = settings.retire_models_ndays):
 def refmodel_set_enabled(ref_id, enabled = False):
     """
     Enable or disable a trained model
+
+    Parameters
+    ----------
+      ref_id: int
+              ID of reference model to enable/disable
+
+     enabled: boolean, optional
+              Defaults to False (disables the model)
+
+    Returns
+    -------
+    Returns the reference model object
     """
     r = ReferenceModel[ref_id]
     r.enabled = enabled
@@ -1177,14 +1273,33 @@ def refmodel_set_enabled(ref_id, enabled = False):
 def refmodel_is_enabled(ref_id):
     """
     Returns the status (enabled/disabled) of a trained model
+
+    Parameters
+    ----------
+      ref_id: int
+              ID of reference model whose status you want to determine
+
+    Returns
+    -------
+    Returns True of False depending on whether the model is enabled or not
     """
     return ReferenceModel[ref_id].enabled
 
 def refmodel_get_metrics(model, active_only = False):
     """
-    Returns the set of metrics available in a trained model
+    Returns the set of metrics (features) available in a trained model
 
-    If 'active_only' is set then only the active metrics are returned.
+    Parameters
+    ----------
+      model: int or ReferenceModel object
+             The model whose metrics (features) you want to determine
+active_only: boolean, optional
+             If 'active_only' is set then only the active metrics are returned,
+             otherwise all metrics for the model are returned
+
+    Returns
+    -------
+    List of features used when creating the model (list of strings)
     """
     r = ReferenceModel[model] if (type(model) == int) else model
     metrics = set()
@@ -1229,6 +1344,22 @@ def refmodel_get_metrics(model, active_only = False):
 def refmodel_set_active_metrics(ref_id, metrics):
     """
     Sets the active metrics for a trained model to specified list of metrics
+
+    Parameters
+    ----------
+      ref_id: int
+              ID of reference model
+     metrics: list of strings
+              List of features to make active in the model
+
+    Returns
+    -------
+    Current active list of features (list of strings)
+
+    Notes
+    -----
+    The model should actually have those features otherwise
+    unavailable features will be ignored with a warning
     """
     r = ReferenceModel[ref_id]
     all_metrics = refmodel_get_metrics(ref_id, False)
