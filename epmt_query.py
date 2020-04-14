@@ -742,7 +742,7 @@ def get_thread_metrics(*processes):
 
 
 @db_session
-def job_proc_tags(jobs, exclude=[], fold=False):
+def job_proc_tags(jobs, exclude=[], tag_filter = '', fold=False):
     """
     Returns the unique process tags across all processes of a job or collection of jobs
 
@@ -778,8 +778,11 @@ def job_proc_tags(jobs, exclude=[], fold=False):
     _empty_collection_check(jobs)
     jobs = orm_jobs_col(jobs)
     tags = []
+    tag_filter = tag_from_string(tag_filter) if tag_filter else {}
     for j in jobs:
         unique_tags_for_job = __unique_proc_tags_for_job(j, exclude, fold = False)
+        if tag_filter:
+            unique_tags_for_job = [ t for t in unique_tags_for_job if t.items() >= tag_filter.items() ]
         tags.extend(unique_tags_for_job)
     # remove duplicates
     tags = unique_dicts(tags, exclude)
@@ -787,6 +790,92 @@ def job_proc_tags(jobs, exclude=[], fold=False):
 
 # alias job_proc_tags for compat
 get_job_proc_tags = job_proc_tags
+
+
+@db_session
+def get_job_tags(jobs, tag_filter = '', fold = True):
+    '''
+    Returns the (filtered) tags across a collection of jobs
+
+    Parameters
+    ----------
+      jobs : list of strings or list of Job objects or ORM query, optional
+             Job collection on which we want to run the tags query
+tag_filter : dict or string
+             If set, only those tags that are superset of `tag_filter`
+             will be included
+     fold  : boolean, optional
+             The range of possible values for each key are compacted
+             into a list to make it more readable for a human. This
+             should be set to False if you plan on using this input
+             to feed to another API call
+
+    Returns
+    -------
+    A list of dicts if fold is False
+    A dict if fold is True
+
+    Examples
+    --------
+    # suppose we want to figure out the time segments for a 
+    # particular experiment and component
+    >>> d = get_job_tags([], tag_filter = 'exp_name:ESM4_historical_D151;exp_component:ocean_annual_z_1x1deg')
+    DEBUG: epmt_query: 9 jobs matched
+    >>> d
+    {'atm_res': 'c96l49',
+     'ocn_res': '0.5l75',
+     'exp_name': 'ESM4_historical_D151',
+     'exp_component': 'ocean_annual_z_1x1deg',
+     'exp_time': ['18890101',
+      '18640101',
+      '18940101',
+      '18690101',
+      '18590101',
+      '18790101',
+      '18540101',
+      '18740101',
+      '18840101'],
+     'script_name': ['ESM4_historical_D151_ocean_annual_z_1x1deg_18540101',
+      'ESM4_historical_D151_ocean_annual_z_1x1deg_18840101',
+      'ESM4_historical_D151_ocean_annual_z_1x1deg_18640101',
+      'ESM4_historical_D151_ocean_annual_z_1x1deg_18890101',
+      'ESM4_historical_D151_ocean_annual_z_1x1deg_18590101',
+      'ESM4_historical_D151_ocean_annual_z_1x1deg_18940101',
+      'ESM4_historical_D151_ocean_annual_z_1x1deg_18740101',
+      'ESM4_historical_D151_ocean_annual_z_1x1deg_18690101',
+      'ESM4_historical_D151_ocean_annual_z_1x1deg_18790101']}
+    >>> sorted(d['exp_time'])
+    ['18540101','18590101','18640101','18690101','18740101','18790101','18840101','18890101','18940101']
+
+    # with fold = False, we will get a list of dicts with any duplicates removed
+    >>> l = get_job_tags([], tag_filter = 'exp_name:ESM4_historical_D151;exp_component:ocean_annual_z_1x1deg')
+    DEBUG: epmt_query: 9 jobs matched
+    >>> len(l)
+    9
+    >>> l
+    [{'atm_res': 'c96l49',
+      'ocn_res': '0.5l75',
+      'exp_name': 'ESM4_historical_D151',
+      'exp_time': '18540101',
+      'script_name': 'ESM4_historical_D151_ocean_annual_z_1x1deg_18540101',
+      'exp_component': 'ocean_annual_z_1x1deg'},
+     {'atm_res': 'c96l49',
+      'ocn_res': '0.5l75',
+      'exp_name': 'ESM4_historical_D151',
+      'exp_time': '18590101',
+      'script_name': 'ESM4_historical_D151_ocean_annual_z_1x1deg_18590101',
+      'exp_component': 'ocean_annual_z_1x1deg'},
+     ...
+    ]
+    
+    '''
+    jobs = get_jobs(jobs, tags = [tag_filter], fmt='orm') if tag_filter else orm_jobs_col(jobs)
+    logger.debug('{} jobs matched'.format(jobs.count()))
+    tags = []
+    for j in jobs:
+        tags.extend([j.tags])
+    tags = unique_dicts(tags)
+    return fold_dicts(tags) if fold else tags
 
 
 def rank_proc_tags_keys(jobs, order = 'cardinality', exclude = []):

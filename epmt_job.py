@@ -944,10 +944,12 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     logger.info("Computed duration of job: %f us, %.2f m",j.duration,j.duration/60000000)
 
     if root_proc:
-        if root_proc.exitcode != j.exitcode:
-            logger.warning('metadata shows the job exit code is {0}, but root process exit code is {1}'.format(j.exitcode, root_proc.exitcode))
+        # if root_proc.exitcode != j.exitcode:
+        #     logger.warning('metadata shows the job exit code is {0}, but root process exit code is {1}'.format(j.exitcode, root_proc.exitcode))
         j.exitcode = root_proc.exitcode
         logger.info('job exit code (using exit code of root process): {0}'.format(j.exitcode))
+    if j.exitcode != 0:
+        logger.warning('Job failed with a non-zero exit code({})'.format(j.exitcode))
     j.tags = job_tags if job_tags else {}
 
     if settings.bulk_insert and all_procs:

@@ -6,13 +6,14 @@ def epmt_help_api(funcs = []):
     import epmt_outliers as eod
     import epmtlib as el
     import epmt_stat as es
+    import epmt_exp_explore as exp
     from epmtlib import docs_module_index
     from inspect import signature
     from sys import stderr
     if funcs:
         for fname in funcs:
             func = None
-            for m in (eq, eod, es, el):
+            for m in (eq, eod, es, el, exp):
                 if hasattr(m, fname):
                     func = getattr(m, fname)
                     break
@@ -23,6 +24,6 @@ def epmt_help_api(funcs = []):
             else:
                 print('Could not find function {} in any module'.format(fname), file=stderr)
     else:
-        for m in (eq, eod):
+        for m in (eq, eod, exp):
             print(m.__doc__)
             print(docs_module_index(m, fmt='string'), '\n\n')

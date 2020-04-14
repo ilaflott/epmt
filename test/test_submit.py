@@ -10,6 +10,7 @@ def setUpModule():
     setup_db(settings, drop=True)
     datafiles='test/data/misc/685000.tgz'
     print('setUpModule: importing {0}'.format(datafiles))
+    settings.post_process_job_on_ingest = True
     epmt_submit(glob(datafiles), dry_run=False)
     
 def tearDownModule():
