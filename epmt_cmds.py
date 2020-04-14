@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 from datetime import datetime
-from os import environ, makedirs, mkdir, path, getpid, chdir, unlink, listdir, rename, uname
+from os import environ, makedirs, mkdir, path, getpid, chdir, remove, listdir, rename, uname
 from socket import gethostname
 from subprocess import call as forkexecwait
 from glob import glob
@@ -919,7 +919,7 @@ def submit_to_db(input, pattern, dry_run=True, remove_file=False):
     if remove_file:
         if r[0]:
             logger.info('Removing {} on successful ingest into db'.format(input))
-            unlink(input)
+            remove(input)
         else:
             logger.debug('Not removing {} as ingest failed'.format(input))
     # if not r[0]:
@@ -966,7 +966,8 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True):
                     logger.debug("copyfile(%s,%s)",indir+"job_metadata",newdir+"/job_metadata")
                     copyfile(indir+"job_metadata",newdir+"/job_metadata")
                     logger.debug("rename(%s,%s)",collated_file,newdir+"/"+collated_file)
-                    rename(collated_file,newdir+"/"+collated_file)
+                    copyfile(collated_file,newdir+"/"+collated_file)
+                    remove(collated_file)
                     logger.debug("rename(%s,%s)",path.dirname(indir),path.dirname(indir)+".original")
                     rename(path.dirname(indir),path.dirname(indir)+".original")
                     logger.debug("rename(%s,%s)",path.dirname(indir)+".collated",path.dirname(indir))
