@@ -10,7 +10,6 @@ stateless mathematical functions. No database connectivity is assumed
 for the functions in this module.
 """
 from __future__ import print_function
-from os import environ
 import pandas as pd
 import numpy as np
 import operator

@@ -22,8 +22,8 @@ def epmt_notebook(arglist):
         args.extend(cmd_args)
         # This does not want argv[0]
         logger.info("ipython kernel argv: %s",str(args))
-        from IPython import start_ipython, start_kernel
-        rv = start_ipython(argv=args)
+        from IPython import start_ipython
+        start_ipython(argv=args)
     else:                 # Run IPython Notebook with passed ops
         import sys
         from os.path import realpath
@@ -36,7 +36,7 @@ def epmt_notebook(arglist):
         args.extend(all_args)
         logger.info("notebook argv: %s",str(args))
         from notebook import notebookapp
-        rv = notebookapp.launch_new_instance(argv=args)
+        notebookapp.launch_new_instance(argv=args)
     return True
 
 # Parse command line to check for kernel mode and clean up extraneous commands

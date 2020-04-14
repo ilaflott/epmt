@@ -6,7 +6,7 @@ for manipulating data structures.
 """
 from functools import wraps
 from time import time
-from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING, CRITICAL
+from logging import getLogger, DEBUG, ERROR, INFO, WARNING, CRITICAL
 from os import environ, unlink, devnull, getuid
 from contextlib import contextmanager
 from subprocess import call
@@ -193,7 +193,7 @@ def safe_rm(f):
     try:
         unlink(f)
         return True
-    except Exception as e:
+    except Exception:
         pass
     return False
 

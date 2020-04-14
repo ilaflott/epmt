@@ -1,25 +1,21 @@
 #!/usr/bin/env python
 from __future__ import print_function
 from datetime import datetime
-from os import environ, makedirs, mkdir, path, getpid, getsid, getcwd, chdir, unlink, listdir, rename
+from os import environ, makedirs, mkdir, path, getpid, chdir, unlink, listdir, rename, uname
 from socket import gethostname
 from subprocess import call as forkexecwait
-from random import randint
-from imp import find_module
 from glob import glob
-from sys import stdout, stderr
+from sys import stderr
 from json import dumps, loads
 from shutil import copyfile, rmtree
 import errno
-
-from shutil import rmtree
 import fnmatch
 import pickle
-from logging import getLogger, basicConfig, DEBUG, INFO, WARNING, ERROR
+from logging import getLogger
+
 logger = getLogger(__name__)  # you can use other name
 import epmt_settings as settings
-
-from epmtlib import get_username, epmt_logging_init, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm, timing, dict_filter, check_fix_metadata
+from epmtlib import get_username, epmt_logging_init, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm, dict_filter, check_fix_metadata
 
 def find_diffs_in_envs(start_env,stop_env):
     env = {}
@@ -328,8 +324,6 @@ def create_start_job_metadata(jobid, submit_ts, from_batch=[]):
     metadata['job_pl_start_ts'] = ts
     metadata['job_pl_env'] = start_env
     metadata['job_pl_username'] = get_username()
-    from socket import gethostname
-    from os import uname
     try:
         # this should normally never fail
         metadata['job_pl_hostname'] = gethostname() or uname()[1]
@@ -611,7 +605,6 @@ def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run
         undercsh = False # All commands under run are started under Bash in Python
         cmd_sep=" "
     if undercsh:
-        aliasing = True
         sh_set_var="set "
 
     def add_var(cmd,str):
@@ -782,7 +775,6 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1, remo
     import multiprocessing
 
     def submit_fn(tid, work_list, ret_dict):
-        from os import getpid
         logger.debug('Worker %d, PID %d', tid, getpid())
         retval = {}
         for f in work_list:
@@ -1022,8 +1014,6 @@ def epmt_stage(dirs, keep_going=True, collate=True, compress_and_tar=True):
         if not d.endswith("/"):
             logger.warning("missing trailing / on %s",d)
             d += "/"
-        jobid = path.basename(path.dirname(d))
-        file = d + "job_metadata"
         r = stage_job(d,collate=collate,compress_and_tar=compress_and_tar,keep_going=keep_going)
         if r is False and not keep_going:
             return False

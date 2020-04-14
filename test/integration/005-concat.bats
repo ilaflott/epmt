@@ -23,7 +23,10 @@ teardown() {
   run test -f pp053-collated-papiex-csv-0.csv
   assert_success
   run sum pp053-collated-papiex-csv-0.csv
-  assert_output "13120     2"
+  assert_output --partial "13120"
+  #--regexp "13120\s+2"
+  #^13120\s+2\s+.*$"
+  #"13120     2"
 }
 
 @test "epmt_concat with valid input files" {
@@ -33,7 +36,7 @@ teardown() {
   run test -f pp053-collated-papiex-csv-0.csv
   assert_success
   run sum pp053-collated-papiex-csv-0.csv
-  assert_output "13120     2"
+  assert_output --partial "13120"
 }
 
 @test "epmt_concat with non-existent directory" {

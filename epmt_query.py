@@ -11,11 +11,10 @@ list of database IDs, and a powerful ORM object collection.
 The format can be selected using the `fmt` argument.
 """
 from __future__ import print_function
-from datetime import datetime, timedelta
+from datetime import datetime
 import pandas as pd
 from orm import *
 from json import loads, dumps
-from os import environ
 from logging import getLogger
 import epmt_settings as settings
 
@@ -26,7 +25,7 @@ logger = getLogger(__name__)  # you can use other name
 epmt_logging_init(settings.verbose if hasattr(settings, 'verbose') else 0, check=True)
 
 ### Put EPMT imports below, after logging is set up
-from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key, stringify_dicts, version, version_str, conv_to_datetime
+from epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key, conv_to_datetime
 from epmt_stat import get_classifier_name, is_classifier_mv, mvod_scores, uvod_classifiers
 
 init_settings(settings) # type: ignore
