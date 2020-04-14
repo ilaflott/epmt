@@ -20,11 +20,11 @@
 
 from __future__ import print_function
 from __future__ import unicode_literals
-from sys import argv, version_info, exit
+from sys import exit
 from re import findall
-from os import getcwd, path, rename
+from os import path, rename, unlink
 from glob import glob
-from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
+from logging import getLogger
 logger = getLogger('epmt_concat')  # you can use other name
 from epmtlib import epmt_logging_init
 
@@ -65,13 +65,11 @@ def parseFile(inputfile, masterHeader, masterHeaderFile, delim, commentDelim):
     to be passed to writeCSV then verifyOut"""
     logger = getLogger('parseFile')
     fileLines = []
-    comment = ""
     comments = []
     header = ""
     datas = []
     line = ""
     data = ""
-    hostFlag = False
     headerFound = False
     headerDelimCount = 0
 
@@ -98,8 +96,7 @@ def parseFile(inputfile, masterHeader, masterHeaderFile, delim, commentDelim):
             if data:
                 datas.append(data)
             logger.debug("File %s: data %s",inputfile,str(data))
-        except Exception as e:
-#            logger.error("%s: Failed to parse file %s, line (%s)",str(e),inputfile,line)
+        except:
             return ([], masterHeader, masterHeaderFile, [])
     return (comments, masterHeader, masterHeaderFile, datas)
 
@@ -143,7 +140,7 @@ def parseLine(infile, line, masterHeader, masterHeaderFile, headerDelimCount, he
             return (None, None, headerDelimCount, headerFound, masterHeader, masterHeaderFile)
     # header is known: line is data
     # match data against header
-    elif headerFound is True and line is not "":
+    elif headerFound is True and line != "":
         # if(hostFlag):
         #     fn = path.basename(infile).split("-papiex")
         #     if(len(fn) > 1):
@@ -192,7 +189,8 @@ def writeCSV(outfile, comments, masterHeader, dataList):
             for item in dataList:
                 f.write("%s\n" % item)
     except Exception as e:  # parent of IOError, OSError
-        logger.error("Error writing output file %s: %s",outfile,str(e))
+        logger.error("Error writing output file %s, removing...: %s",outfile,str(e))
+        unlink(outfile)
         return False
     return True
 
@@ -288,7 +286,7 @@ def csvjoiner(indir,
         else:
             logger.error('Hostname missing from header and file does not have hyphen ')
             return False, None, badfiles
-        if outfile is "":
+        if outfile == "":
             logger.debug("indir: {} host: {} jobid: {}".format(indir, host, jobid))
             outfile = host + "-collated" + "-papiex-" + jobid + "-0.csv"
             logger.info("Output file set as {}".format(str(outfile)))
@@ -316,7 +314,7 @@ def csvjoiner(indir,
                 host = "unknown"
             # Generate outfile name
             logger.debug("indir:{} host:{} jobid:{}".format(indir, host, jobid))
-            if(outfile is ""):
+            if (outfile == ""):
                 outfile = host + "-collated" + "-papiex-" + jobid + "-0.csv"
             else:
                 # Outfile is custom check if it exists
@@ -355,8 +353,8 @@ def csvjoiner(indir,
             return False, None, badfiles_renamed
         
     if masterHeader and masterHeaderFile and dataList:
-        writeCSV(outfile, commentsList, masterHeader, dataList)
-        if verifyOut(list(set(fileList)-set(badfiles)), outfile):
+        rv = writeCSV(outfile, commentsList, masterHeader, dataList)
+        if (rv is True) and verifyOut(list(set(fileList)-set(badfiles)), outfile):
             return True, outfile, badfiles_renamed
         else:
             return False, None, badfiles_renamed
