@@ -1899,6 +1899,17 @@ def get_job_status(jobid):
     '''
     Returns the job status dictionary
 
+    Parameters
+    ----------
+      jobid : string or Job object
+
+    Returns
+    -------
+    The job status dictionary. If the job status has not been 
+    populated, the function will return an empty dictionary.
+
+    Notes
+    -----
     Status dictionary consists of the following job fields:
       - script_path
       - script
@@ -1906,9 +1917,6 @@ def get_job_status(jobid):
       - stderr
       - exit_reason
       - exit_status
-
-    If the job status has not been populated, the function will return an
-    empty dictionary.
     '''
     j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
     return j.info_dict.get('status', {})
@@ -1918,13 +1926,22 @@ def annotate_job(jobid, annotation, replace=False):
     '''
     Annotates a job with the supplied annotation
 
-      - annotation is a dictionary of key/value pairs
-        If replace is True, then *all* existing annotations
-        will be overritten. Normally, this is set to False,
-        in which case, the supplied annotations are merged into
-        the existing annotations.
+    Parameters
+    ----------
+         jobid : string
+    annotation : dict
+                 The dictionary is either merged into the 
+                 existing annotations or replaces the existing
+                 annotations, depending on the value of `replace`
+      replace  : boolean, optional
+                 If replace is True, then *all* existing annotations
+                 will be overritten. Normally, this is set to False,
+                 in which case, the supplied annotations are merged into
+                 the existing annotations.
 
-    Returns the new annotations for the job.
+    Returns
+    -------
+    The dictionary representing the new annotations for the job.
     '''
     j = Job[jobid] if (type(jobid) == str) else jobid
     if type(annotation) == str:
@@ -1938,7 +1955,15 @@ def annotate_job(jobid, annotation, replace=False):
 @db_session
 def get_job_annotations(jobid):
     '''
-    Returns the annotations (if any) for the specified job
+    Gets the annotations (if any) for the specified job
+
+    Parameters
+    ----------
+      jobid : string
+
+    Returns
+    -------
+    A dictionary (possibly empty) representing the job annotations
     '''
     j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
     return j.annotations
@@ -1946,19 +1971,34 @@ def get_job_annotations(jobid):
 def remove_job_annotations(jobid):
     '''
     Removes all annotations for the specified job
+
+    Parameters
+    ----------
+      jobid : string
+
+    Returns
+    -------
+    The final annotations, which should be an empty dict
     '''
     return annotate_job(jobid, {}, True)
 
 def analyze_pending_jobs(jobs = [], analyses_filter = {}):
     """
     Run the analysis pipeline on pending jobs
+
+    Parameters
+    ----------
     
-    jobs: Restrict applying the analyses to a subset specified by jobs.
-          In the most common usage, you will leave jobs unset.
+    jobs : list of strings or list of Job objects or ORM query, optional
+           Restricts applying the analyses to a subset specified by jobs.
+           In the most common usage, you will leave jobs unset
 
-    analyses_filter: This tag defines what constitutes an unanalyzed job
+    analyses_filter : dict, optional
+           This tag defines what constitutes an unanalyzed job
 
-    Returns: The total number of analyses algorithms executed
+    Returns 
+    -------
+    The total number of analyses algorithms executed
     """
     ua_jobs = get_unanalyzed_jobs(jobs = jobs, analyses_filter = analyses_filter)
     num_analyses_run = 0
@@ -1982,21 +2022,37 @@ def analyze_comparable_jobs(jobids, check_comparable = True, keys = ('exp_name',
     """
     Analyzes one or more *comparable* jobs
 
-    A warning will be issued if they aren't (unless check_comparable is disabled).
-    You may want to use the higher-level function -- analyze_pending_jobs -- instead.
+    Parameters
+    ----------
+              jobids : list of strings
+    check_comparable : boolean, optional
+                       If set (which is the default) a check is performed
+                       to ensure the jobs are comparable and a warning
+                       is issued otherwise
+                keys : tuple or list of strings
+                       The keys in the job tags that are used to decide whether
+                       two jobs are comparable or not
+                       Defaults to ('exp_name', 'exp_component'). These 
+                       keys are also used to query for trained models. The
+                       trained models obtained from the query are used to
+                       run outlier detection on the jobs
 
-    jobids: List of job ids
+    Returns
+    -------
+    Number of analyses algorithms executed. This may be zero if number 
+    of comparable jobs are too few and there are no trained models.
 
-    keys: is a tuple of job tag keys that will be used to query for
-    trained models. If trained model(s) are found then outlier detection
-    is run on the jobs against the trained model(s).
+    Notes
+    -----
+    You may want to use the higher-level function -- analyze_pending_jobs -- instead
+    of this function as it also checks whether jobs are comparable or not.
+
+    A warning will be issued if jobs aren't comparable (unless check_comparable is disabled).
 
     It's possible no trained model is found, then we will do an outlier
     detection on the job set (partition_jobs) assuming that's possible.
 
-    Returns: Number of analyses algorithms executed. This may be zero
-             if number of comparable jobs are too few and there are
-             no trained models.
+
     """
     from epmt_outliers import detect_outlier_jobs
     if check_comparable:
