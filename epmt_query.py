@@ -2051,13 +2051,21 @@ def set_job_analyses(jobid, analyses, replace=False):
     '''
     Saves analyses metadata for a job in the database
 
-      - analyses is a dictionary of key/value pairs
-        If replace is True, then *all* existing analyses
-        will be overritten. Normally, this is set to False,
-        in which case, the supplied analyses are merged into
-        the existing analyses.
+    Parameters
+    ----------
+      jobid : string
+   analyses : dict
+              This dict is saved in the database and
+              represents the job analyses metadata
+    replace : boolean, optional
+              If replace is True, then *all* existing analyses
+              will be overritten. Normally, this is set to False,
+              in which case, the supplied analyses are merged into
+              the existing analyses.
 
-    Returns the updated analyses for the job.
+    Returns
+    -------
+    The updated analyses for the job.
     '''
     j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
     full_analyses = {} if replace else dict(j.analyses)
@@ -2069,14 +2077,47 @@ def set_job_analyses(jobid, analyses, replace=False):
 @db_session
 def get_job_analyses(jobid):
     '''  
-    Returns the analyses metadata for the specified job
+    Gets the analyses metadata for the specified job
+
+    Paramaters
+    ----------
+      jobid : string
+
+    Returns
+    -------
+    A dict (possibly empty) representing the current anaylses
+    performed on the job
     '''
     j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
     return j.analyses
 
 def get_unanalyzed_jobs(jobs = [], analyses_filter = {}, fmt='terse'):
     '''
-    Returns the subset of jobs that have not had any analysis pipeline run on them
+    Gets the subset of jobs that have not had any analysis pipeline run on them
+
+    Parameters
+    ----------
+      jobs : list of strings or list of Job objects or ORM query, optional
+             Job collection to restrict the search space. If empty all
+             jobs will be assumed as the search space
+
+analyses_filter : dict, optional
+             This used to filter and return matching jobs. A match
+             exists if the `analyses_filter` passed to this function
+             is a subset of the `jobs` analyses dict. Defaults to an
+             empty dict, IOW all unanalyzed jobs will be returned
+
+       fmt : string, optional
+             Output format. One of 'dict', 'terse', 'pandas' or 'orm'
+
+    Returns
+    -------
+    Collection (possibly empty) of jobs in the specified format
+    filtered according to the analyses filter
+
+    Notes
+    -----
+    This is one of the few functions that allows an empty `jobs` parameter
     '''
     return get_jobs(jobs, analyses = analyses_filter, fmt=fmt)
 
@@ -2084,13 +2125,25 @@ def get_unanalyzed_jobs(jobs = [], analyses_filter = {}, fmt='terse'):
 def remove_job_analyses(jobid):
     '''
     Removes all analyses metadata for a job
+
+    Parameters
+    ----------
+      jobid : string
+
+    Returns
+    -------
+    The updated value of job analyses (should be an empty dict) 
     '''
     return set_job_analyses(jobid, {}, True)
 
 @db_session
 def get_unprocessed_jobs():
     '''
-    Returns the list of jobs that have not been post-processed during ingestion
+    Gets the list of jobids that have not been post-processed during ingestion
+
+    Returns
+    -------
+    List (possibly empty) of unprocessed jobids (list of strings)
     '''
     uj = orm_findall(UnprocessedJob)
     return [ u.jobid for u in uj ]
@@ -2098,14 +2151,24 @@ def get_unprocessed_jobs():
 @db_session
 def comparable_job_partitions(jobs, matching_keys = ['exp_name', 'exp_component']):
     '''
-    Partitions a collection of jobs in disjoint partitions of comparable jobs
+    Partitions a jobs into disjoint partitions of comparable jobs
 
-    Given a non-empty list of job ids, the function returns a
-    a list of lists, where each sub-list is of the form:
+    Parameters
+    ----------
+         jobs : list of strings or list of Job objects or ORM query
+matching_keys : list of strings, optional
+                The list of key names whose values must match
+                Defaults to ['exp_name', 'exp_component']
+
+    Returns
+    -------
+    A list of lists, where each sub-list is of the form:
     [(val1, val2,..), { j1, j2,..}]
     where val1, val2.. are the values of the matching keys that jobs
     j1, j2, .. share.
 
+    Examples
+    --------
     For example, suppose the following jobs have the following tags:
         685000 -> {'exp_name': 'ESM4_historical_D151', 'exp_component': 'ocean_annual_rho2_1x1deg', 
 'exp_time': '18840101', 'atm_res': 'c96l49', 'ocn_res': '0.5l75', 'script_name': 'ESM4_historical_D151_oce
@@ -2147,12 +2210,21 @@ an_annual_rho2_1x1deg_18840101'}
 
 def are_jobs_comparable(jobs, matching_keys = ['exp_name', 'exp_component']):
     '''
-    Returns True if *all* the specified jobs are comparable
+    Returns True iff *all* the specified jobs are comparable
 
+    Parameters
+    ----------
+         jobs : list of strings or list of Job objects or ORM query
+matching_keys : list of strings, optional
+                The list of key names whose values must match
+                Defaults to ['exp_name', 'exp_component']
+    Notes
+    -----
     Comparable jobs share the same values for *all* the keys specified 
-    in matching_keys. Returns False otherwise.
+    in matching_keys
 
-    Example:
+    Examples
+    --------
     >>> eq.are_jobs_comparable(['625151', '627907', '633114', '629322', '685001', '685000', '685003'])
     INFO:epmt_query:doing a comparable_job_partitions on 7 jobs
     False
@@ -2184,9 +2256,25 @@ def compute_process_trees(jobs):
     '''
     Compute process trees for specified jobs
 
+    Parameters
+    ----------
+      jobs : list of strings or list of Job objects or ORM query
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
     The process tree sets fields such as depth for each process.
     It is safe to call this function on jobs that already have process trees
-    computed as they will just be skipped. 
+    computed as they will just be skipped.  It's also usually not necessary to
+    call this function, as any API call that needs the process tree will 
+    call this autmatically.
+
+    Examples
+    --------
+    >>> compute_process_trees(['685000', '685003'])
     '''
     from epmt_job import mk_process_tree
     jobs = orm_jobs_col(jobs)
@@ -2197,16 +2285,51 @@ def compute_process_trees(jobs):
 @db_session
 def procs_histogram(jobs, attr = 'exename'):
     '''
-    Gets a processes histogram for a collection of jobs
+    Gets a histogram for an attribute across the processes in a jobs collection
 
-    jobs: collection of one or more jobs or jobids
-    attr: the attribute from the process model that is the basis of
-          the histogram. Defaults to 'exename'
+    Parameters
+    ----------
+    jobs : list of strings or list of Job objects or ORM query
+           Collection of one or more jobs or jobids
+    attr : string, optional
+           The attribute from the Process model that is the basis of
+           the histogram. Defaults to 'exename'
 
-    RETURNS: A dictionary of the form:
-             { 'bash': 1256, 'cmp': 10, ... }
-            where the key is a process executable and its value is the number
-            of the times the executable was executed.
+    Returns
+    -------
+    A dictionary of the form:
+       { 'bash': 1256, 'cmp': 10, ... }
+       where the key is the process attribute's instance and the value
+       is the number of times the attribute took that instance value
+
+    Notes
+    -----
+    To determine the attributes of the Process model do `epmt schema`.
+    Because of the implementation, one restriction at present is that
+    the attribute values must be hashable (no dicts allowed)
+
+    Examples
+    --------
+    >>> exe_hist = eq.procs_histogram(['685000', '685003'], attr='exename')                              
+    DEBUG: epmt_query: 7265 processes found
+    >>> exe_hist
+    {'tcsh': 1990,
+     'perl': 184,
+     'bash': 171,
+     'grep': 181,
+     'tr': 28,
+     ...
+    }
+    >>> exe_paths = eq.procs_histogram(['685000', '685003'], attr='path')                                 
+    >>> exe_paths
+    {'/bin/tcsh': 1990,
+     '/home/fms/local/perlbrew/perls/perl-5.24.0/bin/perl': 133,
+     '/bin/bash': 171,
+     '/bin/grep': 181,
+     '/usr/bin/tr': 28,
+     ...
+    }
+
     '''
     logger = getLogger(__name__)  # you can use other name
     procs_hist = {}
@@ -2219,7 +2342,46 @@ def procs_histogram(jobs, attr = 'exename'):
 
 def procs_set(jobs, attr = 'exename'):
     '''
-    Returns the set of unique values of attributes for the collection of jobs
+    Unique list of values of an attribute across processes in a jobs collection
+
+    The attribute must belong to the Process model, such as 'exename'
+
+    Parameters
+    ----------
+    jobs : list of strings or list of Job objects or ORM query
+           The collection of jobs across whose processes you want to determine
+           the range of values for an attribute
+    attr : string, optional
+           An attribute from the Process model. Defaults to 'exename'
+
+    Returns
+    -------
+    List of unique values for the attribute across all processes (list of strings)
+
+    Notes
+    -----
+    The list is sorted using `sorted` and duplicates will be replaced
+    with a single occurrence of each element. If you care about frequency
+    of the attributes, see `procs_histogram`.
+    To determine the attributes of the Process model, do `epmt schema`
+    Because of the implementation, one restriction at present is that
+    the attribute values must be hashable (no dicts allowed)
+
+    Examples
+    --------
+    # get the *unique* list of executables used in these two jobs
+    >>> exenames = eq.procs_set(['685000', '685003'])                                                     
+    DEBUG: epmt_query: 7265 processes found
+    # see, duplicates have been removed as 7265 procs gave 56 unique exenames
+    >>> len(exenames)
+    56
+    # first five elements
+    >>> exenames[:5]                                                                                      
+    ['TAVG.exe', 'arch', 'basename', 'bash', 'cat']
+    # Now let's try getting all the hosts used by the processes of these jobs
+    hosts = eq.procs_set(['685000', '685003'], attr='host_id')                                       
+    >>> hosts                                                                                            
+    ['pp208', 'pp212']
     '''
     phist = procs_histogram(jobs, attr)
     return sorted(phist.keys())
@@ -2227,24 +2389,38 @@ def procs_set(jobs, attr = 'exename'):
 @db_session
 def add_features_df(jobs_df, features = [procs_histogram, procs_set], key = 'jobid'):
     '''
-    Appends metrics such as process histogram, processes set to a jobs dataframe
+    Appends synthetic metrics such as process histogram to a jobs dataframe
 
-    jobs_df: Input dataframe (will not be modified)
+    Parameters
+    ----------
+    jobs_df : dataframe
+              Input dataframe (will not be modified)
 
-    features: List of callables. Each callable will be called with the
-             value of "key" to compute the metric value for the row.
+   features : list of callables, optional
+              Each callable will be called with the value of `key` for
+              each row of the dataframe to compute the feature value for the row
 
-        key: The dataframe column to use to get value that will be
-             passed as an argument to each of the callables
+        key : string, optional
+              The dataframe column to use to get value that will be
+              passed as an argument to each of the callables. 
+              Defaults to 'jobid'
 
-    RETURNS: (df, added_features), where
+    Returns
+    -------
+         df : dataframe
+              Created by appending new feature columns along axis=1
+              The original columns of `jobs_df` will be included.
+              Feature names for the new columns will be based on the
+              name of the callables passed
+added_fetaures: list of strings
+              List of feature columns that were concatenated
 
-                df: A new dataframe, which will contain the columns from
-                    jobs_df, alongwith new columns (one for each callable,
-                    whose names are derived from the callables)
-    added_features: List of new features added to dataframe
+    Notes
+    -----
+    `jobs_df` will not be modified in any way
 
-    EXAMPLES:
+    Examples
+    --------
 
     >>> jobs_df = eq.get_jobs(['625151', '627907', '629322', '633114', '675992', '680163', '685001', '691209', '693129'], fmt='pandas')
     >>> new_df, added_features = eq.add_features_df(jobs_df) 
@@ -2290,14 +2466,21 @@ def get_features(jobs):
     '''
     Returns the union of features across the input jobs
 
-       jobs: Collection of jobs
+    Parameters
+    ----------
+       jobs : list of strings or list of Job objects or ORM query
+              Collection of jobs
 
-    RETURNS: The sorted list of features across the jobs. 
+    Returns
+    -------
+    The sorted list of features across the jobs (list of strings)
 
-      NOTES: Blacklisted features (in settings) will be removed
-             from the returned list.
+    Notes
+    -----
+    Blacklisted features (in settings) will be removed from the returned list
 
-   EXAMPLES:
+    Examples
+    --------
 
      >>> eq.get_features(jobs)
      ['PERF_COUNT_SW_CPU_CLOCK', 'cancelled_write_bytes', 'cpu_time', 'delayacct_blkio_time', 'duration',  'exitcode', 'guest_time', 'inblock', 'invol_ctxsw', 'majflt', 'minflt', 'num_procs', 'num_threads', 'outblock', 'processor', 'rchar', 'rdtsc_duration', 'read_bytes', 'rssmax', 'submit', 'syscr', 'syscw', 'systemtime', 'time_oncpu', 'time_waiting', 'timeslices', 'updated_at', 'usertime', 'vol_ctxsw', 'wchar', 'write_bytes']
@@ -2311,10 +2494,22 @@ def get_features(jobs):
 @db_session
 def is_job_post_processed(job):
     '''
-    Returns True if the post-processing pipeline has been run on a job
+    Returns True iff the post-processing pipeline has been run on a job
 
-      job: jobid or ORM job object. The job MUST be in the database.
+    Parameters
+    ----------
 
+      job : string or ORM Job object
+            `job` must refer to a job in the database
+
+    Returns
+    -------
+    True/False depending on whether the job has been post-processed (boolean)
+
+    Example
+    -------
+    >>> is_job_post_processed('685000')
+    True
     '''
     if type(job) == str:
         job = Job[job]
