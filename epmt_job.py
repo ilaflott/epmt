@@ -329,7 +329,7 @@ def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
             if rows == 0:
                 retstr = line[1:].lstrip()
             rows += 1
-            line = file.readline()
+            line = f.readline()
         else:
             return rows, retstr
 
