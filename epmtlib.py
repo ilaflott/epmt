@@ -130,7 +130,7 @@ def init_settings(settings):
         settings.stage_command = "cp"
     if not hasattr(settings, 'stage_command_dest'):
         logger.warning("missing settings.stage_command_dest")
-        settings.stage_command_dest = "."
+        settings.stage_command_dest = "./"
     if not hasattr(settings, 'input_pattern'):
         logger.warning("missing settings.input_pattern")
         settings.input_pattern = "*-papiex-*-[0-9]*.csv"

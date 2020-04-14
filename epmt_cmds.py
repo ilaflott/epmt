@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 from datetime import datetime
-from os import environ, makedirs, mkdir, path, getpid, getsid, getcwd, chdir, unlink, listdir
+from os import environ, makedirs, mkdir, path, getpid, getsid, getcwd, chdir, unlink, listdir, rename
 from socket import gethostname
 from subprocess import call as forkexecwait
 from random import randint
@@ -9,6 +9,7 @@ from imp import find_module
 from glob import glob
 from sys import stdout, stderr
 from json import dumps, loads
+from shutil import copyfile, rmtree
 import errno
 
 from shutil import rmtree
@@ -936,63 +937,57 @@ def submit_to_db(input, pattern, dry_run=True, remove_file=False):
     # return (j.jobid, process_count)
 
 
-def stage_job(dir,collate=True,compress_and_tar=True):
-    logger.debug("stage_job(%s,collate=%s,compress_and_tar=%s)",dir,str(collate),str(compress_and_tar))
-    if not dir or len(dir) < 1:
+def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True):
+    logger.debug("stage_job(%s,collate=%s,compress_and_tar=%s,keep_going=%s)",indir,str(collate),str(compress_and_tar),str(keep_going))
+    if not indir or len(indir) < 1:
         return False
     if settings.stage_command and len(settings.stage_command) and settings.stage_command_dest and len(settings.stage_command_dest):
         try:
-            l=listdir(dir)
+            l=listdir(indir)
             if not l:
-                logger.error(dir + "is empty")
+                logger.error(indir + "is empty")
                 return False
         except Exception as e:
             logger.error(str(e))
             return False
 
+        if not path.exists(indir + "/job_metadata"):
+            logger.error("job_metadata file missing in %s",indir)
+            return False
+        
         if collate:
             from epmt_concat import csvjoiner
-            logger.debug("csvjoiner(%s)",dir)
-            status, collated_file = csvjoiner(dir,debug=0)
+            logger.debug("csvjoiner(%s)",indir)
+            status, collated_file, badfiles = csvjoiner(indir, keep_going=keep_going, errdir=settings.error_dest)
+            if (badfiles):
+                logger.error("Files for error analysis: %s",str(badfiles))
+            # if hasattr(settings, 'error_dest') else "/tmp2/")
             if status == False:
                 return False
             if status == True and collated_file and len(collated_file) > 0:
                 logger.info("Collated file is %s",collated_file)
-                newdir = path.dirname(dir)+".collated"
-                cmd = "mkdir "+newdir
-                logger.debug(cmd)
-                return_code = forkexecwait(cmd, shell=True)
-                if return_code != 0:
+                try:
+                    # make the dir, copy in collated file and job metadata
+                    newdir = path.dirname(indir)+".collated"
+                    logger.debug("mkdir(%s)",newdir)
+                    mkdir(newdir)
+                    logger.debug("copyfile(%s,%s)",indir+"job_metadata",newdir+"/job_metadata")
+                    copyfile(indir+"job_metadata",newdir+"/job_metadata")
+                    logger.debug("rename(%s,%s)",collated_file,newdir+"/"+collated_file)
+                    rename(collated_file,newdir+"/"+collated_file)
+                    logger.debug("rename(%s,%s)",path.dirname(indir),path.dirname(indir)+".original")
+                    rename(path.dirname(indir),path.dirname(indir)+".original")
+                    logger.debug("rename(%s,%s)",path.dirname(indir)+".collated",path.dirname(indir))
+                    rename(path.dirname(indir)+".collated",path.dirname(indir))
+                    logger.debug("rmtree(%s)",path.dirname(indir)+".original")
+                    rmtree(path.dirname(indir)+".original")
+                except Exception as e:
+                    logger.error("Something went wrong: %s",str(e))
                     return False
-                cmd = "cp -p "+dir+"job_metadata "+newdir
-                logger.debug(cmd)
-                return_code = forkexecwait(cmd, shell=True)
-                if return_code != 0:
-                    return False
-                cmd = "mv "+collated_file+" "+newdir
-                logger.debug(cmd)
-                return_code = forkexecwait(cmd, shell=True)
-                if return_code != 0:
-                    return False
-                cmd = "mv "+path.dirname(dir)+" "+path.dirname(dir)+".original" 
-                logger.debug(cmd)
-                return_code = forkexecwait(cmd, shell=True)
-                if return_code != 0:
-                    return False
-                cmd = "mv "+path.dirname(dir)+".collated "+path.dirname(dir)
-                logger.debug(cmd)
-                return_code = forkexecwait(cmd, shell=True)
-                if return_code != 0:
-                    return False
-                cmd = "rm -rf "+path.dirname(dir)+".original"
-                logger.debug(cmd)
-                return_code = forkexecwait(cmd, shell=True)
-                if return_code != 0:
-                    return False
-
-        filetostage = path.dirname(dir)
+                
+        filetostage = path.dirname(indir)
         if compress_and_tar:
-            cmd = "tar -C "+dir+" -cz -f "+path.dirname(dir)+".tgz ."
+            cmd = "tar -C "+indir+" -cz -f "+path.dirname(indir)+".tgz ."
             logger.debug(cmd)
             return_code = forkexecwait(cmd, shell=True)
             if return_code != 0:
@@ -1003,16 +998,15 @@ def stage_job(dir,collate=True,compress_and_tar=True):
         logger.debug(cmd)
         return_code = forkexecwait(cmd, shell=True)
         if return_code != 0:
-            return False
-
-# Collation does it's own cleanup
-        if not collate or (not collated_file) or (len(collated_file) == 0):
-            cmd = "rm -rf "+dir
-            logger.debug(cmd)
-            return_code = forkexecwait(cmd, shell=True)
-            if return_code != 0:
+            if not ((settings.stage_command == "mv") and (path.dirname(filetostage) == path.dirname(settings.stage_command_dest))):
                 return False
-        print(settings.stage_command_dest+path.basename(filetostage))
+
+        logger.debug("rmtree(%s)",indir)
+        try:
+            rmtree(indir)
+        except Exception as e:
+            logger.warning("rmtree(%s): %s",indir,str(e))
+        print(path.normpath(settings.stage_command_dest)+"/"+path.basename(filetostage))
     return True
 
 def epmt_stage(dirs, keep_going=True, collate=True, compress_and_tar=True):
@@ -1024,13 +1018,13 @@ def epmt_stage(dirs, keep_going=True, collate=True, compress_and_tar=True):
 
     logger.debug("epmt_stage(%s)",dirs)
     r = True
-    for dir in dirs:
-        if not dir.endswith("/"):
-            logger.warning("missing trailing / on %s",dir)
-            dir += "/"
-        jobid = path.basename(path.dirname(dir))
-        file = dir + "job_metadata"
-        r = stage_job(dir,collate=collate,compress_and_tar=compress_and_tar)
+    for d in dirs:
+        if not d.endswith("/"):
+            logger.warning("missing trailing / on %s",d)
+            d += "/"
+        jobid = path.basename(path.dirname(d))
+        file = d + "job_metadata"
+        r = stage_job(d,collate=collate,compress_and_tar=compress_and_tar,keep_going=keep_going)
         if r is False and not keep_going:
             return False
     return r
