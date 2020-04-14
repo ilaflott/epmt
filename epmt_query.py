@@ -20,7 +20,7 @@ import epmt_settings as settings
 
 # do NOT do any epmt imports until logging is set up
 # using epmt_logging_init, other than import epmt_logging_init
-from epmtlib import epmt_logging_init
+from epmtlib import epmt_logging_init, version
 logger = getLogger(__name__)  # you can use other name
 epmt_logging_init(settings.verbose if hasattr(settings, 'verbose') else 0, check=True)
 
