@@ -21,7 +21,7 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 from sys import exit
-from re import findall
+from re import findall, search
 from os import path, rename, unlink
 from glob import glob
 from logging import getLogger
@@ -229,6 +229,18 @@ def file_len(fname):
             pass
     return i + 1
 
+def determine_output_filename(instr):
+    try:
+        jobid = path.basename(path.dirname(path.abspath(instr)))
+        logger.debug("jobid %s",jobid)
+        m = search('(.+)-papiex-.+\.csv', path.basename(instr))
+        logger.debug("host %s",m.group(1))
+        outfile = m.group(1) + "-collated" + "-papiex-" + jobid + "-0.csv"
+    except Exception as e:
+        logger.error("Could not determine output file name from %s: %s",instr,str(e))
+        return ""
+    logger.info("Output file set as {}".format(outfile))
+    return outfile
 
 # indir - String location of CSV Files to collate
 # outfile - string file name for output
@@ -266,72 +278,41 @@ def csvjoiner(indir,
     #         indir = str(indir.encode('ascii'))
 # String (Directory) Mode ##################################
     if(type(indir) == str):
-        logger.info("Collate in directory {}".format(indir))
         if not path.isdir(indir):
             msg = "{} does not exist or is not a directory".format(indir)
             logger.error(msg)
             return False, None, badfiles
+        logger.info("Collate in directory {}".format(indir))
         fileList = sorted(glob(indir + "/*.csv"))
         logger.debug("Filelist:{}".format(fileList))
         if(len(fileList) == 0):
             msg = "{} has no CSV files to concatenate".format(indir)
             logger.warning(msg)
             return True, "", badfiles
-        elif(len(fileList) < 2):
-            logger.info("{} has only {} files".format(indir, len(fileList)))
-        jobid = path.basename(path.normpath(indir))
-        h = path.basename(fileList[0]).split("-")
-        if(len(h) > 1):
-            host = h[0]
-        else:
-            logger.error('Hostname missing from header and file does not have hyphen ')
-            return False, None, badfiles
-        if outfile == "":
-            logger.debug("indir: {} host: {} jobid: {}".format(indir, host, jobid))
-            outfile = host + "-collated" + "-papiex-" + jobid + "-0.csv"
-            logger.info("Output file set as {}".format(str(outfile)))
-    # Now that outfile is known check for it
-
 # List Mode #########################################
     if(type(indir) == list):
-        logger.info("Collater in list mode(list arguments detected)")
+        logger.info("Collate list")
         fileList = indir
+        if (len(fileList) != len(set(fileList))):
+            logger.warning("Input has duplicates")
+            if not keep_going:
+                return False, None, badfiles
+        fileList = sorted(list(set(fileList)))
         for test in fileList:
             if(not path.isfile(test)):
                 logger.error(test + " does not exist or is not a file")
                 return False, None, badfiles
-        if(len(fileList) != len(set(fileList))):
-            logger.error("List has duplicates")
-            return False, None, badfiles
-        try:
-            # Assumption: use first directory as jobid
-            # Use normpath to remove the last slash on the directory
-            # Use basename to take the upper directory name that is the jobid
-            jobid = path.basename(path.dirname(path.abspath(indir[0])))
-            # Basename takes the current file name and pull the host before hyphen
-            host = path.basename(fileList[0]).split("-")[0]
-            if len(host) < 1:
-                host = "unknown"
-            # Generate outfile name
-            logger.debug("indir:{} host:{} jobid:{}".format(indir, host, jobid))
-            if (outfile == ""):
-                outfile = host + "-collated" + "-papiex-" + jobid + "-0.csv"
-            else:
-                # Outfile is custom check if it exists
-                if any(outfile in FL.lower() for FL in fileList):
-                    logger.error(outfile + " is in output file list")
-                    return False, None, badfiles
-        except IndexError:
-            logger.error("CSV name not formatted properly(jobid or host?)")
-            return False, None, badfiles
-        logger.info("Output file:{}".format(str(outfile)))
 
+    if outfile == "":
+        outfile = determine_output_filename(fileList[0])
+        if outfile == "":
+            return False, None, badfiles
 # Main pass
-    if (path.isfile(outfile)):
+    if (path.exists(outfile)):
         logger.error("Output {} already exists".format(outfile))
         return False, None, badfiles
     if any(("collated" in FL for FL in fileList)):
-        logger.error("Collated file in filelist")
+        logger.error("Collated output file in input")
         return False, None, badfiles
     # iterate each file building result
     badfiles = []
