@@ -37,13 +37,22 @@ for f in files:
 
 dash_extra_datas = collect_data_files('dash_html_components') + collect_data_files('dash_core_components') + collect_data_files('dash_daq') + collect_data_files('dash_table') + collect_data_files('dash_renderer') + collect_data_files('dash_bootstrap_components')
 
-extra_datas = ipe_extra_datas + dash_extra_datas
+dash_resources = []
+files = glob('ui/components/*.py')
+for f in files:
+    dash_resources.append((f, '.'))
+
+files = glob('ui/assets/*')
+for f in files:
+    dash_resources.append((f, './assets/'))
+
+extra_datas = ipe_extra_datas + dash_extra_datas + dash_resources
 
 print("Extra data: ",extra_datas)
 
 
-a = Analysis(['epmt'],
-             pathex=['/Users/philipmucci/Work/epmt.git'],
+a = Analysis(['epmt', 'ui/index.py'],
+             pathex=['/home/chris/Documents/playground/MM/build/epmt/ui'],
              binaries=[],
              datas=extra_datas,
              hiddenimports=hidden,
