@@ -254,3 +254,67 @@ def exp_explore(exp_name, metric = 'duration', op = np.sum, limit=10):
     for idx in range(len(time_segments)):
         print("%12s %16d %6s" % (time_segments[idx], metric_sums[idx], "**" * int(outlier_scores[idx])))
     return True
+
+@db_session
+def find_missing_time_segments(exp_name, jobs=[], components = [], time_segments = range(18540101, 20190101, 50000)):
+    '''
+    Finds missing time segments in an experiment
+
+    Parameters
+    ----------
+        exp_name : string
+                   Experiment name
+            jobs : list of strings or list of Job objects or ORM query, optional
+                   Restrict the search to a subset of the experiment's jobs
+                   If unspecified or empty all jobs belonging to the experiment
+                   will be used.
+      components : list, optional
+                   Restrict the search to specified components
+                   If unspecified or empty all components in the experiment
+                   will be used
+   time_segments : list of ints, optional
+                   List of expected time segments. Defaults to 18540101 - 20090101
+                   with a spacing of 50000.
+                   You really should be specifying this parameter!
+
+    Returns
+    -------
+    dict containing components with missing segments, with the
+    key being the component name, and the value being the list
+    if missing time segments
+
+    Notes
+    -----
+    The function also prints the missing segment names against the component
+
+    Examples
+    --------
+    >>> d = exp.find_missing_time_segments('ESM4_historical_D151', time_segments=range(18540101, 20140101, 50000))
+    ocean_annual_rho2_1x1deg is missing [18540101, 18590101, 18640101, 18690101, 18740101, 18790101, 18890101, 18940101, 18990101, 19040101, 19090101, 19140101, 19190101, 19240101, 19290101, 19340101, 19390101, 19440101, 19490101, 19540101, 19590101, 19640101, 19690101, 19740101, 19790101, 19840101, 19890101, 19940101, 19990101, 20040101, 20090101]
+    ocean_cobalt_fdet_100 is missing [18540101, 18590101, 18640101, 18690101, 18740101, 18790101, 18890101, 18940101, 18990101, 19040101, 19090101, 19140101, 19190101, 19240101, 19290101, 19340101, 19390101, 19440101, 19490101, 19540101, 19590101, 19640101, 19690101, 19740101, 19790101, 19840101, 19890101, 19940101, 19990101, 20040101, 20090101]
+    >>> d
+    { 'ocean_annual_rho2_1x1deg' : [18540101, 18590101, 18640101, 18690101, 18740101, 18790101, 18890101, 18940101, 18990101, 19040101, 19090101, 19140101, 19190101, 19240101, 19290101, 19340101, 19390101, 19440101, 19490101, 19540101, 19590101, 19640101, 19690101, 19740101, 19790101, 19840101, 19890101, 19940101, 19990101, 20040101, 20090101],
+      'ocean_cobalt_fdet_100': [18540101, 18590101, 18640101, 18690101, 18740101, 18790101, 18890101, 18940101, 18990101, 19040101, 19090101, 19140101, 19190101, 19240101, 19290101, 19340101, 19390101, 19440101, 19490101, 19540101, 19590101, 19640101, 19690101, 19740101, 19790101, 19840101, 19890101, 19940101, 19990101, 20040101, 20090101]
+    }
+    '''
+    tag_filter = { 'exp_name': exp_name }
+    jobs = eq.get_jobs(jobs, fmt='orm', tags = [ tag_filter ])
+    logger.debug('Looking for time segments: {}'.format(sorted(time_segments)))
+    logger.debug('{} matching jobs from the experiment'.format(jobs.count()))
+    jobs_tags = eq.get_job_tags(jobs, tag_filter = tag_filter, fold=True)
+    matched_comp = jobs_tags['exp_component']
+    if components:
+        matched_comp &= set(components)
+    logger.debug('{} components matched'.format(len(matched_comp)))
+    ret = {}
+    for c in sorted(matched_comp):
+        comp_tags = eq.get_job_tags(jobs, tag_filter = 'exp_name:{};exp_component:{}'.format(exp_name, c))
+        exp_times = comp_tags['exp_time']
+        if type(exp_times) == str:
+            exp_times = [exp_times]
+        exp_times = set([ int(t) for t in exp_times ])
+        missing_times = set(time_segments) - exp_times
+        if missing_times:
+            print('{} is missing {}'.format(c, sorted(missing_times)))
+            ret[c] = sorted(missing_times)
+    return ret
