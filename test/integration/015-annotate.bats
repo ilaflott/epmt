@@ -16,7 +16,7 @@ teardown() {
 @test "epmt annotate" {
   run test/integration/epmt-annotate.sh
   run test -f 3456.tgz
-  run epmt dump -k job_annotations 3456.tgz
+  run epmt dump -k annotations 3456.tgz
 
   # the order of keys in the dict might change based on underlying db
   assert_output "{'a': 100, 'b': 200, 'inbetween_1': 1, 'inbetween_2': 1, 'c': 200, 'd': 400, 'e': 300, 'f': 600}"
