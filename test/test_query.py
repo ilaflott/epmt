@@ -401,6 +401,11 @@ class QueryAPI(unittest.TestCase):
         self.assertIn(df.shape, ((1,50), (1,49)))
         self.assertEqual(df.loc[0,'pid'], 122181)
 
+    def test_job_tags(self):
+        d = eq.get_job_tags(['685016', '685003', '685000'], tag_filter = 'exp_name:ESM4_historical_D151;exp_time:18840101')
+        self.assertEqual(set(d.keys()), {'atm_res', 'exp_component', 'exp_name', 'exp_time', 'ocn_res', 'script_name'})
+        self.assertEqual(d, {'atm_res': 'c96l49', 'ocn_res': '0.5l75', 'exp_name': 'ESM4_historical_D151', 'exp_time': '18840101', 'script_name': {'ESM4_historical_D151_ocean_annual_rho2_1x1deg_18840101', 'ESM4_historical_D151_ocean_month_rho2_1x1deg_18840101', 'ESM4_historical_D151_ocean_cobalt_fdet_100_18840101'}, 'exp_component': {'ocean_month_rho2_1x1deg', 'ocean_annual_rho2_1x1deg', 'ocean_cobalt_fdet_100'}})
+
     @db_session
     def test_job_roots(self):
         pids = [p.pid for p in eq.get_roots(['685000', '685003'], fmt='orm')]

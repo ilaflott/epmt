@@ -806,7 +806,7 @@ tag_filter : dict or string
              will be included
      fold  : boolean, optional
              The range of possible values for each key are compacted
-             into a list to make it more readable for a human. This
+             into a set to make it more readable for a human. This
              should be set to False if you plan on using this input
              to feed to another API call
 
@@ -826,16 +826,8 @@ tag_filter : dict or string
      'ocn_res': '0.5l75',
      'exp_name': 'ESM4_historical_D151',
      'exp_component': 'ocean_annual_z_1x1deg',
-     'exp_time': ['18890101',
-      '18640101',
-      '18940101',
-      '18690101',
-      '18590101',
-      '18790101',
-      '18540101',
-      '18740101',
-      '18840101'],
-     'script_name': ['ESM4_historical_D151_ocean_annual_z_1x1deg_18540101',
+     'exp_time': {'18890101', '18640101', '18940101', '18690101', '18590101', '18790101', '18540101', '18740101', '18840101'},
+     'script_name': {'ESM4_historical_D151_ocean_annual_z_1x1deg_18540101',
       'ESM4_historical_D151_ocean_annual_z_1x1deg_18840101',
       'ESM4_historical_D151_ocean_annual_z_1x1deg_18640101',
       'ESM4_historical_D151_ocean_annual_z_1x1deg_18890101',
@@ -843,7 +835,7 @@ tag_filter : dict or string
       'ESM4_historical_D151_ocean_annual_z_1x1deg_18940101',
       'ESM4_historical_D151_ocean_annual_z_1x1deg_18740101',
       'ESM4_historical_D151_ocean_annual_z_1x1deg_18690101',
-      'ESM4_historical_D151_ocean_annual_z_1x1deg_18790101']}
+      'ESM4_historical_D151_ocean_annual_z_1x1deg_18790101'}}
     >>> sorted(d['exp_time'])
     ['18540101','18590101','18640101','18690101','18740101','18790101','18840101','18890101','18940101']
 
@@ -875,7 +867,13 @@ tag_filter : dict or string
     for j in jobs:
         tags.extend([j.tags])
     tags = unique_dicts(tags)
-    return fold_dicts(tags) if fold else tags
+    if fold:
+        folded_dict = fold_dicts(tags)
+        # convert lists to sets as we have no notion of ordering for the values
+        for (k, v) in folded_dict.items():
+            if type(v) == list:
+                folded_dict[k] = set(v)
+    return folded_dict if fold else tags
 
 
 def rank_proc_tags_keys(jobs, order = 'cardinality', exclude = []):
