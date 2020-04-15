@@ -268,7 +268,7 @@ class OutliersAPI(unittest.TestCase):
     def test_partition_jobs(self):
         jobs = eq.get_jobs(tags='launch_id:6656', fmt='orm')
         self.assertEqual(jobs.count(), 4, "incorrect job count using tags")
-        parts = eod.partition_jobs(jobs, fmt='terse')
+        parts = eod.partition_jobs(jobs)
         self.assertEqual(len(parts), 3, "incorrect count of items in partition dict")
         self.assertEqual(parts['cpu_time'], (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-194024', u'kern-6656-20190614-191138']), set([u'kern-6656-20190614-192044-outlier'])))
         self.assertEqual(parts['duration'], (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-194024', u'kern-6656-20190614-191138']), set([u'kern-6656-20190614-192044-outlier'])))
@@ -303,7 +303,7 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(list(df_outl['pca_01'].values), [0, 0, 1, 0])
         self.assertEqual(list(df_outl['pca_02'].values), [0, 0, 0, 0])
         # now lets get the weighted pca scores
-        (pca_weighted_df, pca_weighted_vec) = eod.pca_weighted_score(df_outl, pca_features, variances)
+        (pca_weighted_df, pca_weighted_vec) = eod._pca_weighted_score(df_outl, pca_features, variances)
         self.assertEqual(list(pca_weighted_vec), [0.0, 0.0, 2.8, 0.0])
         self.assertEqual(pca_weighted_df.shape, (4,4))
         self.assertEqual(list(pca_weighted_df['pca_weighted'].values), [0.0, 0.0, 2.8, 0.0])
