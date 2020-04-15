@@ -1,16 +1,22 @@
+# -*- coding: utf-8 -*-
+"""EPMT Outliers API
+
+The EPMT Outliers API provides functions to determine outliers
+among a collection of jobs, operations or processes.
+"""
+
+
 from __future__ import print_function
-from os import environ
 import pandas as pd
 import numpy as np
-import operator
 from logging import getLogger
 from json import dumps, loads
 from orm import db_session, ReferenceModel, orm_get, orm_col_len
 
 # the first epmt import must be epmt_query as it sets up logging
 import epmt_query as eq
-from epmtlib import tags_list, tag_from_string, dict_in_list, isString
-from epmt_stat import thresholds, modified_z_score,iqr,outliers_iqr,outliers_modified_z_score,rca, get_classifier_name, is_classifier_mv, partition_classifiers_uv_mv, mvod_scores_using_model
+from epmtlib import tags_list, tag_from_string, dict_in_list
+from epmt_stat import thresholds, outliers_iqr, outliers_modified_z_score, rca, get_classifier_name, is_classifier_mv, partition_classifiers_uv_mv, mvod_scores_using_model, uvod_classifiers, modified_z_score
 
 logger = getLogger(__name__)  # you can use other name
 import epmt_settings as settings
@@ -18,14 +24,14 @@ import epmt_settings as settings
 FEATURES = settings.outlier_features
 
 
-def partition_jobs(jobs, features=FEATURES, methods=[modified_z_score], thresholds=thresholds, fmt='pandas'):
+def partition_jobs(jobs, features=FEATURES, methods=[], thresholds=thresholds, fmt='pandas'):
     """
     This function partitions jobs using one feature at a time
     INPUT: jobs is a collection/list of jobs/jobids
     OUTPUT: dictionary where the keys are features and the values
             are tuples of the form: ([ref_jobs], [outlier_jobs])
     
-    >> parts = eod.partition_jobs(jobs)
+    >> parts = eod.partition_jobs(jobs, methods = [es.modified_z_score])
     >>> pprint(parts)
     {'cpu_time': (set([u'kern-6656-20190614-190245',
                    u'kern-6656-20190614-194024',
@@ -68,7 +74,7 @@ def partition_jobs_by_ops(jobs, tags=[], features=FEATURES, methods=[modified_z_
     
     EXAMPLE:
     >>> jobs = eq.get_jobs(tags = 'exp_name:linux_kernel', fmt='terse)
-    >>> parts = eod.partition_jobs_by_ops(jobs)
+    >>> parts = eod.partition_jobs_by_ops(jobs, methods = [es.modified_z_score])
     >>> pprint(parts)
     {'{"op_instance": "1", "op_sequence": "1", "op": "download"}': (set[u'kern-6656-20190614-190245',
                                                                      u'kern-6656-20190614-191138',
@@ -85,7 +91,7 @@ def partition_jobs_by_ops(jobs, tags=[], features=FEATURES, methods=[modified_z_
     In the example above we did not supply any tags so the set of unique
     process tags was determined automatically. We can also choose to
     specify a tag (or a list of tags) as so:
-    >>> parts = eod.partition_jobs_by_ops(jobs, tags = 'op:build;op_instance:4;op_sequence:4')
+    >>> parts = eod.partition_jobs_by_ops(jobs, tags = 'op:build;op_instance:4;op_sequence:4', methods = [es.modified_z_score])
     >>> pprint(parts)
     {'{"op_instance": "4", "op_sequence": "4", "op": "build"}': (set([u'kern-6656-20190614-190245',
                                                                   u'kern-6656-20190614-191138',
@@ -97,7 +103,7 @@ def partition_jobs_by_ops(jobs, tags=[], features=FEATURES, methods=[modified_z_
 
 
 @db_session
-def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds = thresholds, sanity_check=True, pca = False):
+def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[], thresholds = thresholds, sanity_check=True, pca = False):
     """
     This function will detects outlier jobs among a set of input jobs.
     This should be used as the first tool in outlier detection. If you
@@ -124,7 +130,8 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
               for outlier detection. If unspecified it will default to
               modified z-score. If multivariate classifiers are specified,
               a trained model *must* be specified. We only support pyod
-              classifiers at present for multivariate classifiers.
+              classifiers at present for multivariate classifiers. Do not
+              mix univariate and multivariate classifiers.
 
     thresholds: Advanced option defining what it means to be an outlier.
               This is ordered in the same order as 'methods', and has 
@@ -172,7 +179,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
     >>> jobs = eq.get_jobs(fmt='orm', tags='exp_name:linux_kernel') 
     >>> len(jobs)
     4
-    >>> (df, parts) = eod.detect_outlier_jobs(jobs)
+    >>> (df, parts) = eod.detect_outlier_jobs(jobs, methods=[es.modified_z_score])
     >>> df
                                    jobid  duration  cpu_time  num_procs
     0          kern-6656-20190614-190245         0         0          0
@@ -205,7 +212,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
     # the column of importance is 'pca_weighted', rather than the individual
     # pca columns. 
 
-    >>> x = eod.detect_outlier_jobs(eq.get_jobs(fmt='pandas'), features=[], pca = 2)
+    >>> x = eod.detect_outlier_jobs(eq.get_jobs(fmt='pandas'), features=[], pca = 2, methods=[es.modified_z_score])
            INFO: epmt_outliers: outlier detection provided 1 classifiers
            INFO: epmt_outliers: 1 classifiers eligible
            INFO: epmt_outliers: outlier detection will be performed using 1 univariate and 0 multivariate classifi
@@ -290,6 +297,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
 
     # get model parameters if available in trained model
     # skip over methods that do not exist in trained model
+    methods = methods or uvod_classifiers()
     _methods = []
     logger.info('outlier detection provided {} classifiers'.format(len(methods)))
     for m in methods:
@@ -471,8 +479,10 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
     # Essentially, for UV classifiers, we will return a list
     # while for MV classifiers, we will return a single dataframe
     return (retlist if len(retlist) > 1 else retlist[0])
-        
 
+ 
+# This function can be very expensive. So, we only use a single outlier
+# scoring method by default. Using 2 more really takes too long.
 @db_session
 def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds=thresholds, sanity_check=True, pca = False):
     """
@@ -490,8 +500,7 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
 
     methods:List of UV or MV classifiers. You cannot mix UV and MV classifiers.
             Use either only UV classifiers or only MV classifiers. If no 
-            methods are provided, then modified_z_score, which is a UV classifier,
-            will be assumed.
+            methods are provided, then we use MADZ.
 
     pca:    False by default. If enabled, the PCA analysis will be done
             on the features prior to outlier detection. Rather than setting
@@ -542,7 +551,7 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
     jobs = [u'625151', u'627907', u'629322', u'633114', u'675992', u'680163', u'685001', u'691209', u'693129', u'696110', u'802938', u'804266']
     
     
-    >>> (df, parts, scores_df, sorted_tags, sorted_features) = eod.detect_outlier_ops(jobs)
+    >>> (df, parts, scores_df, sorted_tags, sorted_features) = eod.detect_outlier_ops(jobs, methods=[es.modified_z_score])
     
     >>> df.head()
         jobid                                               tags  duration  \
@@ -575,7 +584,7 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
 
     # Now let's do one with PCA:
 
-    >>> out_df = eod.detect_outlier_ops(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], features=[], pca = True)
+    >>> out_df = eod.detect_outlier_ops(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], features=[], pca = True, methods=[es.modified_z_score])
    INFO: epmt_outliers: request to do PCA (pca=True). Input features: ['PERF_COUNT_SW_CPU_CLOCK', 'cancelled_write_byte
 s', 'cpu_time', 'delayacct_blkio_time', 'duration', 'guest_time', 'inblock', 'invol_ctxsw', 'majflt', 'minflt', 'num_pr
 ocs', 'numtids', 'outblock', 'processor', 'rchar', 'rdtsc_duration', 'read_bytes', 'rssmax', 'syscr', 'syscw', 'systemt
@@ -675,7 +684,8 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
                     tags_to_use.append(d)
     else:
         tags_to_use = tags
-  
+ 
+    methods = methods or uvod_classifiers()
     _methods = set() 
     for t in tags_to_use:
         t = dumps(t, sort_keys=True)
@@ -801,7 +811,7 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
                     else:
                         # use the max score in the refmodel if we have a trained model
                         # otherwise use the default threshold for the method
-                        threshold = params[0] if params else thresholds[m_name]
+                        threshold = params[0] if params else thresholds.get(m_name, 0)
                     logger.debug('threshold: {}'.format(threshold))
                     outlier_rows = np.where(np.abs(scores) > threshold)[0]
                     score_diff += max(max(scores) - threshold, 0)
@@ -954,6 +964,7 @@ def detect_rootcause(jobs, inp, features = FEATURES,  methods = [modified_z_scor
     jobs is either a dataframe of reference jobs, or a list
     of reference jobs, or a trained model.
     inp is either a single job/jobid or a Series or a dataframe with a single column
+    methods is a list of callables for outlier detection (optional)
 
     OUTPUT:
         (res, df, sorted_feature_list),
@@ -981,6 +992,7 @@ def detect_rootcause_op(jobs, inp, tag, features = FEATURES,  methods = [modifie
     of reference jobs, or a trained model.
     inp is either a single job/jobid or a Series or a dataframe with a single column
     tag: Required string or dictionary signifying the operation
+    methods: List of optional callables for outlier detection
     
     OUTPUT:
         (res, df, sorted_feature_list),
@@ -991,7 +1003,7 @@ def detect_rootcause_op(jobs, inp, tag, features = FEATURES,  methods = [modifie
     tuple (feature,<diff_score>)
     
     EXAMPLE:
-    (retval, df, s) = eod.detect_rootcause_op([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024'], u'kern-6656-20190614-192044-outlier', tag = 'op_sequence:4')
+    (retval, df, s) = eod.detect_rootcause_op([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024'], u'kern-6656-20190614-192044-outlier', tag = 'op_sequence:4', methods=[es.modified_z_score])
     
     >>> df
                                   cpu_time      duration  num_procs
@@ -1319,7 +1331,7 @@ def pca_feature_rank(jobs, inp_features = []):
     sorted_features = list(zip(sorted_df.iloc[-1].index, sorted_df.iloc[-1].round(4)))
     return (sorted_df, sorted_features)
 
-def feature_plot_2d(jobs, features = [], outfile='', annotate = False):
+def feature_scatter_plot(jobs, features = [], outfile='', annotate = False):
     '''
     Generates a 2-D scatter plot of jobs with features on two axes.
     If more than 2 features are requested, for example by setting
@@ -1344,9 +1356,9 @@ def feature_plot_2d(jobs, features = [], outfile='', annotate = False):
     EXAMPLE:
 
     # The following does PCA automatically as we select *all* features as input
-    >>> feature_plot_2d(['625151', '627907', '629322', '633114', '675992', '680163', '685001', '691209', '693129'], features=[])
+    >>> feature_scatter_plot(['625151', '627907', '629322', '633114', '675992', '680163', '685001', '691209', '693129'], features=[])
     # The following selects two features
-    >>> feature_plot_2d(['625151', '627907', '629322', '633114', '675992', '680163', '685001', '691209', '693129'], features=['cpu_time', 'duration'])
+    >>> feature_scatter_plot(['625151', '627907', '629322', '633114', '675992', '680163', '685001', '691209', '693129'], features=['cpu_time', 'duration'])
     '''
     jobs_df = eq.get_jobs(jobs, fmt='pandas')
     features = sanitize_features(features, jobs_df)

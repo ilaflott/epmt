@@ -130,6 +130,16 @@ class EPMTCmds(unittest.TestCase):
             self.assertEqual(type(d), dict, "wrong return type")
             self.assertTrue(len(d.keys()) > 0)
 
+    def test_stage(self):
+        from epmt_cmds import epmt_stage
+        # quell the error messages
+        epmt_logging_init(-2)
+        with capture() as (out, err):
+            retval = epmt_stage(['test/data/corrupted_csv'])
+        # restore logging level
+        epmt_logging_init(-1)
+        self.assertEqual(retval,False, "corrupted CSV files should have failed stage")
+        
     def test_yy_retire(self):
         from datetime import datetime, timedelta
         org_jobs = eq.get_jobs(fmt='terse')

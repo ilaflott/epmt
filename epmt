@@ -64,6 +64,8 @@ if (__name__ == "__main__"):
             original job files and job directory.")
     stage_parser.add_argument('epmt_cmd_args', nargs='*', help="List of directories", metavar="job_dirs")
     stage_parser.add_argument('-e', '--error', action='store_true',help="Exit at the first sign of trouble")
+    stage_parser.add_argument('--no-collate', action='store_true',help="Don't collate the files")
+    stage_parser.add_argument('--no-compress-and-tar', action='store_true',help="Don't compress and tar the output")
     # annotate
     annotate_parser = subparser.add_parser('annotate', help="Annotate a job", formatter_class=argparse.RawTextHelpFormatter, description="Annotates a job with key/value pairs. This call takes three forms:\n\n"
       "To annotate a stopped job within the batch environment: \n"
@@ -178,6 +180,7 @@ if (__name__ == "__main__"):
 
 # Dummy Help for ./epmt help
     help_parser = subparser.add_parser('help', help="Display help with extended configuration information")
+    help_parser.add_argument('api', nargs='*', help="Display help on one or more API functions. If none given then an index of available API functions will be printed")
 
     # Print help without dump config
     if len(argv) == 1:
@@ -189,7 +192,13 @@ if (__name__ == "__main__"):
 
     # Print help if epmt help is called
     if args.command == 'help':
-        parser.print_help()
+        if not args.api:
+            parser.print_help()
+        else:
+            from epmt_cmd_help import epmt_help_api
+            # skip the first api string in list and pass the
+            # rest (function names) to the function
+            epmt_help_api(args.api[1:])
         exit(0)
 
     # Print help if 

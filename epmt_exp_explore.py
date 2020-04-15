@@ -1,3 +1,14 @@
+# -*- coding: utf-8 -*-
+"""EPMT Experiment Explore API
+
+The EPMT Experiment Explore API provides a domain-specific
+API where certain primitives such as experiment name,
+component are taken for granted.
+
+It's a higher-level API than EPMT Query and EPMT Outliers
+API, which it uses underneath.
+"""
+
 from orm import db_session
 import epmt_query as eq
 import numpy as np
@@ -243,4 +254,3 @@ def exp_explore(exp_name, metric = 'duration', op = np.sum, limit=10):
     for idx in range(len(time_segments)):
         print("%12s %16d %6s" % (time_segments[idx], metric_sums[idx], "**" * int(outlier_scores[idx])))
     return True
-

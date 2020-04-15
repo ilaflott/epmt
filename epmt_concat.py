@@ -20,17 +20,38 @@
 
 from __future__ import print_function
 from __future__ import unicode_literals
-from sys import argv, version_info, exit
-from re import compile
-from os import getcwd, path
+from sys import exit
+from re import findall
+from os import path, rename, unlink
 from glob import glob
-from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
+from logging import getLogger
 logger = getLogger('epmt_concat')  # you can use other name
 from epmtlib import epmt_logging_init
 
 class InvalidFileFormat(RuntimeError):
     pass
 
+# outfile is argument to csv joiner
+# errdir is place for output
+# badfiles is possibly empty list of files that errored in parsing
+def rename_bad_files(outfile, errdir, badfiles):
+    logger = getLogger('rename_bad_files')
+    logger.debug("%s,%s,%s",outfile,errdir,str(badfiles))
+    if not errdir:
+        logger.debug("Skipping renaming bad files!")
+        return badfiles
+    ed=path.normpath(errdir)
+    renamed_badfiles = []
+    for f in badfiles:
+        p=path.basename(path.normpath(f))
+        fn=ed+"/"+p+".error"
+        logger.debug("rename(%s,%s)",f,fn)
+        try:
+            rename(f,fn)
+            renamed_badfiles.append(fn)
+        except Exception as e:
+            logger.error("rename(): %s",str(e))
+    return renamed_badfiles
 
 # file - Single CSV File to parse for comment,header and data
 # masterHeader - Current MasterHeader for comparison against file
@@ -39,98 +60,103 @@ class InvalidFileFormat(RuntimeError):
 # delim - Delimiter specified from csvjoiner used in parseline
 # commentDelim - Delimiter specified from csvjoiner used in parseline
 # Returns: tuple(comments list, masterHeader string, datas list)
-def parseFile(file, masterHeader, headerFound, headerDelimCount, delim, commentDelim):
+def parseFile(inputfile, masterHeader, masterHeaderFile, delim, commentDelim):
     """ Take file and paramaters for parsing return tuple of csv data
     to be passed to writeCSV then verifyOut"""
+    logger = getLogger('parseFile')
     fileLines = []
-    comment = ""
     comments = []
     header = ""
     datas = []
     line = ""
     data = ""
-    hostFlag = False
+    headerFound = False
+    headerDelimCount = 0
+
     try:
-        with open(file) as fp:
+        with open(inputfile) as fp:
             fileLines += fp.read().splitlines()
-    except EnvironmentError:
-        logger.error("No such file {}".format(file))
-        raise
+    except Exception as e:
+        logger.error("Failed to read file %s: %s",inputfile,str(e))
+        return(comments, masterHeader, masterHeaderFile, None)
+    
     for line in fileLines:
-        line = line.rstrip('\r\n')
-        comment, header, data, headerDelimCount, headerFound, masterHeader, hostFlag = parseLine(file, line, masterHeader, headerDelimCount, headerFound, delim, commentDelim, hostFlag)
-        if(comment is not None):
-            logger.debug("Found comment \n{}".format(comment))
-            comments.append(comment)
-        if(data is not None):
-            logger.debug("Found data \n{}".format(data))
-            datas.append(data)
-    return (comments, masterHeader, datas)
+        line = line.strip('\r\n')
+        # line is blank
+        if not line:
+            continue
+        # line is comment
+        if line.startswith(commentDelim):
+            logger.debug("File %s: comment %s",inputfile,line)
+            comments.append(line)
+            continue
+        try:
+            header, data, headerDelimCount, headerFound, masterHeader, masterHeaderFile = parseLine(inputfile, line, masterHeader, masterHeaderFile,
+                                                                                                    headerDelimCount, headerFound, delim)
+            if data:
+                datas.append(data)
+            logger.debug("File %s: data %s",inputfile,str(data))
+        except:
+            return ([], masterHeader, masterHeaderFile, [])
+    return (comments, masterHeader, masterHeaderFile, datas)
 
 
 # Check for 3 possible conditions:
 #    - line is comment
 #    - we have no header: set it
 #    - header is known: line is data
-def parseLine(infile, line, masterHeader, headerDelimCount,
-              headerFound, delim, commentDelim, hostFlag):
+def parseLine(infile, line, masterHeader, masterHeaderFile, headerDelimCount, headerFound, delim):
     """ Parse single line of file with paramaters of current status, returning post status and line info"""
-    comment = ""
-    regexDelim = compile(r"(?<!\\)" + delim)
-    line = line.strip()
-    # line is comment
-    if line.startswith(commentDelim):
-        # Append comment to comment list
-        # comments.append(line)
-        comment = line
-        return (comment, None, None, headerDelimCount, headerFound,
-                masterHeader, hostFlag)
-
+    logger = getLogger('parseLine')
+    Delim = r"(?<!\\)" + delim
+    lineDelimCount = len(findall(Delim,line))
     # we have no header: set it
     # Set Header, compare against Master
-    elif headerFound is False:
-        header = line
+    if headerFound is False:
         # logger.debug("Found Header: {}".format(header))
+        # if "hostname" not in header:
+        #     # Adding host to header
+        #     logger.info("Header missing \"hostname\"")
+        #     header += ",hostname"
+        #     hostFlag = True
         headerFound = True
-        if "hostname" not in header:
-            # Adding host to header
-            logger.info("Header missing \"hostname\"")
-            header += ",hostname"
-            hostFlag = True
-        headerDelimCount = len(regexDelim.findall(header))
+        headerDelimCount = lineDelimCount
         if not masterHeader:
-            masterHeader = header
-            logger.debug("Master header set:\n{}".format(masterHeader))
-            return (None, header, None, headerDelimCount, headerFound,
-                    masterHeader, hostFlag)
+            masterHeader = line
+            masterHeaderFile = infile
+            logger.info("Master header file: %s",masterHeaderFile)
+            logger.info("Master header count: %d",headerDelimCount)
+            logger.info("Master header set: %s",masterHeader)
+            return (line, None, headerDelimCount, headerFound, masterHeader, masterHeaderFile)
+        elif line != masterHeader:
+            msg = "Header mismatch: File {} does not match master file {}".format(infile,masterHeaderFile)
+            logger.error(msg)
+            msg = "Header: {}".format(line)
+            logger.error(msg)
+            msg = "Master: {}".format(masterHeader)
+            logger.error(msg)
+            raise InvalidFileFormat()
         else:
-            if header != masterHeader:
-                msg = "File {} header does not match master".format(infile)
-                logger.error(msg)
-                logger.error("Likely a corrupted job.. stopping")
-                raise InvalidFileFormat(msg)
-            elif header == masterHeader:
-                return (None, header, None, headerDelimCount, headerFound,
-                        masterHeader, hostFlag)
+            return (None, None, headerDelimCount, headerFound, masterHeader, masterHeaderFile)
     # header is known: line is data
     # match data against header
-    elif headerFound is True and line is not "":
-        if(hostFlag):
-            fn = path.basename(infile).split("-papiex")
-            if(len(fn) > 1):
-                host = fn[0]
-                line = line + ',' + host
-            else:
-                logger.warning("{} filename missing host before -papiex".format(str(fn[0])))
-                raise ValueError("Invalid filename -- missing host")
-        lineDelimCount = len(regexDelim.findall(line))
+    elif headerFound is True and line != "":
+        # if(hostFlag):
+        #     fn = path.basename(infile).split("-papiex")
+        #     if(len(fn) > 1):
+        #         host = fn[0]
+        #         line = line + ',' + host
+        #     else:
+        #         logger.warning("{} filename missing host before -papiex".format(str(fn[0])))
+        #         raise ValueError("Invalid filename -- missing host")
         if (lineDelimCount == headerDelimCount):
-            return (None, None, line, headerDelimCount, headerFound, masterHeader, hostFlag)
+            return (None, line, headerDelimCount, headerFound, masterHeader, masterHeaderFile)
         else:
-            msg = "Different number of elements in header and data in {0}".format(infile)
-            logger.error(msg)
-            logger.error("Header: {} delimiters, row has {} delimiters".format(str(headerDelimCount), str(lineDelimCount)))
-            raise InvalidFileFormat(msg)
+            logger.error("File: {}, Header: {} delimiters, but this row has {} delimiters".format(infile, str(headerDelimCount), str(lineDelimCount)))
+            logger.error("Row: {}".format(line))
+            logger.error("Master File: {}".format(masterHeaderFile))
+            logger.error("Master header: {}".format(masterHeader))
+            raise InvalidFileFormat()
 
 
 #
@@ -162,56 +188,36 @@ def writeCSV(outfile, comments, masterHeader, dataList):
         # write data
             for item in dataList:
                 f.write("%s\n" % item)
-    except EnvironmentError:  # parent of IOError, OSError
-        logger.error("Error writing output file {}".format(outfile))
-        raise
-
+    except Exception as e:  # parent of IOError, OSError
+        logger.error("Error writing output file %s, removing...: %s",outfile,str(e))
+        unlink(outfile)
+        return False
+    return True
 
 # Count lines in input directory compare result with length of output file lines
-def verifyOut(indir, outfile):
-    """ VerifyOut will take a input directory, count the csv files and compare
+def verifyOut(fileList, outfile):
+    """ VerifyOut will take a list of files, count the csv files and compare
         the length against the outfile.
 
         Return: True if line count matches
         """
-    # Directory Given
-    if(type(indir) == str):
-        fileList = sorted(glob(indir + "*.csv"))
-        # Check for output in list of files
-        if indir + outfile in fileList:
-            fileList.remove(indir + outfile)
-        # If outfile is just a base filename
-        if(path.basename(outfile) is outfile):
-            outputLines = file_len(outfile)
-        # Else outfile includes full directory
-        else:
-            outputLines = file_len(outfile)
-    # List Given
-    if(type(indir) == list):
-        fileList = indir
-        outputLines = file_len(outfile)
+    logger = getLogger('verifyOut')
+    outputLines = file_len(outfile)
     lines = 0
     for file in fileList:
         lines += file_len(file)
     headers2Remove = len(fileList)
     result = lines - (headers2Remove - 1)
-    if(result > outputLines):
-        logger.warning("Output file smaller than expected, off by {}".format((result - outputLines)))
-        logger.warning("Lines in files {}".format(str(lines)))
-        logger.warning("Files(headers removed - 1) {}".format(str(headers2Remove)))
-        logger.warning("Output Lines: {}".format(str(outputLines)))
+    logger.debug("{} input files have {} lines".format(len(fileList), lines))
+    logger.debug("{} output file has {} lines".format(outfile, outputLines))
+    logger.debug("{} output file expected {} lines".format(outfile, result))
+    if (result != outputLines):
+        logger.error("Output file {} smaller than expected, off by {} lines, expected {}".format(outfile,result - outputLines,result))
+        logger.error("Input files {} have {} lines".format(str(fileList),str(lines)))
+        logger.error("Total header lines removed - 1 {}".format(str(headers2Remove)))
         return False
-    elif(result < outputLines):
-        logger.warning("Output file larger than expected, off by {}".format((outputLines - result)))
-        logger.warning("Lines in files {}".format(str(lines)))
-        logger.warning("Files(headers removed - 1) {}".format(str(headers2Remove)))
-        logger.warning("Output lines: {}".format(str(outputLines)))
-        return False
-    elif(result == outputLines):
-        logger.debug("Input: {} lines {} files".format(outputLines, len(fileList),))
-        logger.debug("Output: {} lines file: {}".format(result, outfile))
+    else:
         return True
-
 
 # fname: file name to count lines of
 # Returns number of lines
@@ -231,7 +237,7 @@ def file_len(fname):
 # debug - Defaults to intlvl=2, set "false" to disable debug
 def csvjoiner(indir,
               outfile="",
-              delim=',', comment='#', debug=0):
+              delim=',', comment='#', debug=0, keep_going=True, errdir="/tmp/"):
     """ CSVJoiner will collate the csv files within the indir
         The resulting collated file can be designated with outfile paramater. """
     logger = getLogger("csvjoiner")
@@ -247,12 +253,13 @@ def csvjoiner(indir,
     #     debug=header\ndebug=data\ndebug=comment\n\n""")
     # Comments Outer
     commentsList = []
+    # List of corrupted CSV files not joined
+    badfiles = []
     # Header
     masterHeader = ""
-    headerFound = False
+    masterHeaderFile = ""
     # Data
     dataList = []
-    numFields = 0
     commentDelim = comment
     # if(version_info < (3, 0)):
     #     if(isinstance(indir, basestring)):
@@ -263,13 +270,13 @@ def csvjoiner(indir,
         if not path.isdir(indir):
             msg = "{} does not exist or is not a directory".format(indir)
             logger.error(msg)
-            return False, None
+            return False, None, badfiles
         fileList = sorted(glob(indir + "/*.csv"))
         logger.debug("Filelist:{}".format(fileList))
         if(len(fileList) == 0):
             msg = "{} has no CSV files to concatenate".format(indir)
             logger.warning(msg)
-            return True, ""
+            return True, "", badfiles
         elif(len(fileList) < 2):
             logger.info("{} has only {} files".format(indir, len(fileList)))
         jobid = path.basename(path.normpath(indir))
@@ -278,8 +285,8 @@ def csvjoiner(indir,
             host = h[0]
         else:
             logger.error('Hostname missing from header and file does not have hyphen ')
-            return False, None
-        if outfile is "":
+            return False, None, badfiles
+        if outfile == "":
             logger.debug("indir: {} host: {} jobid: {}".format(indir, host, jobid))
             outfile = host + "-collated" + "-papiex-" + jobid + "-0.csv"
             logger.info("Output file set as {}".format(str(outfile)))
@@ -292,10 +299,10 @@ def csvjoiner(indir,
         for test in fileList:
             if(not path.isfile(test)):
                 logger.error(test + " does not exist or is not a file")
-                return False, None
+                return False, None, badfiles
         if(len(fileList) != len(set(fileList))):
             logger.error("List has duplicates")
-            return False, None
+            return False, None, badfiles
         try:
             # Assumption: use first directory as jobid
             # Use normpath to remove the last slash on the directory
@@ -307,41 +314,53 @@ def csvjoiner(indir,
                 host = "unknown"
             # Generate outfile name
             logger.debug("indir:{} host:{} jobid:{}".format(indir, host, jobid))
-            if(outfile is ""):
+            if (outfile == ""):
                 outfile = host + "-collated" + "-papiex-" + jobid + "-0.csv"
             else:
                 # Outfile is custom check if it exists
                 if any(outfile in FL.lower() for FL in fileList):
                     logger.error(outfile + " is in output file list")
-                    return False, None
+                    return False, None, badfiles
         except IndexError:
             logger.error("CSV name not formatted properly(jobid or host?)")
-            return False, None
+            return False, None, badfiles
         logger.info("Output file:{}".format(str(outfile)))
+
+# Main pass
     if (path.isfile(outfile)):
         logger.error("Output {} already exists".format(outfile))
-        return False, None
+        return False, None, badfiles
     if any(("collated" in FL for FL in fileList)):
         logger.error("Collated file in filelist")
-        return False, None
+        return False, None, badfiles
     # iterate each file building result
-    for file in fileList:
-        logger.debug("Collating file:{}".format(file))
-        comments, masterHeader, data = parseFile(file, masterHeader,
-                                                     headerFound,
-                                                     numFields, delim, commentDelim)
-        # Reset for next file
-        headerFound = False
-        numFields = 0
-        # Append lists
-        commentsList += comments
-        dataList += data
-    writeCSV(outfile, commentsList, masterHeader, dataList)
-    if verifyOut(indir, outfile):
-        return True, outfile
-    else:
-        return False, None
+    badfiles = []
+    badfiles_renamed = []
+    for f in fileList:
+        logger.info("Collating file:{}".format(f))
+        comments, masterHeader, masterHeaderFile, data = parseFile(f, masterHeader, masterHeaderFile, delim, commentDelim)
+        if not data:
+            badfiles.append(f)
+        else:
+            commentsList += comments
+            dataList += data
 
+
+    if badfiles:
+#        logger.error("Parsing errors in: %s",str(badfiles))
+        badfiles_renamed = rename_bad_files(outfile,errdir,badfiles)
+        if not keep_going:
+            return False, None, badfiles_renamed
+        
+    if masterHeader and masterHeaderFile and dataList:
+        rv = writeCSV(outfile, commentsList, masterHeader, dataList)
+        if (rv is True) and verifyOut(list(set(fileList)-set(badfiles)), outfile):
+            return True, outfile, badfiles_renamed
+        else:
+            return False, None, badfiles_renamed
+
+    logger.error("Missing dataList, masterHeader or masterHeaderFile: %s",str(fileList))
+    return False, None, badfiles_renamed
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
@@ -349,12 +368,13 @@ if __name__ == '__main__':
     parser.add_argument('files', nargs='+', metavar='FILE',
                     help='Two or more CSV files to concatenate OR a directory containing CSV files')
     parser.add_argument('-v', '--verbose', action="count", default=0, help="increase verbosity")
-    parser.add_argument('-o', '--output-file', help="output file name. Without this option the file will be automatically named based on the input file names", default='')
+    parser.add_argument('-o', '--output-file', help="Name of the output file, determined from input if not specified",default='')
+    parser.add_argument('-e', '--error', action='store_true',help="Exit at the first sign of trouble",default=False)
+    parser.add_argument('-E', '--error-dir', help="Name of the directory to save files with errors, disabled if not specified",default='')
     args = parser.parse_args()
-    try:
-        retval = csvjoiner(debug=args.verbose, indir=(args.files[0] if (len(args.files) == 1) else args.files), outfile=args.output_file)
-    except Exception as e:
-        # an exception occured 
-        retval = (False, str(e))
-        logger.error("Error concatenating files: {0}".format(str(e)))
-    exit(0 if retval[0] else -1)
+    retval, of, bf = csvjoiner(debug=args.verbose,
+                               indir=(args.files[0] if (len(args.files) == 1) else args.files),
+                               outfile=args.output_file,
+                               keep_going=not args.error,
+                               errdir=args.error_dir)
+    exit(0 if retval else -1)

@@ -1,5 +1,15 @@
+# -*- coding: utf-8 -*-
+"""EPMT Statistics Module
+
+This module provides low-level statistical and numerical methods.
+
+Most methods use numpy ndarrays (as opposed to pandas dataframes).
+We deliberately do not include an EPMT-specific semantic knowledge
+in the functions of this module. The idea is to use them as pure
+stateless mathematical functions. No database connectivity is assumed
+for the functions in this module.
+"""
 from __future__ import print_function
-from os import environ
 import pandas as pd
 import numpy as np
 import operator
@@ -45,30 +55,42 @@ def z_score(ys, params = ()):
     '''
     Computes the *absolute* z-scores for an input vector.
 
-        ys: Input vector
-    params: Usually not provided. It's only of significance when
-            computing z-scores against a trained model. In which
-            case, it is of the form:
-              (z_max, mean_y, stdev_y)
-            where z_max: is the max absolute z-score in the model
-                 mean_y: is the mean of the trained model input
-                stdev_y: is the std. deviation of the trained model input
+    Parameters
+    ----------
 
-   RETURNS: (abs_z_scores, z_score_max, mean_ys, stdev_ys), where:
+        ys : list or numpy 1-d array
+             Input vector
+    params : tuple of 3 floats
+             Usually not provided. It's only of significance when
+             computing z-scores against a trained model. In which
+             case, it is of the form:
+               (z_max, mean_y, stdev_y)
+             where z_max: is the max absolute z-score in the model
+                  mean_y: is the mean of the trained model input
+                 stdev_y: is the std. deviation of the trained model input
 
-            abs_z_scores: Array of abs. values of z-scores (same shape as ys)
-             z_score_max: Max absolute z-score
-                 mean_ys: Mean of ys
-                stdev_ys: Std. dev of ys
+    RETURNS
+    -------
+    abs_z_scores : list of floats
+                   Absolute z-scores (same shape as ys)
+     z_score_max : float 
+                   Max. absolute z-score
+         mean_ys : float
+                   Mean of the input vector
+        stdev_ys : Standard deviation of input vector
 
-     NOTES: Unless you care about trained models you should ignore
-            all return values except the first, and 'params' argument.
 
-  EXAMPLES:
+    NOTES
+    -----
+    Unless you care about trained models you should ignore
+    all return values except the first, and 'params' argument.
 
-  >>> es.z_score([1,2,3,4,5,6,7,8,9,10, 1000])                                                          
-      (array([0.332 , 0.3285, 0.325 , 0.3215, 0.318 , 0.3145, 0.311 , 0.3075,
-              0.304 , 0.3005, 3.1621]), 3.1621, 95.9091, 285.9118)
+    EXAMPLES
+    --------
+
+    >>> z_score([1,2,3,4,5,6,7,8,9,10, 1000])                                                          
+    (array([0.332 , 0.3285, 0.325 , 0.3215, 0.318 , 0.3145, 0.311 , 0.3075,
+            0.304 , 0.3005, 3.1621]), 3.1621, 95.9091, 285.9118)
     '''
     # suppress divide by 0 warnings. We handle the actual division
     # issue by using np.nan_to_num
@@ -247,6 +269,20 @@ def outliers_uv(ys, methods = [outliers_iqr, outliers_z_score, outliers_modified
         out_vec += outliers
     logger.info('outliers using {} classifiers: {}'.format(len(methods), out_vec))
     return out_vec
+
+
+def uvod_classifiers():
+    '''
+    Returns a list of available univariate classifiers based on settings.py
+    If no univariate classifiers are defined in settings, then sensible defaults
+    are returned. The returned list contains one or more callables that support
+    the epmt univariate classifier interface.
+    '''
+    method_names = settings.univariate_classifiers if hasattr(settings, 'univariate_classifiers') else ['iqr', 'modified_z_score', 'z_score']
+    import sys
+    thismodule = sys.modules[__name__]
+    funcs = [ getattr(thismodule, m) for m in method_names ]
+    return funcs
 
 
 def mvod_classifiers(contamination = 0.1, warnopts='ignore'):
@@ -530,13 +566,16 @@ def rca(ref, inp, features, methods = [modified_z_score]):
     if type(inp) == pd.Series:
         inp = pd.DataFrame(inp).transpose()
 
-    if list(ref.columns.values) != list(inp.columns.values):
-        logger.error('ref and inp MUST have the same columns and in the same order')
-        return (False, None, None)
 
-    if not features:
-        # pick all the numeric columns in the dataframe
-        features = [f for f in list(inp.columns.values) if isinstance(inp[f][0], Number)]
+    # if list(ref.columns.values) != list(inp.columns.values):
+    #     logger.error('ref and inp MUST have the same columns and in the same order')
+    #     logger.error('ref has columns: {}\ninp has columns: {}'.format(ref.columns.values, inp.columns.values))
+    #     return (False, None, None)
+
+    if (not features) or (features == '*'):
+        # pick all the common numeric columns in the dataframe
+        ref_cols_set = set(ref.columns.values)
+        features = [f for f in list(inp.columns.values) if (isinstance(inp[f][0], Number) and (f in ref_cols_set)) ]
         logger.debug('using following features for RCA analysis: ' + str(features))
 
     ref_computed = ref[features].describe()
@@ -773,6 +812,19 @@ def normalize(v, min_=0, max_=1):
     '''
     from sklearn.preprocessing import minmax_scale
     return minmax_scale(v, feature_range=(min_,max_), axis=0)
+
+
+def standardize(v):
+    '''
+    Performs column-wise standardization (z-score normalization),
+    so that each column has a mean 0, and a standard deviation 1.0.
+
+          v: Input ndarray
+
+    RETURNS: A standardized ndarray of the same shape as the input
+    '''
+    from scipy.stats import zscore
+    return zscore(v, axis=0)
 
 def dframe_append_weighted_row(df, weights, ignore_index = True, use_abs = False):
     '''

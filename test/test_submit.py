@@ -10,6 +10,7 @@ def setUpModule():
     setup_db(settings, drop=True)
     datafiles='test/data/misc/685000.tgz'
     print('setUpModule: importing {0}'.format(datafiles))
+    settings.post_process_job_on_ingest = True
     epmt_submit(glob(datafiles), dry_run=False)
     
 def tearDownModule():
@@ -72,7 +73,7 @@ class EPMTSubmit(unittest.TestCase):
         self.assertTrue(eq.is_job_post_processed(j))
 
     @db_session
-    def test_unprocessed_conv_job_bug(self):
+    def test_unprocessed_jobs_auto_post_process(self):
         from orm import UnprocessedJob
         saved_val = settings.post_process_job_on_ingest
         if settings.orm == 'sqlalchemy':
@@ -80,11 +81,15 @@ class EPMTSubmit(unittest.TestCase):
             settings.post_process_job_on_ingest = False
         with capture() as (out,err):
             epmt_submit(['test/data/query/685016.tgz'], dry_run=False)
-        # make sure we can do a conv_jobs on the job without
-        # raising an exception
-        eq.conv_jobs('685016', fmt='pandas')
         # restore the old setting
         settings.post_process_job_on_ingest = saved_val
+        # make sure we can do a conv_jobs on the job without
+        # raising an exception
+        df = eq.conv_jobs('685016', fmt='pandas')
+        # we are guaranteed that the job will be post-processed
+        # as conv_jobs will post-process unprocessed jobs
+        self.assertTrue(list(df.rssmax.values))
+        self.assertTrue(eq.is_job_post_processed('685016'))
 
     @db_session
     def test_corrupted_csv(self):

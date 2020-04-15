@@ -1,15 +1,9 @@
 from __future__ import print_function
-from sys import stdout, argv, stderr
-import sys
 from os.path import basename
-from glob import glob
-import fnmatch
 from os import environ
-from logging import getLogger, basicConfig, DEBUG, ERROR, INFO, WARNING
-from os import getuid
+from logging import getLogger
 from json import dumps, loads
-from pwd import getpwnam, getpwuid
-from epmtlib import tag_from_string, sum_dicts, unique_dicts, fold_dicts, timing, dotdict, get_first_key_match, check_fix_metadata
+from epmtlib import tag_from_string, sum_dicts, timing, dotdict, get_first_key_match, check_fix_metadata
 from datetime import datetime, timedelta
 from functools import reduce
 import time
@@ -324,18 +318,18 @@ def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
             logger.error(err_msg)
             raise LookupError(err_msg)
         else:
-            file = tarfile.extractfile(info)
+            f = tarfile.extractfile(info)
     else:
-        file = open(jobdatafile,'r')
+        f = open(jobdatafile,'r')
     
-    line = file.readline()
+    line = f.readline()
     while line:
         line = line.strip()
         if len(line) == 0 or (str(line)).startswith(comment):
             if rows == 0:
                 retstr = line[1:].lstrip()
             rows += 1
-            line = file.readline()
+            line = f.readline()
         else:
             return rows, retstr
 
@@ -745,26 +739,6 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 #    info_dict = metadata['job_pl_from_batch'] # end batch also
 
     logger.info("Processing job id %s",jobid)
-    hostname = ""
-    file = ""
-# Damn NAN's for empty strings require converters, and empty integers need floats
-    conv_dic = { 'exename':str, 
-                 'path':str, 
-                 'args':str,
-                 'tags':str,
-                 'hostname':str }
-
-    # below dictionary isn't used anymore
-    # dtype_dic = { 
-    #     'pid':                        float,
-    #     'generation':                 float,
-    #     'ppid':                       float,
-    #     'pgid':                       float,
-    #     'sid':                        float,
-    #     'numtids':                    float }
-
-    # not used anywhere
-    # standards = [ "exename","path","args","pid","generation","ppid","pgid","sid","numtids","tid","start","end" ]
 
     # Initialize elements used in compute
     then = datetime.now()
@@ -814,8 +788,6 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     proc_tag_process_time = 0
     load_process_from_df_time = 0
     proc_misc_time = 0
-    read_csv_time = 0
-    tar_extract_time = 0
     profile = dotdict()
     profile.load_process = dotdict({'init': 0, 'misc': 0, 'proc_tags': 0, 'thread_sums': 0, 'to_json': 0})
 
@@ -972,10 +944,12 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     logger.info("Computed duration of job: %f us, %.2f m",j.duration,j.duration/60000000)
 
     if root_proc:
-        if root_proc.exitcode != j.exitcode:
-            logger.warning('metadata shows the job exit code is {0}, but root process exit code is {1}'.format(j.exitcode, root_proc.exitcode))
+        # if root_proc.exitcode != j.exitcode:
+        #     logger.warning('metadata shows the job exit code is {0}, but root process exit code is {1}'.format(j.exitcode, root_proc.exitcode))
         j.exitcode = root_proc.exitcode
         logger.info('job exit code (using exit code of root process): {0}'.format(j.exitcode))
+    if j.exitcode != 0:
+        logger.warning('Job failed with a non-zero exit code({})'.format(j.exitcode))
     j.tags = job_tags if job_tags else {}
 
     if settings.bulk_insert and all_procs:

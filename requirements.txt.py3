@@ -28,12 +28,14 @@ jupyter-core==4.6.1
 kiwisolver==1.1.0
 kmodes==0.10.2
 lazy-object-proxy==1.4.3
+line-profiler==3.0.2
 llvmlite==0.31.0
 lockfile==0.12.2
 Mako==1.1.0
 MarkupSafe==1.1.1
 matplotlib==3.1.2
 mccabe==0.6.1
+memory-profiler==0.57.0
 mistune==0.8.4
 more-itertools==7.2.0
 nbconvert==5.6.1
@@ -50,6 +52,7 @@ pickleshare==0.7.5
 pony==0.7.10
 prometheus-client==0.7.1
 prompt-toolkit==2.0.10
+psutil==5.7.0
 psycopg2-binary==2.7.5
 ptyprocess==0.6.0
 pycparser==2.19

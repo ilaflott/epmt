@@ -22,7 +22,8 @@ verbose = 0
 profile = False
 input_pattern = "*-papiex-*-[0-9]*.csv"
 install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-oss-install/"
-
+# place for error'd CSV files
+error_dest = "/tmp"
 # when we are not attached to a terminal we log to the file below
 logfile = path.expandvars("/tmp/epmt_{}.log".format(getuser() or "unknown"))
 
@@ -36,6 +37,7 @@ per_process_fields = ["tags","hostname","exename","path","args","exitcode","pid"
 skip_for_thread_sums = ["tid", "start", "end", "num_threads", "starttime"]
 
 # outlier detection
+univariate_classifiers = ['iqr', 'modified_z_score', 'z_score']
 outlier_thresholds = { 'modified_z_score': 3.5, 'z_score': 3.0 }
 # default features to use if no features specified
 outlier_features = ['duration', 'cpu_time', 'num_procs']
