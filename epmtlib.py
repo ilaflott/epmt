@@ -24,7 +24,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (3,7,11)
+_version = (3,7,12)
 
 def version():
     return _version
@@ -236,7 +236,10 @@ def capture():
 # Note, both key and values will be strings and no attempt will be made to
 # guess the type for integer/floats
 def tag_from_string(s, delim = ';', sep = ':', tag_default_value = '1'):
-    from pony.orm.ormtypes import TrackedDict
+    import warnings
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore",category=DeprecationWarning)
+        from pony.orm.ormtypes import TrackedDict
     if type(s) in (dict, TrackedDict): return s
     if not s: return (None if s == None else {})
 
