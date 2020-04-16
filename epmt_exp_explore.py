@@ -12,8 +12,8 @@ API, which it uses underneath.
 from orm import db_session
 import epmt_query as eq
 import numpy as np
-import epmt_settings as settings
 import epmt_stat as es
+import epmt_settings as settings
 
 from logging import getLogger
 
@@ -366,24 +366,36 @@ def exp_find_jobs(exp_name, components = [], exp_times = [], failed = None, **kw
     >>> exp.exp_find_jobs('ESM4_historical_D151', components=['ocean_annual_rho2_1x1deg', 'ocean_cobalt_fdet_100'], exp_times=['18540101', '18840101'], failed = False)
     ['685000', '685003']
     '''
-    from orm import Job
     if 'tags' in kwargs:
-        logger.warning('If you use the "tags" option then "exp_name", and "components" options will be ignored')
+        logger.warning('If you use the "tags" option then "exp_name", "components" and "exp_time" options will be ignored')
     else:
-        kwargs['tags'] = [ { 'exp_name': exp_name, 'exp_component' : c } for c in components ] if components else [ { 'exp_name': exp_name } ]
+        # create tags using exp_name and components
+        tags = [ { 'exp_name': exp_name, 'exp_component' : c } for c in components ] if components else [ { 'exp_name': exp_name } ]
+        # expand exp_times into the tag dictionaries
+        if exp_times:
+            _tags = []
+            for tag in tags:
+                _tags.extend([ dict(tag, exp_time = str(t)) for t in exp_times ])
+            tags = _tags
+        kwargs['tags'] = tags
+
 
     if failed is not None:
+        # create a filter with exitcode, but first check the user isn't
+        # using the fltr keyword themselves!
         if 'fltr' in kwargs:
             raise ValueError("You cannot use the 'fltr' option in conjunction with 'failed'")
-        kwargs['fltr'] = (Job.exitcode != 0) if failed else (Job.exitcode == 0)
+        # pony and sqlalchemy have different syntax for filters
+        if settings.orm == 'sqlalchemy':
+            from orm import Job
+            kwargs['fltr'] = (Job.exitcode != 0) if failed else (Job.exitcode == 0)
+        else:
+            # pony
+            kwargs['fltr'] = (lambda j: j.exitcode != 0) if failed else (lambda j: j.exitcode == 0)
 
+
+    # if fmt is not set use fmt default as 'terse'
     out_fmt = kwargs.get('fmt', 'terse')
     if 'fmt' in kwargs:
         del kwargs['fmt']
-    if exp_times:
-        partial_jobs = eq.get_jobs(**kwargs, fmt='orm')
-        time_tags = [ { 'exp_time': str(t) } for t in exp_times ]
-        final_jobs = eq.get_jobs(partial_jobs, tags = time_tags, fmt=out_fmt)
-    else:
-        final_jobs = eq.get_jobs(**kwargs, fmt=out_fmt)
-    return final_jobs
+    return eq.get_jobs(**kwargs, fmt=out_fmt)
