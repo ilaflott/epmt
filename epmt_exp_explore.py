@@ -318,3 +318,72 @@ def find_missing_time_segments(exp_name, jobs=[], components = [], time_segments
             print('{} is missing {}'.format(c, sorted(missing_times)))
             ret[c] = sorted(missing_times)
     return ret
+
+@db_session
+def exp_find_jobs(exp_name, components = [], exp_times = [], failed = None, **kwargs):
+    '''
+    Finds jobs within an experiment
+
+    The function searches for jobs within an experiment based on
+    restrictions on components, times and exit status
+
+    Parameters
+    ----------
+          exp_name : string
+                     Experiment name
+        components : list of strings, optional
+                     Restrict the search space to a set of components.
+                     If unspecified, all jobs within the experiment are
+                     candidates
+         exp_times : list of ints or list of strings, optional
+                     Restrict the search space to a set of time segments.
+                     If unspecified, all jobs within the experiment are
+                     candidates
+            failed : boolean, optional
+                     Restrict the search space to failed jobs if True
+                     or successful jobs if False. If not set, both
+                     failed and successful jobs will be returned
+
+          **kwargs : Any keyword option from `get_jobs`. You may
+                     consider `fmt` and other useful options.
+
+    Returns
+    -------
+    Collection (possibly, empty) of jobs in the selected format
+
+    Notes
+    -----
+    This function is a wrapper on `get_jobs` so you can use options
+    from that function as arguments here. The arguments `exp_name`,
+    `components` and `exp_times` are expanded to a set of tags and
+    passed to `get_jobs`. That's why you are strongly discouraged from
+    passing `tags` as an option to this function.
+    You can combine `components` and `exp_times`. This will use a
+    cross-product of the two in terms of acceptable tags.
+
+    Examples
+    --------
+    >>> exp.exp_find_jobs('ESM4_historical_D151', components=['ocean_annual_rho2_1x1deg', 'ocean_cobalt_fdet_100'], exp_times=['18540101', '18840101'], failed = False)
+    ['685000', '685003']
+    '''
+    from orm import Job
+    if 'tags' in kwargs:
+        logger.warning('If you use the "tags" option then "exp_name", and "components" options will be ignored')
+    else:
+        kwargs['tags'] = [ { 'exp_name': exp_name, 'exp_component' : c } for c in components ] if components else [ { 'exp_name': exp_name } ]
+
+    if failed is not None:
+        if 'fltr' in kwargs:
+            raise ValueError("You cannot use the 'fltr' option in conjunction with 'failed'")
+        kwargs['fltr'] = (Job.exitcode != 0) if failed else (Job.exitcode == 0)
+
+    out_fmt = kwargs.get('fmt', 'terse')
+    if 'fmt' in kwargs:
+        del kwargs['fmt']
+    if exp_times:
+        partial_jobs = eq.get_jobs(**kwargs, fmt='orm')
+        time_tags = [ { 'exp_time': str(t) } for t in exp_times ]
+        final_jobs = eq.get_jobs(partial_jobs, tags = time_tags, fmt=out_fmt)
+    else:
+        final_jobs = eq.get_jobs(**kwargs, fmt=out_fmt)
+    return final_jobs
