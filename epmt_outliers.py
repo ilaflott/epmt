@@ -2,7 +2,12 @@
 """EPMT Outliers API
 
 The EPMT Outliers API provides functions to determine outliers
-among a collection of jobs, operations or processes.
+among a collection of jobs, operations or processes. It uses
+EPMT Query API and the EPMT statistics module for the underlying 
+operations.
+
+Most functions in this API deal with dataframes and understand
+high-level primitives such as jobs and processes.
 """
 
 
@@ -24,13 +29,36 @@ import epmt_settings as settings
 FEATURES = settings.outlier_features
 
 
-def partition_jobs(jobs, features=FEATURES, methods=[], thresholds=thresholds, fmt='pandas'):
+def partition_jobs(jobs, features=FEATURES, methods=[], thresholds=thresholds):
     """
-    This function partitions jobs using one feature at a time
-    INPUT: jobs is a collection/list of jobs/jobids
-    OUTPUT: dictionary where the keys are features and the values
-            are tuples of the form: ([ref_jobs], [outlier_jobs])
-    
+    Partition jobs into disjoint sets of reference and outliers
+
+    Parameters
+    ----------
+          jobs : list of strings or list of Job objects or ORM query
+                 The collection of jobs to partition
+
+      features : list of strings or '*', optional
+                 Partitioning is done on the basis of these features
+                 The wildcard -- '*' -- or an empty feature list means
+                 use all features
+
+       methods : list of callables, optional
+                 If unset, a default list of univariate classifiers is used
+
+    thresholds : dict, optional
+                 Defines the thresholds for different classifiers.
+                 This is used from settings, and ordinarily you should
+                 not have to manually use this option
+
+    Returns
+    -------
+    A dict where the keys are feature strings and the values are
+    tuples containing the two disjoint sets -- reference jobs and
+    outlier jobs
+ 
+    Examples
+    -------- 
     >> parts = eod.partition_jobs(jobs, methods = [es.modified_z_score])
     >>> pprint(parts)
     {'cpu_time': (set([u'kern-6656-20190614-190245',
@@ -53,26 +81,43 @@ def partition_jobs(jobs, features=FEATURES, methods=[], thresholds=thresholds, f
 
 def partition_jobs_by_ops(jobs, tags=[], features=FEATURES, methods=[modified_z_score], thresholds=thresholds):
     """
-    This function attempts to partition the supplied jobs into two partitions:
+    Partitions operations into disjoint sets of reference and outliers
+
+    
+    Parameters
+    ----------
+          jobs : list of strings or list of Job objects or ORM query
+                 The collection of jobs whose operations will be partitioned
+          tags : list of strings or list of dicts or string, optional
+                 The tags define the operations which will be partitioned.
+                 If not specified the unique process tags across all jobs
+                 will be used
+      features : list of strings, optional
+                 Defaults to the features defined in settings
+
+       methods : list of callables, optional
+                 One or more methods for outlier detection.
+                 Defaults to MADZ
+
+    thresholds : dict, optional
+                 Defines the thresholds for different classifiers.
+                 This is used from settings, and ordinarily you should
+                 not have to manually use this option
+    
+    Returns
+    -------
+       dictionary where each key is a tag, and the value is a tuple like 
+       ([ref_jobs],[outlier_jobs).
+    
+    Notes
+    -----
+    This function partitions the supplied jobs into two partitions:
     reference jobs and outliers. The partitioning is done for each tag, and
     for a tag, if any feature makes a job an outlier then it's put in the
     outlier partition.
     
-    INPUT:
-      - jobs: Jobs collection specified as a list of a jobs, a single job or a pandas df
-      - tags: One or more tags specified as a list of strings, or a list of dicts.
-              Single tag specified as a string or tag is also acceptable.
-              If not specified all the unique process tags across all jobs in "jobs"
-              will be assumed.
-      - features: One or more features. Specified as a list of strings
-      - methods: One or more methods for outlier detection (default is MADZ)
-      - thresholds: dict of constants indexable by the names of functions specified in 'methods'
-    
-    OUTPUT:
-      - dictionary where each key is a tag, and the value is a tuple like 
-        ([ref_jobs],[outlier_jobs).
-    
-    EXAMPLE:
+    Examples
+    --------
     >>> jobs = eq.get_jobs(tags = 'exp_name:linux_kernel', fmt='terse)
     >>> parts = eod.partition_jobs_by_ops(jobs, methods = [es.modified_z_score])
     >>> pprint(parts)
@@ -105,59 +150,71 @@ def partition_jobs_by_ops(jobs, tags=[], features=FEATURES, methods=[modified_z_
 @db_session
 def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[], thresholds = thresholds, sanity_check=True, pca = False):
     """
+    Detects outlier jobs
+
     This function will detects outlier jobs among a set of input jobs.
     This should be used as the first tool in outlier detection. If you
     would like to dig deeper into the operations that are outliers,
     then use `detect_outlier_ops`, which will take appreciably longer
     than this function.
     
-    INPUT:
-    jobs:     is either a pandas dataframe of job(s) or a list of job ids or 
-              a Pony Query object
+    Parameters
+    ----------
 
-    trained_model: The ID of a reference model (optional). If not specified,
-              outlier detection will be done from within the jobs. Without
-              a trained model, you will need a minimum number of jobs (4)
-              for outlier detection to work.
+          jobs : list of strings or list of objects or ORM query or dataframe
+                 You need a minimum of 4 jobs without a trained model for
+                 outlier detection
 
-    features: is a list of metrics available in the jobs. If an empty 
-              list/None/'*' is specified, then it's assumed that the 
-              user wants outlier detection on all *available* features. 
-              If features is not specified, then the default 
-              outlier_features in settings will be used.
+ trained_model : int, optional
+                 The ID of a reference model. If not specified,
+                 outlier detection will be done from within the jobs
 
-    methods:  This is an advanced option to specify the function(s) to use
-              for outlier detection. If unspecified it will default to
-              modified z-score. If multivariate classifiers are specified,
-              a trained model *must* be specified. We only support pyod
-              classifiers at present for multivariate classifiers. Do not
-              mix univariate and multivariate classifiers.
+    features   : list of strings or '*', optional
+                 List of features to use for outlier detection. 
+                 An empty list or '*' means use all available features.
+                 Defaults to a list specified in settings
 
-    thresholds: Advanced option defining what it means to be an outlier.
-              This is ordered in the same order as 'methods', and has 
-              meaning in the context of the 'method' it applies to.
+       methods : list of callables, optional 
+                 This is an advanced option to specify the function(s) to use
+                 for outlier detection. If unspecified it will default to
+                 all the available univariate classifiers
+                 If multivariate classifiers are specified, a trained model 
+                 *must* be specified. We only support pyod classifiers at present 
+                 for multivariate classifiers. Do not mix univariate and 
+                 multivariate classifiers.
 
-    sanity_check: Warn if the jobs are not comparable. Enabled by default.
+    thresholds : dict, optional
+                 Defines the thresholds for different classifiers.
+                 This is used from settings, and ordinarily you should
+                 not have to manually use this option
 
-    pca:    False by default. If enabled, the PCA analysis will be done
-            on the features prior to outlier detection. Rather than setting
-            this option to True, you may also set this option to something
-            like: pca = 2, in which case it will mean you want two components
-            in the PCA. Or something like, pca = 0.95, which will be 
-            intepreted as meaning do PCA and automatically select the number
-            components to arrive at the number of components in the PCA.
-            If set to True, a 0.85 variance ratio will be set to enable
-            automatic selection of PCA components.
+  sanity_check : boolean, optional
+                 Warn if the jobs are not comparable. Enabled by default.
+
+           pca : boolean or int or float, optional
+                 False by default. If enabled, the PCA analysis will be done
+                 on the features prior to outlier detection. Rather than setting
+                 this option to True, you may also set this option to something
+                 like: pca = 2, in which case it will mean you want two components
+                 in the PCA. Or something like, pca = 0.95, which will be 
+                 intepreted as meaning do PCA and automatically select the number
+                 components to arrive at the number of components in the PCA.
+                 If set to True, a 0.85 variance ratio will be set to enable
+                 automatic selection of PCA components.
     
-    OUTPUT:
+    Returns
+    -------
       The output of the function depends on the classifier methods
       given as argument to the function:
 
       If univariate classifiers are used or if no classifiers
-        are given: (uv_df, uv_dict)
+      are given: (uv_df, uv_dict)
+        uv_df: Is a dataframe like shown below (univariate classifier examples)
+      uv_dict: Is a  dictionary indexed by one of the requested "features"
+               and the value is a tuple like ([ref_jobs], [outlier_jobs])
 
       If only multivariate classifiers are used: mv_df, mv_dict
-        mv_df: Is a dataframe containing outlier scores for given
+         mv_df: Is a dataframe containing outlier scores for given
                jobs. A higher score indications more classifier
                methods classified the job as an outlier.
 
@@ -165,14 +222,14 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
                contains the outlier vector generated by classification
                using said classifier.
 
+    Notes
+    -----
     You cannot mix UV classifiers with MV classifiers. You MUST specify
     either only univariate classifiers, or only multivariate classifiers.
     
-        uv_df: Is a dataframe like shown below (univariate classifier examples)
-      uv_dict: Is a  dictionary indexed by one of the requested "features"
-               and the value is a tuple like ([ref_jobs], [outlier_jobs])
     
-    EXAMPLES:
+    Examples
+    --------
 
     The following examples show OD using UV classifiers:
 
@@ -469,7 +526,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
                 if trained_model and added_model_jobs:
                     # remove model rows that we added
                     arg = retval[~arg.jobid.isin(added_model_jobs)].reset_index(drop=True)
-                adjusted_df = pca_weighted_score(arg, pca_features, pca_variances)[0]
+                adjusted_df = _pca_weighted_score(arg, pca_features, pca_variances)[0]
                 _new_retlist.append(adjusted_df)
             else:
                 _new_retlist.append(arg)
@@ -486,43 +543,69 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
 @db_session
 def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds=thresholds, sanity_check=True, pca = False):
     """
-    This function detects outlier *operations* across a set of *jobs*.
+    Detects outlier operations
+
+    This function detects outlier *operations* on a set of jobs.
     You should be using this function only if you want to figure out
     which operations are outlier. If you only want to figure out the
     jobs that were outliers, it is recommended you use `detect_outlier_jobs`,
     since that runs considerably faster than `detect_outlier_ops`.
 
-    jobs:   List of jobids or an ORM query
+    Parameters
+    ----------
+          jobs : list of strings or list of objects or ORM query or dataframe
+                 You need a minimum of 4 jobs without a trained model for
+                 outlier detection
 
-    tags:   List of tags specified either as a string or a list of string/list 
-            of dicts. If tags is not specified, then the list of jobs will be 
-            queried to get the superset of unique tags across the jobs.
+          tags : list of strings or list of dicts or string, optional
+                 The tags define the operations which will be partitioned.
+                 If not specified the unique process tags across all jobs
+                 will be used
 
-    methods:List of UV or MV classifiers. You cannot mix UV and MV classifiers.
-            Use either only UV classifiers or only MV classifiers. If no 
-            methods are provided, then we use MADZ.
+ trained_model : int, optional
+                 The ID of a reference model. If not specified,
+                 outlier detection will be done from within the jobs
 
-    pca:    False by default. If enabled, the PCA analysis will be done
-            on the features prior to outlier detection. Rather than setting
-            this option to True, you may also set this option to something
-            like: pca = 2, in which case it will mean you want two components
-            in the PCA. Or something like, pca = 0.95, which will be 
-            intepreted as meaning do PCA and automatically select the number
-            components to arrive at the number of components in the PCA.
-            If set to True, a 0.85 variance ratio will be set to enable
-            automatic selection of PCA components.
+    features   : list of strings or '*', optional
+                 List of features to use for outlier detection. 
+                 An empty list or '*' means use all available features.
+                 Defaults to a list specified in settings
 
-            NOTE: When pca is enabled, then the return value is a single dataframe
-            with no special ordering of rows other than they are grouped by tag.
+       methods : list of callables, optional 
+                 This is an advanced option to specify the function(s) to use
+                 for outlier detection. If unspecified it will default to
+                 all the available univariate classifiers
+                 If multivariate classifiers are specified, a trained model 
+                 *must* be specified. We only support pyod classifiers at present 
+                 for multivariate classifiers. Do not mix univariate and 
+                 multivariate classifiers
+
+    thresholds : dict, optional
+                 Defines the thresholds for different classifiers.
+                 This is used from settings, and ordinarily you should
+                 not have to manually use this option
+
+           pca : boolean or int or float, optional
+                 False by default. If enabled, the PCA analysis will be done
+                 on the features prior to outlier detection. Rather than setting
+                 this option to True, you may also set this option to something
+                 like: pca = 2, in which case it will mean you want two components
+                 in the PCA. Or something like, pca = 0.95, which will be 
+                 intepreted as meaning do PCA and automatically select the number
+                 components to arrive at the number of components in the PCA.
+                 If set to True, a 0.85 variance ratio will be set to enable
+                 automatic selection of PCA components.
+                 When pca is enabled, then the return value is a single dataframe
+                 with no special ordering of rows other than they are grouped
+                 by tag
     
-    OUTPUT:
+    Returns
+    -------
 
        When given UV classifiers: (df, dict_of_partitions, scores_df, sorted_tags, sorted_features)
        When given MV classifiers: df
 
-       NOTE: You cannot mix UV and MV classifier methods.
-
-    Where:
+    where:
        df is the dataframe that is sorted by decreasing tag importance, and
        has a bitmask showing whether a particular operation of a job was an
        outlier when contrasted with the same operation in other jobs. The 
@@ -542,10 +625,14 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
     feature_score is defined as the sum of scores for a feature across 
     all tags:
 
-    NOTE: When pca is enabled, then the return value is a single dataframe
-          with no special ordering of rows other than they are grouped by tag.
+    Notes
+    -----
+    You cannot mix UV and MV classifiers.
+    When pca is enabled, then the return value is a single dataframe
+    with no special ordering of rows other than they are grouped by tag.
     
-    EXAMPLES:
+    Examples
+    --------
     
     The following examples cover OD using univariate classifiers:
     jobs = [u'625151', u'627907', u'629322', u'633114', u'675992', u'680163', u'685001', u'691209', u'693129', u'696110', u'802938', u'804266']
@@ -829,7 +916,7 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
                 # remove model rows that we added
                 retval = retval[~retval.jobid.isin(added_model_jobs)].reset_index(drop=True)
             logger.info('adjusting the PCA scores based on PCA variances')
-            adjusted_df = pca_weighted_score(retval, pca_features, pca_variances, 2)[0]
+            adjusted_df = _pca_weighted_score(retval, pca_features, pca_variances, 2)[0]
             return adjusted_df
 
         # now lets sort the tags by the max of the scores across the features
@@ -958,15 +1045,28 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
 @db_session
 def detect_rootcause(jobs, inp, features = FEATURES,  methods = [modified_z_score]):
     """
-    This function does an RCA for outlier jobs
+    Performs root-cause analysis on a job given a set of reference jobs
 
-    INPUT:
-    jobs is either a dataframe of reference jobs, or a list
-    of reference jobs, or a trained model.
-    inp is either a single job/jobid or a Series or a dataframe with a single column
-    methods is a list of callables for outlier detection (optional)
+    Parameters
+    ----------
+          jobs : list of strings or list of objects or ORM query or int
+                 jobs can be replaced with the reference ID of a trained model
 
-    OUTPUT:
+           inp : string or Series or a dataframe with a single column
+                 inp represents the entity that is an outlier for which
+                 you want to perform RCA
+
+    features   : list of strings or '*', optional
+                 List of features to use for outlier detection. 
+                 An empty list or '*' means use all available features.
+                 Defaults to a list specified in settings
+
+       methods : list of callables, optional 
+                 This is an advanced option to specify the function(s) to use
+                 for outlier detection. If unspecified it will default to MADZ
+
+    Returns
+    -------
         (res, df, sorted_feature_list),
     where 'res' is True on sucess and False otherwise,
     df is a dataframe that ranks the features from left to right according
@@ -985,16 +1085,31 @@ def detect_rootcause(jobs, inp, features = FEATURES,  methods = [modified_z_scor
 @db_session
 def detect_rootcause_op(jobs, inp, tag, features = FEATURES,  methods = [modified_z_score]):
     """
-    This function does an RCA for outlier ops
+    Performs root-cause analysis (RCA) for an operation
 
-    INPUT:
-    jobs is either a dataframe of reference jobs, or a list
-    of reference jobs, or a trained model.
-    inp is either a single job/jobid or a Series or a dataframe with a single column
-    tag: Required string or dictionary signifying the operation
-    methods: List of optional callables for outlier detection
+    Parameters
+    ----------
+          jobs : list of strings or list of objects or ORM query or int
+                 jobs can be replaced with the reference ID of a trained model
+
+           inp : string or Series or a dataframe with a single column
+                 inp represents the entity that is an outlier for which
+                 you want to perform RCA
+
+           tag : string or dict
+                 This is used to select the operation
+
+      features : list of strings or '*', optional
+                 List of features to use for outlier detection. 
+                 An empty list or '*' means use all available features.
+                 Defaults to a list specified in settings
+
+       methods : list of callables, optional 
+                 This is an advanced option to specify the function(s) to use
+                 for outlier detection. If unspecified it will default to MADZ
     
-    OUTPUT:
+    Returns
+    -------
         (res, df, sorted_feature_list),
     where 'res' is True on sucess and False otherwise,
     df is a dataframe that ranks the features from left to right according
@@ -1002,8 +1117,9 @@ def detect_rootcause_op(jobs, inp, tag, features = FEATURES,  methods = [modifie
     for the feature. The sorted_tuples consists of a list of tuples, where each
     tuple (feature,<diff_score>)
     
-    EXAMPLE:
-    (retval, df, s) = eod.detect_rootcause_op([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024'], u'kern-6656-20190614-192044-outlier', tag = 'op_sequence:4', methods=[es.modified_z_score])
+    Examples
+    --------
+    >>> (retval, df, s) = eod.detect_rootcause_op([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024'], u'kern-6656-20190614-192044-outlier', tag = 'op_sequence:4', methods=[es.modified_z_score])
     
     >>> df
                                   cpu_time      duration  num_procs
@@ -1047,41 +1163,54 @@ def detect_rootcause_op(jobs, inp, tag, features = FEATURES,  methods = [modifie
 
 def pca_feature_combine(inp_df, inp_features = [], desired = 2, retain_features = False):
     '''
+    Perform PCA on a dataframe with multiple features
+
     Performs PCA and returns a new dataframe containing
     the new PCA features as columns. The returned dataframe
     does not contain the old features unless retain_features
     is enabled.
 
-    inp_df: A pandas dataframe where some or all of the columns are features.
+    Parameters
+    ----------
 
-    inp_features: A list of features to use. If not set, the feature set
-        will be automatically determined.
+       inp_df : dataframe
+                Input dataframe where some or all of the columns are features.
 
-    desired: Refers to the number of components desired in the PCA.
-             It may be set instead to a number < 1.0, in which case
-             it implies the desired PCA variance ratio.
+ inp_features : list of strings, optional
+                A list of features to use. If not set, the feature set
+                will be automatically determined
 
-    retain_features: Defaults to False. If enabled, the input features
-             will also be copied into the output dataframe.
+      desired : int (>= 1) or float (< 1.0), optional 
+                If an integer (>= 1) it refers to the desired number of PCA 
+                components. It may be set instead to a float < 1.0, in which 
+                case it refers to the desired PCA variance ratio. Defaults
+                to 2, meaning we want 2 PCA components
 
-    RETURNS: A tuple consisting of (out_df, pca_variance_ratios_list, pca_feature_names, features_df)
+retain_features: boolean, optional 
+                Defaults to False. If enabled, the input features
+                will also be copied into the output dataframe.
 
-             where:
-                 out_df: Output dataframe consisting of the jobids, PCA feature
-                         columns and optionally the original feature columns if
-                         retain_features is set.
-                 pca_variance_ratios_list: List of variance ratios. You should
-                         sum them to ensure they capture the variance of the
-                         original data (ideally 80% or higher)
-                 pca_feature_names: List of PCA component names
-                 features_df: Dataframe of shape (n_pca_components X num_features)
-                         This dataframe can be used to determine the feature
-                         weights used to construct the PCA components. The rows
-                         correspond to the PCA components in order. So the first
-                         row is the most important. You probably want to use
-                         the absolute values of the values in this dataframe.
+    Returns
+    -------
+    (out_df, pca_variance_ratios_list, pca_feature_names, features_df)
 
-    EXAMPLE:
+    where:
+                 out_df : Output dataframe consisting of the jobids, PCA feature
+                          columns and optionally the original feature columns if
+                          retain_features is set.
+pca_variance_ratios_list: List of variance ratios. You should
+                          sum them to ensure they capture the variance of the
+                          original data (ideally 80% or higher)
+       pca_feature_names: List of PCA component names
+             features_df: Dataframe of shape (n_pca_components X num_features)
+                          This dataframe can be used to determine the feature
+                          weights used to construct the PCA components. The rows
+                          correspond to the PCA components in order. So the first
+                          row is the most important. You probably want to use
+                          the absolute values of the values in this dataframe.
+
+    Examples
+    --------
         >>> jobs = eq.get_jobs(['625151', '627907', '629322', '633114', '675992', '680163', '685001', '691209', '693129'], fmt='pandas')
         >>> (df, variances, pca_features, features_df) = eod.pca_feature_combine(jobs)
         >>> df.iloc[:,[0,1,2,3]]
@@ -1232,16 +1361,38 @@ def pca_feature_combine(inp_df, inp_features = [], desired = 2, retain_features 
     return (out_df, pca_.explained_variance_ratio_, pca_feature_names, features_df)
 
 
-def pca_weighted_score(pca_df, pca_features, variances, index = 1):
+def _pca_weighted_score(pca_df, pca_features, variances, index = 1):
     '''
+    Compute a weighted PCA score using covariance ratios
+
     Takes an input dataframe consisting of PCA outlier scores
     and returns a dataframe comprising of an additional column
     -- 'pca_weighted' -- which is obtained by weighting the
     individual PCA feature scores by their variance weight.
 
-    index: Column number where to insert the pca_weighted column
-           in the output dataframe
+    Parameters
+    ----------
+         pca_df : dataframe
+                  Input dataframe consisting of PCA columns
+   pca_features : list of strings
+                  PCA feature names
+      variances : tuple or list of floats
+                  List or tuple of floats representing the variance ratios
+                  of the PCA columns. Must be in the same order as
+                  `pca_features`
+          index : int, optional
+                  Column number where to insert the pca_weighted column
+                  in the output dataframe
 
+    Returns
+    -------
+        new_df : dataframe
+                 New dataframe, which is a copy of the old one with
+                 an additional 'PCA_weighted' column
+pca_weight_vec : The newly added PCA weighted vector
+
+    Notes
+    -----
     For example, if the input df is like:
       jobid    pca_01     pca_02
       xxxx     1          0
@@ -1270,15 +1421,19 @@ def pca_weighted_score(pca_df, pca_features, variances, index = 1):
 
 def pca_feature_rank(jobs, inp_features = []):
     '''
-    This function does a 2-component PCA analysis and returns a dataframe
-    with features sorted by importance. 
+    Performs 2-component PCA and feature-ranking
 
+    Parameters
+    ----------
+           jobs : list of strings or list of Job objects or ORM or dataframe
+                  Collection of jobs
+    inp_features: list of strings, optional
+                  The list of features to use. If empty, all available
+                  input features will be used.
 
-    jobs: Collection of jobs
-    inp_features: The list of features to use. If empty, all available
-          input features will be used.
-
-    RETURNS: (features_df, sorted_features), where:
+    Returns
+    -------
+    (features_df, sorted_features), where:
 
         features_df is a dataframe with 3 rows. The first two rows 
         are the feature coefficients for the two PCA components 
@@ -1291,9 +1446,12 @@ def pca_feature_rank(jobs, inp_features = []):
          [(featureN, scoreN), ...]
         The list is sorted in the decreasing order of feature importance.
 
-
+    Notes
+    -----
     This function is just a simple wrapper around pca_feature_combine.
 
+    Examples
+    --------
     >>> df, sorted_features = pca_feature_rank(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'])
     ...
     DEBUG: epmt_stat: PCA explained variance ratio: [0.68112048 0.24584736], sum(0.9269678411657647)
@@ -1333,28 +1491,35 @@ def pca_feature_rank(jobs, inp_features = []):
 
 def feature_scatter_plot(jobs, features = [], outfile='', annotate = False):
     '''
+    Create a 2-D scatter plot showing job features
+
     Generates a 2-D scatter plot of jobs with features on two axes.
     If more than 2 features are requested, for example by setting
     features=[], then 2-component PCA analysis is automatically
     done, prior to plotting the features.
 
-    jobs: A collection of jobs or jobids
+    Parameters
+    ----------
+           jobs : list of strings or list of Job objects or ORM or dataframe
+                  Collection of jobs
+        features: list of strings, optional
+                  The list of features to use. If more than two features
+                  are specified, PCA will be performed to get a final
+                  of 2 PCA features
+                  [] or '*' imply all features, and, again, PCA will be done
+                  if more than two features are found. By default,
+                  features is set to [], so PCA analysis will be performed
+                  to reduce the final feature set to 2.
 
-    features: A list/tuple of features. If more than two are
-              provided, then 2-component PCA analysis is done
-              to reduce the number of features to 2.
-              [] or '*' imply all features, and PCA will be done
-              if more than two features are found. By default,
-              features is set to [], so PCA analysis will be performed
-              to reduce the final feature set to 2.
+        outfile : string, optional
+                  If this is set, the output is saved in a file. Otherwise
+                  matplotlib's standard renderer is used.
 
-    outfile: If this is set, the output is saved in a file. Otherwise
-             matplotlib's standard renderer is used.
+       annotate : boolean, optional
+                  If set, annotate each datapoint (plot can become cluttered if enabled)
 
-    annotate: Annotate each datapoint (plot can become cluttered if enabled)
-
-    EXAMPLE:
-
+    Example
+    -------
     # The following does PCA automatically as we select *all* features as input
     >>> feature_scatter_plot(['625151', '627907', '629322', '633114', '675992', '680163', '685001', '691209', '693129'], features=[])
     # The following selects two features
@@ -1419,6 +1584,27 @@ def feature_scatter_plot(jobs, features = [], outfile='', annotate = False):
 # df: jobs dataframe
 # model: reference model
 def sanitize_features(f, df, model = None):
+    '''
+    Prune feature list based on availability
+
+    This function will prune a given list of features to a, possibly,
+    smaller list by checking availability, removing blacklisted
+    features, etc.
+
+    Parameters
+    ----------
+             f : list of strings or '*'
+                 Input list of features. [] or '*' means use all available
+                 features
+
+            df : dataframe
+                 Job dataframe
+         model : int or ReferenceModel object, optional
+
+    Returns
+    -------
+    list of strings that is a subset of the input features
+    '''
     # logger.debug('dataframe shape: {}'.format(df.shape))
     if f in ([], '', '*', None):
         logger.debug('using all available features in dataframe')
@@ -1458,22 +1644,32 @@ def sanitize_features(f, df, model = None):
 
 def get_feature_distributions(jobs, features = []):
     '''
+    Get feature distributions for a collection of jobs
+
     Get the distribution (normal, uniform, etc) of features across
     a collection of jobs. If features is unspecified, all available
     numeric features will be used. The function returns a dictionary
     indexed by feature where the value is a string like 'norm' or
     'uniform'. The distribution name is a string from scipy.stats.
 
-    jobs: A collection of jobs, such as a list, an ORM or dataframe.
-    features: A list of features for which we want to determine the
-              the distribution. The argument is optional, and if
-              not specified, all available numeric features for the
-              jobs will be used.
-    RETURNS: A dictionary indexed by feature where the value is the
-             distribution specified as a string. At present, this string
-             is one of: ['norm', 'uniform', 'unknown']
+    Parameters
+    ----------
+        jobs : list of strings or list of Job objects or ORM query
 
-    EXAMPLES:
+    features: list of strings, optional
+              A list of *numeric* features for which we want to 
+              determine the the distribution. The argument is optional, 
+              and if not specified, all available numeric features for the
+              jobs will be used.
+
+    Returns
+    -------
+    Dictionary indexed by feature where the value is the
+    distribution specified as a string. At present, this string
+    is one of: ['norm', 'uniform', 'unknown']
+
+    Examples
+    --------
    
     # Below we explicitly choose two features: cpu_time and rssmax. If we do not specify
     # the features, all the numeric features are selected. 

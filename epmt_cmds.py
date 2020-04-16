@@ -557,9 +557,9 @@ def epmt_annotate(argslist, replace = False):
     # with the updated metadata
 
     # merge existing annotations if any
-    annotations = metadata.get('job_annotations', {}) if (not replace) else {}
+    annotations = metadata.get('annotations', {}) if (not replace) else {}
     annotations.update(d)
-    metadata['job_annotations'] = annotations
+    metadata['annotations'] = annotations
     retval = write_job_metadata(metadatafile,metadata)
 
     # for staged job we need to recreate the staged file

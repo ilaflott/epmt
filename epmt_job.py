@@ -728,7 +728,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     exitcode = metadata['job_el_exitcode']
     env_changes_dict = metadata['job_env_changes']
     job_tags = metadata['job_tags']
-    annotations = metadata.get('job_annotations', {})
+    annotations = metadata.get('annotations', {})
     if annotations:
         logger.info('Job annotations: {0}'.format(annotations))
 
