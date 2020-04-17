@@ -955,7 +955,7 @@ def submit_to_db(input, pattern, dry_run=True, remove_file=False):
 
 
 def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True,from_annotate=False):
-    logger.debug("stage_job(%s,collate=%s,compress_and_tar=%s,keep_going=%s)",indir,str(collate),str(compress_and_tar),str(keep_going))
+    logger.debug("stage_job(%s,collate=%s,compress_and_tar=%s,keep_going=%s,from_annotate=%s)",indir,str(collate),str(compress_and_tar),str(keep_going),str(from_annotate))
     if not indir or len(indir) == 0:
         logger.error("stage_job: indir is epmty")
         return False
@@ -967,6 +967,7 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True,from_anno
         logger.debug("csvjoiner(%s)",indir)
         status, collated_file, badfiles = csvjoiner(indir, keep_going=keep_going, errdir=settings.error_dest)
         if status == False:
+            logger.debug("csvjoiner returned status = %s",status)
             return False
         if (badfiles) and not from_annotate:
             d={}
@@ -1036,6 +1037,7 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True,from_anno
     return True
 
 def epmt_stage(dirs, keep_going=True, collate=True, compress_and_tar=True):
+    logger.debug("epmt_stage(%s,collate=%s,compress_and_tar=%s,keep_going=%s)",dirs,str(collate),str(compress_and_tar),str(keep_going))
     if not dirs:
         global_jobid,global_datadir,global_metadatafile = setup_vars()
         if not (global_jobid and global_datadir and global_metadatafile):
@@ -1050,7 +1052,10 @@ def epmt_stage(dirs, keep_going=True, collate=True, compress_and_tar=True):
             d += "/"
         r = stage_job(d,collate=collate,compress_and_tar=compress_and_tar,keep_going=keep_going)
         if r is False and not keep_going:
+            logger.debug("stage_job early exit status = %s",r)
             return False
+
+    logger.debug("stage_job final status = %s",r)    
     return r
 
 def epmt_dbsize(findwhat=['database','table','index','tablespace'], usejson=True, usebytes=True):

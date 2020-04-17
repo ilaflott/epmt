@@ -2,4 +2,4 @@ FROM papiex-tester:latest as papiex
 RUN ls && pwd
 
 FROM epmt-command:latest as epmt
-COPY --from=papiex /tmp/build/papiex-oss-install /home/app/papiex-oss-install
+COPY --from=papiex /tmp/build/papiex-epmt-install /home/app/papiex-epmt-install
