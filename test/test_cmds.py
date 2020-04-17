@@ -136,7 +136,11 @@ class EPMTCmds(unittest.TestCase):
         epmt_logging_init(-2)
         with capture() as (out, err):
             retval = epmt_stage(['test/data/corrupted_csv'],keep_going=False)
-            self.assertEqual(retval,False, "corrupted CSV files should have failed stage")
+            self.assertTrue(retval == False, "corrupted CSV files, should have returned False")
+            self.assertTrue(path.exists(settings.error_dest+'/pp053-papiex-615503-0.csv.error'))
+            retval = epmt_stage(['test/data/corrupted_csv'],keep_going=True)
+            self.assertTrue(retval == True, "corrupted CSV files but keep_going, should have returned True")
+            self.assertTrue(path.exists(settings.error_dest+'/pp053-papiex-615503-0.csv.error'))
         # restore logging level
         epmt_logging_init(-1)
         
