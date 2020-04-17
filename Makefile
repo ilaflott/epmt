@@ -21,6 +21,7 @@ dist:
 	cp -Rp preset_settings epmt-install
 	cp -Rp notebooks epmt-install
 	cp -Rp migrations epmt-install
+	cp -p alembic.ini epmt-install
 	mkdir epmt-install/examples
 	cp epmt-example.sh epmt-example.csh epmt-install/examples
 	mkdir epmt-install/slurm

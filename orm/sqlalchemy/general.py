@@ -7,6 +7,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.query import Query
 import threading
 from functools import wraps
+from os import chdir, getcwd, path
 
 from logging import getLogger
 logger = getLogger('orm.sqlalchemy')  # you can use other name
@@ -616,6 +617,22 @@ def set_sql_debug(discard):
     print('Try changing the value of the "echo" key in the settings.py:db_params')
     return False
 
+# This decorator will change the directory to the directory
+# containing alembic.ini (install dir) and then restore
+# the working directory on end of function
+def chdir_for_alembic_and_restore_cwd(function):
+   def decorator(*args, **kwargs):
+      cwd = getcwd()
+      # change dir to install root
+      install_dir = path.dirname(path.abspath(__file__)) + "/../../"
+      chdir(install_dir)
+      result = function(*args, **kwargs)
+      # restore directory to cwd
+      chdir(cwd)
+      return result
+   return decorator
+
+@chdir_for_alembic_and_restore_cwd
 def check_and_apply_migrations():
     from alembic import config, script
     database_schema_version = get_db_schema_version()
@@ -632,6 +649,7 @@ def check_and_apply_migrations():
         logger.info('database schema up-to-date (version {})'.format(epmt_schema_head))
     return True
 
+@chdir_for_alembic_and_restore_cwd
 def get_db_schema_version():
     from alembic import config
     from alembic.runtime import migration
@@ -643,6 +661,7 @@ def get_db_schema_version():
     return database_schema_version
 
 
+@chdir_for_alembic_and_restore_cwd
 def migrate_db():
     from alembic import config, script
     from sqlalchemy import exc
@@ -663,6 +682,7 @@ def migrate_db():
         logger.info('Database successfully migrated to: {}'.format(epmt_schema_head))
     return (epmt_schema_head == updated_version)
 
+@chdir_for_alembic_and_restore_cwd
 def alembic_dump_schema(version = ''):
     '''
     This functions dumps the raw SQL needed to generate the
