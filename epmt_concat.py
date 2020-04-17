@@ -22,7 +22,8 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from sys import exit
 from re import findall, search
-from os import path, rename, unlink
+from os import path, remove
+from shutil import copyfile
 from glob import glob
 from logging import getLogger
 logger = getLogger('epmt_concat')  # you can use other name
@@ -45,12 +46,14 @@ def rename_bad_files(outfile, errdir, badfiles):
     for f in badfiles:
         p=path.basename(path.normpath(f))
         fn=ed+"/"+p+".error"
-        logger.debug("rename(%s,%s)",f,fn)
+        logger.debug("copyfile(%s,%s)",f,fn)
         try:
-            rename(f,fn)
+            copyfile(f,fn)
+            remove(f)
             renamed_badfiles.append(fn)
         except Exception as e:
-            logger.error("rename(): %s",str(e))
+            logger.error("copyfile(%s,%s) or remove(%s) failed: %s",f,fn,f,str(e))
+            renamed_badfiles.append(f)
     return renamed_badfiles
 
 # file - Single CSV File to parse for comment,header and data
@@ -190,7 +193,7 @@ def writeCSV(outfile, comments, masterHeader, dataList):
                 f.write("%s\n" % item)
     except Exception as e:  # parent of IOError, OSError
         logger.error("Error writing output file %s, removing...: %s",outfile,str(e))
-        unlink(outfile)
+        remove(outfile)
         return False
     return True
 
@@ -252,8 +255,10 @@ def csvjoiner(indir,
               delim=',', comment='#', debug=0, keep_going=True, errdir="/tmp/"):
     """ CSVJoiner will collate the csv files within the indir
         The resulting collated file can be designated with outfile paramater. """
+
     logger = getLogger("csvjoiner")
     epmt_logging_init(intlvl=debug, check=True)
+    logger.debug("indir=%s,outfile=%s,delim=%s,comment=%s,keep_going=%s,errdir=%s",str(indir),outfile,delim,comment,keep_going,errdir)
     #epmt_logging_init(intlvl=2, check=True)
     # if (debug.lower() == "true"):
     #     epmt_logging_init(intlvl=2, check=False)  # Since debug paramater is specified check false
@@ -326,12 +331,11 @@ def csvjoiner(indir,
             commentsList += comments
             dataList += data
 
-
     if badfiles:
-#        logger.error("Parsing errors in: %s",str(badfiles))
-        badfiles_renamed = rename_bad_files(outfile,errdir,badfiles)
+        logger.debug("parseFile returned some bad files: %s",str(badfiles))
         if not keep_going:
-            return False, None, badfiles_renamed
+            return False, None, badfiles
+        badfiles_renamed = rename_bad_files(outfile,errdir,badfiles)
         
     if masterHeader and masterHeaderFile and dataList:
         rv = writeCSV(outfile, commentsList, masterHeader, dataList)
