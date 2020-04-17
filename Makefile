@@ -1,8 +1,11 @@
 OS_TARGET=centos-6
 PAPIEX_VERSION?=2.2.4
-VERSION=$(shell python3 -m epmtlib)
-RELEASE=epmt-$(OS_TARGET)-$(VERSION).tgz
-EPMT_RELEASE=EPMT-release-$(VERSION)-$(OS_TARGET).tgz
+PAPIEX_SRC?=../papiex-oss
+EPMT_VERSION=$(shell python3 -m epmtlib)
+EPMT_RELEASE=epmt-$(EPMT_VERSION)-$(OS_TARGET).tgz
+EPMT_FULL_RELEASE=EPMT-release-$(EPMT_VERSION)-$(OS_TARGET).tgz
+PAPIEX_RELEASE=papiex-epmt-$(PAPIEX_VERSION)-$(OS_TARGET).tgz
+#
 SHELL=/bin/bash
 PWD=$(shell pwd)
 
@@ -26,26 +29,26 @@ dist:
 	cp epmt-example.sh epmt-example.csh epmt-install/examples
 	mkdir epmt-install/slurm
 	cp SLURM/slurm_task_*log_epmt.sh epmt-install/slurm
-	rm -f $(RELEASE); tar cvfz $(RELEASE) epmt-install
+	rm -f $(EPMT_RELEASE); tar cvfz $(EPMT_RELEASE) epmt-install
 	rm -rf epmt-install build
 
 dist-test:
 	rm -rf epmt-install-tests
 	mkdir epmt-install-tests
 	cp -Rp test Makefile epmt-example.csh epmt-example.sh epmt-install-tests
-	rm -f test-$(RELEASE); tar cvfz test-$(RELEASE) epmt-install-tests
+	rm -f test-$(EPMT_RELEASE); tar cvfz test-$(EPMT_RELEASE) epmt-install-tests
 	rm -rf epmt-install-tests
 
-docker-dist $(RELEASE) test-$(RELEASE): 
+docker-dist $(EPMT_RELEASE) test-$(EPMT_RELEASE): 
 	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build -t $(OS_TARGET)-epmt-build .
 	docker run -i --tty --rm --volume=$(PWD):$(PWD):z -w $(PWD) $(OS_TARGET)-epmt-build make distclean dist dist-test
 
-docker-test-dist: $(RELEASE) test-$(RELEASE)
-	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test -t $(OS_TARGET)-epmt-test --build-arg release=$(VERSION) .
+docker-test-dist: $(EPMT_RELEASE) test-$(EPMT_RELEASE)
+	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test -t $(OS_TARGET)-epmt-test --build-arg release=$(EPMT_VERSION) .
 	docker run --rm -it $(OS_TARGET)-epmt-test
 
-docker-dist-slurm: $(RELEASE)
-	docker build -f Dockerfiles/Dockerfile.slurm-$(OS_TARGET) -t $(OS_TARGET)-epmt-papiex-slurm-test --build-arg release=$(VERSION) .
+docker-dist-slurm: $(EPMT_RELEASE)
+	docker build -f Dockerfiles/Dockerfile.slurm-$(OS_TARGET) -t $(OS_TARGET)-epmt-papiex-slurm-test --build-arg release=$(EPMT_VERSION) .
 
 slurm-start: docker-dist-slurm
 	docker run --name $(OS_TARGET)-slurm --privileged -dt --rm --volume=$(PWD):$(PWD):z -w $(PWD) -h ernie $(OS_TARGET)-epmt-papiex-slurm-test tail -f /dev/null
@@ -78,17 +81,15 @@ release7:
 	$(MAKE) OS_TARGET=centos-7 release
 
 release:  
-	@if [ -f $(EPMT_RELEASE) ]; then echo "$(EPMT_RELEASE) already exists. Please remove it and try again"; exit 1; fi
-	@echo "Making EPMT release $(VERSION) for $(OS_TARGET)..."
-	@echo " - building epmt and epmt-test tarball.."
-	@$(MAKE) docker-dist > /dev/null
-	@ls $(RELEASE) test-$(RELEASE)
-	@echo " - building papiex tarball"
-	cd ../papiex-oss; rm -f papiex-epmt-$(OS_TARGET)-$(PAPIEX_VERSION).tgz;  make OS_TARGET=$(OS_TARGET) docker-dist > /dev/null; cp -v papiex-epmt-$(OS_TARGET)-$(PAPIEX_VERSION).tgz ../epmt
-	@ls papiex-epmt-$(OS_TARGET)-$(PAPIEX_VERSION).tgz
-	@echo "Assembling release tarball"
-	tar -czf $(EPMT_RELEASE) $(RELEASE) test-$(RELEASE) papiex-epmt-$(OS_TARGET)-$(PAPIEX_VERSION).tgz
-	@echo "Release prepared: $(EPMT_RELEASE)"
+	@if [ -f $(EPMT_FULL_RELEASE) ]; then echo "$(EPMT_FULL_RELEASE) already exists. Please remove it and try again"; exit 1; fi
+	@echo "Making EPMT release for $(OS_TARGET): $(EPMT_VERSION)"
+	@echo " - building epmt and epmt-test tarball"
+	make OS_TARGET=$(OS_TARGET) docker-dist > /dev/null
+	@ls $(EPMT_RELEASE) test-$(EPMT_RELEASE)
+	@echo " - building papiex tarball for $(OS_TARGET): $(PAPIEX_VERSION)"
+	cd $(PAPIEX_SRC); rm -f $(PAPIEX_RELEASE); make OS_TARGET=$(OS_TARGET) docker-dist > /dev/null; cp -v $(PAPIEX_RELEASE) $(PWD)
+	tar -czf $(EPMT_FULL_RELEASE) $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(PAPIEX_RELEASE)
+	@echo "$(EPMT_VERSION) release prepared for $(OS_TARGET): $(EPMT_FULL_RELEASE)"
 
 release-all:
 	$(MAKE) release6 && utils/check-release
@@ -98,7 +99,7 @@ clean:
 	find . -name "*~" -o -name "*.pyc" -o -name epmt.log -o -name core -exec rm -f {} \; 
 	rm -rf __pycache__
 distclean: clean
-	rm -f settings.py test-$(RELEASE) $(RELEASE)
+	rm -f settings.py test-$(EPMT_RELEASE) $(EPMT_RELEASE)
 	rm -rf epmt-install epmt-install-tests build
 # 
 # Simple python version testing with no database
