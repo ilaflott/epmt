@@ -573,8 +573,8 @@ def epmt_annotate(argslist, replace = False):
             jobid = argslist[0]
             logger.info('annotating job {0} in db: {1}'.format(jobid, d))
             mode = 2  # annotating job in database
-            from epmt_query import annotate_job_db
-            updated_ann = annotate_job_db(jobid, d, replace)
+            from epmt_query import annotate_job
+            updated_ann = annotate_job(jobid, d, replace)
             logger.debug('updated annotations: {}'.format(updated_ann))
             return d.items() <= updated_ann.items()
 
