@@ -1,5 +1,6 @@
 OS_TARGET=centos-6
 PAPIEX_VERSION?=2.2.4
+PAPIEX_SRC?=../papiex-oss
 EPMT_VERSION=$(shell python3 -m epmtlib)
 EPMT_RELEASE=epmt-$(EPMT_VERSION)-$(OS_TARGET).tgz
 EPMT_FULL_RELEASE=EPMT-release-$(EPMT_VERSION)-$(OS_TARGET).tgz
@@ -85,7 +86,7 @@ release:
 	make OS_TARGET=$(OS_TARGET) docker-dist > /dev/null
 	@ls $(EPMT_RELEASE) test-$(EPMT_RELEASE)
 	@echo " - building papiex tarball for $(OS_TARGET): $(PAPIEX_VERSION)"
-	cd ../papiex-oss; rm -f $(PAPIEX_RELEASE); make OS_TARGET=$(OS_TARGET) docker-dist > /dev/null; cp -v $(PAPIEX_RELEASE) ../epmt
+	cd $(PAPIEX_SRC); rm -f $(PAPIEX_RELEASE); make OS_TARGET=$(OS_TARGET) docker-dist > /dev/null; cp -v $(PAPIEX_RELEASE) $(PWD)
 	tar -czf $(EPMT_FULL_RELEASE) $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(PAPIEX_RELEASE)
 	@echo "$(EPMT_VERSION) release prepared for $(OS_TARGET): $(EPMT_FULL_RELEASE)"
 
