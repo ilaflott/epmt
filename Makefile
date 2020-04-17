@@ -41,7 +41,7 @@ dist-test:
 
 docker-dist $(EPMT_RELEASE) test-$(EPMT_RELEASE): 
 	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build -t $(OS_TARGET)-epmt-build .
-	docker run -i --tty --rm --volume=$(PWD):$(PWD):z -w $(PWD) $(OS_TARGET)-epmt-build make distclean dist dist-test
+	docker run -i --tty --rm --volume=$(PWD):$(PWD):z -w $(PWD) $(OS_TARGET)-epmt-build make OS_TARGET=$(OS_TARGET) distclean dist dist-test
 
 docker-test-dist: $(EPMT_RELEASE) test-$(EPMT_RELEASE)
 	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test -t $(OS_TARGET)-epmt-test --build-arg release=$(EPMT_VERSION) .
