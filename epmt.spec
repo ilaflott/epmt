@@ -36,7 +36,7 @@ for f in files:
     ipe_extra_datas.append((f, '.'))
 
 dash_extra_datas = collect_data_files('dash_html_components') + collect_data_files('dash_core_components') + collect_data_files('dash_daq') + collect_data_files('dash_table') + collect_data_files('dash_renderer') + collect_data_files('dash_bootstrap_components')
-
+plotly_extra_datas = collect_data_files('plotly.graph_objects') + collect_data_files('plotly.express') + collect_data_files('plotly.figure_factory')
 dash_resources = []
 files = glob('ui/components/*.py')
 for f in files:
@@ -46,7 +46,7 @@ files = glob('ui/assets/*')
 for f in files:
     dash_resources.append((f, './assets/'))
 
-extra_datas = ipe_extra_datas + dash_extra_datas + dash_resources
+extra_datas = ipe_extra_datas + dash_extra_datas + dash_resources + plotly_extra_datas
 
 print("Extra data: ",extra_datas)
 
