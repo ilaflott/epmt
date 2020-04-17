@@ -634,7 +634,12 @@ def chdir_for_alembic_and_restore_cwd(function):
       try:
           chdir(settings.install_prefix + "/../../epmt")
       except FileNotFoundError:
-          chdir(settings.install_prefix + "/../epmt-install/epmt")
+          logger.warning(settings.install_prefix + "/../../epmt")
+          try:
+              chdir(settings.install_prefix + "/../epmt-install/epmt")
+          except FileNotFoundError:
+              logger.warning(settings.install_prefix + "/../epmt-install/epmt")
+              pass
       result = function(*args, **kwargs)
       # restore directory to cwd
       chdir(cwd)
