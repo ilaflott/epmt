@@ -17,7 +17,7 @@ bulk_insert = True
 # stage_command_dest = "./"
 # verbose = 0
 # input_pattern = "*-papiex-*-[0-9]*.csv"
-# install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-oss-install/"
+# install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-epmt-install/"
 
 # when we are not attached to a terminal we log to the file below
 # logfile = path.expandvars("/tmp/epmt_{}.log".format(getuser() or "unknown"))

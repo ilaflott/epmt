@@ -21,7 +21,7 @@ verbose = 0
 # gather profiling information or not
 profile = False
 input_pattern = "*-papiex-*-[0-9]*.csv"
-install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-oss-install/"
+install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-epmt-install/"
 # place for error'd CSV files
 error_dest = "/tmp"
 # when we are not attached to a terminal we log to the file below
