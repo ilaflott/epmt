@@ -1,4 +1,4 @@
-# EPMT Installation
+# EPMT
 
 Experiment Performance Management Tool a.k.a Workflow DB
 
@@ -6,17 +6,32 @@ This is a tool to collect metadata and performance data about an entire job down
 
 The software contained in this repository was written by Philip Mucci of Minimal Metrics LLC.
 
-## Table of Contents
+# Installation With Release File
 
-[TOC]
+For installing with a release file you'll need:
+
+* CentOS 6 or 7
+* Release file `EPMT-release-*-OS-*.tgz` 
+* Installer script `epmt-installer`
+
+## Running Install Script
+
+> :boom:
+root@0b261f368b92:/home/installer# ls  
+EPMT-release-3.7.13-centos-7.tgz  epmt-installer
+
+---
+
+
+# Installation From Source
 
 ## Requirements
 
-A basic Linux (or container image) with:
+A Linux (or container image) with:
 
-* 	python (2.6 or higher)
-*  pip (python-pip)
-* 	gcc
+* python (2.6 or higher)
+* pip (python-pip)
+* gcc
 * git 
 
 For a stock Ubuntu 16.04 (or container):
@@ -34,7 +49,7 @@ Before you start, please make sure you have a copy of **EPMT** in a directory ca
 ```
 $ mkdir build
 $ cd build/
-$ git clone https://<user>@bitbucket.org/minimalmetrics/epmt.git
+$ git clone https://<user>@gitlab.com:minimal-metrics-llc/epmt/epmt.git
 ```
 
 You also need the **papiex** data collection libraries in the **build** directory:

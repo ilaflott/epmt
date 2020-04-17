@@ -1083,9 +1083,17 @@ def epmt_entrypoint(args):
         exp_explore(args.epmt_cmd_args, metric = args.metric, limit = args.limit)
         return 0
     if args.command == 'gui':
+        from threading import Thread
+
+        from waitress import serve
+        from serve_static import app as docsapp
         from ui import init_app, app
         init_app()
-        app.run_server(debug=environ.get("DASH_DEBUG",False), host='0.0.0.0')
+        
+        ui = Thread(target=app.run_server)
+        docs = Thread(target=serve, args=([docsapp]))
+        docs.start()
+        ui.start()
         return 0
     if args.command == 'unittest':
         import unittest

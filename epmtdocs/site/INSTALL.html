@@ -1,165 +1,127 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
+      <script>
+	// Hack for scrolling window when linking to anchor tag with fixed nav header
+        var shiftWindow = function() { scrollBy(0, -75) };
+        window.addEventListener("hashchange", shiftWindow);
+        function load() { if (window.location.hash) shiftWindow(); }
+      </script>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         
         
         
-        <link rel="shortcut icon" href="../img/favicon.ico">
-        <title>EPMT Installation - EPMT</title>
-        <link href="../css/bootstrap-custom.min.css" rel="stylesheet">
-        <link href="../css/font-awesome.min.css" rel="stylesheet">
-        <link href="../css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
-        <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
-        <!--[if lt IE 9]>
-            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-            <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
-        <![endif]-->
+        <link rel="shortcut icon" href="./img/favicon.ico">
+        <title>Install - EPMT</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+    <link href="css/font-awesome.min.css" rel="stylesheet">
+    <link href="css/base.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
 
-        <script src="../js/jquery-1.10.2.min.js" defer></script>
-        <script src="../js/bootstrap-3.0.3.min.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
-        <script>hljs.initHighlightingOnLoad();</script> 
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+    <script src="js/base.js"></script> 
     </head>
 
-    <body>
+    <body class="">
 
-        <div class="navbar navbar-default navbar-fixed-top" role="navigation">
-            <div class="container">
+      <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
+	<div class="container">
+	<a class="navbar-brand" href="README.html">EPMT</a>
+	<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarsExample04" aria-controls="navbarsExample04" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+	</button>
 
-                <!-- Collapsed navigation -->
-                <div class="navbar-header">
-                    <!-- Expander button -->
-                    <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-                        <span class="sr-only">Toggle navigation</span>
-                        <span class="icon-bar"></span>
-                        <span class="icon-bar"></span>
-                        <span class="icon-bar"></span>
-                    </button>
-                    <a class="navbar-brand" href="..">EPMT</a>
+	<div class="collapse navbar-collapse">
+          <!-- Main navigation -->
+          <nav class="nav">
+            <ul class="navbar-nav">
+              <li class="active">
+                <a class="nav-link" href="INSTALL.html">Install</a>
+              </li>
+              <li >
+                <a class="nav-link" href="README.html">Readme</a>
+              </li>
+              <li >
+                <a class="nav-link" href="migrations.html">Database Migrations</a>
+              </li>
+              <li class="nav-item dropdown">
+                <a href="#" role="button" class="nav-link dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" id="nav-dropdown-Notebooks">Notebooks <b class="caret"></b></a>
+                <div class="dropdown-menu" aria-labelledby="nav-dropdown-Notebooks">
+                  
+<a href="http://localhost:8888/notebooks/notebooks/Outliers.ipynb" target="_blank" class="dropdown-item">Outliers</a>
+                  
+<a href="http://localhost:8888/notebooks/notebooks/Query-API.ipynb" target="_blank" class="dropdown-item">Query API</a>
                 </div>
+              </li>
+              <li >
+                <a class="nav-link" href="http://localhost:8050" target="_blank">Interface</a>
+              </li>
+              <li >
+                <a class="nav-link" href="index_ui.html">Interface Readme</a>
+              </li>
+            </ul>
+          </nav>
 
-                <!-- Expanded navigation -->
-                <div class="navbar-collapse collapse">
-                        <!-- Main navigation -->
-                        <ul class="nav navbar-nav">
-                            <li >
-                                <a href="..">Readme</a>
-                            </li>
-                            <li class="active">
-                                <a href="./">EPMT Installation</a>
-                            </li>
-                            <li >
-                                <a href="../migrations/">Database Migrations</a>
-                            </li>
-                            <li class="dropdown">
-                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">Notebooks <b class="caret"></b></a>
-                                <ul class="dropdown-menu">
-                                    
-<li >
-    <a href="http://localhost:8888/notebooks/notebooks/Outliers.ipynb" target="_blank">Outliers</a>
-</li>
-                                    
-<li >
-    <a href="http://localhost:8888/notebooks/notebooks/Query-API.ipynb" target="_blank">Query API</a>
-</li>
-                                </ul>
-                            </li>
-                            <li >
-                                <a href="http://localhost:8050" target="_blank">Interface</a>
-                            </li>
-                            <li >
-                                <a href="../index_ui/">Interface Readme</a>
-                            </li>
-                        </ul>
+          <ul class="navbar-nav flex-row ml-md-auto d-none d-md-flex">
+            <li class="nav-item disabled">
+              <a class="nav-link" rel="next" >
+		<i class="fa fa-arrow-left"></i> Previous
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" rel="prev" href="README.html">
+		Next <i class="fa fa-arrow-right"></i>
+              </a>
+            </li>
+          </ul>
+	</div>
+	</div>
+      </nav><div id="content" class="container">
+        
+      <div class="row">
+        <div class="col-md-9" role="main">
 
-                    <ul class="nav navbar-nav navbar-right">
-                        <li>
-                            <a href="#" data-toggle="modal" data-target="#mkdocs_search_modal">
-                                <i class="fa fa-search"></i> Search
-                            </a>
-                        </li>
-                            <li >
-                                <a rel="next" href="..">
-                                    <i class="fa fa-arrow-left"></i> Previous
-                                </a>
-                            </li>
-                            <li >
-                                <a rel="prev" href="../migrations/">
-                                    Next <i class="fa fa-arrow-right"></i>
-                                </a>
-                            </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
 
-        <div class="container">
-                <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
-    <ul class="nav bs-sidenav">
-        <li class="main active"><a href="#epmt-installation">EPMT Installation</a></li>
-            <li><a href="#table-of-contents">Table of Contents</a></li>
-            <li><a href="#requirements">Requirements</a></li>
-            <li><a href="#source-code">Source Code</a></li>
-            <li><a href="#installation-of-the-data-collection-libraries">Installation of the Data Collection Libraries</a></li>
-            <li><a href="#installation-of-epmt">Installation of EPMT</a></li>
-            <li><a href="#database-services">Database Services</a></li>
-            <li><a href="#analysis-and-visualization">Analysis and Visualization</a></li>
-        <li class="main "><a href="#troubleshooting">Troubleshooting</a></li>
-            <li><a href="#error-version-glibc_xxx-not-found">Error: version GLIBC_x.xx not found</a></li>
-        <li class="main "><a href="#appendix">Appendix</a></li>
-            <li><a href="#docker-images-for-the-running-the-epmt-command">Docker Images for the running the EPMT command</a></li>
-            <li><a href="#testing-epmt-collection-with-various-python-versions-under-docker">Testing EPMT Collection with Various Python Versions under Docker</a></li>
-    </ul>
-</div></div>
-                <div class="col-md-9" role="main">
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    
+    <li class="breadcrumb-item active" aria-current="page">Install</li>
+  </ol>
+</nav>
 
-<h1 id="epmt-installation">EPMT Installation</h1>
+
+<h1 id="epmt">EPMT</h1>
 <p>Experiment Performance Management Tool a.k.a Workflow DB</p>
 <p>This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes. This tool uses <strong>papiex</strong> to perform the process monitoring. This tool is targeted at batch or ephemeral jobs, not daemon processes. </p>
 <p>The software contained in this repository was written by Philip Mucci of Minimal Metrics LLC.</p>
-<h2 id="table-of-contents">Table of Contents</h2>
-<div class="toc">
+<h1 id="installation-with-release-file">Installation With Release File</h1>
+<p>For installing with a release file you'll need:</p>
 <ul>
-<li><a href="#epmt-installation">EPMT Installation</a><ul>
-<li><a href="#table-of-contents">Table of Contents</a></li>
-<li><a href="#requirements">Requirements</a></li>
-<li><a href="#source-code">Source Code</a></li>
-<li><a href="#installation-of-the-data-collection-libraries">Installation of the Data Collection Libraries</a><ul>
-<li><a href="#perf-event-system-setting">Perf Event System Setting</a></li>
+<li>CentOS 6 or 7</li>
+<li>Release file <code>EPMT-release-*-OS-*.tgz</code> </li>
+<li>Installer script <code>epmt-installer</code></li>
 </ul>
-</li>
-<li><a href="#installation-of-epmt">Installation of EPMT</a><ul>
-<li><a href="#configuration">Configuration</a></li>
-<li><a href="#collection">Collection</a></li>
-<li><a href="#submission">Submission</a></li>
-<li><a href="#configuring-a-database">Configuring a Database</a></li>
-</ul>
-</li>
-<li><a href="#database-services">Database Services</a><ul>
-<li><a href="#database-service-configuration">Database Service Configuration</a></li>
-<li><a href="#dropping-and-recreating-database">Dropping and Recreating Database</a></li>
-</ul>
-</li>
-<li><a href="#analysis-and-visualization">Analysis and Visualization</a></li>
-</ul>
-</li>
-<li><a href="#troubleshooting">Troubleshooting</a><ul>
-<li><a href="#error-version-glibc_xxx-not-found">Error: version GLIBC_x.xx not found</a></li>
-</ul>
-</li>
-<li><a href="#appendix">Appendix</a><ul>
-<li><a href="#docker-images-for-the-running-the-epmt-command">Docker Images for the running the EPMT command</a></li>
-<li><a href="#testing-epmt-collection-with-various-python-versions-under-docker">Testing EPMT Collection with Various Python Versions under Docker</a></li>
-</ul>
-</li>
-</ul>
-</div>
+<h2 id="running-install-script">Running Install Script</h2>
+<blockquote>
+<p>:boom:
+root@0b261f368b92:/home/installer# ls<br />
+EPMT-release-3.7.13-centos-7.tgz  epmt-installer</p>
+</blockquote>
+<hr />
+<h1 id="installation-from-source">Installation From Source</h1>
 <h2 id="requirements">Requirements</h2>
-<p>A basic Linux (or container image) with:</p>
+<p>A Linux (or container image) with:</p>
 <ul>
 <li>python (2.6 or higher)</li>
 <li>pip (python-pip)</li>
@@ -176,7 +138,7 @@ $ apt-get install -y python python-pip git gcc
 <p>Before you start, please make sure you have a copy of <strong>EPMT</strong> in a directory called <strong>build</strong>:</p>
 <pre><code>$ mkdir build
 $ cd build/
-$ git clone https://&lt;user&gt;@bitbucket.org/minimalmetrics/epmt.git
+$ git clone https://&lt;user&gt;@gitlab.com:minimal-metrics-llc/epmt/epmt.git
 </code></pre>
 
 <p>You also need the <strong>papiex</strong> data collection libraries in the <strong>build</strong> directory:</p>
@@ -463,49 +425,91 @@ notebook_1  |         http://(9a7974f0ffb9 or 127.0.0.1):8888/?token=c9d7cb543a8
 make check-python-2.6
 make check-python-2.7
 make check-python-3
-</code></pre></div>
-        </div>
+</code></pre>
 
-        <footer class="col-md-12">
-            <hr>
-            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
-        </footer>
-        <script>
-            var base_url = "..",
-                shortcuts = {"search": 83, "next": 78, "help": 191, "previous": 80};
-        </script>
-        <script src="../js/base.js" defer></script>
-        <script src="../search/main.js" defer></script>
-
-        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="Search Modal" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-                <h4 class="modal-title" id="exampleModalLabel">Search</h4>
-            </div>
-            <div class="modal-body">
-                <p>
-                    From here you can search these documents. Enter
-                    your search terms below.
-                </p>
-                <form role="form">
-                    <div class="form-group">
-                        <input type="text" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
-                    </div>
-                </form>
-                <div id="mkdocs-search-results"></div>
-            </div>
-            <div class="modal-footer">
-            </div>
-        </div>
+<ul class="metadata page-metadata" data-bi-name="page info" lang="en-us" dir="ltr">
+  <li class="last-updated-holder displayDate loading">
+    <span class="last-updated-text">Last updated:</span>
+    <time role="presentation" datetime="2018-10-25T00:00:00.000Z" data-article-date-source="ms.date"></time>
+  </li>
+<!--
+  <li class="readingTime">
+    2 minutes to read
+  </li>
+-->
+  <li class="contributors-holder">
+    <span class="contributors-text">Contributors</span>
+    <ul class="contributors" data-bi-name="contributors"></ul>
+  </li>
+</ul>
+</div>
+        <div class="col-md-3"><div class="navbar-light navbar-expand-md hidden-print sticky-top sticky-offset" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
     </div>
-</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="Keyboard Shortcuts Modal" aria-hidden="true">
+
+    <div id="toc-collapse" class="navbar-collapse collapse card">
+        <ul class="nav flex-column bs-sidenav">
+            <li class="nav-item main"><a class="nav-link" href="#epmt">EPMT</a></li>
+            <li class="nav-item main"><a class="nav-link" href="#installation-with-release-file">Installation With Release File</a></li>
+                <li class="nav-item">
+                    <a href="#running-install-script" class="nav-link">Running Install Script</a>
+                </li>
+            <li class="nav-item main"><a class="nav-link" href="#installation-from-source">Installation From Source</a></li>
+                <li class="nav-item">
+                    <a href="#requirements" class="nav-link">Requirements</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#source-code" class="nav-link">Source Code</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#installation-of-the-data-collection-libraries" class="nav-link">Installation of the Data Collection Libraries</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#installation-of-epmt" class="nav-link">Installation of EPMT</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#database-services" class="nav-link">Database Services</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#analysis-and-visualization" class="nav-link">Analysis and Visualization</a>
+                </li>
+            <li class="nav-item main"><a class="nav-link" href="#troubleshooting">Troubleshooting</a></li>
+                <li class="nav-item">
+                    <a href="#error-version-glibc_xxx-not-found" class="nav-link">Error: version GLIBC_x.xx not found</a>
+                </li>
+            <li class="nav-item main"><a class="nav-link" href="#appendix">Appendix</a></li>
+                <li class="nav-item">
+                    <a href="#docker-images-for-the-running-the-epmt-command" class="nav-link">Docker Images for the running the EPMT command</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#testing-epmt-collection-with-various-python-versions-under-docker" class="nav-link">Testing EPMT Collection with Various Python Versions under Docker</a>
+                </li>
+        </ul>
+    </div>
+</div></div>
+      </div>
+      </div>
+
+      <footer class="col-md-12">
+	<hr>
+	<div class="container">
+	</div>
+      </footer>
+      <script>
+	var base_url = ".",
+            shortcuts = {"search": 83, "next": 78, "help": 191, "previous": 80};
+      </script>
+      <script src="js/base.js" defer></script>
+
+      <div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="Keyboard Shortcuts Modal" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
+                <p class="h4 modal-title">Keyboard Shortcuts</p>
                 <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-                <h4 class="modal-title" id="exampleModalLabel">Keyboard Shortcuts</h4>
             </div>
             <div class="modal-body">
               <table class="table">

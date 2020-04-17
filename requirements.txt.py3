@@ -37,6 +37,8 @@ matplotlib==3.1.2
 mccabe==0.6.1
 memory-profiler==0.57.0
 mistune==0.8.4
+mkdocs==1.1
+mkdocs-bootstrap4==0.1.4
 more-itertools==7.2.0
 nbconvert==5.6.1
 nbformat==4.4.0
@@ -80,6 +82,7 @@ tornado==6.0.3
 traitlets==4.3.3
 typed-ast==1.4.0
 tzlocal==2.0.0
+waitress==1.4.3
 wcwidth==0.1.7
 webencodings==0.5.1
 widgetsnbextension==3.5.1

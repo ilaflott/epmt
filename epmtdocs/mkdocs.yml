@@ -1,7 +1,12 @@
 site_name: EPMT
+theme:
+  name: mkdocs
+  custom_dir: mkdocs_bootstrap4
+use_directory_urls: false
+plugins: []
 
 nav:
-  - INSTALL.md
+  - Install: INSTALL.md
   - Readme: README.md
   - migrations.md
   - Notebooks: 
