@@ -35,9 +35,14 @@ for f in files:
     fn = "IPython/extensions/" + os.path.basename(f)
     ipe_extra_datas.append((f, '.'))
 
+alembic_extras = []
+alembic_migration_files = glob(os.path.join('migrations/versions', "*.py")) + glob(os.path.join('migrations', "*.py")) 
+for f in alembic_migration_files:
+    alembic_extras.append((f, '.'))
+
 dash_extra_datas = collect_data_files('dash_html_components') + collect_data_files('dash_core_components') + collect_data_files('dash_daq') + collect_data_files('dash_table') + collect_data_files('dash_renderer') + collect_data_files('dash_bootstrap_components')
 
-extra_datas = ipe_extra_datas + dash_extra_datas
+extra_datas = ipe_extra_datas + dash_extra_datas + alembic_extras
 
 print("Extra data: ",extra_datas)
 

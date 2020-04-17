@@ -624,8 +624,17 @@ def chdir_for_alembic_and_restore_cwd(function):
    def decorator(*args, **kwargs):
       cwd = getcwd()
       # change dir to install root
-      install_dir = path.dirname(path.abspath(__file__)) + "/../../"
-      chdir(install_dir)
+      # install_dir = path.dirname(path.abspath(__file__)) + "/../../"
+      # The above path.dirname won't work with pyinstaller as the path is fake
+      # So, derive install dir from papiex install prefix
+      # Unfortunately we have two different paths, one for
+      # development and one for production. So try the other
+      # if the first fails.
+      # TODO: We have to have a better way than this gross hack below!
+      try:
+          chdir(settings.install_prefix + "/../../epmt")
+      except FileNotFoundError:
+          chdir(settings.install_prefix + "/../epmt-install/epmt")
       result = function(*args, **kwargs)
       # restore directory to cwd
       chdir(cwd)

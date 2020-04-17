@@ -201,8 +201,8 @@ def verify_db_params():
         else:
             PrintPass()
             return True
-    except ImportError:
-        logger.error("pony module not installed, see INSTALL.md");
+    except ImportError as e:
+        logger.error("Error setting up DB: {}".format(str(e)))
         PrintFail()
         return False
     
