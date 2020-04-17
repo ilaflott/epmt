@@ -1,7 +1,9 @@
 OS_TARGET=centos-6
 PAPIEX_VERSION?=2.2.4
+# We should probably code PAPIEX_RELEASE here
 VERSION=$(shell python3 -m epmtlib)
-RELEASE=epmt-$(VERSION).tgz
+# We should name these more descriptively
+RELEASE=epmt-$(VERSION)-$(OS_TARGET).tgz
 EPMT_RELEASE=EPMT-release-$(VERSION)-$(OS_TARGET).tgz
 SHELL=/bin/bash
 PWD=$(shell pwd)
@@ -20,6 +22,7 @@ dist:
 	pyinstaller --clean --distpath=epmt-install epmt.spec
 	cp -Rp preset_settings epmt-install
 	cp -Rp notebooks epmt-install
+	cp -Rp migrations epmt-install
 	mkdir epmt-install/examples
 	cp epmt-example.sh epmt-example.csh epmt-install/examples
 	mkdir epmt-install/slurm
@@ -80,12 +83,19 @@ release:
 	@echo "Making EPMT release $(VERSION) for $(OS_TARGET)..."
 	@echo " - building epmt and epmt-test tarball.."
 	@$(MAKE) docker-dist > /dev/null
-	@ls epmt-$(VERSION).tgz test-epmt-$(VERSION).tgz
+	@ls $(RELEASE) test-$(RELEASE)
 	@echo " - building papiex tarball"
+<<<<<<< HEAD
 	cd ../papiex-oss; rm -f papiex-epmt-$(PAPIEX_VERSION).tgz;  make OS_TARGET=$(OS_TARGET) docker-dist > /dev/null; cp -v papiex-epmt-$(PAPIEX_VERSION).tgz ../epmt
 	@ls papiex-epmt-$(PAPIEX_VERSION).tgz
 	@echo "Assembling release tarball"
 	tar -czf $(EPMT_RELEASE) epmt-$(VERSION).tgz test-epmt-$(VERSION).tgz papiex-epmt-$(PAPIEX_VERSION).tgz
+=======
+	cd ../papiex-oss; rm -f papiex-epmt-$(OS_TARGET)-$(PAPIEX_VERSION).tgz;  make OS_TARGET=$(OS_TARGET) docker-dist > /dev/null; cp -v papiex-epmt-$(OS_TARGET)-$(PAPIEX_VERSION).tgz ../epmt
+	@ls papiex-epmt-$(OS_TARGET)-$(PAPIEX_VERSION).tgz
+	@echo "Assembling release tarball"
+	tar -czf $(EPMT_RELEASE) $(RELEASE) test-$(RELEASE) papiex-epmt-$(OS_TARGET)-$(PAPIEX_VERSION).tgz
+>>>>>>> a9f47b3d116c3c1f82c0e3a4a61a33291c9fcf25
 	@echo "Release prepared: $(EPMT_RELEASE)"
 
 release-all:

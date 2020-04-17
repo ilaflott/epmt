@@ -8,8 +8,8 @@ import epmt_exp_explore as exp
 @timing
 def setUpModule():
     print('\n' + str(settings.db_params))
-    setup_db(settings)
-    datafiles='test/data/query/68500*.tgz'
+    setup_db(settings, drop=True)
+    datafiles='test/data/query/68500[03].tgz'
     print('setUpModdule: importing {0}'.format(datafiles))
     epmt_submit(sorted(glob(datafiles)), dry_run=False)
     
