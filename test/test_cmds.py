@@ -136,9 +136,9 @@ class EPMTCmds(unittest.TestCase):
         epmt_logging_init(-2)
         with capture() as (out, err):
             retval = epmt_stage(['test/data/corrupted_csv'],keep_going=False)
+            self.assertEqual(retval,False, "corrupted CSV files should have failed stage")
         # restore logging level
         epmt_logging_init(-1)
-        self.assertEqual(retval,False, "corrupted CSV files should have failed stage")
         
     def test_yy_retire(self):
         from datetime import datetime, timedelta
