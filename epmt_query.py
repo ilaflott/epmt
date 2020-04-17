@@ -2008,7 +2008,7 @@ def get_job_status(jobid):
     return j.info_dict.get('status', {})
 
 @db_session
-def annotate_job(jobid, annotation, replace=False):
+def annotate_job_db(jobid, annotation, replace=False):
     '''
     Annotates a job with the supplied annotation
 
@@ -2066,7 +2066,7 @@ def remove_job_annotations(jobid):
     -------
     The final annotations, which should be an empty dict
     '''
-    return annotate_job(jobid, {}, True)
+    return annotate_job_db(jobid, {}, True)
 
 def analyze_pending_jobs(jobs = [], analyses_filter = {}):
     """

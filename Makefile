@@ -1,5 +1,5 @@
 OS_TARGET=centos-6
-PAPIEX_VERSION?=2.2.3
+PAPIEX_VERSION?=2.2.4
 VERSION=$(shell python3 -m epmtlib)
 RELEASE=epmt-$(VERSION).tgz
 EPMT_RELEASE=EPMT-release-$(VERSION)-$(OS_TARGET).tgz

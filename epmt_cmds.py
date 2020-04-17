@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 from datetime import datetime
-from os import environ, makedirs, mkdir, path, getpid, chdir, remove, listdir, rename, uname
+from os import environ, makedirs, mkdir, path, getpid, chdir, remove, rename, uname
 from socket import gethostname
 from subprocess import call as forkexecwait
 from glob import glob
@@ -479,6 +479,13 @@ def epmt_dump_metadata(filelist, key = None):
                 print("%-24s%-56s" % (d,str(metadata[d])))
     return rc_final
 
+def merge_and_write_annotations(metadatafile,metadata,d,replace = False):
+    # merge existing annotations if any
+    annotations = metadata.get('annotations', {}) if (not replace) else {}
+    annotations.update(d)
+    metadata['annotations'] = annotations
+    retval = write_job_metadata(metadatafile,metadata)
+    return retval
 
 # args list is one of the following forms:
 #   ['key1=value1', 'key2=value2', ...]  - annotate stopped job within a batch env
@@ -493,11 +500,20 @@ def epmt_dump_metadata(filelist, key = None):
 def epmt_annotate(argslist, replace = False):
     if not argslist: return False
     from epmtlib import kwargify
+    mode = 0
+    
+    # First case: if equals is in first argument, then we have no filename, we are annotating a job
+    # specified in the environment, it could be not started, not stopped, or stopped.
+    
     if '=' in argslist[0]:
-        # first form, we are annotating a stopped job
-        d = kwargify(argslist)
-        if not d: return False
-        mode = 0   # stopped job mode
+        result = all("=" in elem for elem in argslist)
+        if not result:
+            logger.error("epmt_annotate: form for annotations must be <key=value>")
+            return False
+        d = kwargify(argslist,strict=True)
+        if not d:
+            logger.error("kwargs empty")
+            return False
         logger.info('annotating stopped job: {}'.format(d))
         jobid,datadir,metadatafile = setup_vars()
         if not (jobid and datadir and metadatafile):
@@ -505,24 +521,33 @@ def epmt_annotate(argslist, replace = False):
         if not path.exists(metadatafile):
             # this means we haven't even run epmt_start_job as otherwise
             # we would have a metadata file
+            logger.warning("annotate: job is not started, starting...")
             if not epmt_start_job():
                 return False
         metadata = read_job_metadata(metadatafile)
     else:
         # annotating either a staged job file
         # or a job in the database
-        assert(len(argslist) > 1)
-        d = kwargify(argslist[1:])
-        if not d: return False
-        if '.tgz' in argslist[0]:
-            # annotating a staged .tgz file
-            mode = 1  # staged job annotation
-            infile = argslist[0]
-            logger.info('annotating staged job file {0}: {1}'.format(infile, d))
+        if (len(argslist) <= 1):
+            logger.error("epmt_annotate: form must be <jobfile> <key=value> ...  or <key=value> ...")
+            return False
+        infile = argslist[0]
+        result = all("=" in elem for elem in argslist[1:])
+        if not result:
+            logger.error("epmt_annotate: form must be <jobfile> <key=value> ...  or <key=value> ...")
+            return False
+        infile = argslist[0]
+        if infile.endswith(".tgz"):
+            mode = 1
+        d = kwargify(argslist[1:],strict=True)
+        if not d:
+            logger.error("kwargs empty")
+            return False
+        if mode == 1:
             if not path.exists(infile):
-                 logger.error("%s does not exist!",infile)
-                 return False
-
+                logger.error("%s does not exist!",infile)
+                return False
+            logger.info('annotating staged job file {0}: {1}'.format(infile, d))
             err,tar = compressed_tar(infile)
             try:
                 info = tar.getmember("./job_metadata")
@@ -543,28 +568,25 @@ def epmt_annotate(argslist, replace = False):
                 tar.extractall(path=datadir)
                
         else:
+# HERE WE SHOULD CHECK BOTH THE DATABASE AND THE FILESYSTEM
+# BECAUSE WE MAY WANT TO ANNOTATE A DIRECTORY!
             jobid = argslist[0]
             logger.info('annotating job {0} in db: {1}'.format(jobid, d))
             mode = 2  # annotating job in database
-            from epmt_query import annotate_job
-            updated_ann = annotate_job(jobid, d, replace)
+            from epmt_query import annotate_job_db
+            updated_ann = annotate_job_db(jobid, d, replace)
             logger.debug('updated annotations: {}'.format(updated_ann))
             return d.items() <= updated_ann.items()
 
     # below we handle annotation update in the metadata file
     # if its a stopped job, we simply write out the metadata and we
-    # are done. If it's a staged job we need to recreate the .tgz
-    # with the updated metadata
-
-    # merge existing annotations if any
-    annotations = metadata.get('annotations', {}) if (not replace) else {}
-    annotations.update(d)
-    metadata['annotations'] = annotations
-    retval = write_job_metadata(metadatafile,metadata)
-
+    # are done.
+    
+    retval = merge_and_write_annotations(metadatafile,metadata,d,replace=replace)
+    
     # for staged job we need to recreate the staged file
-    if mode == 1:
-        stage_job(datadir, collate=False)
+    if retval and mode == 1:
+        stage_job(datadir, collate=False, from_annotate=True)
 
     return retval
 
@@ -929,77 +951,85 @@ def submit_to_db(input, pattern, dry_run=True, remove_file=False):
     # return (j.jobid, process_count)
 
 
-def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True):
+def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True,from_annotate=False):
     logger.debug("stage_job(%s,collate=%s,compress_and_tar=%s,keep_going=%s)",indir,str(collate),str(compress_and_tar),str(keep_going))
-    if not indir or len(indir) < 1:
+    if not indir or len(indir) == 0:
+        logger.error("stage_job: indir is epmty")
         return False
-    if settings.stage_command and len(settings.stage_command) and settings.stage_command_dest and len(settings.stage_command_dest):
-        try:
-            l=listdir(indir)
-            if not l:
-                logger.error(indir + "is empty")
-                return False
-        except Exception as e:
-            logger.error(str(e))
+    if not settings.stage_command or not settings.stage_command_dest or len(settings.stage_command) == 0 or len(settings.stage_command_dest) == 0: 
+        logger.debug("stage_job: no stage commands to do")
+        return True
+    if collate:
+        from epmt_concat import csvjoiner
+        logger.debug("csvjoiner(%s)",indir)
+        status, collated_file, badfiles = csvjoiner(indir, keep_going=keep_going, errdir=settings.error_dest)
+        if status == False:
             return False
-
-        if not path.exists(indir + "/job_metadata"):
-            logger.error("job_metadata file missing in %s",indir)
-            return False
-        
-        if collate:
-            from epmt_concat import csvjoiner
-            logger.debug("csvjoiner(%s)",indir)
-            status, collated_file, badfiles = csvjoiner(indir, keep_going=keep_going, errdir=settings.error_dest)
-            if (badfiles):
-                logger.error("Files for error analysis: %s",str(badfiles))
-            # if hasattr(settings, 'error_dest') else "/tmp2/")
-            if status == False:
+        if (badfiles) and not from_annotate:
+            d={}
+            d["epmt_stage_error"]=str(badfiles)
+            logger.error("Job being annotated with %s",str(d))
+# begin HACK: should call a real annotate function            
+            metadatafile = indir+"job_metadata"
+            metadata = read_job_metadata(metadatafile)
+            if not metadata:
+                logger.error("Failed to get %s for annotation of erroneous stage",metadatafile)
                 return False
-            if status == True and collated_file and len(collated_file) > 0:
-                logger.info("Collated file is %s",collated_file)
-                try:
-                    # make the dir, copy in collated file and job metadata
-                    newdir = path.dirname(indir)+".collated"
-                    logger.debug("mkdir(%s)",newdir)
-                    mkdir(newdir)
-                    logger.debug("copyfile(%s,%s)",indir+"job_metadata",newdir+"/job_metadata")
-                    copyfile(indir+"job_metadata",newdir+"/job_metadata")
-                    logger.debug("rename(%s,%s)",collated_file,newdir+"/"+collated_file)
-                    copyfile(collated_file,newdir+"/"+collated_file)
-                    remove(collated_file)
-                    logger.debug("rename(%s,%s)",path.dirname(indir),path.dirname(indir)+".original")
-                    rename(path.dirname(indir),path.dirname(indir)+".original")
-                    logger.debug("rename(%s,%s)",path.dirname(indir)+".collated",path.dirname(indir))
-                    rename(path.dirname(indir)+".collated",path.dirname(indir))
-                    logger.debug("rmtree(%s)",path.dirname(indir)+".original")
-                    rmtree(path.dirname(indir)+".original")
-                except Exception as e:
-                    logger.error("Something went wrong: %s",str(e))
-                    return False
-                
-        filetostage = path.dirname(indir)
-        if compress_and_tar:
-            cmd = "tar -C "+indir+" -cz -f "+path.dirname(indir)+".tgz ."
-            logger.debug(cmd)
-            return_code = forkexecwait(cmd, shell=True)
-            if return_code != 0:
+            if not merge_and_write_annotations(metadatafile,metadata,d,replace=False):
+                logger.error("Failed to write to %s annotations of erroneous stage",metadatafile)
                 return False
-            filetostage += ".tgz "
+# end HACK
+        if status == True and collated_file and len(collated_file) > 0:
+            logger.info("Collated file is %s",collated_file)
+            try:
+                # make the dir, copy in collated file and job metadata
+                newdir = path.dirname(indir)+".collated"
+                logger.debug("mkdir(%s)",newdir)
+                mkdir(newdir)
+                logger.debug("copyfile(%s,%s)",indir+"job_metadata",newdir+"/job_metadata")
+                copyfile(indir+"job_metadata",newdir+"/job_metadata")
+                logger.debug("rename(%s,%s)",collated_file,newdir+"/"+collated_file)
+                copyfile(collated_file,newdir+"/"+collated_file)
+                remove(collated_file)
+                logger.debug("rename(%s,%s)",path.dirname(indir),path.dirname(indir)+".original")
+                rename(path.dirname(indir),path.dirname(indir)+".original")
+                logger.debug("rename(%s,%s)",path.dirname(indir)+".collated",path.dirname(indir))
+                rename(path.dirname(indir)+".collated",path.dirname(indir))
+                logger.debug("rmtree(%s)",path.dirname(indir)+".original")
+                rmtree(path.dirname(indir)+".original")
+            except Exception as e:
+                logger.error("Something went wrong while juggling a collated %s: %s",indir,str(e))
+                return False
 
-        cmd = settings.stage_command + " " + filetostage + " " + settings.stage_command_dest
+    if not path.exists(indir + "/job_metadata"):
+        logger.error("job_metadata file missing in %s",indir)
+        return False
+
+    filetostage = path.dirname(indir)
+    if compress_and_tar:
+        cmd = "tar -C "+indir+" -cz -f "+path.dirname(indir)+".tgz ."
         logger.debug(cmd)
         return_code = forkexecwait(cmd, shell=True)
         if return_code != 0:
-            if not ((settings.stage_command == "mv") and (path.dirname(filetostage) == path.dirname(settings.stage_command_dest))):
-                return False
+            return False
+        filetostage += ".tgz "
 
-        logger.debug("rmtree(%s)",indir)
-        try:
-            rmtree(indir)
-        except Exception as e:
-            logger.warning("rmtree(%s): %s",indir,str(e))
-        print(path.normpath(settings.stage_command_dest)+"/"+path.basename(filetostage))
+    cmd = settings.stage_command + " " + filetostage + " " + settings.stage_command_dest
+    logger.debug(cmd)
+    return_code = forkexecwait(cmd, shell=True)
+    if return_code != 0:
+        if not ((settings.stage_command == "mv") and
+                ((path.dirname(filetostage) == path.dirname(settings.stage_command_dest)) or
+                 ((path.dirname(filetostage) == "") and (path.dirname(settings.stage_command_dest) == ".")))):
+            return False
+
+    try:
+        logger.info("rmtree(%s)",indir)
+        rmtree(indir)
+    except Exception as e:
+        logger.warning("rmtree(%s): %s",indir,str(e))
+
+    print(path.normpath(settings.stage_command_dest)+"/"+path.basename(filetostage))
     return True
 
 def epmt_stage(dirs, keep_going=True, collate=True, compress_and_tar=True):
