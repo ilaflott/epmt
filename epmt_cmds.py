@@ -641,7 +641,7 @@ def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run
     cmd = add_var(cmd,"PAPIEX_OUTPUT"+equals+global_datadir) 
     cmd = add_var(cmd,"PAPIEX_OPTIONS"+equals+settings.papiex_options)
     old_pl_libs = environ.get("LD_PRELOAD","")
-    papiex_pl_libs = settings.install_prefix+"lib/libpapiex.so:"+settings.install_prefix+"lib/libmonitor.so"
+    papiex_pl_libs = settings.install_prefix+"lib/libpapiex.so:"+settings.install_prefix+"lib/libmonitor.so:"+settings.install_prefix+"lib/libpapi.so:"+settings.install_prefix+"lib/libpfm.so"
     if run_cmd:
         cmd = add_var(cmd,"LD_PRELOAD"+equals+papiex_pl_libs+":"+old_pl_libs)
     else:
