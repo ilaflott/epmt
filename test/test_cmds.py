@@ -134,7 +134,7 @@ class EPMTCmds(unittest.TestCase):
         from epmt_cmds import epmt_stage
         # quell the error messages
         epmt_logging_init(-2)
-        from os import remove
+        from os import remove, path
         errorfile=settings.error_dest+'/pp053-papiex-615503-0.csv.error'
         with capture() as (out, err):
             retval = epmt_stage(['test/data/corrupted_csv'],keep_going=False)
