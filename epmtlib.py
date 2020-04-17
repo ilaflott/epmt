@@ -24,7 +24,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (3,7,13)
+_version = (3,7,14)
 
 def version():
     return _version
@@ -407,14 +407,17 @@ def check_none(s):
     return False
 
 # Checks on a few types
-def kwargify(list_of_str):
+# strict doesn't let anything in other than x=y
+def kwargify(list_of_str, strict=False):
     myDict = {}
     jobs = []
     for s in list_of_str:
-        if not "=" in s:
+        if not "=" in s and not strict:
             jobs.append(s)
         else:
             a, b = s.split('=')
+            if strict and (not a or not b):
+                continue
             if check_int(b):
                 myDict[a] = int(b)
             elif check_boolean(b):
@@ -423,7 +426,7 @@ def kwargify(list_of_str):
                 myDict[a] = None
             else: #string
                 myDict[a] = b
-    if myDict.get('jobs') == None and jobs:
+    if myDict.get('jobs') == None and jobs and not strict:
         myDict['jobs'] = jobs
     return myDict
 
