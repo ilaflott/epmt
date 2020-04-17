@@ -19,6 +19,7 @@ dist:
 	pyinstaller --clean --distpath=epmt-install epmt.spec
 	cp -Rp preset_settings epmt-install
 	cp -Rp notebooks epmt-install
+	cp -Rp migrations epmt-install
 	mkdir epmt-install/examples
 	cp epmt-example.sh epmt-example.csh epmt-install/examples
 	mkdir epmt-install/slurm
