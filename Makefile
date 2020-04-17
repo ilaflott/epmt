@@ -4,7 +4,7 @@ PAPIEX_SRC?=../papiex-oss
 EPMT_VERSION=$(shell python3 -m epmtlib)
 EPMT_RELEASE=epmt-$(EPMT_VERSION)-$(OS_TARGET).tgz
 EPMT_FULL_RELEASE=EPMT-release-$(EPMT_VERSION)-$(OS_TARGET).tgz
-PAPIEX_RELEASE=papiex-$(PAPIEX_VERSION)-$(OS_TARGET).tgz
+PAPIEX_RELEASE=papiex-epmt-$(PAPIEX_VERSION)-$(OS_TARGET).tgz
 #
 SHELL=/bin/bash
 PWD=$(shell pwd)
