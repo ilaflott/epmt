@@ -1073,14 +1073,25 @@ def epmt_shell(ipython = True):
     # since the builtins module included by pydoc doesn't have help
     import builtins
     from pydoc import help
+    kwargs = {}
+    try:
+        # locals() gives an exception if run in the epmt
+        # directory created by pyinstaller. It works elsewhere
+        # So it will run in the user directories fine. However,
+        # out integration tests run from the 'epmt' directory
+        # and may fail. So, just handle the exception and pass
+        # an empty local namespace if necessary
+        args = { 'local': locals() }
+    except:
+        pass
     if ipython:
         # ipython shell
         from IPython import embed
-        embed(local=locals())
+        embed(**kwargs)
     else:
         # regular python shell
         from code import interact
-        interact(local=locals())
+        interact(**kwargs)
 
 
 def epmt_entrypoint(args):

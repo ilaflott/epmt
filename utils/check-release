@@ -1,4 +1,6 @@
-#!/bin/bash -Eeuo pipefail
+#!/bin/bash -Eeu
+
+set -o pipefail 
 
 # This script thoroughly tests an EPMT release
 # usage:
