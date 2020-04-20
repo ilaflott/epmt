@@ -24,7 +24,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (3,7,17)
+_version = (3,7,18)
 
 def version():
     return _version
@@ -940,6 +940,18 @@ def docs_module_index(mod, fmt=None):
     # with the correct spacing
     fmt_string = "{:" + str(max_func_name_len) + "s}    {}"
     return "\n".join([fmt_string.format(o[0], o[1]) for o in out])
+
+def get_install_root():
+    '''
+    Returns the install root. This function is specifically written
+    to avoid os path functions so it can work under pyinstaller's
+    hacked environment. It uses rsplit:
+
+    >>> '/abc/def/ghi.py'.rsplit('/',1)
+    ['/abc/def', 'ghi.py']
+    '''
+    return (__file__.rsplit('/', 1)[0])
+
     
 
 if __name__ == "__main__":

@@ -631,15 +631,22 @@ def chdir_for_alembic_and_restore_cwd(function):
       # development and one for production. So try the other
       # if the first fails.
       # TODO: We have to have a better way than this gross hack below!
+      # try:
+      #     chdir(settings.install_prefix + "/../../epmt")
+      # except FileNotFoundError:
+#     #      logger.warning(settings.install_prefix + "/../../epmt")
+      #     try:
+      #         chdir(settings.install_prefix + "/../epmt-install/epmt")
+      #     except FileNotFoundError:
+#     #          logger.warning(settings.install_prefix + "/../epmt-install/epmt")
+      #         pass
+      from epmtlib import get_install_root
+      install_dir = get_install_root()
       try:
-          chdir(settings.install_prefix + "/../../epmt")
-      except FileNotFoundError:
-#          logger.warning(settings.install_prefix + "/../../epmt")
-          try:
-              chdir(settings.install_prefix + "/../epmt-install/epmt")
-          except FileNotFoundError:
-#              logger.warning(settings.install_prefix + "/../epmt-install/epmt")
-              pass
+          chdir(install_dir)
+      except:
+          logger.error('Could not change directory to {} for migrations'.format(install_dir))
+          raise
       result = function(*args, **kwargs)
       # restore directory to cwd
       chdir(cwd)
