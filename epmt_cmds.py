@@ -1132,6 +1132,12 @@ def epmt_entrypoint(args):
         exp_explore(args.epmt_cmd_args, metric = args.metric, limit = args.limit)
         return 0
     if args.command == 'gui':
+        import os
+        import sys
+        script_dir = os.path.dirname(__file__)
+        ui_dir = os.path.join(script_dir, 'ui')
+        sys.path.append(ui_dir)
+        sys.path.append(os.path.join(ui_dir, 'components'))
         from ui import init_app, app
         init_app()
         app.run_server(debug=False, host='0.0.0.0')

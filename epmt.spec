@@ -23,6 +23,9 @@ hidden.append('sqlalchemy.ext.baked')
 # pyod, pca
 hidden.extend(['sklearn.neighbors._typedefs','sklearn.neighbors._quad_tree','sklearn.tree._utils','sklearn.utils', 'sklearn.utils._cython_blas', 'sklearn.utils.arrayfuncs', 'sklearn.utils.arrayfuncs.array'])
 
+hidden.append('ui.components')
+hidden.append('ui')
+
 print("Hidden modules: ",hidden)
 
 exclude = ['settings']
@@ -41,7 +44,7 @@ for f in alembic_migration_files:
     alembic_extras.append((f, '.'))
 
 ui_extras = []
-ui_files = glob(os.path.join('ui', "*.py")) + glob(os.path.join('ui/components', "*.py"))
+ui_files = glob(os.path.join('ui/components', "*.py")) +  glob(os.path.join('ui', "*.py"))
 for f in ui_files:
     ui_extras.append((f, '.'))
 
