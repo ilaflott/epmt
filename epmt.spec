@@ -21,7 +21,10 @@ hidden.append('ipykernel.datapub')
 # Required for EPMT
 hidden.append('sqlalchemy.ext.baked')
 # pyod, pca
-hidden.extend(['logging.config','sklearn.neighbors._typedefs','sklearn.neighbors._quad_tree','sklearn.tree._utils','sklearn.utils', 'sklearn.utils._cython_blas', 'sklearn.utils.arrayfuncs', 'sklearn.utils.arrayfuncs.array'])
+hidden.extend(['sklearn.neighbors._typedefs','sklearn.neighbors._quad_tree','sklearn.tree._utils','sklearn.utils', 'sklearn.utils._cython_blas', 'sklearn.utils.arrayfuncs', 'sklearn.utils.arrayfuncs.array'])
+
+hidden.append('ui.components')
+hidden.append('ui')
 
 print("Hidden modules: ",hidden)
 
@@ -40,33 +43,20 @@ alembic_migration_files = glob(os.path.join('migrations/versions', "*.py")) + gl
 for f in alembic_migration_files:
     alembic_extras.append((f, '.'))
 
+ui_extras = []
+ui_files = glob(os.path.join('ui/components', "*.py")) +  glob(os.path.join('ui', "*.py"))
+for f in ui_files:
+    ui_extras.append((f, '.'))
+
 dash_extra_datas = collect_data_files('dash_html_components') + collect_data_files('dash_core_components') + collect_data_files('dash_daq') + collect_data_files('dash_table') + collect_data_files('dash_renderer') + collect_data_files('dash_bootstrap_components')
-plotly_extra_datas = collect_data_files('plotly.graph_objects') + collect_data_files('plotly.express') + collect_data_files('plotly.figure_factory')
 
-# Move web components into root
-dash_resources = []
-files = glob('ui/components/*.py')
-for f in files:
-    dash_resources.append((f, '.'))
-
-# Move Web assets into subdirectory
-files = glob('ui/assets/*')
-for f in files:
-    dash_resources.append((f, './assets/'))
-
-# Move Documents into subdirectory
-docs_resources = []
-files = glob('epmtdocs/site*')
-for f in files:
-    docs_resources.append((f, './epmtdocs/site/'))
-
-extra_datas = ipe_extra_datas + dash_extra_datas + alembic_extras + dash_resources + plotly_extra_datas + docs_resources
+extra_datas = ipe_extra_datas + dash_extra_datas + alembic_extras + ui_extras
 
 print("Extra data: ",extra_datas)
 
 
-a = Analysis(['epmt', 'ui/index.py'],
-             pathex=['/Users/philipmucci/Work/epmt.git', '/home/chris/Documents/playground/MM/build/epmt/ui'],
+a = Analysis(['epmt'],
+             pathex=['/Users/philipmucci/Work/epmt.git'],
              binaries=[],
              datas=extra_datas,
              hiddenimports=hidden,
