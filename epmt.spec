@@ -42,16 +42,25 @@ for f in alembic_migration_files:
 
 dash_extra_datas = collect_data_files('dash_html_components') + collect_data_files('dash_core_components') + collect_data_files('dash_daq') + collect_data_files('dash_table') + collect_data_files('dash_renderer') + collect_data_files('dash_bootstrap_components')
 plotly_extra_datas = collect_data_files('plotly.graph_objects') + collect_data_files('plotly.express') + collect_data_files('plotly.figure_factory')
+
+# Move web components into root
 dash_resources = []
 files = glob('ui/components/*.py')
 for f in files:
     dash_resources.append((f, '.'))
 
+# Move Web assets into subdirectory
 files = glob('ui/assets/*')
 for f in files:
     dash_resources.append((f, './assets/'))
 
-extra_datas = ipe_extra_datas + dash_extra_datas + alembic_extras + dash_resources + plotly_extra_datas
+# Move Documents into subdirectory
+docs_resources = []
+files = glob('epmtdocs/site*')
+for f in files:
+    docs_resources.append((f, './epmtdocs/site/'))
+
+extra_datas = ipe_extra_datas + dash_extra_datas + alembic_extras + dash_resources + plotly_extra_datas + docs_resources
 
 print("Extra data: ",extra_datas)
 
