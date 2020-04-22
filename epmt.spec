@@ -60,9 +60,9 @@ extra_datas = ipe_extra_datas + dash_extra_datas + alembic_extras + dash_resourc
 
 print("Extra data: ",extra_datas)
 
-
+# see we add the ui directory to 
 a = Analysis(['epmt','ui/index.py'],
-             pathex=['/home/chris/Documents/playground/MM/build/epmt/ui'],
+             pathex=['./ui'],
              binaries=[],
              datas=extra_datas,
              hiddenimports=hidden,
