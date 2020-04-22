@@ -43,20 +43,26 @@ alembic_migration_files = glob(os.path.join('migrations/versions', "*.py")) + gl
 for f in alembic_migration_files:
     alembic_extras.append((f, '.'))
 
-ui_extras = []
-ui_files = glob(os.path.join('ui/components', "*.py")) +  glob(os.path.join('ui', "*.py"))
-for f in ui_files:
-    ui_extras.append((f, '.'))
+# Move web components into root
+dash_resources = []
+files = glob('ui/components/*.py')
+for f in files:
+    dash_resources.append((f, '.'))
+
+# Move Web assets into subdirectory
+files = glob('ui/assets/*')
+for f in files:
+    dash_resources.append((f, './assets/'))
 
 dash_extra_datas = collect_data_files('dash_html_components') + collect_data_files('dash_core_components') + collect_data_files('dash_daq') + collect_data_files('dash_table') + collect_data_files('dash_renderer') + collect_data_files('dash_bootstrap_components')
 
-extra_datas = ipe_extra_datas + dash_extra_datas + alembic_extras + ui_extras
+extra_datas = ipe_extra_datas + dash_extra_datas + alembic_extras + dash_resources
 
 print("Extra data: ",extra_datas)
 
 
-a = Analysis(['epmt'],
-             pathex=['/Users/philipmucci/Work/epmt.git'],
+a = Analysis(['epmt','ui/index.py'],
+             pathex=['/home/chris/Documents/playground/MM/build/epmt/ui'],
              binaries=[],
              datas=extra_datas,
              hiddenimports=hidden,
