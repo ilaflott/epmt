@@ -1973,7 +1973,7 @@ dm_agg_df_by_job: dataframe
         agg_ops_by_job.append(agg_dict)
         if (n % 10 == 0):
             elapsed_time = datetime.now() - start_time
-            logger.debug('processed %d of %d jobs at %.2f jobs/sec', n, len(jobs), n/elapsed_time.total_seconds())
+            logger.debug('processed %d of %d jobs at %.2f jobs/sec', n, jobs.count(), n/elapsed_time.total_seconds())
     dm_ops_df = pd.concat(df_list).reset_index(drop=True)
     dm_agg_df_by_job = pd.DataFrame(agg_ops_by_job)
     dm_cpu_time = dm_ops_df['cpu_time'].sum()
