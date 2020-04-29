@@ -82,7 +82,7 @@ release6:
 	$(MAKE) OS_TARGET=centos-6 release check-release
 
 release7:
-	$(MAKE) OS_TARGET=centos-7 release
+	$(MAKE) OS_TARGET=centos-7 release check-release
 
 check-release:
 	-utils/check-release $(EPMT_FULL_RELEASE)
