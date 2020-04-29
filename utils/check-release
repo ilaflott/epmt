@@ -1,4 +1,6 @@
-#!/bin/bash -e
+#!/bin/bash -Eeu
+
+set -o pipefail 
 
 # This script thoroughly tests an EPMT release
 # usage:
@@ -7,12 +9,19 @@
 #  - or -
 #  utils/check-release /path/to/EPMT-*.tgz
 
+function err_report() {
+    echo "$0: Error on line $1" >&2
+    exit 1
+}
+trap 'err_report $LINENO' ERR
 
 skip_unittests=0
-case $1 in
-  --no-unit-tests) skip_unittests=1; shift;;
-  --help|help|-h|--h) echo "usage: check-release [--no-unit-tests] [/path/to/EPMT-release-*.tgz]"; exit 0;;
-esac
+if [ $# -gt 0 ]; then
+   case $1 in
+       --no-unit-tests) skip_unittests=1; shift;;
+       --help|help|-h|--h) echo "usage: $0 [--no-unit-tests] [/path/to/EPMT-release-*.tgz]"; exit 0;;
+   esac
+fi
 
 function die() {
   echo $* >&2
@@ -22,9 +31,7 @@ function die() {
 wait_file() {
   local file="$1"; shift
   local wait_seconds="${1:-10}"; shift # 10 seconds as default timeout
-
   until test $((wait_seconds--)) -eq 0 -o -f "$file" ; do sleep 1; done
-
   ((++wait_seconds))
 }
 
@@ -41,45 +48,32 @@ verify_staged_file() {
   echo "$cmd PASSED"
 }
 
-release=${1:-$(ls -1rt EPMT-release-*.tgz| tail -n1)}
-release_file=$(basename "$release")
-STAGE="/tmp/$(echo $release_file| sed 's/.tgz//')"
-OS_TARGET="$(echo $release_file| sed 's/.tgz//; s/EPMT-release-[0-9]-//'| cut -d- -f4-)"
-echo "Release OS: $OS_TARGET"
+script_dir="$(dirname $0)"
+test $# -gt 0 || die "$0: Missing argument: /path/to/EPMT-release-<version>-<osname>-<osver>.tgz"
+release=$1
+test -n "${release}" || die "Release not specified"
+test -f "${release}" || die "${release} does not exist or is not readable"
+
+release_file=$(basename "${release}")
+OS_TARGET="$(echo ${release_file} | sed -E 's/.tgz//;s/EPMT-release-[0-9.]+-//;')"
+stage_dir="/opt/minimal-metrics"
 case $OS_TARGET in
   centos-6|centos-7) ;;
-  *) die "Do not know how to check release for OS: $OS_TARGET";;
+  *) die "OS_TARGET ${OS_TARGET} is not implemented";;
 esac
 
-test -n "$release" || die "Could not find a release to test. Looking for EPMT-*.tgz"
-test -f "$release" || die "$release does not exist or is not readable"
-
 passed=0
-echo "Testing release: $release"
-echo "Staging area: $STAGE"
-echo "Wiping clean staging area and recreating it.."; rm -rf "$STAGE"
-mkdir -p "$STAGE"
-
-script_dir="$(dirname $0)"
-echo "copying epmt-installer and $release to staging area"
-cp -v "$script_dir/epmt-installer" "$STAGE"/
-cp -v "$release" "$STAGE"/
-
-echo "Changing directory to: $STAGE (staging area)"
-cd $STAGE/
-pwd
-echo; echo "Running epmt-installer.."
-echo -e "\n\n" | ./epmt-installer "$release_file" || die "epmt-installer FAILED"
-EPMT_PREFIX=$(ls -d "$STAGE"/epmt-*|grep -v installer)
-echo "EPMT_PREFIX=$EPMT_PREFIX"
-# echo "Prepending $EPMT_PREFIX/epmt-install/epmt to PATH"
-export PATH="$EPMT_PREFIX/epmt-install/epmt:$PATH"
-echo "epmt: $(which epmt)"
-epmt -V || die "Could not execute EPMT"
+tmp_host_dir=
+echo "Release: ${release}"
+echo "Environment: ${OS_TARGET}"
+echo "Staging area: ${stage_dir}"
 
 # cleanup on exit or interrupt
 function cleanup() {
-  echo;echo "Stopping SLURM test container.."
+    echo;echo "Stopping SLURM test container..."
+    if [ ! -z "${tmp_host_dir}" ]; then
+	rm -rf ${tmp_host_dir}
+    fi
   docker stop $SLURM_CONTAINER
   [ $passed -eq 1 ] || echo "One or more tests FAILED" >&2
 }
@@ -92,42 +86,63 @@ case $OS_TARGET in
 esac
 
 SLURM_CONTAINER="$OS_TARGET-slurm-release-test"
-docker run --name $SLURM_CONTAINER --rm -dt -h ernie -v $PWD:$PWD:z -w $PWD --privileged -e PATH="$EPMT_PREFIX/epmt-install/epmt:/usr/local/bin:/bin:/usr/bin:/sbin:/usr/sbin" $SLURM_IMAGE tail -f /dev/null
-sleep 2
-echo;echo "Installing tcsh.."; docker exec $SLURM_CONTAINER yum install -y -q tcsh
-docker exec $SLURM_CONTAINER epmt -V
-docker exec $SLURM_CONTAINER epmt check
+# dir that's mapped/shared fron contaier to host
+tmp_host_dir=$(mktemp -d -t ci-XXXXXXXXXX)
+docker run --name $SLURM_CONTAINER -v ${tmp_host_dir}:/home -w /home --rm -dt -h ernie --privileged $SLURM_IMAGE tail -f /dev/null
+#-v $PWD:$PWD:z -w $PWD
+docker exec -it $SLURM_CONTAINER bash -c 'pwd; until sinfo; do sleep 1; done'
+docker exec $SLURM_CONTAINER mkdir ${stage_dir}
+docker cp "${script_dir}/epmt-installer" $SLURM_CONTAINER:"${stage_dir}"
+docker cp "${release}" $SLURM_CONTAINER:"${stage_dir}"
+# run the installer
+docker exec -t -w ${stage_dir} $SLURM_CONTAINER bash -ce 'set -o pipefail; echo -e "\n\n" |'"${stage_dir}/epmt-installer ${stage_dir}/${release_file}"
+# cleanup junk
+docker exec $SLURM_CONTAINER rm ${stage_dir}/epmt-installer ${stage_dir}/${release_file}
+# get the path to the install
+install_path=`docker exec $SLURM_CONTAINER bash -ce "ls -d ${stage_dir}"'/epmt-[0-9]*'`"/epmt-install"
+# fetch full modified path to use in docker line, so we don't have to bash it every time
+newpath=`docker exec $SLURM_CONTAINER bash -ce 'exec env PATH='"${install_path}/epmt:"'$PATH | grep PATH | sed s/PATH=//'`
+docker exec $SLURM_CONTAINER mount -o remount,rw /proc
+docker exec $SLURM_CONTAINER sysctl -w kernel.perf_event_paranoid=0
+docker exec $SLURM_CONTAINER yum install -y -q tcsh
+#
+# Begin EPMT testing
+#
+echo;echo "epmt check..."
+docker exec -e PATH="${newpath}" $SLURM_CONTAINER which epmt
+docker exec -e PATH="${newpath}" $SLURM_CONTAINER epmt -V
+docker exec -e PATH="${newpath}" $SLURM_CONTAINER epmt check
 
-echo;echo "Testing sbatch with epmt-example.?sh"
-docker exec $SLURM_CONTAINER sbatch "$EPMT_PREFIX/epmt-install/epmt/epmt-example.sh"
-verify_staged_file 2.tgz "sbatch epmt-example.sh"
-docker exec $SLURM_CONTAINER sbatch "$EPMT_PREFIX/epmt-install/epmt/epmt-example.csh"
-verify_staged_file 3.tgz "sbatch epmt-example.csh"
+echo;echo "Testing sbatch with epmt-example.[c]sh files"
+docker exec -e PATH="${newpath}" $SLURM_CONTAINER sbatch "${install_path}/examples/epmt-example.sh"
+verify_staged_file ${tmp_host_dir}/2.tgz "sbatch epmt-example.sh"
+docker exec -e PATH="${newpath}" $SLURM_CONTAINER sbatch "${install_path}/examples/epmt-example.csh"
+verify_staged_file ${tmp_host_dir}/3.tgz "sbatch epmt-example.csh"
 
 echo;echo "Testing srun --task-prolog/task-epilog"
-docker exec $SLURM_CONTAINER srun -n1 --task-prolog="$EPMT_PREFIX/epmt-install/slurm/slurm_task_prolog_epmt.sh" --task-epilog="$EPMT_PREFIX/epmt-install/slurm/slurm_task_epilog_epmt.sh" sleep 1
-verify_staged_file 4.tgz "srun --task-prolog/task-epilog sleep 1"
+docker exec -e PATH="${newpath}" $SLURM_CONTAINER srun -n1 --task-prolog="${install_path}/slurm/slurm_task_prolog_epmt.sh" --task-epilog="${install_path}/slurm/slurm_task_epilog_epmt.sh" sleep 1
+verify_staged_file ${tmp_host_dir}/4.tgz "srun --task-prolog/task-epilog sleep 1"
 
 echo;echo "Testing auto-instrumentation by adding prolog/epilog to slurm.conf"
-docker exec $SLURM_CONTAINER bash -c "echo TaskProlog=$EPMT_PREFIX/epmt-install/slurm/slurm_task_prolog_epmt.sh >> /etc/slurm/slurm.conf"
-docker exec $SLURM_CONTAINER bash -c "echo TaskEpilog=$EPMT_PREFIX/epmt-install/slurm/slurm_task_epilog_epmt.sh >> /etc/slurm/slurm.conf"
+docker exec $SLURM_CONTAINER bash -c "echo TaskProlog=${install_path}/slurm/slurm_task_prolog_epmt.sh >> /etc/slurm/slurm.conf"
+docker exec $SLURM_CONTAINER bash -c "echo TaskEpilog=${install_path}/slurm/slurm_task_epilog_epmt.sh >> /etc/slurm/slurm.conf"
 docker exec $SLURM_CONTAINER scontrol reconfigure
-echo -e "#!/bin/tcsh\nsleep 1\n" > uninstr.csh
+docker exec $SLURM_CONTAINER bash -c 'echo -e "#!/bin/tcsh\nsleep 1\n" > uninstr.csh'
 docker exec $SLURM_CONTAINER sbatch uninstr.csh
-verify_staged_file 5.tgz "sbatch with auto-instrument using prolog/epilog"
+verify_staged_file ${tmp_host_dir}/5.tgz "sbatch with auto-instrument using prolog/epilog"
 
 # case $OS_TARGET in
 #   centos-6) echo "Skipping integration and unit tests for $OS_TARGET"; exit 0;;
 # esac
   
 echo;echo "Running integration tests (in SLURM container)"
-docker exec $SLURM_CONTAINER bash -c "rm -f /root/EPMT_DB.*; cd $EPMT_PREFIX/epmt-install/epmt; test/integration/run_integration"
+docker exec -e PATH="${newpath}" $SLURM_CONTAINER bash -c "rm -f /root/EPMT_DB.*; cd ${install_path}/epmt; test/integration/run_integration"
 
 if [ $skip_unittests -eq 1 ]; then
   echo;echo "skipping unit tests as invoked with --no-unit-tests option"
 else
   echo;echo "Running unit tests (in SLURM container)"
-  docker exec $SLURM_CONTAINER bash -c "rm -f /root/EPMT_DB.*; epmt unittest"
+  docker exec -e PATH="${newpath}" $SLURM_CONTAINER bash -c "rm -f /root/EPMT_DB.*; epmt unittest"
 fi
 
 passed=1

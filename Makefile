@@ -76,10 +76,13 @@ docker-test-dist-slurm: slurm-start
 
 
 release6:
-	$(MAKE) OS_TARGET=centos-6 release
+	$(MAKE) OS_TARGET=centos-6 release check-release
 
 release7:
-	$(MAKE) OS_TARGET=centos-7 release
+	$(MAKE) OS_TARGET=centos-7 release check-release
+
+check-release:
+	-utils/check-release $(EPMT_FULL_RELEASE)
 
 release:  
 	@if [ -f $(EPMT_FULL_RELEASE) ]; then echo "$(EPMT_FULL_RELEASE) already exists. Please remove it and try again"; exit 1; fi
@@ -93,8 +96,8 @@ release:
 	@echo "$(EPMT_VERSION) release prepared for $(OS_TARGET): $(EPMT_FULL_RELEASE)"
 
 release-all:
-	$(MAKE) release6 && utils/check-release
-	$(MAKE) release7 && utils/check-release
+	$(MAKE) release6
+	$(MAKE) release7
 
 test-ui:
 	docker run -it -w /usr/workspace -v $(PWD):/usr/workspace python-chromedriver:3.7 python ui/test/first_dash_test.py

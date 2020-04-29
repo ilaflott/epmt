@@ -731,6 +731,15 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     annotations = metadata.get('annotations', {})
     if annotations:
         logger.info('Job annotations: {0}'.format(annotations))
+        if settings.job_tags_env in annotations:
+            job_tag_from_ann = tag_from_string(annotations[settings.job_tags_env])
+            if job_tags and job_tag_from_ann:
+                if (job_tags != job_tag_from_ann):
+                    err_msg = 'Metadata and annotations contain different job tags:\n{} (metadata),\n{} (annotations)'.format(job_tags, job_tag_from_ann)
+                    return (False, err_msg)
+                else:
+                    logger.warning('Both metadata and annotations have the same job tags')
+            job_tags = job_tag_from_ann or job_tags
 
     # sometimes script name is to be found in the job tags
     if (job_status.get('script_name') is None) and job_tags and job_tags.get('script_name'):
@@ -950,6 +959,8 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         logger.info('job exit code (using exit code of root process): {0}'.format(j.exitcode))
     if j.exitcode != 0:
         logger.warning('Job failed with a non-zero exit code({})'.format(j.exitcode))
+    if job_tags:
+        logger.info('Job tags: {}'.format(job_tags))
     j.tags = job_tags if job_tags else {}
 
     if settings.bulk_insert and all_procs:

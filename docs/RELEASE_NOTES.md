@@ -1,3 +1,30 @@
+
+Version 3.7.22
+==============
+
+  Release date: 04/22/2020
+
+  The list includes features added since version 3.3.20.
+  - Support for automatic database migration under SQLAlchemy added
+  - `epmt help api` and `epmt help api <function>` provide
+    concise list of API index and function docstrings
+  - Improved API docstrings
+  - API support to find jobs based on experiment name, components,
+    times and exit status
+  - API support to find missing time-segments in an experiment
+  - Revamp of the outliers notebook with the latest data
+  - Daemon mode now supports ingestion and retire functions
+  - `epmt submit` now supports `--remove` to delete on successful submits
+  - bug fixes
+    - papiex memory/cache consistency issues resolved
+    - fixes to support for `PAPIEX_TAGS`
+    - resolved race in submit which could cause jobs to remain unprocessed
+  - epmt annotate supports special handling for `EPMT_JOB_TAGS`
+  - Additional univariate classifiers added
+  - API improvements for PCA-based feature ranking
+  - Improved handling of staging and concatenation errors
+  - Improvements to the GUI
+
 Version 3.3.20
 ==============
 

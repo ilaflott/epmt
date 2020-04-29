@@ -22,7 +22,14 @@ class EPMTLib(unittest.TestCase):
         self.assertEqual(pruned_d2, { 'abc': 10, 'def': 20, '_ghi': 30 })
 
     def test_url_to_db_params(self):
-        from orm.pony.general import _url2params
+        # get rid of this warning in the pony import:
+        # pony/thirdparty/compiler/pycodegen.py:4: DeprecationWarning: the imp 
+        # module is deprecated in favour of importlib; see the module's 
+        # documentation for alternative uses import imp
+        import warnings
+        with warnings.catch_warnings():
+             warnings.filterwarnings("ignore",category=DeprecationWarning)
+             from orm.pony.general import _url2params
         url = 'postgresql://postgres:example@localhost:5432/EPMT'
         db_params = _url2params(url)
         self.assertEqual(db_params, {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'localhost', 'port': 5432, 'dbname': 'EPMT'})
@@ -72,6 +79,12 @@ class EPMTLib(unittest.TestCase):
         self.assertEqual(encdf['A'].dtype, np.dtype('int64'))
         self.assertEqual(encdf['D'].dtype, np.dtype('int64'))
         self.assertTrue(encdf['A'][0] == encdf['A'][1])
+
+    def test_install_root(self):
+        from epmtlib import get_install_root
+        install_root = get_install_root()
+        self.assertTrue(install_root)
+        self.assertEqual(install_root + '/test', __file__.rsplit('/', 1)[0])
 
 if __name__ == '__main__':
     unittest.main()
