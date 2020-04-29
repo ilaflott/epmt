@@ -10,6 +10,8 @@ decorator==4.4.1
 defusedxml==0.6.0
 docutils==0.15.2
 entrypoints==0.3
+Flask==1.1.1
+Flask-Compress==1.4.0
 frozendict==1.2
 importlib-metadata==0.23
 ipykernel==5.1.3

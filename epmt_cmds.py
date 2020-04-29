@@ -1132,12 +1132,10 @@ def epmt_entrypoint(args):
         exp_explore(args.epmt_cmd_args, metric = args.metric, limit = args.limit)
         return 0
     if args.command == 'gui':
-        import os
-        import sys
-        script_dir = os.path.dirname(__file__)
-        ui_dir = os.path.join(script_dir, 'ui')
-        sys.path.append(ui_dir)
-        sys.path.append(os.path.join(ui_dir, 'components'))
+        # Start both Dash interface and Static Web Server
+        from threading import Thread
+        from waitress import serve
+        from serve_static import app as docsapp
         from ui import init_app, app
         init_app()
         

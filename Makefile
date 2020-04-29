@@ -20,6 +20,8 @@ build:
 
 dist: 
 	rm -rf epmt-install
+	rm -rf epmtdocs/site
+	mkdocs build -f epmtdocs/mkdocs.yml
 	pyinstaller --clean --distpath=epmt-install epmt.spec
 	cp -Rp preset_settings epmt-install
 	cp -Rp notebooks epmt-install
@@ -30,6 +32,9 @@ dist:
 	cp epmt-example.sh epmt-example.csh epmt-install/examples
 	mkdir epmt-install/slurm
 	cp SLURM/slurm_task_*log_epmt.sh epmt-install/slurm
+	mkdir epmt-install/epmt/epmtdocs/
+	mkdir epmt-install/epmt/epmtdocs/site
+	cp -R epmtdocs/site/* epmt-install/epmt/epmtdocs/site/
 	rm -f $(EPMT_RELEASE); tar cvfz $(EPMT_RELEASE) epmt-install
 	rm -rf epmt-install build
 
@@ -88,7 +93,7 @@ release:
 	@if [ -f $(EPMT_FULL_RELEASE) ]; then echo "$(EPMT_FULL_RELEASE) already exists. Please remove it and try again"; exit 1; fi
 	@echo "Making EPMT release for $(OS_TARGET): $(EPMT_VERSION)"
 	@echo " - building epmt and epmt-test tarball"
-	make OS_TARGET=$(OS_TARGET) docker-dist > /dev/null
+	make OS_TARGET=$(OS_TARGET) docker-dist
 	@ls $(EPMT_RELEASE) test-$(EPMT_RELEASE)
 	@echo " - building papiex tarball for $(OS_TARGET): $(PAPIEX_VERSION)"
 	cd $(PAPIEX_SRC); rm -f $(PAPIEX_RELEASE); make OS_TARGET=$(OS_TARGET) docker-dist > /dev/null; cp -v $(PAPIEX_RELEASE) $(PWD)

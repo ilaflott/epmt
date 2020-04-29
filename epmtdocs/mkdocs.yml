@@ -6,8 +6,8 @@ use_directory_urls: false
 plugins: []
 
 nav:
-  - Install: INSTALL.md
-  - Readme: README.md
+  - EPMT Install: INSTALL.md
+  - EPMT Readme: README.md
   - migrations.md
   - Notebooks: 
     - Outliers: http://localhost:8888/notebooks/notebooks/Outliers.ipynb" target="_blank
