@@ -1,10 +1,16 @@
 #!/usr/bin/env python
 from waitress import serve
 
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, render_template
+# set the project root directory as the static folder
+app = Flask(__name__, static_folder='epmtdocs/site/', template_folder="epmtdocs/site/")
 
-# set the project root directory as the static folder, you can set others.
-app = Flask(__name__, static_folder='epmtdocs/site/')
+
+@app.errorhandler(404)
+# inbuilt function which takes error as parameter
+def not_found(e):
+    return render_template("404.html")
+
 
 # Handle the case where user visits the root of static server
 # This is needed as we aren't using index.html files in directories

@@ -21,7 +21,7 @@ hidden.append('ipykernel.datapub')
 # Required for EPMT
 hidden.append('sqlalchemy.ext.baked')
 # pyod, pca
-hidden.extend(['logging.config','sklearn.neighbors._typedefs','sklearn.neighbors._quad_tree','sklearn.tree._utils','sklearn.utils', 'sklearn.utils._cython_blas', 'sklearn.utils.arrayfuncs', 'sklearn.utils.arrayfuncs.array'])
+hidden.extend(['sklearn.neighbors._typedefs','sklearn.neighbors._quad_tree','sklearn.tree._utils','sklearn.utils', 'sklearn.utils._cython_blas', 'sklearn.utils.arrayfuncs', 'sklearn.utils.arrayfuncs.array'])
 
 hidden.append('ui.components')
 hidden.append('ui')
@@ -57,7 +57,7 @@ for f in files:
 dash_extra_datas = collect_data_files('dash_html_components') + collect_data_files('dash_core_components') + collect_data_files('dash_daq') + collect_data_files('dash_table') + collect_data_files('dash_renderer') + collect_data_files('dash_bootstrap_components')
 plotly_extra_datas = collect_data_files('plotly.graph_objects') + collect_data_files('plotly.express') + collect_data_files('plotly.figure_factory')
 
-extra_datas = ipe_extra_datas + dash_extra_datas + alembic_extras + dash_resources
+extra_datas = ipe_extra_datas + dash_extra_datas + alembic_extras + dash_resources + plotly_extra_datas
 
 print("Extra data: ",extra_datas)
 

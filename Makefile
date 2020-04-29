@@ -27,14 +27,12 @@ dist:
 	cp -Rp notebooks epmt-install
 	cp -Rp migrations epmt-install
 	cp -p alembic.ini epmt-install
-	cp -Rp docs epmt-install
 	mkdir epmt-install/examples
 	cp epmt-example.sh epmt-example.csh epmt-install/examples
 	mkdir epmt-install/slurm
 	cp SLURM/slurm_task_*log_epmt.sh epmt-install/slurm
 	mkdir epmt-install/epmt/epmtdocs/
-	mkdir epmt-install/epmt/epmtdocs/site
-	cp -R epmtdocs/site/* epmt-install/epmt/epmtdocs/site/
+	cp -Rp epmtdocs/site epmt-install/epmt/epmtdocs/
 	rm -f $(EPMT_RELEASE); tar cvfz $(EPMT_RELEASE) epmt-install
 	rm -rf epmt-install build
 
@@ -84,7 +82,7 @@ release6:
 	$(MAKE) OS_TARGET=centos-6 release check-release
 
 release7:
-	$(MAKE) OS_TARGET=centos-7 release check-release
+	$(MAKE) OS_TARGET=centos-7 release
 
 check-release:
 	-utils/check-release $(EPMT_FULL_RELEASE)
@@ -93,7 +91,7 @@ release:
 	@if [ -f $(EPMT_FULL_RELEASE) ]; then echo "$(EPMT_FULL_RELEASE) already exists. Please remove it and try again"; exit 1; fi
 	@echo "Making EPMT release for $(OS_TARGET): $(EPMT_VERSION)"
 	@echo " - building epmt and epmt-test tarball"
-	make OS_TARGET=$(OS_TARGET) docker-dist
+	make OS_TARGET=$(OS_TARGET) docker-dist > /dev/null
 	@ls $(EPMT_RELEASE) test-$(EPMT_RELEASE)
 	@echo " - building papiex tarball for $(OS_TARGET): $(PAPIEX_VERSION)"
 	cd $(PAPIEX_SRC); rm -f $(PAPIEX_RELEASE); make OS_TARGET=$(OS_TARGET) docker-dist > /dev/null; cp -v $(PAPIEX_RELEASE) $(PWD)

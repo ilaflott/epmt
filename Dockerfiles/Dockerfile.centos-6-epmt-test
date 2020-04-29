@@ -9,10 +9,9 @@ RUN rm -rf /var/cache/yum
 ARG release=2.1.0
 ARG settings=settings_sqlite_inmem_sqlalchemy.py
 ARG destdir=/opt/epmt
-ARG os_target=centos-6
 
-ADD epmt-${release}-${os_target}.tgz ${destdir}
-ADD test-epmt-${release}-${os_target}.tgz .
+ADD epmt-${release}.tgz ${destdir}
+ADD test-epmt-${release}.tgz .
 COPY preset_settings/${settings} ${destdir}/epmt-install/epmt/settings.py
 WORKDIR /home/epmt-install-tests
 ENV PATH="${destdir}/epmt-install/epmt:${PATH}"

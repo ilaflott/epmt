@@ -1138,7 +1138,6 @@ def epmt_entrypoint(args):
         from serve_static import app as docsapp
         from ui import init_app, app
         init_app()
-        
         ui = Thread(target=app.run_server, kwargs={'port':8050, 'host':'0.0.0.0'})
         docs = Thread(target=serve, args=([docsapp]))
         docs.start()
