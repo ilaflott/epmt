@@ -692,9 +692,9 @@ def migrate_db():
     logger.info('Migrating database to HEAD: {}'.format(epmt_schema_head))
     try:
         config.main(argv=['--raiseerr', 'upgrade', 'head',])
-    except exc.OperationalError as e:
+    except Exception as e:
         logger.warning(e)
-        logger.warning('Could not upgrade the database. This likely means that your database schema predates our migration support. The best course would be start with a fresh database.')
+        logger.warning('Could not upgrade the database. This very likely means that your database schema predates our migration support. A solution would be to start with a fresh database.')
         return False
     updated_version = get_db_schema_version()
     if updated_version != epmt_schema_head:
