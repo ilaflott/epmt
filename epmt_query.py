@@ -1103,7 +1103,7 @@ op_tags: list of dicts or list of strings
          If set, it will restrict the model to the filtered ops.
          op_tags are distinct from "tag". op_tags are used to
          obtain the set of processes over which an aggregation
-         is performed using op_metrics. 
+         is performed using get_op_metrics. 
     
 methods: list of callables, optonal
          Is a list of methods that are used to obtain outlier
@@ -1690,7 +1690,7 @@ op_duration_method: string, optional
     jobs = orm_jobs_col(jobs).order_by(Job.start)
 
     if jobs.count() == 0:
-        logger.warning('You need to specify one or more jobs for op_metrics')
+        logger.warning('You need to specify one or more jobs for get_op_metrics')
         return None
 
     if isString(jobs):
@@ -1765,9 +1765,6 @@ op_duration_method: string, optional
 
     # we assume the user wants the output in the form of a list of dicts
     return all_procs
-
-# alias for get_op_metrics, for compat
-op_metrics = get_op_metrics
 
 @db_session
 def delete_jobs(jobs, force = False, before=None, after=None, warn = True):
@@ -1891,7 +1888,7 @@ def retire_jobs(ndays = settings.retire_jobs_ndays):
 #     if (num_jobs > 100):
 #         logger.warning('job count ({0}) > 100: it is recommended to use dm_calc_iter instead for a lower memory footprint and faster time-to-solution'.format(num_jobs))
 #     tags = tags_list(tags)
-#     dm_ops_df = op_metrics(jobs, tags = tags, group_by_tag = True)
+#     dm_ops_df = get_op_metrics(jobs, tags = tags, group_by_tag = True)
 #     jobs_cpu_time = 0.0
 #     for j in jobs:
 #         jobs_cpu_time += j.cpu_time
@@ -1919,8 +1916,9 @@ def ops_costs(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', '
              for which we want to determine the time taken.
    features: list of strings, optional
              The metrics to use for calculations. `duration` and
-             `cpu_time` are good candidates. With `duration` beware
-             of double-counting due to backgrounded processes.
+             `cpu_time` are available candidates. With `duration`
+             we take care not to do double-counting of overlapping
+             processes.
 
     Returns
     -------
@@ -1960,7 +1958,7 @@ dm_agg_df_by_job: dataframe
     for j in jobs:
         n += 1
         jobs_cpu_time += j.cpu_time
-        job_dm_ops_df = op_metrics(j, tags = tags, group_by_tag = True)
+        job_dm_ops_df = get_op_metrics(j, tags = tags, group_by_tag = True, op_duration_method = 'sum-minus-overlap')
         job_dm_ops_df.insert(0, 'jobid', j.jobid)
         df_list.append(job_dm_ops_df)
         agg_dict = {'jobid': j.jobid, 'job_cpu_time': j.cpu_time}

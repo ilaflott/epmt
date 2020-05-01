@@ -828,7 +828,7 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
     # get the dataframe of aggregate metrics, where each row
     # is an aggregate across a group of processes with a particular
     # jobid and tag
-    ops = eq.op_metrics(jobs=jobs, tags=tags_to_use)
+    ops = eq.get_op_metrics(jobs=jobs, tags=tags_to_use)
     if len(ops) == 0:
         logger.warning('no matching tags found in the tag set: {0}'.format(tags_to_use))
         return (None, {})
@@ -1149,13 +1149,13 @@ def detect_rootcause_op(jobs, inp, tag, features = FEATURES,  methods = [modifie
         print('You can only do RCA for a single "inp" job')
         return (False, None, None)
     tag = tag_from_string(tag) if (type(tag) == str) else tag
-    ref_ops_df = eq.op_metrics(jobs, tag)
-    inp_ops_df = eq.op_metrics(inp, tag)
+    ref_ops_df = eq.get_op_metrics(jobs, tag)
+    inp_ops_df = eq.get_op_metrics(inp, tag)
     unique_tags = set([str(d) for d in ref_ops_df['tags'].values])
     if unique_tags != set([str(tag)]):
         # this is just a sanity check to make sure we only compare
         # rows that have the same tag. Ordinarily this code won't be
-        # triggered as eq.op_metrics will only return rows that match 'tag'
+        # triggered as eq.get_op_metrics will only return rows that match 'tag'
         print('ref jobs have multiple distinct tags({0}) that are superset of this specified tag. Please specify an exact tag match'.format(unique_tags))
         return (False, None, None)
     return rca(ref_ops_df, inp_ops_df, features, methods)
