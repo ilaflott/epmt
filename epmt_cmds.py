@@ -1142,6 +1142,16 @@ def epmt_entrypoint(args):
         init_app()
         app.run_server(debug=False, host='0.0.0.0')
         return 0
+
+    if args.command == 'integration':
+        import subprocess
+        from epmtlib import get_install_root
+        install_root = get_install_root()
+        logger.info('changing directory to ' + install_root)
+        chdir(install_root)
+        retval = subprocess.run('test/integration/run_integration')
+        return retval.returncode
+
     if args.command == 'unittest':
         import unittest
         from importlib import import_module
