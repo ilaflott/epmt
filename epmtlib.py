@@ -24,7 +24,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (3,8,7)
+_version = (3,8,8)
 
 def version():
     return _version
@@ -951,6 +951,17 @@ def get_install_root():
     ['/abc/def', 'ghi.py']
     '''
     return (__file__.rsplit('/', 1)[0])
+
+def logfn(func):
+    '''
+    Logs function name and arguments
+    '''
+    def echo_func(*func_args, **func_kwargs):
+        logger = getLogger(func.__module__)
+        logger.debug('{}({}{}{})'.format(func.__name__, ", ".join([str(x) for x in func_args]), "," if func_kwargs else "", ",".join(["{}={}".format(k, v) for (k,v) in func_kwargs.items()])))
+
+        return func(*func_args, **func_kwargs)
+    return echo_func
 
     
 
