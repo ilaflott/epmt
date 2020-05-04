@@ -957,9 +957,14 @@ def logfn(func):
     Logs function name and arguments
     '''
     def echo_func(*func_args, **func_kwargs):
+        # get the module name from the function itself
         logger = getLogger(func.__module__)
+        # we want to log a message like:
+        #  FUNC_NAME(arg1, arg2..., kwarg1=xyz, kwarg2=abc, ...)
+        # the module is prepended automatically by our logging format
+        # as we use getLogger with the module name
         logger.debug('{}({}{}{})'.format(func.__name__, ", ".join([str(x) for x in func_args]), "," if func_kwargs else "", ",".join(["{}={}".format(k, v) for (k,v) in func_kwargs.items()])))
-
+        # now call the actual function with its arguments (if any)
         return func(*func_args, **func_kwargs)
     return echo_func
 
