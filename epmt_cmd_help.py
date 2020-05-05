@@ -19,11 +19,18 @@ def epmt_help_api(funcs = []):
                     break
             if func:
                 print("from {} import {}\n".format(m.__name__, fname))
+                section = el.docs_func_section(func)
                 print("{}{}".format(func.__name__, signature(func)))
-                print(func.__doc__, '\n\n')
+                doc = func.__doc__
+                if section:
+                   # add the section name with suitable indent
+                    print('\n    Section::{}'.format(section))
+                    # remove the ugly section suffix from the summary string
+                    doc = doc.replace('::{}'.format(section), '')
+                print(doc, '\n\n')
             else:
                 print('Could not find function {} in any module'.format(fname), file=stderr)
     else:
         for m in (eq, eod, exp):
             print(m.__doc__)
-            print(docs_module_index(m, fmt='string'), '\n\n')
+            print(docs_module_index(m, fmt='string'), '\n')

@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""EPMT Outliers API
+"""
+EPMT Outliers API
+=================
 
 The EPMT Outliers API provides functions to determine outliers
 among a collection of jobs, operations or processes. It uses
@@ -31,7 +33,7 @@ FEATURES = settings.outlier_features
 
 def partition_jobs(jobs, features=FEATURES, methods=[], thresholds=thresholds):
     """
-    Partition jobs into disjoint sets of reference and outliers
+    Partition jobs into disjoint sets of reference and outliers::Outlier Detection
 
     Parameters
     ----------
@@ -81,7 +83,7 @@ def partition_jobs(jobs, features=FEATURES, methods=[], thresholds=thresholds):
 
 def partition_jobs_by_ops(jobs, tags=[], features=FEATURES, methods=[modified_z_score], thresholds=thresholds):
     """
-    Partitions operations into disjoint sets of reference and outliers
+    Partitions operations into disjoint sets of reference and outliers::Outlier Detection
 
     
     Parameters
@@ -150,7 +152,7 @@ def partition_jobs_by_ops(jobs, tags=[], features=FEATURES, methods=[modified_z_
 @db_session
 def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[], thresholds = thresholds, sanity_check=True, pca = False):
     """
-    Detects outlier jobs
+    Detects outlier jobs::Outlier Detection
 
     This function will detects outlier jobs among a set of input jobs.
     This should be used as the first tool in outlier detection. If you
@@ -543,7 +545,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
 @db_session
 def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds=thresholds, sanity_check=True, pca = False):
     """
-    Detects outlier operations
+    Detects outlier operations::Outlier Detection
 
     This function detects outlier *operations* on a set of jobs.
     You should be using this function only if you want to figure out
@@ -1045,7 +1047,7 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
 @db_session
 def detect_rootcause(jobs, inp, features = FEATURES,  methods = [modified_z_score]):
     """
-    Performs root-cause analysis on a job given a set of reference jobs
+    Performs root-cause analysis on a job given a set of reference jobs::RCA
 
     Parameters
     ----------
@@ -1085,7 +1087,7 @@ def detect_rootcause(jobs, inp, features = FEATURES,  methods = [modified_z_scor
 @db_session
 def detect_rootcause_op(jobs, inp, tag, features = FEATURES,  methods = [modified_z_score]):
     """
-    Performs root-cause analysis (RCA) for an operation
+    Performs root-cause analysis (RCA) for an operation::RCA
 
     Parameters
     ----------
@@ -1163,7 +1165,7 @@ def detect_rootcause_op(jobs, inp, tag, features = FEATURES,  methods = [modifie
 
 def pca_feature_combine(inp_df, inp_features = [], desired = 2, retain_features = False):
     '''
-    Perform PCA on a dataframe with multiple features
+    Perform PCA on a dataframe with multiple features::Data Reduction
 
     Performs PCA and returns a new dataframe containing
     the new PCA features as columns. The returned dataframe
@@ -1421,7 +1423,7 @@ pca_weight_vec : The newly added PCA weighted vector
 
 def pca_feature_rank(jobs, inp_features = []):
     '''
-    Performs 2-component PCA and feature-ranking
+    Performs 2-component PCA and feature-ranking::Data Reduction
 
     Parameters
     ----------
@@ -1491,7 +1493,7 @@ def pca_feature_rank(jobs, inp_features = []):
 
 def feature_scatter_plot(jobs, features = [], outfile='', annotate = False):
     '''
-    Create a 2-D scatter plot showing job features
+    Create a 2-D scatter plot showing job features::Outlier Detection
 
     Generates a 2-D scatter plot of jobs with features on two axes.
     If more than 2 features are requested, for example by setting
@@ -1585,7 +1587,7 @@ def feature_scatter_plot(jobs, features = [], outfile='', annotate = False):
 # model: reference model
 def sanitize_features(f, df, model = None):
     '''
-    Prune feature list based on availability
+    Prune feature list based on availability::Miscellaneous
 
     This function will prune a given list of features to a, possibly,
     smaller list by checking availability, removing blacklisted
@@ -1644,7 +1646,7 @@ def sanitize_features(f, df, model = None):
 
 def get_feature_distributions(jobs, features = []):
     '''
-    Get feature distributions for a collection of jobs
+    Get feature distributions for a collection of jobs::Jobs
 
     Get the distribution (normal, uniform, etc) of features across
     a collection of jobs. If features is unspecified, all available

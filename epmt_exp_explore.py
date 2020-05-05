@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""EPMT Experiment Explore API
+"""
+EPMT Experiment Explore API
+===========================
 
 The EPMT Experiment Explore API provides a domain-specific
 API where certain primitives such as experiment name,
@@ -22,6 +24,8 @@ logger = getLogger(__name__)
 @db_session
 def exp_component_outliers(exp_name, metric = 'duration', op = np.sum, limit = 10):
     '''
+    Orders components in an experiment by aggregate metric value::Experiments
+
     Computes an ordered list of components by aggregate metric value
     across jobs of that component. This function can be used to determine
     which jobs/time-segments of a particular component are outliers.
@@ -161,8 +165,9 @@ def exp_component_outliers(exp_name, metric = 'duration', op = np.sum, limit = 1
 @db_session
 def exp_time_segment_stats(exp_name, metric = 'duration'):
     '''
-    Computes statistics by time-segment for an experiment. This
-    function can help you determine if one time-segment is taking
+    Computes statistics by time-segment for an experiment::Experiments
+
+    This function can help you determine if one time-segment is taking
     significantly longer than another time-segment.
 
     exp_name: Experiment name
@@ -219,6 +224,9 @@ OrderedDict([('18540101', {'jobids': ['625151'], 'metrics': [10425623185.0]}),
 
 @db_session
 def exp_explore(exp_name, metric = 'duration', op = np.sum, limit=10):
+    '''
+    Prints a drilldown for an experiment by components and time-segments::Experiments
+    '''
     from scipy.stats import variation
 
     metric = metric or 'duration' # defaults when using with command-line
@@ -258,7 +266,7 @@ def exp_explore(exp_name, metric = 'duration', op = np.sum, limit=10):
 @db_session
 def find_missing_time_segments(exp_name, jobs=[], components = [], time_segments = range(18540101, 20190101, 50000)):
     '''
-    Finds missing time segments in an experiment
+    Finds missing time segments in an experiment::Experiments
 
     Parameters
     ----------
@@ -322,7 +330,7 @@ def find_missing_time_segments(exp_name, jobs=[], components = [], time_segments
 @db_session
 def exp_find_jobs(exp_name, components = [], exp_times = [], failed = None, **kwargs):
     '''
-    Finds jobs within an experiment
+    Finds jobs within an experiment::Experiments
 
     The function searches for jobs within an experiment based on
     restrictions on components, times and exit status

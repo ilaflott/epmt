@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""EPMT Misc. Library
+"""
+EPMT Misc. Library
+==================
 
 This module provides miscellaneous functions such as those needed
 for manipulating data structures.
@@ -24,7 +26,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (3,8,11)
+_version = (3,8,12)
 
 def version():
     return _version
@@ -893,7 +895,23 @@ def docs_func_summary(func):
     '''
     Returns the docstring summary for a function
     '''
-    return ((func.__doc__ or '').lstrip().split('\n')[0].strip())
+    summary_string = ((func.__doc__ or '').lstrip().split('\n')[0].strip())
+    # the summary string may have a section name at the end of it
+    # separated by ::
+    # So, if we have a :: in the string, then we split and take the first portion
+    # as the actual summary
+    return summary_string.rsplit('::', 1)[0] if '::' in summary_string else summary_string
+
+def docs_func_section(func):
+    '''
+    Returns the section name (if any) for a function from its docstrings
+
+    We assume a doctstring summary line has a double-colon followed by
+    a section name at the end of the summary line.
+    '''
+    summary_string = ((func.__doc__ or '').lstrip().split('\n')[0].strip())
+    return summary_string.rsplit('::', 1)[1] if '::' in summary_string else ''
+    
 
 def docs_module_index(mod, fmt=None):
     '''
@@ -927,10 +945,18 @@ def docs_module_index(mod, fmt=None):
     # prepare a list of tuples; the first tuple number is the 
     # function name, and the second item is it's one-line summary extracted
     # from it's docstring. Some functions may have no docstrings, and thats OK
-    out = [ (f.__name__, docs_func_summary(f)) for f in funcs ]
+    out = [ (f.__name__, docs_func_summary(f), docs_func_section(f)) for f in funcs ]
     if fmt != 'string':
         # return the list of tuples
         return out
+
+    sections = {}
+    for (name, summary, section) in out:
+        section = section or 'Uncategorized'
+        if section in sections:
+            sections[section].append((name, summary))
+        else:
+            sections[section] = [(name, summary)]
 
     # user wants a human-readable string
     # get the maximum length of function names
@@ -939,7 +965,12 @@ def docs_module_index(mod, fmt=None):
     # format so we print the function name followed by the summary
     # with the correct spacing
     fmt_string = "{:" + str(max_func_name_len) + "s}    {}"
-    return "\n".join([fmt_string.format(o[0], o[1]) for o in out])
+    out_str = ""
+    for section in sorted(sections.keys()):
+        section_calls = sections[section]
+        out_str += "\n\nSection::{}\n".format(section)
+        out_str += "\n".join([fmt_string.format(o[0], o[1]) for o in section_calls])
+    return out_str
 
 def get_install_root():
     '''

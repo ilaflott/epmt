@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""EPMT Statistics Module
+"""
+EPMT Statistics Module
+======================
 
 This module provides low-level statistical and numerical methods.
 
