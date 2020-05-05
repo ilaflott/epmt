@@ -24,7 +24,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (3,8,10)
+_version = (3,8,11)
 
 def version():
     return _version
@@ -956,7 +956,8 @@ def logfn(func):
     '''
     Logs function name and arguments
     '''
-    def echo_func(*func_args, **func_kwargs):
+    @wraps(func)
+    def log_func(*func_args, **func_kwargs):
         # get the module name from the function itself
         logger = getLogger(func.__module__)
         # we want to log a message like:
@@ -966,7 +967,7 @@ def logfn(func):
         logger.debug('{}({}{}{})'.format(func.__name__, ", ".join([str(x) for x in func_args]), "," if func_kwargs else "", ",".join(["{}={}".format(k, v) for (k,v) in func_kwargs.items()])))
         # now call the actual function with its arguments (if any)
         return func(*func_args, **func_kwargs)
-    return echo_func
+    return log_func
 
     
 
