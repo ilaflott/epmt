@@ -31,6 +31,6 @@ def epmt_help_api(funcs = []):
             else:
                 print('Could not find function {} in any module'.format(fname), file=stderr)
     else:
-        for m in (eq, eod, exp):
+        for m in (eq, eod, exp, es):
             print(m.__doc__)
             print(docs_module_index(m, fmt='string'), '\n')
