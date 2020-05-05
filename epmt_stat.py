@@ -15,7 +15,7 @@ import numpy as np
 import operator
 from logging import getLogger
 from numbers import Number
-from epmtlib import logfn
+# from epmtlib import logfn
 
 logger = getLogger(__name__)  # you can use other name
 import epmt_settings as settings
@@ -52,7 +52,7 @@ def partition_classifiers_uv_mv(classifiers):
     uv_set = set(classifiers) - mv_set
     return (uv_set, mv_set)
 
-@logfn
+#@logfn
 def z_score(ys, params = ()):
     '''
     Computes the *absolute* z-scores for an input vector.
