@@ -26,6 +26,10 @@ teardown() {
       epmt annotate 3456 g=400 h=800  # annotate job in database as well
       run epmt dump -k annotations 3456
       assert_output "{'a': 100, 'b': 200, 'c': 200, 'd': 400, 'e': 300, 'f': 600, 'g': 400, 'h': 800, 'inbetween_1': 1, 'inbetween_2': 1}"
+      # special annotation, check we set the tags field
+      epmt annotate 3456 EPMT_JOB_TAGS='exp_name:abc;exp_component:def;exp_time:18540101'
+      run epmt dump -k tags 3456
+      assert_output "{'exp_name': 'abc', 'exp_time': '18540101', 'exp_component': 'def'}"
   fi
 }
 

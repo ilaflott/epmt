@@ -2008,6 +2008,44 @@ def get_job_status(jobid):
     return j.info_dict.get('status', {})
 
 @db_session
+def tag_job(jobid, tag, replace=False):
+    '''
+    Tag a job with the supplied tag::Jobs
+
+    Parameters
+    ----------
+       jobid: string
+         tag: dict or string
+     replace: boolean
+              Defaults to False, which means merge into an existing tag.
+              If True, it replaces the tag
+    Returns
+    -------
+    The updated tag (which is also saved in the database)
+
+    Notes
+    -----
+    Passing a jobid that does not exist in the database will cause an exception
+    '''
+    j = Job[jobid]
+    tag = tag_from_string(tag)
+    if replace:
+        j.tags = tag
+        updated_tag = tag
+    else:
+        # we do copy as otherwise the ORM gets confused
+        # and doesn't save the updated object (since it only compares refs)
+        existing_tag = dict.copy(j.tags or {})
+        # merge tag on top of existing_tag
+        existing_tag.update(tag)
+        j.tags = existing_tag
+        updated_tag = existing_tag
+    orm_commit()
+    return updated_tag
+    
+
+
+@db_session
 def annotate_job(jobid, annotation, replace=False):
     '''
     Annotates a job with the supplied annotation::Jobs
