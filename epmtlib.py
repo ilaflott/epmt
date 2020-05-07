@@ -26,7 +26,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (3,8,14)
+_version = (3,8,15)
 
 def version():
     return _version
@@ -264,6 +264,14 @@ def tag_from_string(s, delim = ';', sep = ':', tag_default_value = '1'):
             # it's probably a simple label, so use the default value for it
             tag[t] = tag_default_value
     return tag
+
+def tag_dict_to_string(tag, delim = ';', sep = ':'):
+    '''
+    Converts a dictionary tag to a string
+    '''
+    if type(tag) == str:
+        return tag
+    return delim.join([ "{}{}{}".format(k, sep, tag[k]) for k in sorted(tag.keys()) ])
 
 # returns a list of tags, where each tag is a dict.
 # the input can be a list of strings or a single string.

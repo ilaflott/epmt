@@ -576,11 +576,11 @@ def epmt_annotate(argslist, replace = False):
             from epmt_query import annotate_job
             updated_ann = annotate_job(jobid, d, replace)
             logger.debug('updated annotations: {}'.format(updated_ann))
-            if 'EPMT_JOB_TAGS' in d:
+            if settings.job_tags_env in d:
                 # we need to set <job>.tags to the value of EPMT_JOB_TAGS
                 from epmt_query import tag_job
                 # we have to overwrite the existing tags (not merge it in)
-                r = tag_job(jobid, d['EPMT_JOB_TAGS'], True)
+                r = tag_job(jobid, d[settings.job_tags_env], True)
                 logger.debug('Updated tags for job {} to {}'.format(jobid, r))
             return d.items() <= updated_ann.items()
 
