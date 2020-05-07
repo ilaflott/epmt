@@ -427,8 +427,8 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(r, {})
         self.assertEqual(eq.get_job_annotations('685000'), {})
         r = eq.annotate_job('685016', 'abc:200;def:bye')
-        self.assertEqual(r, {'abc': '200', 'def': 'bye'})
-        self.assertEqual(eq.get_job_annotations('685016'), {'abc': '200', 'def': 'bye'})
+        self.assertEqual(r, {'abc': '200', 'def': 'bye', 'EPMT_JOB_TAGS': 'atm_res:c96l49;exp_component:ocean_month_rho2_1x1deg;exp_name:ESM4_historical_D151;exp_time:18840101;ocn_res:0.5l75;script_name:ESM4_historical_D151_ocean_month_rho2_1x1deg_18840101'})
+        self.assertEqual(eq.get_job_annotations('685016'), {'abc': '200', 'def': 'bye', 'EPMT_JOB_TAGS': 'atm_res:c96l49;exp_component:ocean_month_rho2_1x1deg;exp_name:ESM4_historical_D151;exp_time:18840101;ocn_res:0.5l75;script_name:ESM4_historical_D151_ocean_month_rho2_1x1deg_18840101'})
         self.assertEqual(eq.get_jobs(annotations = {'abc': '200'}, fmt='terse'), [u'685016'])
 
     @db_session
