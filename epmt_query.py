@@ -1954,8 +1954,7 @@ dm_agg_df_by_job: dataframe
     from datetime import datetime
     logger.info('dm ops: {0}'.format(tags))
     if metric not in {"duration","cpu_time"}:
-        logger.error('We only support "duration" or "cpu_time" for metric')
-        return False
+        raise ValueError('We only support "duration" or "cpu_time" for metric')
     logger.info('metric: {}'.format(metric))
     jobs = orm_jobs_col(jobs)
     njobs = jobs.count()
@@ -1990,6 +1989,13 @@ dm_agg_df_by_job: dataframe
             elapsed_time = datetime.now() - start_time
             logger.info('processed %d of %d jobs at %.2f jobs/sec', n, jobs.count(), n/elapsed_time.total_seconds())
     dm_ops_df = pd.concat(df_list).reset_index(drop=True)
+
+    # reorder the columns so we see the jobid and the metric in the first two columns
+    cols = set(dm_ops_df.columns.values)
+    initial_cols = ['jobid', 'tags', metric]
+    ordered_cols = initial_cols + list(cols - set(initial_cols))
+
+    dm_ops_df = dm_ops_df[ordered_cols]
     dm_agg_df_by_job = pd.DataFrame(agg_ops_by_job)
     dm_metric = dm_ops_df[metric].sum()
     dm_percent = round((100 * dm_metric / jobs_metric), 3)
