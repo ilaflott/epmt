@@ -1708,7 +1708,7 @@ op_duration_method: string, optional
     all_procs = []
     # we iterate over tags, where each tag is dictionary
     for t in tags:
-
+        logger.debug('  processing op: {}'.format(t))
         # group the Query response we got by jobid
         # we use group_concat to join the thread_sums json into a giant string
         if settings.orm == 'sqlalchemy':
@@ -1760,6 +1760,7 @@ op_duration_method: string, optional
             all_procs.append(sum_dict)
 
     if group_by_tag:
+        logger.debug('grouping by tags..')
         all_procs = group_dicts_by_key(all_procs, key='tags', exclude=['job', 'jobid'])
 
     if fmt == 'pandas':
@@ -1899,7 +1900,7 @@ def retire_jobs(ndays = settings.retire_jobs_ndays):
 #     return (dm_percent, dm_ops_df, jobs_cpu_time)
 
 @db_session
-def ops_costs(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op:dmput', 'op:hsmget', 'op:rm', 'op:cp'], features = ['cpu_time']):
+def ops_costs(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op:dmput', 'op:hsmget', 'op:rm', 'op:cp'], metric = 'cpu_time'):
     """
     Calculates operation(s) costs as a fraction of total job times::Operations
 
@@ -1916,22 +1917,20 @@ def ops_costs(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', '
       tags : list of strings or list of dicts, optional
              The `tags` specify the cumumlative set of operations
              for which we want to determine the time taken.
-   features: list of strings, optional
-             The metrics to use for calculations. `duration` and
-             `cpu_time` are available candidates. With `duration`
-             we take care not to do double-counting of overlapping
-             processes.
+     metric: string
+             'cpu_time' or 'duration'
+              Defaults to 'cpu_time'
 
     Returns
     -------
-      (dm_percent, dm_ops_df, jobs_cpu_time, dm_agg_df_by_job)
+      (dm_percent, dm_ops_df, jobs_metric, dm_agg_df_by_job)
       
       dm_percent: float
-                  Operations cost as a percent of total cpu cycles
+                  Operations cost as a percent of total metric for all the jobs
       dm_ops_df : dataframe
                   Dataframe of operations showing cost of each operation
-   jobs_cpu_time: float
-                  Total cpu time across the jobs in question
+     jobs_metric: float
+                  Aggregated time for specified metric across the jobs in question
 dm_agg_df_by_job: dataframe
                   Aggregate rows by job across operations
 
@@ -1946,39 +1945,55 @@ dm_agg_df_by_job: dataframe
     As mentioned the functions primary goal was to calculate the
     fractional time spent in data-movement operations. But the
     function can be used for any list of operations.
+
+    When the metric specified is 'duration', we take care not to
+    double-count the duration of overlapping processes in a job.
+    This makes the computation slower (5x) than with 'cpu_time',
+    where the aggregation is performed in the database layer.
     """
     from datetime import datetime
-    logger.debug('dm ops: {0}'.format(tags))
+    logger.info('dm ops: {0}'.format(tags))
+    if metric not in {"duration","cpu_time"}:
+        logger.error('We only support "duration" or "cpu_time" for metric')
+        return False
+    logger.info('metric: {}'.format(metric))
     jobs = orm_jobs_col(jobs)
-    logger.debug('number of jobs: {0}'.format(jobs.count))
+    njobs = jobs.count()
+    logger.info('number of jobs: {0}'.format(njobs))
     tags = tags_list(tags)
-    jobs_cpu_time = 0.0
+    jobs_metric = 0.0 # cumulative across all jobs for metric
     df_list = []
     agg_ops_by_job = []
     n = 0
     start_time = datetime.now()
+    # if we use duration as the metric to measure, then we need to avoid
+    # double-counting overlapping process intervals in a job. For other
+    # scenarios we use the faster "sum" aggregation available in the
+    # database itself
+    agg_method = 'sum-minus-overlap' if metric == 'duration' else "sum"
+    logger.debug('Using slower (but accurate) computation for "duration" that avoids double-counting overlapping processes in a job. Try using "cpu_time" for faster results')
     for j in jobs:
         n += 1
-        jobs_cpu_time += j.cpu_time
-        job_dm_ops_df = get_op_metrics(j, tags = tags, group_by_tag = True, op_duration_method = 'sum-minus-overlap')
+        logger.debug('processing {} ({}/{})'.format(j.jobid, n, njobs))
+        jobs_metric += j.duration if (metric == 'duration') else j.cpu_time
+        job_dm_ops_df = get_op_metrics(j, tags = tags, group_by_tag = True, op_duration_method = agg_method)
         job_dm_ops_df.insert(0, 'jobid', j.jobid)
         df_list.append(job_dm_ops_df)
-        agg_dict = {'jobid': j.jobid, 'job_cpu_time': j.cpu_time}
-        for f in features:
-            agg_dict['dm_' + f] = job_dm_ops_df[f].sum()
-            if hasattr(j, f):
-                job_total = getattr(j, f)
-                if job_total != 0:
-                    agg_dict['dm_' + f + '%'] = round(100*agg_dict['dm_' + f]/job_total)
+        agg_dict = {'jobid': j.jobid}
+        agg_dict['dm_' + metric] = job_dm_ops_df[metric].sum()
+        job_total = getattr(j, metric)
+        agg_dict['job_' + metric] = job_total
+        if job_total != 0:
+            agg_dict['dm_' + metric + '%'] = round(100*agg_dict['dm_' + metric]/job_total)
         agg_ops_by_job.append(agg_dict)
         if (n % 10 == 0):
             elapsed_time = datetime.now() - start_time
-            logger.debug('processed %d of %d jobs at %.2f jobs/sec', n, jobs.count(), n/elapsed_time.total_seconds())
+            logger.info('processed %d of %d jobs at %.2f jobs/sec', n, jobs.count(), n/elapsed_time.total_seconds())
     dm_ops_df = pd.concat(df_list).reset_index(drop=True)
     dm_agg_df_by_job = pd.DataFrame(agg_ops_by_job)
-    dm_cpu_time = dm_ops_df['cpu_time'].sum()
-    dm_percent = round((100 * dm_cpu_time / jobs_cpu_time), 3)
-    return (dm_percent, dm_ops_df, jobs_cpu_time, dm_agg_df_by_job)
+    dm_metric = dm_ops_df[metric].sum()
+    dm_percent = round((100 * dm_metric / jobs_metric), 3)
+    return (dm_percent, dm_ops_df, jobs_metric, dm_agg_df_by_job)
 
 @db_session
 def get_job_status(jobid):
