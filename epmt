@@ -130,6 +130,9 @@ if (__name__ == "__main__"):
     # unittest
     unit_test_parser = subparser.add_parser('unittest', help="Run EPMT unit test suite",
         description = "runs unit tests")
+    # integration tests
+    integration_test_parser = subparser.add_parser('integration', help="Run EPMT integration tests",
+        description = "runs integration tests")
     # drop
     drop_parser = subparser.add_parser('drop', help="Drop the entire database, Caution!! Irreversible!")
     drop_parser.add_argument('-f', '--force', action='store_true',help="Do not prompt to confirm")

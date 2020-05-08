@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""EPMT Statistics Module
+"""
+EPMT Statistics Module
+======================
 
 This module provides low-level statistical and numerical methods.
 
@@ -15,6 +17,7 @@ import numpy as np
 import operator
 from logging import getLogger
 from numbers import Number
+from epmtlib import logfn
 
 logger = getLogger(__name__)  # you can use other name
 import epmt_settings as settings
@@ -25,7 +28,7 @@ thresholds = settings.outlier_thresholds
 
 def get_classifier_name(c):
     """
-    Returns the classifier name as a string
+    Returns the classifier name as a string::Statistics
     """
     if hasattr(c, '__name__'): return c.__name__
     if hasattr(c, '__module__'): return c.__module__
@@ -33,6 +36,8 @@ def get_classifier_name(c):
 
 def is_classifier_mv(c):
     """
+    Determines if a classifier is a multivariate classifier or not::Statistics
+
     Returns True if classifier is a multivariate classifier
     and False in all other cases. At present, we can only handle
     classifiers in this module and pyod
@@ -43,17 +48,17 @@ def is_classifier_mv(c):
 
 def partition_classifiers_uv_mv(classifiers):
     """
-    Partition given list of classifiers into two disjoint sets,
-    one containing multivariate classifiers and the other
-    univariate classifiers
+    Partition classifiers into two disjoint sets of univariate and multivariate::Statistics
+
     """
     mv_set = set([ c for c in classifiers if is_classifier_mv(c) ])
     uv_set = set(classifiers) - mv_set
     return (uv_set, mv_set)
 
+@logfn
 def z_score(ys, params = ()):
     '''
-    Computes the *absolute* z-scores for an input vector.
+    Computes the *absolute* z-scores for an input vector::Statistics
 
     Parameters
     ----------
@@ -110,7 +115,7 @@ def z_score(ys, params = ()):
 
 def iqr(ys, params = ()):
     '''
-    Detects outliers using the 1.5 IQR rule.
+    Detects outliers using the 1.5 IQR rule::Statistics
 
         ys: Input vector
     params: If params is provided it should be of the form
@@ -193,6 +198,9 @@ def iqr(ys, params = ()):
 # params if passed in, is of the form (max, median, median_abs_dev)
 # We will ignore params(0) as that's the max z_score in the ref_model
 def modified_z_score(ys, params=()):
+    '''
+    Returns the modified-adjusted Z-score (MADZ) for an input vector::Statistics
+    '''
     logger = getLogger(__name__)  # you can use other name
     logger.debug('scoring using {}'.format('modified_z_score'))
     median_y = params[1] if params else np.median(ys)
@@ -220,13 +228,13 @@ def modified_z_score(ys, params=()):
 
 def outliers_iqr(ys):
     '''
-    Returns a vector mask that identifies outliers using IQR
+    Returns a vector mask that identifies outliers using IQR::Statistics
     '''
     return iqr(ys)[0]
 
 def outliers_modified_z_score(ys,threshold=thresholds['modified_z_score']):
     '''
-    Returns a vector mask that identifies outliers using MADZ
+    Returns a vector mask that identifies outliers using MADZ::Statistics
     '''
     scores = modified_z_score(ys)[0]
     # return np.where(np.abs(scores) > threshold)[0]
@@ -235,7 +243,7 @@ def outliers_modified_z_score(ys,threshold=thresholds['modified_z_score']):
 
 def outliers_z_score(ys,threshold=thresholds['z_score']):
     '''
-    Returns a vector mask that identifies outliers using z-score
+    Returns a vector mask that identifies outliers using z-score::Statistics
     '''
     scores = z_score(ys)[0]
     # return np.where(np.abs(scores) > threshold)[0]
@@ -244,6 +252,8 @@ def outliers_z_score(ys,threshold=thresholds['z_score']):
 
 def outliers_uv(ys, methods = [outliers_iqr, outliers_z_score, outliers_modified_z_score]):
     '''
+    Detects outliers in a vector using one or more univariate classifiers::Statistics
+
     Returns a vector that identifies outliers using the argument
     methods. For each element the returned vector indicates the
     number of outlier methods that considered that element to be
@@ -273,6 +283,8 @@ def outliers_uv(ys, methods = [outliers_iqr, outliers_z_score, outliers_modified
 
 def uvod_classifiers():
     '''
+    Get a list of available univariate classifiers::Statistics
+
     Returns a list of available univariate classifiers based on settings.py
     If no univariate classifiers are defined in settings, then sensible defaults
     are returned. The returned list contains one or more callables that support
@@ -287,7 +299,7 @@ def uvod_classifiers():
 
 def mvod_classifiers(contamination = 0.1, warnopts='ignore'):
     '''
-    Returns a list of multivariate classifiers
+    Returns a list of multivariate classifiers::Statistics
     '''
     if warnopts:
         from warnings import simplefilter
@@ -327,6 +339,8 @@ def mvod_classifiers(contamination = 0.1, warnopts='ignore'):
 # (x['K Nearest Neighbors (KNN)'] > 0.5104869395352308) * 1
 def mvod_scores(X = None, classifiers = [], warnopts = 'ignore'):
     '''
+    Perform outlier scoring using multivariate classifiers::Statistics
+
     Performs multivariate outlier scoring on a multi-dimensional
     numpy array. Returns a numpy array of scores for each
     classifier (same length as the input) where each score 
@@ -461,6 +475,8 @@ def mvod_scores(X = None, classifiers = [], warnopts = 'ignore'):
 
 def mvod_scores_using_model(inp, model_inp, classifier, threshold = None):
     """
+    Performs multivariate scoring against a model::Statistics
+
     Determines the score for *each row* separately against
     a model for a given classifier. If threshold is set, then
     rather than returning an array of scores, we just return
@@ -559,6 +575,9 @@ def mvod_scores_using_model(inp, model_inp, classifier, threshold = None):
 # dataframe then it's column labels must match those of ref and in the
 # same order.
 def rca(ref, inp, features, methods = [modified_z_score]):
+    '''
+    Perform low-level RCA::Statistics
+    '''
     # API input checking
     if ref.empty or inp.empty:
         return (False, None, None)
@@ -621,6 +640,9 @@ def rca(ref, inp, features, methods = [modified_z_score]):
 
 
 def check_finite(values):
+    '''
+    Low-level function to check if a vector contains finite values::Statistics
+    '''
     from math import isnan, isinf
     n_nans = 0
     n_infs = 0
@@ -635,6 +657,8 @@ def check_finite(values):
 
 def pca_stat(inp_features, desired = 2):
     '''
+    Performs PCA on an ndarray::Statistics
+
     Combines features ndarray into a new PCA feature array with 
     a dimensionality equal to n_components. It also returns an
     array containing the explained_variance_ratio. 
@@ -695,6 +719,7 @@ def pca_stat(inp_features, desired = 2):
 
 def check_dist(data = [], dist='norm', alpha = 0.05):
     '''
+    Determines the distribution of input data::Statistics
 
         data: numpy 1-d array or list of numbers. If none is provided then
               one will be generated of the type of distribution to be tested for
@@ -805,6 +830,8 @@ def check_dist(data = [], dist='norm', alpha = 0.05):
 
 def normalize(v, min_=0, max_=1):
     '''
+    Performs normalization (min-max scaling) on an input vector::Statistics
+
     Performs column-wise min-max scaling of a numpy array (of any dimension)
     so that the elements of each column range from min_ to max_. 
 
@@ -816,6 +843,8 @@ def normalize(v, min_=0, max_=1):
 
 def standardize(v):
     '''
+    Performs standardization (z-score normalization) on a vector::Statistics
+
     Performs column-wise standardization (z-score normalization),
     so that each column has a mean 0, and a standard deviation 1.0.
 
@@ -828,6 +857,8 @@ def standardize(v):
 
 def dframe_append_weighted_row(df, weights, ignore_index = True, use_abs = False):
     '''
+    Appends row to dataframe that uses a weighted combination of other rows::Statistics
+
     Returns a dataframe that's a copy of the original dataframe,
     with an additional row computed by multiplying each element
     in the same column with its corresponding weight and then

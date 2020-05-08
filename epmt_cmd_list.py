@@ -66,7 +66,7 @@ def epmt_list_thread_metrics(arglist):
 
 def epmt_list_op_metrics(arglist):
     if not arglist:
-        print('You must to specify one more more jobs to get op_metrics', file=stderr)
+        print('You must to specify one more more jobs to get_op_metrics', file=stderr)
         return False
     logger.info("epmt_list_op_metrics: %s",str(arglist))
     kwargs = kwargify(arglist)
