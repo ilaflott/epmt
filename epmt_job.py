@@ -740,6 +740,12 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 else:
                     logger.warning('Both metadata and annotations have the same job tags')
             job_tags = job_tag_from_ann or job_tags
+    if job_tags and not (settings.job_tags_env in annotations):
+        # set annotation based on metadata job tags (if it is not set)
+        from epmtlib import tag_dict_to_string
+        tag_str = tag_dict_to_string(job_tags)
+        logger.debug('updating {} in annotations to {} based on metadata job tags'.format(settings.job_tags_env, tag_str))
+        annotations[settings.job_tags_env] = tag_str
 
     # sometimes script name is to be found in the job tags
     if (job_status.get('script_name') is None) and job_tags and job_tags.get('script_name'):

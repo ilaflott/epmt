@@ -576,6 +576,12 @@ def epmt_annotate(argslist, replace = False):
             from epmt_query import annotate_job
             updated_ann = annotate_job(jobid, d, replace)
             logger.debug('updated annotations: {}'.format(updated_ann))
+            if settings.job_tags_env in d:
+                # we need to set <job>.tags to the value of EPMT_JOB_TAGS
+                from epmt_query import tag_job
+                # we have to overwrite the existing tags (not merge it in)
+                r = tag_job(jobid, d[settings.job_tags_env], True)
+                logger.debug('Updated tags for job {} to {}'.format(jobid, r))
             return d.items() <= updated_ann.items()
 
     # below we handle annotation update in the metadata file
@@ -1142,6 +1148,16 @@ def epmt_entrypoint(args):
         init_app()
         app.run_server(debug=False, host='0.0.0.0')
         return 0
+
+    if args.command == 'integration':
+        import subprocess
+        from epmtlib import get_install_root
+        install_root = get_install_root()
+        logger.info('changing directory to ' + install_root)
+        chdir(install_root)
+        retval = subprocess.run('test/integration/run_integration')
+        return retval.returncode
+
     if args.command == 'unittest':
         import unittest
         from importlib import import_module
