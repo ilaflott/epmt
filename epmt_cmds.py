@@ -36,20 +36,20 @@ def find_diffs_in_envs(start_env,stop_env):
     return env
 
 
-def dump_config(outf):
+def dump_config(outf, sep = ":"):
     print("\nsettings.py:", file=outf)
 #    book = {}
     for key, value in sorted(settings.__dict__.items()):
         if not (key.startswith('__') or key.startswith('_') or key == 'ERROR'):
             if type(value) in [str, int, float, list, dict, bool]:
-                print("%-24s%-56s" % (key,str(value)), file=outf)
+                print("%s%s%s" % (key,sep,str(value)), file=outf)
     print("\nenvironment variables (overrides settings.py):", file=outf)
     for v in [ "PAPIEX_OSS_PATH", "PAPIEX_OUTPUT", "EPMT_DB_PROVIDER", "EPMT_DB_USER", "EPMT_DB_PASSWORD", "EPMT_DB_HOST", "EPMT_DB_DBNAME", "EPMT_DB_FILENAME" ]:
 #                "provider", "user", "password", "host", "dbname", "filename" ]:
 # "PAPIEX_OPTIONS","PAPIEX_DEBUG","PAPI_DEBUG","MONITOR_DEBUG","LIBPFM_DEBUG"
 #              ]:
         if v in environ:
-            print("%-24s%-56s" % (v,environ[v]), file=outf)
+            print("%%s%s" % (v,sep,environ[v]), file=outf)
 
 def read_job_metadata_direct(file):
     try:
