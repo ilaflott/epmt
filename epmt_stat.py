@@ -828,6 +828,84 @@ def check_dist(data = [], dist='norm', alpha = 0.05):
     logger.debug('check_dist: {} tests PASSED, {} tests FAILED'.format(passed, failed))
     return(passed, failed)
 
+def get_num_modes(X, max_modes = 10):
+    '''
+    Get the number of modes (unimodal, bimodal, etc) and mode values for a distribution
+
+    Parameters
+    ----------
+                X: 1-d numpy array or list
+                   Possibly, multimodal, 1-D vector for which we want to
+                   determine the number of modes
+        max_modes: int
+                   The maximum number of modes to check for (>= 2)
+               
+    Returns
+    -------
+      (nmodes, modes)
+
+         nmodes: int
+                 representing the number of modes in X
+          modes: numpy 1-D array of mode values
+
+    Notes
+    -----
+    The approach uses KMeans clustering with the Silhouette method to determine
+    the optimal number of clusters.
+
+    The Silhouette method only works if number of clusters is >= 2.
+    The elbow method (also computed) as km_scores works with number of
+    clusters equal to 1.
+
+    The data will be scaled automatically as needed so you don't need to
+    pass scaled data.
+
+    See:
+    https://github.com/tirthajyoti/Machine-Learning-with-Python/blob/master/Clustering-Dimensionality-Reduction/Clustering_metrics.ipynb
+    '''
+    from sklearn.cluster import KMeans
+    from sklearn.preprocessing import MinMaxScaler
+    from sklearn.metrics import silhouette_score
+    scaler = MinMaxScaler()
+    X_scaled=scaler.fit_transform(X.reshape(-1,1))
+    km_silhouette = []
+    km_scores= []
+    for i in range(1,max_modes):
+        km = KMeans(n_clusters=i, random_state=0).fit(X_scaled)
+        preds = km.predict(X_scaled)
+    
+        logger.debug("Score for number of cluster(s) {}: {}".format(i,km.score(X_scaled)))
+        km_scores.append(-km.score(X_scaled))
+   
+        if (i > 1):
+            # silhouette method only works for n_clusters >= 2 
+            silhouette = silhouette_score(X_scaled,preds)
+            km_silhouette.append(silhouette)
+            logger.debug("Silhouette score for number of cluster(s) {}: {}".format(i,silhouette))
+
+    # find optimal value according to elbow method
+    diffs = np.abs(np.diff(km_scores))
+    logger.debug('diffs of km_scores: {}'.format(diffs))
+    from kneed import KneeLocator
+    kneedle = KneeLocator(range(len(km_scores)), km_scores, S=1.0, curve='convex', direction='decreasing')
+    modes_by_elbow_method = kneedle.elbow + 1
+    logger.debug('optimal clustering according to elbow method: {}'.format(modes_by_elbow_method))
+    num_modes = modes_by_elbow_method
+    if modes_by_elbow_method != 1:
+        # the index of the peak value fo km_silhouette + 2 (since we start
+        # from 2 to max_modes represents the number of modes
+        modes_by_silhouette_method = (np.argmax(km_silhouette) + 2)
+        logger.debug('optimal clustering according to silhouette method: {}'.format(modes_by_silhouette_method))
+        if modes_by_elbow_method != modes_by_silhouette_method:
+            logger.warning('Elbow and silhouette methods gave different mode counts -- {} and {}. Usually this means you might have a single mode or your data was not drawn from normal distributions'.format(modes_by_elbow_method, modes_by_silhouette_method))
+            num_modes = 1
+
+    km = KMeans(n_clusters=num_modes, random_state=0).fit(X_scaled)
+    preds = km.predict(X_scaled)
+    modes = scaler.inverse_transform(km.cluster_centers_).reshape(num_modes,)
+    return (num_modes, modes)
+    
+
 def normalize(v, min_=0, max_=1):
     '''
     Performs normalization (min-max scaling) on an input vector::Statistics
@@ -902,4 +980,20 @@ def dframe_append_weighted_row(df, weights, ignore_index = True, use_abs = False
     for c in df.columns:
         new_row.append(((abs(df[c].values) if use_abs else df[c].values) * np.asarray(weights_array)).sum())
     return df.append(pd.DataFrame([new_row], columns = df.columns), ignore_index = ignore_index)
-        
+
+
+# https://datascience.stackexchange.com/questions/57122/in-elbow-curve-how-to-find-the-point-from-where-the-curve-starts-to-rise
+# def __find_elbow(data):
+#     theta = np.arctan2(data[:, 1].max() - data[:, 1].min(), data[:, 0].max() - data[:, 0].min())
+#    
+#     # make rotation matrix
+#     co = np.cos(theta)
+#     si = np.sin(theta)
+#     rotation_matrix = np.array(((co, -si), (si, co)))
+# 
+#     # rotate data vector
+#     rotated_vector = data.dot(rotation_matrix)
+# 
+#     # return index of elbow
+#     return np.where(rotated_vector == rotated_vector.min())[0][0]
+
