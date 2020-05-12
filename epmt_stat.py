@@ -830,7 +830,7 @@ def check_dist(data = [], dist='norm', alpha = 0.05):
 
 def get_num_modes(X, max_modes = 10):
     '''
-    Get the number of modes (unimodal, bimodal, etc) of a distribution
+    Get the number of modes (unimodal, bimodal, etc) and mode values for a distribution
 
     Parameters
     ----------
@@ -842,7 +842,11 @@ def get_num_modes(X, max_modes = 10):
                
     Returns
     -------
-      integer representing the number of modes in X
+      (nmodes, modes)
+
+         nmodes: int
+                 representing the number of modes in X
+          modes: numpy 1-D array of mode values
 
     Notes
     -----
@@ -851,9 +855,10 @@ def get_num_modes(X, max_modes = 10):
 
     The Silhouette method only works if number of clusters is >= 2.
     The elbow method (also computed) as km_scores works with number of
-    clusters equal to 1, however, it requires visual inspection.
+    clusters equal to 1.
 
-    The data will be scaled automatically as needed.
+    The data will be scaled automatically as needed so you don't need to
+    pass scaled data.
 
     See:
     https://github.com/tirthajyoti/Machine-Learning-with-Python/blob/master/Clustering-Dimensionality-Reduction/Clustering_metrics.ipynb
@@ -881,14 +886,24 @@ def get_num_modes(X, max_modes = 10):
     # find optimal value according to elbow method
     diffs = np.abs(np.diff(km_scores))
     logger.debug('diffs of km_scores: {}'.format(diffs))
-    # elbow_index = __find_elbow(np.array(km_scores).reshape(-1,1))
-    # logger.debug('elbow index: {}'.format(elbow_index))
-    #opt_elbow = np.argmax(diffs) + 1
-    #logger.debug('optimal clustering according to elbow method: {}'.format(opt_elbow))
+    from kneed import KneeLocator
+    kneedle = KneeLocator(range(len(km_scores)), km_scores, S=1.0, curve='convex', direction='decreasing')
+    modes_by_elbow_method = kneedle.elbow + 1
+    logger.debug('optimal clustering according to elbow method: {}'.format(modes_by_elbow_method))
+    num_modes = modes_by_elbow_method
+    if modes_by_elbow_method != 1:
+        # the index of the peak value fo km_silhouette + 2 (since we start
+        # from 2 to max_modes represents the number of modes
+        modes_by_silhouette_method = (np.argmax(km_silhouette) + 2)
+        logger.debug('optimal clustering according to silhouette method: {}'.format(modes_by_silhouette_method))
+        if modes_by_elbow_method != modes_by_silhouette_method:
+            logger.warning('Elbow and silhouette methods gave different mode counts -- {} and {}. Usually this means you might have a single mode or your data was not drawn from normal distributions'.format(modes_by_elbow_method, modes_by_silhouette_method))
+            num_modes = 1
 
-    # the index of the peak value fo km_silhouette + 2 (since we start
-    # from 2 to max_modes represents the number of modes
-    return (np.argmax(km_silhouette) + 2)
+    km = KMeans(n_clusters=num_modes, random_state=0).fit(X_scaled)
+    preds = km.predict(X_scaled)
+    modes = scaler.inverse_transform(km.cluster_centers_).reshape(num_modes,)
+    return (num_modes, modes)
     
 
 def normalize(v, min_=0, max_=1):
