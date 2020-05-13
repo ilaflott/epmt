@@ -828,9 +828,9 @@ def check_dist(data = [], dist='norm', alpha = 0.05):
     logger.debug('check_dist: {} tests PASSED, {} tests FAILED'.format(passed, failed))
     return(passed, failed)
 
-def get_num_modes(X, max_modes = 10):
+def get_modes(X, max_modes = 10):
     '''
-    Get the number of modes (unimodal, bimodal, etc) and mode values for a distribution
+    Get the modes for a distribution
 
     Parameters
     ----------
@@ -842,10 +842,6 @@ def get_num_modes(X, max_modes = 10):
                
     Returns
     -------
-      (nmodes, modes)
-
-         nmodes: int
-                 representing the number of modes in X
           modes: numpy 1-D array of mode values
 
     Notes
@@ -903,7 +899,7 @@ def get_num_modes(X, max_modes = 10):
     km = KMeans(n_clusters=num_modes, random_state=0).fit(X_scaled)
     preds = km.predict(X_scaled)
     modes = scaler.inverse_transform(km.cluster_centers_).reshape(num_modes,)
-    return (num_modes, modes)
+    return modes
     
 
 def normalize(v, min_=0, max_=1):
