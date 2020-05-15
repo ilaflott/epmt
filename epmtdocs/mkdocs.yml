@@ -1,12 +1,25 @@
 site_name: EPMT
 theme:
-  name: mkdocs
-use_directory_urls: false
+  name: material
+  favicon: favicon.ico
+  logo: logo.png
+  palette:
+    primary: blue
+    accent: grey
+  navigation_depth: 2
+markdown_extensions:
+  - admonition
+  - codehilite:
+      guess_lang: false
+  - toc:
+      permalink: true
 plugins: []
+use_directory_urls: false
 
 nav:
   - EPMT Install: INSTALL.md
   - EPMT Readme: README.md
+  - EPMT Commands: epmt_cmds.md
   - migrations.md
   - Notebooks: 
     - Outliers: http://localhost:8888/notebooks/notebooks/Outliers.ipynb" target="_blank

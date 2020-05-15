@@ -8,84 +8,173 @@ This is a tool to collect metadata and performance data about an entire job down
 
 The software contained in this repository was written by Philip Mucci of Minimal Metrics LLC.
 
-## Table of Contents
-
-[TOC]
-
 ## Verifying Installation 
 
-It is best to check your installation and configuration using the ```epmt check``` command. Here is an example run from docker via the source tree. You will notice that we bind-mount the parent-directory of `epmt` to the container. This allows `epmt` to find the `papiex` install directory, lying adjacent to the `epmt` directory.
+It is best to check your installation and configuration using the ```epmt check``` command.
 
+Here is an example:
 ```
-$ docker run --privileged -it --rm -v $PWD/..:/tmp/foo -w /tmp/foo/epmt python-epmt:latest ./epmt check
-settings.db_params = {'filename': ':memory:', 'provider': 'sqlite'}
-		   Pass
-settings.install_prefix = ../papiex-oss/papiex-oss-install/
-			ls -l ../papiex-oss/papiex-oss-install/bin/monitor-run>/dev/null
-			ls -l ../papiex-oss/papiex-oss-install/lib/libpapiex.so>/dev/null
-			ls -l ../papiex-oss/papiex-oss-install/lib/libmonitor.so>/dev/null
-			ls -l ../papiex-oss/papiex-oss-install/lib/libpapi.so>/dev/null
-			ls -l ../papiex-oss/papiex-oss-install/lib/libpfm.so>/dev/null
-			ls -l ../papiex-oss/papiex-oss-install/bin/papi_command_line>/dev/null
-			Pass
-settings.epmt_output_prefix = /tmp/epmt/
-		   mkdir -p /tmp/epmt/
-		   mkdir -p /tmp/epmt/tmp
-		   ls -lR /tmp/epmt/ >/dev/null
-		   rm -rf /tmp/epmt/tmp
-		   Pass
-/proc/sys/kernel/perf_event_paranoid = 2
-WARNING:epmt_cmds:restrictive /proc/sys/kernel/perf_event_paranoid value of 2, should be 0 for non-privileged users
-			Pass
-settings.papiex_options = PERF_COUNT_SW_CPU_CLOCK
-			../papiex-oss/papiex-oss-install/bin/papi_component_avail| sed -n -e '/Active/,$p' | grep perf_event >/dev/null
-			../papiex-oss/papiex-oss-install/bin/papi_command_line PERF_COUNT_SW_CPU_CLOCK| sed -n -e '/PERF_COUNT_SW_CPU_CLOCK\ :/,$p' | grep PERF_COUNT_SW_CPU_CLOCK > /dev/null
-			Pass
-WARNING:epmt_cmds:JOB_ID unset: Using session id 1 as JOB_ID
-WARNING:epmt_cmds:JOB_NAME unset: Using job id 1 as JOB_NAME
-WARNING:epmt_cmds:JOB_SCRIPTNAME unset: Using process name 1 as JOB_SCRIPTNAME
-WARNING:epmt_cmds:JOB_USER unset: Using username root as JOB_USER
-collect functionality (papiex+epmt)
-	       epmt run -a /bin/sleep 1
-	       Pass
-
-### Running unit tests with Python's `unittest` module
-
-We have a comprehensive set of unit tests. Navigate to the top-level folder
-in the installation, and run the following command:
-
+$ epmt check
+settings.db_params = {'url': 'sqlite:////home/chris/EPMT_DB_2.2.7.sqlite', 'echo': False}       Pass
+settings.install_prefix = /home/chris/Downloads/epmt-2.2.7/papiex-epmt-install/ Pass
+settings.epmt_output_prefix = /tmp/epmt/        Pass
+/proc/sys/kernel/perf_event_paranoid =  0       Pass
+settings.papiex_options = PERF_COUNT_SW_CPU_CLOCK       Pass
+epmt stage functionality        Pass
+WARNING:epmtlib:No job name found, defaulting to unknown
+epmt run functionality  Pass
 ```
-$ python -m unittest discover
 
-{'filename': ':memory:', 'provider': 'sqlite'}
-setUpModule: importing test/data/misc/*.tgz
-Imported successfully - job: failed-exitcode processes: 1 rate: 54.5643040323
-Imported successfully - job: 685000 processes: 3480 rate: 374.482987496
-'setUpModule' took: 10.2743 sec
-......
-{'filename': ':memory:', 'provider': 'sqlite'}
-setUpModule: importing test/data/misc/685000.tgz
-'setUpModule' took: 0.0117 sec
-..
-{'filename': ':memory:', 'provider': 'sqlite'}
-setUpModdule: importing test/data/query/*.tgz
-Imported successfully - job: 685000 processes: 3480 rate: 367.989366376
-Imported successfully - job: 685003 processes: 3785 rate: 368.269617338
-Imported successfully - job: 685016 processes: 3412 rate: 368.965343103
-'setUpModule' took: 31.8878 sec
-...............
-{'filename': ':memory:', 'provider': 'sqlite'}
-setUpModule: importing test/data/outliers/*.tgz
-Imported successfully - job: kern-6656-20190614-190245 processes: 10600 rate: 353.525545172
-Imported successfully - job: kern-6656-20190614-192044-outlier processes: 10600 rate: 351.265328962
-Imported successfully - job: kern-6656-20190614-194024 processes: 10600 rate: 352.45282394
-Imported successfully - job: kern-6656-20190614-191138 processes: 10600 rate: 352.341328069
-'setUpModule' took: 132.7657 sec
-.........
+We have a comprehensive set of unit tests. The epmt unittest command will begin those tests:
+```
+$ epmt unittest
+
+
+Running test.test_lib
+test_dict_filter (test.test_lib.EPMTLib) ... ok
+test_merge_intervals (test.test_lib.EPMTLib) ... ok
+test_sqlite_json_support (test.test_lib.EPMTLib) ... ok
+test_url_to_db_params (test.test_lib.EPMTLib) ... ok
+
 ----------------------------------------------------------------------
-Ran 32 tests in 215.512s
+Ran 4 tests in 0.086s
 
 OK
+
+
+Running test.test_settings
+test_default_settings (test.test_settings.EPMTSettings) ... ok
+test_epmt_settings (test.test_settings.EPMTSettings) ... ok
+test_settings_overrides_defaults (test.test_settings.EPMTSettings) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.001s
+
+OK
+
+
+Running test.test_anysh
+
+{'url': 'sqlite:////home/chris/EPMT_DB_2.2.7.sqlite', 'echo': False}
+test_monolithic (test.test_anysh.EPMTShell) ... ok
+test_run_auto (test.test_anysh.EPMTShell) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 2.472s
+
+OK
+
+
+Running test.test_submit
+
+{'url': 'sqlite:////home/chris/EPMT_DB_2.2.7.sqlite', 'echo': False}
+setUpModule: importing test/data/misc/685000.tgz
+Imported successfully - job: 685000 processes: 3480 rate: 200.55582779792528
+test_corrupted_csv (test.test_submit.EPMTSubmit) ... ok
+test_job_data (test.test_submit.EPMTSubmit) ... ok
+test_proc_data (test.test_submit.EPMTSubmit) ... ok
+test_unprocessed_jobs (test.test_submit.EPMTSubmit) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 37.892s
+
+OK
+
+
+Running test.test_cmds
+
+{'url': 'sqlite:////home/chris/EPMT_DB_2.2.7.sqlite', 'echo': False}
+setUpModule: importing test/data/misc/685000.tgz
+test_daemon (test.test_cmds.EPMTCmds) ... ok
+test_dbsize_json (test.test_cmds.EPMTCmds) ... skipped 'requires postgres'
+test_dbsize_provider (test.test_cmds.EPMTCmds) ... ok
+test_list_job_proc_tags (test.test_cmds.EPMTCmds) ... ok
+test_list_jobs (test.test_cmds.EPMTCmds) ... ok
+test_list_op_metrics (test.test_cmds.EPMTCmds) ... ok
+test_list_procs (test.test_cmds.EPMTCmds) ... ok
+test_list_refmodels (test.test_cmds.EPMTCmds) ... ok
+test_list_thread_metrics (test.test_cmds.EPMTCmds) ... ok
+test_zz_drop_db (test.test_cmds.EPMTCmds) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 42.324s
+
+OK (skipped=1)
+
+
+Running test.test_query
+
+{'url': 'sqlite:////home/chris/EPMT_DB_2.2.7.sqlite', 'echo': False}
+setUpModdule: importing test/data/query/*.tgz
+Imported successfully - job: 685000 processes: 3480 rate: 231.56639963556242
+Imported successfully - job: 685003 processes: 3785 rate: 234.26530902131879
+Imported successfully - job: 685016 processes: 3412 rate: 230.75266148374908
+test_job (test.test_query.QueryAPI) ... ok
+test_job_advanced (test.test_query.QueryAPI) ... ok
+test_job_convert (test.test_query.QueryAPI) ... ok
+test_job_proc_tags (test.test_query.QueryAPI) ... ok
+test_job_roots (test.test_query.QueryAPI) ... ok
+test_jobs_annotations (test.test_query.QueryAPI) ... ok
+test_jobs_comparable (test.test_query.QueryAPI) ... ok
+test_op (test.test_query.QueryAPI) ... ok
+test_op_metrics (test.test_query.QueryAPI) ... ok
+test_op_metrics_grouped (test.test_query.QueryAPI) ... ok
+test_op_roots (test.test_query.QueryAPI) ... ok
+test_ops (test.test_query.QueryAPI) ... ok
+test_ops_dm_calc (test.test_query.QueryAPI) ... ok
+test_ops_dm_calc_iter (test.test_query.QueryAPI) ... ok
+test_process_tree (test.test_query.QueryAPI) ... ok
+test_procs (test.test_query.QueryAPI) ... ok
+test_procs_advanced (test.test_query.QueryAPI) ... ok
+test_procs_convert (test.test_query.QueryAPI) ... ok
+test_refmodel_crud (test.test_query.QueryAPI) ... ok
+test_root (test.test_query.QueryAPI) ... ok
+test_status (test.test_query.QueryAPI) ... ok
+test_timeline (test.test_query.QueryAPI) ... ok
+test_unanalyzed_jobs (test.test_query.QueryAPI) ... ok
+test_version (test.test_query.QueryAPI) ... ok
+test_zz_delete_jobs (test.test_query.QueryAPI) ... ok
+
+----------------------------------------------------------------------
+Ran 25 tests in 128.958s
+
+OK
+
+
+Running test.test_outliers
+
+{'url': 'sqlite:////home/chris/EPMT_DB_2.2.7.sqlite', 'echo': False}
+setUpModule: importing test/data/outliers/*.tgz
+Imported successfully - job: kern-6656-20190614-194024 processes: 10600 rate: 231.2331956455997
+Imported successfully - job: kern-6656-20190614-191138 processes: 10600 rate: 233.32790148913608
+Imported successfully - job: kern-6656-20190614-190245 processes: 10600 rate: 232.74203535896046
+Imported successfully - job: kern-6656-20190614-192044-outlier processes: 10600 rate: 232.31410778484795
+test_outlier_jobs (test.test_outliers.OutliersAPI) ... ok
+test_outlier_jobs_trained (test.test_outliers.OutliersAPI) ... ok
+test_outlier_ops (test.test_outliers.OutliersAPI) ... ok
+test_outlier_ops_trained (test.test_outliers.OutliersAPI) ... ok
+test_partition_jobs (test.test_outliers.OutliersAPI) ... ok
+test_partition_jobs_by_ops (test.test_outliers.OutliersAPI) ... ok
+test_rca_jobs (test.test_outliers.OutliersAPI) ... ok
+test_rca_ops (test.test_outliers.OutliersAPI) ... ok
+test_trained_model (test.test_outliers.OutliersAPI) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 208.896s
+
+OK
+
+
+Running test.test_db_schema
+
+{'url': 'sqlite:////home/chris/EPMT_DB_2.2.7.sqlite', 'echo': False}
+test_schema (test.test_db_schema.EPMTDBSchema) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.004s
+
+OK
+All tests successfully PASSED
 ```
 
 ## Collecting Performance Data
@@ -141,8 +230,8 @@ Let's skip all the markup, as we can do it with only environment variables. **EP
 $ cat my_job_bash.sh
 #!/bin/bash
 # Example job script for Torque or SLURM
-# 
-# Preamble, collect job metadata and monitor all processes/threads  
+ 
+### Preamble, collect job metadata and monitor all processes/threads  
 epmt start
 eval `epmt source`
 #
@@ -277,7 +366,7 @@ EPMT_DB_DBNAME
 EPMT_DB_FILENAME
 ```
 
-## settings.py
+### settings.py
 
 There are a number of example files provided. See **INSTALL.md** for more details.
 
@@ -343,9 +432,9 @@ Using the epmt-command docker image, we run **epmt** on a local directory to sub
 $ docker run --network=host -ti --rm -v `pwd`:/app -w /app -e EPMT_DB_HOST=<hostname> epmt-command:latest -v submit <localdir/>
 ```
 
-This could be easilt aliased for convenience.
+This could be easily aliased for convenience.
 
-# Analysis of EPMT Data 
+## Analysis of EPMT Data 
 
 Current analytics are performed in an iPython notebook, specifically the SciPy-Notebook as described on [their homepage](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html).  
 
@@ -433,3 +522,4 @@ $ papi_command_line CYCLES
 ```
 
 Note that often in virtual environments, hardware counters are not often available in the VM. 
+

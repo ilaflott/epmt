@@ -1,186 +1,406 @@
-<!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="utf-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        
-        
-        
-        <link rel="shortcut icon" href="img/favicon.ico">
+
+
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      <link rel="shortcut icon" href="favicon.ico">
+      <meta name="generator" content="mkdocs-1.1, mkdocs-material-5.1.6">
+    
+    
+      
         <title>EPMT Install - EPMT</title>
-        <link href="css/bootstrap.min.css" rel="stylesheet">
-        <link href="css/font-awesome.min.css" rel="stylesheet">
-        <link href="css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
-
-        <script src="js/jquery-1.10.2.min.js" defer></script>
-        <script src="js/bootstrap.min.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
-        <script>hljs.initHighlightingOnLoad();</script> 
-    </head>
-
-    <body>
-        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
-            <div class="container">
-                <a class="navbar-brand" href=".">EPMT</a>
-                <!-- Expander button -->
-                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-
-                <!-- Expanded navigation -->
-                <div id="navbar-collapse" class="navbar-collapse collapse">
-                        <!-- Main navigation -->
-                        <ul class="nav navbar-nav">
-                            <li class="navitem active">
-                                <a href="INSTALL.html" class="nav-link">EPMT Install</a>
-                            </li>
-                            <li class="navitem">
-                                <a href="README.html" class="nav-link">EPMT Readme</a>
-                            </li>
-                            <li class="navitem">
-                                <a href="migrations.html" class="nav-link">Database Migrations</a>
-                            </li>
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Notebooks <b class="caret"></b></a>
-                                <ul class="dropdown-menu">
-                                    
-<li>
-    <a href="http://localhost:8888/notebooks/notebooks/Outliers.ipynb" target="_blank" class="dropdown-item">Outliers</a>
-</li>
-                                    
-<li>
-    <a href="http://localhost:8888/notebooks/notebooks/Query-API.ipynb" target="_blank" class="dropdown-item">Query API</a>
-</li>
-                                    
-<li>
-    <a href="http://localhost:8888/notebooks/notebooks/graphing.ipynb" target="_blank" class="dropdown-item">Graphing API</a>
-</li>
-                                </ul>
-                            </li>
-                            <li class="navitem">
-                                <a href="http://localhost:8050" target="_blank" class="nav-link">Interface</a>
-                            </li>
-                            <li class="navitem">
-                                <a href="index_ui.html" class="nav-link">Interface Readme</a>
-                            </li>
-                        </ul>
-
-                    <ul class="nav navbar-nav ml-auto">
-                            <li class="nav-item">
-                                <a rel="prev" class="nav-link disabled">
-                                    <i class="fa fa-arrow-left"></i> Previous
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a rel="next" href="README.html" class="nav-link">
-                                    Next <i class="fa fa-arrow-right"></i>
-                                </a>
-                            </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <div class="container">
-            <div class="row">
-                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
-    <div class="navbar-header">
-        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
-            <span class="fa fa-angle-down"></span>
-        </button>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.4b9ffd7b.min.css">
+      
+        <link rel="stylesheet" href="assets/stylesheets/palette.b79bcd20.min.css">
+      
+      
+        
+        
+        <meta name="theme-color" content="#2196f3">
+      
+    
+    
+    
+      
+        <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
+      
+    
+    
+    
+    
+      
+    
+    
+  </head>
+  
+  
+    
+    
+    <body dir="ltr" data-md-color-primary="blue" data-md-color-accent="grey">
+  
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#epmt" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid" aria-label="Header">
+    <a href="." title="EPMT" class="md-header-nav__button md-logo" aria-label="EPMT">
+      
+  <img src="logo.png" alt="logo">
+
+    </a>
+    <label class="md-header-nav__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header-nav__title" data-md-component="header-title">
+      
+        <div class="md-header-nav__ellipsis">
+          <span class="md-header-nav__topic md-ellipsis">
+            EPMT
+          </span>
+          <span class="md-header-nav__topic md-ellipsis">
+            
+              EPMT Install
+            
+          </span>
+        </div>
+      
+    </div>
+    
+    
+  </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+        
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="." title="EPMT" class="md-nav__button md-logo" aria-label="EPMT">
+      
+  <img src="logo.png" alt="logo">
+
+    </a>
+    EPMT
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+    
+      
+    
+    
+    <a href="INSTALL.html" title="EPMT Install" class="md-nav__link md-nav__link--active">
+      EPMT Install
+    </a>
+    
+  </li>
 
     
-    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
-        <ul class="nav flex-column">
-            
-            <li class="nav-item" data-level="1"><a href="#epmt" class="nav-link">EPMT</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="1"><a href="#installation-with-release-file" class="nav-link">Installation With Release File</a>
-              <ul class="nav flex-column">
-            <li class="nav-item" data-level="2"><a href="#running-install-script" class="nav-link">Running Install Script</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="1"><a href="#installation-from-source" class="nav-link">Installation From Source</a>
-              <ul class="nav flex-column">
-            <li class="nav-item" data-level="2"><a href="#requirements" class="nav-link">Requirements</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-level="2"><a href="#source-code" class="nav-link">Source Code</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-level="2"><a href="#installation-of-the-data-collection-libraries" class="nav-link">Installation of the Data Collection Libraries</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-level="2"><a href="#installation-of-epmt" class="nav-link">Installation of EPMT</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-level="2"><a href="#database-services" class="nav-link">Database Services</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-level="2"><a href="#analysis-and-visualization" class="nav-link">Analysis and Visualization</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="1"><a href="#troubleshooting" class="nav-link">Troubleshooting</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="1"><a href="#appendix" class="nav-link">Appendix</a>
-              <ul class="nav flex-column">
-            <li class="nav-item" data-level="2"><a href="#docker-images-for-the-running-the-epmt-command" class="nav-link">Docker Images for the running the EPMT command</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-level="2"><a href="#testing-epmt-collection-with-various-python-versions-under-docker" class="nav-link">Testing EPMT Collection with Various Python Versions under Docker</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-              </ul>
-            </li>
-        </ul>
-    </div>
-</div></div>
-                    <div class="col-md-9" role="main">
+      
+      
+      
 
-<h1 id="epmt">EPMT</h1>
+
+  <li class="md-nav__item">
+    <a href="README.html" title="EPMT Readme" class="md-nav__link">
+      EPMT Readme
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="epmt_cmds.html" title="EPMT Commands" class="md-nav__link">
+      EPMT Commands
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="migrations.html" title="Database Migrations" class="md-nav__link">
+      Database Migrations
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-5" type="checkbox" id="nav-5">
+    
+    <label class="md-nav__link" for="nav-5">
+      Notebooks
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="Notebooks" data-md-level="1">
+      <label class="md-nav__title" for="nav-5">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        Notebooks
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="http://localhost:8888/notebooks/notebooks/Outliers.ipynb" target="_blank" title="Outliers" class="md-nav__link">
+      Outliers
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="http://localhost:8888/notebooks/notebooks/Query-API.ipynb" target="_blank" title="Query API" class="md-nav__link">
+      Query API
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="http://localhost:8888/notebooks/notebooks/graphing.ipynb" target="_blank" title="Graphing API" class="md-nav__link">
+      Graphing API
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="http://localhost:8050" target="_blank" title="Interface" class="md-nav__link">
+      Interface
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="index_ui.html" title="Interface Readme" class="md-nav__link">
+      Interface Readme
+    </a>
+  </li>
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                
+                  
+                
+                
+                <h1 id="epmt">EPMT<a class="headerlink" href="#epmt" title="Permanent link">&para;</a></h1>
 <p>Experiment Performance Management Tool a.k.a Workflow DB</p>
 <p>This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes. This tool uses <strong>papiex</strong> to perform the process monitoring. This tool is targeted at batch or ephemeral jobs, not daemon processes. </p>
 <p>The software contained in this repository was written by Philip Mucci of Minimal Metrics LLC.</p>
-<h1 id="installation-with-release-file">Installation With Release File</h1>
+<h1 id="installation-with-release-file">Installation With Release File<a class="headerlink" href="#installation-with-release-file" title="Permanent link">&para;</a></h1>
+<p>The release file includes EPMT, Data Collection Libraries, Notebook and EPMT Interface </p>
 <p>For installing with a release file you'll need:</p>
 <ul>
 <li>CentOS 6 or 7</li>
-<li>Release file <code>EPMT-release-*-OS-*.tgz</code> </li>
+<li>Release file <code>EPMT-release-(Version)-(OS).tgz</code> ex: EPMT-release-3.8.20-centos-7.tgz</li>
 <li>Installer script <code>epmt-installer</code></li>
 </ul>
-<h2 id="running-install-script">Running Install Script</h2>
+<h2 id="run-install-script">Run Install Script<a class="headerlink" href="#run-install-script" title="Permanent link">&para;</a></h2>
+<p>Use the provided epmt-installer script </p>
+<p>$ ./epmt-installer EPMT-release-<strong>version</strong>-<strong>os</strong>.tgz</p>
+<div class="codehilite"><pre><span></span><code>epmt-installer  EPMT-release-3.8.20-centos-7.tgz
+ chris@chrisOpti:/tmp/ep-inst$ ls
+ chris@chrisOpti:/tmp/ep-inst$ ./epmt-installer EPMT-release-3.8.20-centos-7.tgz 
+ Using release: /tmp/ep-inst/EPMT-release-3.8.20-centos-7.tgz
+
+ Enter full path to an empty install directory [/tmp/ep-inst/epmt-3.8.20]: 
+ Install directory: /tmp/ep-inst/epmt-3.8.20
+ Press ENTER to continue, Ctrl-C to abort: 
+ Extracting release..
+ Installing settings.py and migrations
+ Fixing paths in slurm scripts
+ EPMT 3.8.20
+
+ ***********************************************************************
+ Installation successful.
+ EPMT 3.8.20 installed in: /tmp/ep-inst/epmt-3.8.20
+
+ Please add /tmp/ep-inst/epmt-3.8.20/epmt-install/epmt to PATH:
+
+ For Bash:
+     export PATH=&quot;/tmp/ep-inst/epmt-3.8.20/epmt-install/epmt:$PATH&quot;
+
+ Or, for C shell/tcsh:
+     setenv PATH &quot;/tmp/ep-inst/epmt-3.8.20/epmt-install/epmt:$PATH&quot;
+
+ If you prefer using modules, you can instead do:
+     module load /tmp/ep-inst/epmt-3.8.20/modulefiles/epmt
+ ***********************************************************************
+</code></pre></div>
+
+
+<h3 id="add-epmt-to-path">Add EPMT to path<a class="headerlink" href="#add-epmt-to-path" title="Permanent link">&para;</a></h3>
 <blockquote>
-<p>:boom:
-root@0b261f368b92:/home/installer# ls<br />
-EPMT-release-3.7.13-centos-7.tgz  epmt-installer</p>
+<p>chris@chrisOpti:/tmp/ep-inst$ export PATH="/tmp/ep-inst/epmt-3.8.20/epmt-install/epmt:$PATH"
+ chris@chrisOpti:/tmp/ep-inst$ cd /tmp/
+ chris@chrisOpti:/tmp/$ epmt --version
+ EPMT 3.8.20</p>
 </blockquote>
+<h3 id="verify-installation">Verify installation<a class="headerlink" href="#verify-installation" title="Permanent link">&para;</a></h3>
+<p>Here I add a verbosity switch to get a detailed check output</p>
+<div class="codehilite"><pre><span></span><code> $epmt -v check
+    INFO: orm.sqlalchemy: sqlalchemy orm selected
+    INFO: orm.sqlalchemy: Creating engine with db_params: {&#39;url&#39;: &#39;sqlite:////home/chris/ EPMT_DB.sqlite&#39;, &#39;echo&#39;: False}
+    INFO: alembic.runtime.migration: Context impl SQLiteImpl.
+    INFO: alembic.runtime.migration: Will assume non-transactional DDL.
+    INFO: orm.sqlalchemy: database schema up-to-date (version 392efb1132ae)
+ settings.db_params = {&#39;url&#39;: &#39;sqlite:////home/chris/EPMT_DB.sqlite&#39;, &#39;echo&#39;: False}     Pass
+    INFO: epmt_cmds:     ls -l /tmp/ep-inst/epmt-3.8.20/papiex-epmt-install/lib/libpapiex.so&gt;/ dev/null 2&gt;&amp;1
+    INFO: epmt_cmds:     ls -l /tmp/ep-inst/epmt-3.8.20/papiex-epmt-install/lib/libmonitor.so&gt;/ dev/null 2&gt;&amp;1
+    INFO: epmt_cmds:     ls -l /tmp/ep-inst/epmt-3.8.20/papiex-epmt-install/lib/libpapi.so&gt;/ dev/null 2&gt;&amp;1
+    INFO: epmt_cmds:     ls -l /tmp/ep-inst/epmt-3.8.20/papiex-epmt-install/lib/libpfm.so&gt;/dev/ null 2&gt;&amp;1
+    INFO: epmt_cmds:     ls -l /tmp/ep-inst/epmt-3.8.20/papiex-epmt-install/bin/ papi_command_line&gt;/dev/null 2&gt;&amp;1
+ settings.install_prefix = /tmp/ep-inst/epmt-3.8.20/papiex-epmt-install/ Pass
+    INFO: epmt_cmds:     mkdir -p /tmp/epmt/
+    INFO: epmt_cmds:     mkdir -p /tmp/epmt/tmp
+    INFO: epmt_cmds: created dir /tmp/epmt/tmp
+    INFO: epmt_cmds:     ls -lR /tmp/epmt/ &gt;/dev/null
+    INFO: epmt_cmds:     rm -rf /tmp/epmt/tmp
+ settings.epmt_output_prefix = /tmp/epmt/        Pass
+    INFO: epmt_cmds: perf_event_paranoid is 1
+ /proc/sys/kernel/perf_event_paranoid =  1       Pass
+    INFO: epmt_cmds:     /tmp/ep-inst/epmt-3.8.20/papiex-epmt-install/bin/papi_component_avail  2&gt;&amp;1 | sed -n -e &#39;/Active/,$p&#39; | grep perf_event &gt;/dev/null 2&gt;&amp;1
+    INFO: epmt_cmds:     /tmp/ep-inst/epmt-3.8.20/papiex-epmt-install/bin/papi_command_line 2&gt;&amp; 1 PERF_COUNT_SW_CPU_CLOCK| sed -n -e &#39;/PERF_COUNT_SW_CPU_CLOCK\ :/,$p&#39; | grep  PERF_COUNT_SW_CPU_CLOCK &gt; /dev/null 2&gt;&amp;1
+ settings.papiex_options = PERF_COUNT_SW_CPU_CLOCK       Pass
+ epmt stage functionality        Pass
+    INFO: epmt_cmds:     epmt run -a /bin/sleep 1, output to &lt;built-in function dir&gt;
+    INFO: epmt_cmds: jobid = 1, dir = /tmp/epmt/chris/1/, file = /tmp/epmt/chris/1/job_metadata
+    INFO: epmt_cmds: Forcing epmt_start
+    INFO: epmt_cmds: jobid = 1, dir = /tmp/epmt/chris/1/, file = /tmp/epmt/chris/1/job_metadata
+    INFO: epmt_cmds: created dir /tmp/epmt/chris/1/
+    INFO: epmt_cmds: pickled to /tmp/epmt/chris/1/job_metadata
+    INFO: epmt_cmds: Executing(PAPIEX_OUTPUT=/tmp/epmt/chris/1/  PAPIEX_OPTIONS=PERF_COUNT_SW_CPU_CLOCK LD_PRELOAD=/tmp/ep-inst/epmt-3.8.20/ papiex-epmt-install/lib/libpapiex.so:/tmp/ep-inst/epmt-3.8.20/papiex-epmt-install/lib/ libmonitor.so:/tmp/ep-inst/epmt-3.8.20/papiex-epmt-install/lib/libpapi.so:/tmp/ep-inst/ epmt-3.8.20/papiex-epmt-install/lib/libpfm.so:  /bin/sleep 1)
+    INFO: epmt_cmds: Exit code 0
+    INFO: epmt_cmds: Forcing epmt_stop
+    INFO: epmt_cmds: jobid = 1, dir = /tmp/epmt/chris/1/, file = /tmp/epmt/chris/1/job_metadata
+    INFO: epmt_cmds: Unpickling from /tmp/epmt/chris/1/job_metadata
+    INFO: epmt_cmds: read job start metadata from /tmp/epmt/chris/1/job_metadata
+ WARNING: epmtlib: No job name found, defaulting to unknown
+    INFO: epmt_cmds: pickled to /tmp/epmt/chris/1/job_metadata
+    INFO: epmt_cmds: jobid = 1, dir = /tmp/epmt/chris/1/, file = /tmp/epmt/chris/1/job_metadata
+    INFO: epmt_cmds: rmtree /tmp/epmt/chris/1/
+ epmt run functionality  Pass
+</code></pre></div>
+
+
 <hr />
-<h1 id="installation-from-source">Installation From Source</h1>
-<h2 id="requirements">Requirements</h2>
+<h1 id="installation-from-source">Installation From Source<a class="headerlink" href="#installation-from-source" title="Permanent link">&para;</a></h1>
+<h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
 <p>A Linux (or container image) with:</p>
 <ul>
 <li>python (2.6 or higher)</li>
@@ -189,101 +409,153 @@ EPMT-release-3.7.13-centos-7.tgz  epmt-installer</p>
 <li>git </li>
 </ul>
 <p>For a stock Ubuntu 16.04 (or container):</p>
-<pre><code>$ apt-get update
+<div class="codehilite"><pre><span></span><code> $ apt-get update
+ $ apt-get install -y python python-pip git gcc 
 $ apt-get install -y python python-pip git gcc 
+ $ apt-get install -y python python-pip git gcc 
+</code></pre></div>
 
-</code></pre>
 
-<h2 id="source-code">Source Code</h2>
+<h2 id="source-code">Source Code<a class="headerlink" href="#source-code" title="Permanent link">&para;</a></h2>
 <p>Before you start, please make sure you have a copy of <strong>EPMT</strong> in a directory called <strong>build</strong>:</p>
-<pre><code>$ mkdir build
-$ cd build/
-$ git clone https://&lt;user&gt;@gitlab.com:minimal-metrics-llc/epmt/epmt.git
-</code></pre>
+<div class="codehilite"><pre><span></span><code> $ mkdir build
+ $ cd build/
+ $ git clone https://&lt;user&gt;@gitlab.com:minimal-metrics-llc/epmt/epmt.git
+</code></pre></div>
 
-<p>You also need the <strong>papiex</strong> data collection libraries in the <strong>build</strong> directory:</p>
-<pre><code>$ git clone https://bitbucket.org/minimalmetrics/papiex-oss.git -b papiex-epmt
-Cloning into 'papiex-oss'...
-remote: Counting objects: 5274, done.
-remote: Compressing objects: 100% (3273/3273), done.
-remote: Total 5274 (delta 2964), reused 3986 (delta 1909)
-Receiving objects: 100% (5274/5274), 8.54 MiB | 1.70 MiB/s, done.
-Resolving deltas: 100% (2964/2964), done.
-Checking connectivity... done.
-</code></pre>
 
-<h2 id="installation-of-the-data-collection-libraries">Installation of the Data Collection Libraries</h2>
+<p>You also need the <strong>papiex</strong> data collection libraries, <strong>papiex-epmt</strong> branch in the <strong>build</strong> directory:</p>
+<div class="codehilite"><pre><span></span><code> build$ git clone -b papiex-epmt git@gitlab.com:minimal-metrics-llc/papiex.git
+ Cloning into &#39;papiex&#39;...
+ remote: Enumerating objects: 5149, done.
+ remote: Counting objects: 100% (5149/5149), done.
+ remote: Compressing objects: 100% (2231/2231), done.
+ remote: Total 5149 (delta 2850), reused 5130 (delta 2831), pack-reused 0
+ Receiving objects: 100% (5149/5149), 6.76 MiB | 5.62 MiB/s, done.
+ Resolving deltas: 100% (2850/2850), done.
+</code></pre></div>
+
+
+<h2 id="installation-of-the-data-collection-libraries">Installation of the Data Collection Libraries<a class="headerlink" href="#installation-of-the-data-collection-libraries" title="Permanent link">&para;</a></h2>
 <p>Compile the data collection libraries used by <strong>EPMT</strong>:</p>
-<pre><code>$ cd papiex-oss/
-$ make
-</code></pre>
+<div class="codehilite"><pre><span></span><code> $ cd papiex/
+ $ make
+ cd monitor; ./configure --prefix=/home/chris/Documents/Playground/MM/build/papiex-oss/ papiex-epmt-install
+ checking for a BSD-compatible install... /usr/bin/install -c
+ checking whether build environment is sane... yes
+ checking for a thread-safe mkdir -p... /bin/mkdir -p
+ checking for gawk... no
+ checking for mawk... mawk
+ checking whether make sets $(MAKE)... yes
+ checking whether make supports nested variables... yes
+ checking whether to enable maintainer-specific portions of Makefiles... no
+ checking for style of include used by make... GNU
+ ....
+</code></pre></div>
+
 
 <p>The we run the data collection tests. If a test is <em>SKIPPED</em>, the test suite will still report a failure. </p>
-<pre><code>$ make check
-cd papiex; make PREFIX=/build/papiex-oss/papiex-oss-install LIBPAPIEX=/build/papiex-oss/papiex-oss-install/lib/libpapiex.so check
-make[1]: Entering directory '/build/papiex-oss/papiex'
-make -C /build/papiex-oss/papiex/x86_64-Linux -f /build/papiex-oss/papiex/src/Makefile check
-make[2]: Entering directory '/build/papiex-oss/papiex/x86_64-Linux'
-cp -Rp /build/papiex-oss/papiex/src/tests/* /build/papiex-oss/papiex/x86_64-Linux/tests
-cd tests; ./test.sh
-/build/papiex-oss/papiex-oss-install/bin/monitor-run -i /build/papiex-oss/papiex-oss-install/lib/libpapiex.so
-Testing papi with PERF_COUNT_SW_CPU_CLOCK...
-/build/papiex-oss/papiex-oss-install/bin/papi_command_line PERF_COUNT_SW_CPU_CLOCK: PASS(0)
-0 errors.
+<div class="codehilite"><pre><span></span><code>cd papiex; make PREFIX=/home/chris/Documents/Playground/MM/build/papiex-oss/papiex-epmt-install LIBPAPIEX=/home/chris/Documents/Playground/MM/build/papiex-oss/papiex-epmt-install/lib/libpapiex.so check
+ build/papiex-oss$ make check
+ make[1]: Entering directory &#39;/home/chris/Documents/Playground/MM/build/papiex-oss/papiex&#39;
+ make -C /home/chris/Documents/Playground/MM/build/papiex-oss/papiex/x86_64-Linux -f /home/ chris/Documents/Playground/MM/build/papiex-oss/papiex/src/Makefile check
+ make[2]: Entering directory &#39;/home/chris/Documents/Playground/MM/build/papiex-oss/papiex/ x86_64-Linux&#39;
+ cp -Rp /home/chris/Documents/Playground/MM/build/papiex-oss/papiex/src/tests/* /home/chris/ Documents/Playground/MM/build/papiex-oss/papiex/x86_64-Linux/tests
+ cd tests; PAPIEX_PREFIX=/home/chris/Documents/Playground/MM/build/papiex-oss/ papiex-epmt-install ./test.sh
+ ./test.sh: line 4: /proc/sys/kernel/perf_event_paranoid: Permission denied
+ Test dir: /home/chris/Documents/Playground/MM/build/papiex-oss/papiex/x86_64-Linux/tests/.
+ Temp output pattern: /tmp/*-papiex-*
+ Test output data dir: /home/chris/Documents/Playground/MM/build/papiex-oss/ papiex-epmt-install/tmp
+ Environment: PAPIEX_PREFIX=/home/chris/Documents/Playground/MM/build/papiex-oss/ papiex-epmt-install
+ Environment: PAPIEX_OPTIONS=PERF_COUNT_SW_CPU_CLOCK
+ Invocation: PAPIEX_OUTPUT=/tmp/ PAPIEX_OPTIONS=PERF_COUNT_SW_CPU_CLOCK LD_PRELOAD=/home/chris/ Documents/Playground/MM/build/papiex-oss/papiex-epmt-install/lib/libpapiex.so:/home/chris/ Documents/Playground/MM/build/papiex-oss/papiex-epmt-install/lib/libmonitor.so
+ sysctl kernel.perf_event_paranoid = 0
 
-Testing tagged runs...
-sleep 1: PASS
-ps -fade: PASS
-host google.com: PASS
-echo : | tr ':' '\n': PASS
-sed -e s/,//g &lt; /dev/null: PASS
-tcsh -f module-test.csh: PASS
-bash --noprofile -c 'sleep 1': PASS
-tcsh -f -c 'sleep 1': PASS
-csh -f -c 'sleep 1': PASS
-tcsh -f evilcsh.csh: PASS
-csh -f evilcsh.csh: PASS
-bash --noprofile sieve.sh 100: PASS
-tcsh -f sieve.csh 100: PASS
-csh -f sieve.csh 100: PASS
-python sieve.py: PASS
-perl sieve.pl: PASS
-gcc -Wall unit1.c -o unit1a: PASS
-gcc -pthread dotprod_mutex.c -o dotprod_mutex: PASS
-g++ -fopenmp md_openmp.cpp -o md_openmp: PASS
-gfortran -fopenmp fft_openmp.f90 -o fft_openmp: PASS
-./unit1a: PASS
-./dotprod_mutex: PASS
-./md_openmp: PASS
-./fft_openmp: PASS
-0 errors.
-</code></pre>
+ -- Test Data --
+ /home/chris/Documents/Playground/MM/build/papiex-oss/papiex-epmt-install/bin/ papi_command_line PERF_COUNT_SW_CPU_CLOCK: PASS
+ gcc -Wall unit1.c -o unit1a: PASS
+ gcc -Wall -fPIC -shared dumb-mpi.c -o dumb-mpi.so: PASS
+ gcc -Wall dumb-mpi-main.c ./dumb-mpi.so -o dumb-mpi: PASS
+ gcc -Wall unit1.c -o unit1a: PASS
+ gcc -pthread dotprod_mutex.c -o dotprod_mutex: PASS
+ g++ -fopenmp md_openmp.cpp -o md_openmp: PASS
+ gfortran -fopenmp fft_openmp.f90 -o fft_openmp: SKIPPED executable not found
+ ./unit1a: PASS
+ ./dotprod_mutex: PASS
+ ./md_openmp: PASS
+ ./fft_openmp: SKIPPED executable not found
+ ./dumb-mpi: PASS
+ sleep 1: PASS
+ ps -fade: PASS
+ host google.com: PASS
+ sed -e s/,//g: PASS
+ bash --noprofile sieve.sh 100: PASS
+ tcsh -f sieve.csh 100: SKIPPED executable not found
+ csh -f sieve.csh 100: SKIPPED executable not found
+ python2 sieve.py: PASS
+ python3 sieve.py: PASS
+ perl sieve.pl: PASS
+ tcsh -f module-test.csh: SKIPPED executable not found
+ bash --noprofile -c &#39;sleep 1&#39;: PASS
+ tcsh -f -c &#39;sleep 1&#39;: SKIPPED executable not found
+ csh -f -c &#39;sleep 1&#39;: SKIPPED executable not found
+ tcsh -f evilcsh.csh: SKIPPED executable not found
+ csh -f evilcsh.csh: SKIPPED executable not found
+ The authenticity of host localhost &#39;(127.0.0.1)&#39; cant be established.
+ ECDSA key fingerprint is SHA256:fDSW/zfzeDWdTO1FpwDbVjXCWwEC9c2ZvZiytP/KqJk.
+ Are you sure you want to continue connecting (yes/no)? yes
+ Warning: Permanently added &#39;localhost&#39; (ECDSA) to the list of known hosts.
+ chris@localhost: Permission denied (publickey,password).
+ ssh -o PreferredAuthentications=publickey localhost /bin/true: SKIPPED ssh failed, keys  missing
+ cshsucks@localhost: Permission denied (publickey,password).
+ ssh -o PreferredAuthentications=publickey cshsucks@localhost /bin/true: SKIPPED ssh failed,  keys missing
+ tcshsucks@localhost: Permission denied (publickey,password).
+ ssh -o PreferredAuthentications=publickey tcshsucks@localhost /bin/true: SKIPPED ssh failed,  keys missing
+ ./noop: PASS
+ ./_noop x: PASS
+ ./_noop,: PASS
+ /bin/sleep 10: PASS
+ -- Test Results --
+  PASSED: 24
+ SKIPPED: 12
+  FAILED: 0 (0 expected)
 
-<p>The collection agent is now installed in the <strong>papiex-oss-install</strong> directory.</p>
-<pre><code>$ ls papiex-oss-install/
-bin  include  lib  share  tmp
-</code></pre>
+ PASSED
+ make[2]: Leaving directory &#39;/home/chris/Documents/Playground/MM/build/papiex-oss/papiex/ x86_64-Linux&#39;
+ make[1]: Leaving directory &#39;/home/chris/Documents/Playground/MM/build/papiex-oss/papiex&#39;
+ ln -s /home/chris/Documents/Playground/MM/build/papiex-oss/papiex-epmt-install/tmp ./ sample-data.build
+</code></pre></div>
+
+
+<p>The collection agent is now installed in the <strong>papiex-epmt-install</strong> directory.</p>
+<div class="codehilite"><pre><span></span><code>$ ls papiex-epmt-install/
+bin  include  lib  share
+</code></pre></div>
+
 
 <p>If there are errors, often it is a problem with the a Linux setting that prevents access to performance data, see the next section:</p>
-<h3 id="perf-event-system-setting">Perf Event System Setting</h3>
+<h3 id="perf-event-system-setting">Perf Event System Setting<a class="headerlink" href="#perf-event-system-setting" title="Permanent link">&para;</a></h3>
 <p>For detailed hardware and software performance metrics to collected by non-privileged users, the following setting must be verified/modified:</p>
-<pre><code> # A value of 3 means the system is totally disabled
+<div class="codehilite"><pre><span></span><code> # A value of 3 means the system is totally disabled
  $ cat /proc/sys/kernel/perf_event_paranoid
  3 
  $ # Allow root and non-root users to use the perf subsystem
- $ echo 1 &gt; /proc/sys/kernel/perf_event_paranoid 
+ # echo 1 &gt; /proc/sys/kernel/perf_event_paranoid
+ $ cat /proc/sys/kernel/perf_event_paranoid
  1
-</code></pre>
+</code></pre></div>
+
 
 <p>This isn't necessary unless one would like to collect metrics exposed by <a href="http://icl.utk.edu/papi/">PAPI</a>, <a href="http://perfmon2.sourceforge.net/">libpfm</a> and the <a href="http://web.eece.maine.edu/~vweaver/projects/perf_events/">perfevent</a> subsystems. But collecting this data is, after all, the entire point of this tool. See <a href="https://stackoverflow.com/questions/51911368/what-restriction-is-perf-event-paranoid-1-actually-putting-on-x86-perf">Stack Overflow</a> for a discussion of the setting. A setting of 1 is perfectly safe for production systems.</p>
-<h2 id="installation-of-epmt">Installation of EPMT</h2>
-<p>As there is no virtual environment at the moment, the source tree should be copied in its entirety to the target machines. Here we use <code>build/epmt</code> as our source dir, parallel to <code>build/papiex-oss</code> as above. </p>
-<pre><code>$ cd build
+<h2 id="installation-of-epmt">Installation of EPMT<a class="headerlink" href="#installation-of-epmt" title="Permanent link">&para;</a></h2>
+<p>As there is no virtual environment at the moment, the source tree should be copied in its entirety to the target machines. Here we use <em>build/epmt</em> as our source dir, parallel to <em>build/papiex-epmt-install</em> as above. </p>
+<div class="codehilite"><pre><span></span><code>$ cd build
 $ # 
 $ # We already did this above
 $ # git clone https://&lt;user&gt;@bitbucket.org/minimalmetrics/epmt.git
 $ cd epmt
-</code></pre>
+</code></pre></div>
+
 
 <p>There are three modes to <strong>EPMT</strong> usage, collection, submission and analysis, and have an increasing number of dependencies:</p>
 <ul>
@@ -291,22 +563,23 @@ $ cd epmt
 <li><strong>Submission</strong> requires Python packages for data and database interaction</li>
 <li><strong>Analysis</strong> requires <a href="https://jupyter.org">Jupyter</a>, an iPython notebook environment, as well as additional python data analysis libraries.</li>
 </ul>
-<h3 id="configuration">Configuration</h3>
+<h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h3>
 <p>All three modes reference the <strong>settings.py</strong> file as well as <strong>environment variables</strong>. EPMT uses uses a in-memory, temporary database by default, see <strong>Configuring a Database</strong>.  </p>
-<pre><code>$ cat settings.py
-db_params = {'provider': 'sqlite', 'filename': ':memory:'}
-papiex_options = &quot;PERF_COUNT_SW_CPU_CLOCK&quot;
-epmt_output_prefix = &quot;/tmp/epmt/&quot;
-debug = False
-input_pattern = &quot;*-papiex-[0-9]*-[0-9]*.csv&quot;
-install_prefix = &quot;../papiex-oss/papiex-oss-install/&quot;
-# DO NOT TOUCH THIS
-</code></pre>
+<div class="codehilite"><pre><span></span><code> $ cat settings.py
+ db_params = {&#39;provider&#39;: &#39;sqlite&#39;, &#39;filename&#39;: &#39;:memory:&#39;}
+ papiex_options = &quot;PERF_COUNT_SW_CPU_CLOCK&quot;
+ epmt_output_prefix = &quot;/tmp/epmt/&quot;
+ debug = False
+ input_pattern = &quot;*-papiex-[0-9]*-[0-9]*.csv&quot;
+ install_prefix = &quot;../papiex-oss/papiex-oss-install/&quot;
+ # DO NOT TOUCH THIS
+</code></pre></div>
 
-<h3 id="collection">Collection</h3>
-<p>Immediately after installation, but before configuration of <strong>settings.py</strong> , run the <strong>collection</strong> regression tests using <code>make check</code>.</p>
-<pre><code>$ make check
-make[1]: Entering directory '/build/epmt'
+
+<h3 id="collection">Collection<a class="headerlink" href="#collection" title="Permanent link">&para;</a></h3>
+<p>Immediately after installation, but before configuration of <strong>settings.py</strong> , run the <strong>collection</strong> regression tests using <em>make check</em>.</p>
+<div class="codehilite"><pre><span></span><code>$ make check
+make[1]: Entering directory &#39;/build/epmt&#39;
 PAPIEX_OUTPUT=/build/epmt  python -m py_compile *.py models/*.py         # Compile everything
 PAPIEX_OUTPUT=/build/epmt  ./epmt -h &gt;/dev/null      # help path 1
 PAPIEX_OUTPUT=/build/epmt  ./epmt help &gt;/dev/null    # help path 2
@@ -320,32 +593,35 @@ job_pl_username         root
 PAPIEX_OUTPUT=/build/epmt  ./epmt -n submit       # Submit
 Python 2.7.12
 Tests pass! 
-</code></pre>
+</code></pre></div>
+
 
 <p>We can now collect some test data.  </p>
-<pre><code>$ ./epmt -a run firefox
+<div class="codehilite"><pre><span></span><code>$ ./epmt -a run firefox
 $ ls /tmp/epmt/1/
 job_metadata  linuxkit-025000000001-papiex-14346-0.csv
-</code></pre>
+</code></pre></div>
+
 
 <p>If this fails, then it's likely the papiex installation is either missing or misconfigured in <strong>settings.py</strong>. The <strong>-a</strong> flag tells <strong>EPMT</strong> to treat this run as an entire <strong>job</strong>. See <strong>README.md</strong> for further details.</p>
-<h3 id="submission">Submission</h3>
+<h3 id="submission">Submission<a class="headerlink" href="#submission" title="Permanent link">&para;</a></h3>
 <p>In order to submit data to the database, we need to install the dependencies. It is recommended that one use the Docker image which contains all the dependencies and <strong>requires no user setup</strong>. However, one may install these in a Python virtual environment, to the system Python or the user's local repository, using <strong>pip install</strong> as below:</p>
-<pre><code>$ cat requirements.txt
+<div class="codehilite"><pre><span></span><code>$ cat requirements.txt
 pandas==0.17.1
 pony==0.7.6
 psycopg2-binary==2.7.5
 $ pip install --user -r requirements.txt
-</code></pre>
+</code></pre></div>
+
 
 <p>Now we can submit our previous job to the default, in-memory, database defined in <strong>settings.py</strong>:</p>
-<pre><code>$ ./epmt -v submit /tmp/epmt/1/
+<div class="codehilite"><pre><span></span><code>$ ./epmt -v submit /tmp/epmt/1/
 INFO:epmt_cmds:submit_to_db(/tmp/epmt/1/,*-papiex-[0-9]*-[0-9]*.csv,False)
 INFO:epmt_cmds:Unpickling from /tmp/epmt/1/job_metadata
 INFO:epmt_cmds:1 files to submit
-INFO:epmt_cmds:1 hosts found: ['linuxkit-025000000001-']
+INFO:epmt_cmds:1 hosts found: [&#39;linuxkit-025000000001-&#39;]
 INFO:epmt_cmds:host linuxkit-025000000001-: 1 files to import
-INFO:epmt_job:Binding to DB: {'filename': ':memory:', 'provider': 'sqlite'}
+INFO:epmt_job:Binding to DB: {&#39;filename&#39;: &#39;:memory:&#39;, &#39;provider&#39;: &#39;sqlite&#39;}
 INFO:epmt_job:Generating mapping from schema...
 INFO:epmt_job:Processing job id 1
 INFO:epmt_job:Creating user root
@@ -383,65 +659,31 @@ INFO:epmt_job:Latest process end: 2019-03-06 15:37:06.996065
 INFO:epmt_job:Computed duration of job: 10047715.000000 us, 0.17 m
 INFO:epmt_job:Staged import of 1 processes, 1 threads
 INFO:epmt_job:Staged import took 0:00:00.189151, 5.286781 processes per second
-INFO:epmt_cmds:Committed job 1 to database: Job[u'1']
-</code></pre>
+INFO:epmt_cmds:Committed job 1 to database: Job[u&#39;1&#39;]
+</code></pre></div>
+
 
 <p>You are ready to configure a real database.</p>
-<h3 id="configuring-a-database">Configuring a Database</h3>
+<h3 id="configuring-a-database">Configuring a Database<a class="headerlink" href="#configuring-a-database" title="Permanent link">&para;</a></h3>
 <p>There is a prebuilt settings.py file to connect to the localhost.</p>
-<pre><code>$ rm settings.py settings.pyc
+<div class="codehilite"><pre><span></span><code>$ rm settings.py settings.pyc
 $ ln -s settings/settings_pg_localhost.py settings.py
 $ grep db_params settings.py
-db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'localhost', 'dbname': 'EPMT'}
+db_params = {&#39;provider&#39;: &#39;postgres&#39;, &#39;user&#39;: &#39;postgres&#39;,&#39;password&#39;: &#39;example&#39;,&#39;host&#39;: &#39;localhost&#39;, &#39;dbname&#39;: &#39;EPMT&#39;}
+</code></pre></div>
 
-</code></pre>
 
 <p>The database is ready to go.</p>
-<h2 id="database-services">Database Services</h2>
-<p>If you do not have a postgres database daemon installed and running, it's easiest to use the provided Docker Compose recipe for both the database and the administrative interface:</p>
-<pre><code>$ docker-compose up adminer db
-$ docker-compose ps
-     Name                   Command               State           Ports         
---------------------------------------------------------------------------------
-epmt_adminer_1   entrypoint.sh docker-php-e ...   Up      0.0.0.0:8080-&gt;8080/tcp
-epmt_db_1        docker-entrypoint.sh postgres    Up      0.0.0.0:5432-&gt;5432/tcp
-</code></pre>
-
-<p>These services will export the following ports:</p>
-<ul>
-<li>8080 for <strong>Adminer</strong>, the DB administration interface</li>
-<li>5432 for <strong>PostGresQL</strong></li>
-</ul>
-<p>After these are running, one can examine the database using the provided <strong>Adminer</strong> console: <a href="">http://localhost:8080/?pgsql=db&amp;username=postgres&amp;db=EPMT&amp;ns=public</a>. </p>
-<h3 id="database-service-configuration">Database Service Configuration</h3>
-<p>Persistent data and config present in <strong>./data/postgres</strong>. See the below <strong>docker-compose.yml</strong> file:</p>
-<pre><code>db:
-    image: postgres
-    volumes:
-      - ./data/postgres:/var/lib/postgresql/data
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: example
-      POSTGRES_DB: EPMT
-    ports:
-      - 5432:5432
-</code></pre>
-
-<p>Postgres will self-provision if the above database and user are not found.  One could run it directly from the command line using <strong>docker</strong>.</p>
-<pre><code>docker run --name postgres -v ./data/postgres:/var/lib/postgresql/data -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -e POSTGRES_DB=EPMT -d postgres:latest
-</code></pre>
-
-<p>See <a href="">https://hub.docker.com/_/postgres/</a> for documentation of the parameters of the image.</p>
-<h3 id="dropping-and-recreating-database">Dropping and Recreating Database</h3>
+<h3 id="dropping-and-recreating-database">Dropping and Recreating Database<a class="headerlink" href="#dropping-and-recreating-database" title="Permanent link">&para;</a></h3>
 <p>You can do this with the provided <strong>Adminer</strong> console: <a href="">http://localhost:8080/?pgsql=db&amp;username=postgres</a> or via the command line with <strong>psql</strong>. </p>
-<pre><code>$ sudo su - postgres
+<div class="codehilite"><pre><span></span><code>$ sudo su - postgres
 $ psql -c &quot;create database EPMT&quot;
-</code></pre>
+</code></pre></div>
 
-<h2 id="analysis-and-visualization">Analysis and Visualization</h2>
+
+<h2 id="analysis-and-visualization">Analysis and Visualization<a class="headerlink" href="#analysis-and-visualization" title="Permanent link">&para;</a></h2>
 <p>Here we need a working <strong>ipython notebook</strong> data analytics environment along with <strong>EPMT</strong>'s dependencies. It's easiest to build/use the existing the <strong>epmt-notebook</strong> container image, which uses the supported <a href="">jupyter/scipy-notebook</a> container image from Docker Hub. </p>
-<pre><code>$ make
+<div class="codehilite"><pre><span></span><code>$ make
 .
 .
 .
@@ -450,10 +692,11 @@ REPOSITORY               TAG                 IMAGE ID            CREATED        
 epmt-notebook            latest              045023fc0ccc        About a minute ago   4.3GB
 epmt-command             latest              530fe3198a1d        About a minute ago   1.1GB
 python-epmt              latest              5b99ede4828d        About a minute ago   1.1GB
-</code></pre>
+</code></pre></div>
+
 
 <p>Once <strong>epmt-notebook</strong> is built, one starts the notebook via the command line. </p>
-<pre><code>$ docker-compose up notebook
+<div class="codehilite"><pre><span></span><code>$ docker-compose up notebook
 Creating epmt_notebook_1 ... done
 Attaching to epmt_notebook_1
 notebook_1  | Executing the command: jupyter notebook
@@ -468,77 +711,89 @@ notebook_1  |
 notebook_1  |     Copy/paste this URL into your browser when you connect for the first time,
 notebook_1  |     to login with a token:
 notebook_1  |         http://(9a7974f0ffb9 or 127.0.0.1):8888/?token=c9d7cb543a82a7a278197b874c789da99a7ed91cd2f84016
-</code></pre>
+</code></pre></div>
+
 
 <p>and then login and load the <strong>EPMT.ipynb</strong> file.</p>
-<h1 id="troubleshooting">Troubleshooting</h1>
-<h3 id="error-version-glibc_xxx-not-found">Error: <code>version GLIBC_x.xx not found</code></h3>
-<p>The successful deployment of the collector libraries depends on the run-time environment of the target system. More plainly, this means, **do not compile papiex in your development environment, compile it with your target distributions environment. Each target environment should have their own separate <code>papiex-oss-install</code> directory. </p>
-<p>If you need to do otherwise, there are solutions involving deploying copies of additional libraries
-. </p>
-<h1 id="appendix">Appendix</h1>
-<h2 id="docker-images-for-the-running-the-epmt-command">Docker Images for the running the EPMT command</h2>
+<h1 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h1>
+<h3 id="error-version-glibc_xxx-not-found">Error: <code>version GLIBC_x.xx not found</code><a class="headerlink" href="#error-version-glibc_xxx-not-found" title="Permanent link">&para;</a></h3>
+<p>The collector library may not have been built for the current environement or the release
+OS version does not match the current environment. </p>
+<h1 id="appendix">Appendix<a class="headerlink" href="#appendix" title="Permanent link">&para;</a></h1>
+<h2 id="docker-images-for-the-running-the-epmt-command">Docker Images for the running the EPMT command<a class="headerlink" href="#docker-images-for-the-running-the-epmt-command" title="Permanent link">&para;</a></h2>
 <p>The image <strong>epmt-command</strong> is the image that contains a working <strong>epmt</strong> install and all it's dependencies. It's mean to be run as a command with arguments via <strong>docker run</strong>. See <strong>README.md</strong> for more details.</p>
-<h2 id="testing-epmt-collection-with-various-python-versions-under-docker">Testing EPMT Collection with Various Python Versions under Docker</h2>
+<h2 id="testing-epmt-collection-with-various-python-versions-under-docker">Testing EPMT Collection with Various Python Versions under Docker<a class="headerlink" href="#testing-epmt-collection-with-various-python-versions-under-docker" title="Permanent link">&para;</a></h2>
 <p>One can test <strong>EPMT</strong> on various versions of python with the following make commands. Each will test against a minimal install of Python, without installing any dependencies. </p>
-<pre><code>make check-python-native
+<div class="codehilite"><pre><span></span><code>make check-python-native
 make check-python-2.6
 make check-python-2.7
 make check-python-3
 </code></pre></div>
-            </div>
-        </div>
+                
+              
+              
+                
 
-        <footer class="col-md-12">
-            <hr>
-            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
-        </footer>
-        <script>
-            var base_url = ".",
-                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
-        </script>
-        <script src="js/base.js" defer></script>
 
-        <div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-            </div>
-            <div class="modal-body">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th style="width: 20%;">Keys</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td class="help shortcut"><kbd>?</kbd></td>
-                    <td>Open this help</td>
-                  </tr>
-                  <tr>
-                    <td class="next shortcut"><kbd>n</kbd></td>
-                    <td>Next page</td>
-                  </tr>
-                  <tr>
-                    <td class="prev shortcut"><kbd>p</kbd></td>
-                    <td>Previous page</td>
-                  </tr>
-                  <tr>
-                    <td class="search shortcut"><kbd>s</kbd></td>
-                    <td>Search</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <div class="modal-footer">
-            </div>
+              
+            </article>
+          </div>
         </div>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
+        
+        
+          <a href="README.html" title="EPMT Readme" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                EPMT Readme
+              </div>
+            </div>
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
     </div>
-</div>
-
-    </body>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+        Made with
+        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+          Material for MkDocs
+        </a>
+      </div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="assets/javascripts/vendor.a0c4167b.min.js"></script>
+      <script src="assets/javascripts/bundle.fb26dd1d.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      
+      <script>
+        app = initialize({
+          base: ".",
+          features: [],
+          search: Object.assign({
+            worker: "assets/javascripts/worker/search.37585f48.min.js"
+          }, typeof search !== "undefined" && search)
+        })
+      </script>
+      
+    
+  </body>
 </html>

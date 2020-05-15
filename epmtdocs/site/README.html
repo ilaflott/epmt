@@ -1,513 +1,903 @@
-<!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="utf-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        
-        
-        
-        <link rel="shortcut icon" href="img/favicon.ico">
+
+
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      <link rel="shortcut icon" href="favicon.ico">
+      <meta name="generator" content="mkdocs-1.1, mkdocs-material-5.1.6">
+    
+    
+      
         <title>EPMT Readme - EPMT</title>
-        <link href="css/bootstrap.min.css" rel="stylesheet">
-        <link href="css/font-awesome.min.css" rel="stylesheet">
-        <link href="css/base.css" rel="stylesheet">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
-
-        <script src="js/jquery-1.10.2.min.js" defer></script>
-        <script src="js/bootstrap.min.js" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
-        <script>hljs.initHighlightingOnLoad();</script> 
-    </head>
-
-    <body>
-        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
-            <div class="container">
-                <a class="navbar-brand" href=".">EPMT</a>
-                <!-- Expander button -->
-                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-
-                <!-- Expanded navigation -->
-                <div id="navbar-collapse" class="navbar-collapse collapse">
-                        <!-- Main navigation -->
-                        <ul class="nav navbar-nav">
-                            <li class="navitem">
-                                <a href="INSTALL.html" class="nav-link">EPMT Install</a>
-                            </li>
-                            <li class="navitem active">
-                                <a href="README.html" class="nav-link">EPMT Readme</a>
-                            </li>
-                            <li class="navitem">
-                                <a href="migrations.html" class="nav-link">Database Migrations</a>
-                            </li>
-                            <li class="dropdown">
-                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Notebooks <b class="caret"></b></a>
-                                <ul class="dropdown-menu">
-                                    
-<li>
-    <a href="http://localhost:8888/notebooks/notebooks/Outliers.ipynb" target="_blank" class="dropdown-item">Outliers</a>
-</li>
-                                    
-<li>
-    <a href="http://localhost:8888/notebooks/notebooks/Query-API.ipynb" target="_blank" class="dropdown-item">Query API</a>
-</li>
-                                    
-<li>
-    <a href="http://localhost:8888/notebooks/notebooks/graphing.ipynb" target="_blank" class="dropdown-item">Graphing API</a>
-</li>
-                                </ul>
-                            </li>
-                            <li class="navitem">
-                                <a href="http://localhost:8050" target="_blank" class="nav-link">Interface</a>
-                            </li>
-                            <li class="navitem">
-                                <a href="index_ui.html" class="nav-link">Interface Readme</a>
-                            </li>
-                        </ul>
-
-                    <ul class="nav navbar-nav ml-auto">
-                            <li class="nav-item">
-                                <a rel="prev" href="INSTALL.html" class="nav-link">
-                                    <i class="fa fa-arrow-left"></i> Previous
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a rel="next" href="migrations.html" class="nav-link">
-                                    Next <i class="fa fa-arrow-right"></i>
-                                </a>
-                            </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <div class="container">
-            <div class="row">
-                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
-    <div class="navbar-header">
-        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
-            <span class="fa fa-angle-down"></span>
-        </button>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.4b9ffd7b.min.css">
+      
+        <link rel="stylesheet" href="assets/stylesheets/palette.b79bcd20.min.css">
+      
+      
+        
+        
+        <meta name="theme-color" content="#2196f3">
+      
+    
+    
+    
+      
+        <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>body,input{font-family:"Roboto",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif}code,kbd,pre{font-family:"Roboto Mono",SFMono-Regular,Consolas,Menlo,monospace}</style>
+      
+    
+    
+    
+    
+      
+    
+    
+  </head>
+  
+  
+    
+    
+    <body dir="ltr" data-md-color-primary="blue" data-md-color-accent="grey">
+  
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#epmt" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid" aria-label="Header">
+    <a href="." title="EPMT" class="md-header-nav__button md-logo" aria-label="EPMT">
+      
+  <img src="logo.png" alt="logo">
+
+    </a>
+    <label class="md-header-nav__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header-nav__title" data-md-component="header-title">
+      
+        <div class="md-header-nav__ellipsis">
+          <span class="md-header-nav__topic md-ellipsis">
+            EPMT
+          </span>
+          <span class="md-header-nav__topic md-ellipsis">
+            
+              EPMT Readme
+            
+          </span>
+        </div>
+      
+    </div>
+    
+    
+  </nav>
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+        
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="." title="EPMT" class="md-nav__button md-logo" aria-label="EPMT">
+      
+  <img src="logo.png" alt="logo">
+
+    </a>
+    EPMT
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="INSTALL.html" title="EPMT Install" class="md-nav__link">
+      EPMT Install
+    </a>
+  </li>
 
     
-    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
-        <ul class="nav flex-column">
-            
-            <li class="nav-item" data-level="1"><a href="#epmt" class="nav-link">EPMT</a>
-              <ul class="nav flex-column">
-            <li class="nav-item" data-level="2"><a href="#table-of-contents" class="nav-link">Table of Contents</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            <li class="nav-item" data-level="2"><a href="#verifying-installation" class="nav-link">Verifying Installation</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="1"><a href="#binbash" class="nav-link">!/bin/bash</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="1"><a href="#example-job-script-for-torque-or-slurm" class="nav-link">Example job script for Torque or SLURM</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="1"><a href="#binbash_1" class="nav-link">!/bin/bash</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="1"><a href="#example-job-script-for-torque-or-slurm_1" class="nav-link">Example job script for Torque or SLURM</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="1"><a href="#binbash_2" class="nav-link">!/bin/bash</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="1"><a href="#example-job-script-for-torque-or-slurm_2" class="nav-link">Example job script for Torque or SLURM</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="1"><a href="#binbash_3" class="nav-link">!/bin/bash</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="1"><a href="#example-job-script-for-torque-or-slurm_3" class="nav-link">Example job script for Torque or SLURM</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="1"><a href="#_1" class="nav-link"></a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="1"><a href="#binbash_4" class="nav-link">!/bin/bash</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="1"><a href="#example-job-script-for-torque-or-slurm_4" class="nav-link">Example job script for Torque or SLURM</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="1"><a href="#_2" class="nav-link"></a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="1"><a href="#preamble-collect-job-metadata-and-monitor-all-processesthreads" class="nav-link">Preamble, collect job metadata and monitor all processes/threads</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="1"><a href="#_3" class="nav-link"></a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="1"><a href="#_4" class="nav-link"></a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="1"><a href="#postamble-disable-monitoring-and-collect-job-metadata" class="nav-link">Postamble, disable monitoring and collect job metadata</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="1"><a href="#binbash_5" class="nav-link">!/bin/bash</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-            
-            <li class="nav-item" data-level="1"><a href="#example-job-script-for-torque-or-slurm_5" class="nav-link">Example job script for Torque or SLURM</a>
-              <ul class="nav flex-column">
-            <li class="nav-item" data-level="2"><a href="#key-source-description" class="nav-link">Key                     Source                          Description</a>
-              <ul class="nav flex-column">
-              </ul>
-            </li>
-              </ul>
-            </li>
-        </ul>
-    </div>
-</div></div>
-                    <div class="col-md-9" role="main">
+      
+      
+      
 
-<h1 id="epmt">EPMT</h1>
+  
+
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+    
+      
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="__toc">
+        EPMT Readme
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 9h14V7H3v2m0 4h14v-2H3v2m0 4h14v-2H3v2m16 0h2v-2h-2v2m0-10v2h2V7h-2m0 6h2v-2h-2v2z"/></svg>
+        </span>
+      </label>
+    
+    <a href="README.html" title="EPMT Readme" class="md-nav__link md-nav__link--active">
+      EPMT Readme
+    </a>
+    
+      
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#verifying-installation" class="md-nav__link">
+    Verifying Installation
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#collecting-performance-data" class="md-nav__link">
+    Collecting Performance Data
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#importing-data-into-the-database" class="md-nav__link">
+    Importing Data Into the Database
+  </a>
+  
+    <nav class="md-nav" aria-label="Importing Data Into the Database">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    Examples
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#submitting-a-directory-of-compressed-job-data" class="md-nav__link">
+    Submitting a directory of compressed job data
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#submitting-data-directly-from-within-a-job" class="md-nav__link">
+    Submitting data directly from within a job
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#submitting-data-from-the-current-session" class="md-nav__link">
+    Submitting data from the current session
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-and-configuration" class="md-nav__link">
+    Usage and Configuration
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    Environment Variables
+  </a>
+  
+    <nav class="md-nav" aria-label="Environment Variables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#settingspy" class="md-nav__link">
+    settings.py
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#debugging" class="md-nav__link">
+    Debugging
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#epmt-under-docker" class="md-nav__link">
+    EPMT under Docker
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#analysis-of-epmt-data" class="md-nav__link">
+    Analysis of EPMT Data
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-dictionary" class="md-nav__link">
+    Data Dictionary
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+    
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="epmt_cmds.html" title="EPMT Commands" class="md-nav__link">
+      EPMT Commands
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="migrations.html" title="Database Migrations" class="md-nav__link">
+      Database Migrations
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item md-nav__item--nested">
+    
+      <input class="md-nav__toggle md-toggle" data-md-toggle="nav-5" type="checkbox" id="nav-5">
+    
+    <label class="md-nav__link" for="nav-5">
+      Notebooks
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M8.59 16.58L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.42z"/></svg>
+      </span>
+    </label>
+    <nav class="md-nav" aria-label="Notebooks" data-md-level="1">
+      <label class="md-nav__title" for="nav-5">
+        <span class="md-nav__icon md-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+        </span>
+        Notebooks
+      </label>
+      <ul class="md-nav__list" data-md-scrollfix>
+        
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="http://localhost:8888/notebooks/notebooks/Outliers.ipynb" target="_blank" title="Outliers" class="md-nav__link">
+      Outliers
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="http://localhost:8888/notebooks/notebooks/Query-API.ipynb" target="_blank" title="Query API" class="md-nav__link">
+      Query API
+    </a>
+  </li>
+
+        
+          
+          
+          
+
+
+  <li class="md-nav__item">
+    <a href="http://localhost:8888/notebooks/notebooks/graphing.ipynb" target="_blank" title="Graphing API" class="md-nav__link">
+      Graphing API
+    </a>
+  </li>
+
+        
+      </ul>
+    </nav>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="http://localhost:8050" target="_blank" title="Interface" class="md-nav__link">
+      Interface
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="index_ui.html" title="Interface Readme" class="md-nav__link">
+      Interface Readme
+    </a>
+  </li>
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#verifying-installation" class="md-nav__link">
+    Verifying Installation
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#collecting-performance-data" class="md-nav__link">
+    Collecting Performance Data
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#importing-data-into-the-database" class="md-nav__link">
+    Importing Data Into the Database
+  </a>
+  
+    <nav class="md-nav" aria-label="Importing Data Into the Database">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    Examples
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#submitting-a-directory-of-compressed-job-data" class="md-nav__link">
+    Submitting a directory of compressed job data
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#submitting-data-directly-from-within-a-job" class="md-nav__link">
+    Submitting data directly from within a job
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#submitting-data-from-the-current-session" class="md-nav__link">
+    Submitting data from the current session
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-and-configuration" class="md-nav__link">
+    Usage and Configuration
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    Environment Variables
+  </a>
+  
+    <nav class="md-nav" aria-label="Environment Variables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#settingspy" class="md-nav__link">
+    settings.py
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#debugging" class="md-nav__link">
+    Debugging
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#epmt-under-docker" class="md-nav__link">
+    EPMT under Docker
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#analysis-of-epmt-data" class="md-nav__link">
+    Analysis of EPMT Data
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-dictionary" class="md-nav__link">
+    Data Dictionary
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content">
+            <article class="md-content__inner md-typeset">
+              
+                
+                
+                  
+                
+                
+                <h1 id="epmt">EPMT<a class="headerlink" href="#epmt" title="Permanent link">&para;</a></h1>
 <p><strong>Experiment Performance Management Tool</strong>  aka<br />
 <strong>WorkflowDB</strong> aka<br />
 <strong>PerfMiner</strong></p>
 <p>This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes. This tool uses <strong>papiex</strong> to perform the process monitoring. This tool is targeted at batch or ephemeral jobs, not daemon processes. </p>
 <p>The software contained in this repository was written by Philip Mucci of Minimal Metrics LLC.</p>
-<h2 id="table-of-contents">Table of Contents</h2>
-<div class="toc">
-<ul>
-<li><a href="#epmt">EPMT</a><ul>
-<li><a href="#table-of-contents">Table of Contents</a></li>
-<li><a href="#verifying-installation">Verifying Installation</a></li>
-</ul>
-</li>
-<li><a href="#binbash">!/bin/bash</a></li>
-<li><a href="#example-job-script-for-torque-or-slurm">Example job script for Torque or SLURM</a></li>
-<li><a href="#binbash_1">!/bin/bash</a></li>
-<li><a href="#example-job-script-for-torque-or-slurm_1">Example job script for Torque or SLURM</a></li>
-<li><a href="#binbash_2">!/bin/bash</a></li>
-<li><a href="#example-job-script-for-torque-or-slurm_2">Example job script for Torque or SLURM</a></li>
-<li><a href="#binbash_3">!/bin/bash</a></li>
-<li><a href="#example-job-script-for-torque-or-slurm_3">Example job script for Torque or SLURM</a></li>
-<li><a href="#_1"></a></li>
-<li><a href="#binbash_4">!/bin/bash</a></li>
-<li><a href="#example-job-script-for-torque-or-slurm_4">Example job script for Torque or SLURM</a></li>
-<li><a href="#_2"></a></li>
-<li><a href="#preamble-collect-job-metadata-and-monitor-all-processesthreads">Preamble, collect job metadata and monitor all processes/threads</a></li>
-<li><a href="#_3"></a></li>
-<li><a href="#_4"></a></li>
-<li><a href="#postamble-disable-monitoring-and-collect-job-metadata">Postamble, disable monitoring and collect job metadata</a></li>
-<li><a href="#binbash_5">!/bin/bash</a></li>
-<li><a href="#example-job-script-for-torque-or-slurm_5">Example job script for Torque or SLURM</a><ul>
-<li><a href="#key-source-description">Key                     Source                          Description</a></li>
-</ul>
-</li>
-</ul>
-</div>
-<h2 id="verifying-installation">Verifying Installation</h2>
-<p>It is best to check your installation and configuration using the <code>epmt check</code> command. Here is an example run from docker via the source tree. You will notice that we bind-mount the parent-directory of <code>epmt</code> to the container. This allows <code>epmt</code> to find the <code>papiex</code> install directory, lying adjacent to the <code>epmt</code> directory.</p>
-<pre><code>$ docker run --privileged -it --rm -v $PWD/..:/tmp/foo -w /tmp/foo/epmt python-epmt:latest ./epmt check
-settings.db_params = {'filename': ':memory:', 'provider': 'sqlite'}
-           Pass
-settings.install_prefix = ../papiex-oss/papiex-oss-install/
-            ls -l ../papiex-oss/papiex-oss-install/bin/monitor-run&gt;/dev/null
-            ls -l ../papiex-oss/papiex-oss-install/lib/libpapiex.so&gt;/dev/null
-            ls -l ../papiex-oss/papiex-oss-install/lib/libmonitor.so&gt;/dev/null
-            ls -l ../papiex-oss/papiex-oss-install/lib/libpapi.so&gt;/dev/null
-            ls -l ../papiex-oss/papiex-oss-install/lib/libpfm.so&gt;/dev/null
-            ls -l ../papiex-oss/papiex-oss-install/bin/papi_command_line&gt;/dev/null
-            Pass
-settings.epmt_output_prefix = /tmp/epmt/
-           mkdir -p /tmp/epmt/
-           mkdir -p /tmp/epmt/tmp
-           ls -lR /tmp/epmt/ &gt;/dev/null
-           rm -rf /tmp/epmt/tmp
-           Pass
-/proc/sys/kernel/perf_event_paranoid = 2
-WARNING:epmt_cmds:restrictive /proc/sys/kernel/perf_event_paranoid value of 2, should be 0 for non-privileged users
-            Pass
-settings.papiex_options = PERF_COUNT_SW_CPU_CLOCK
-            ../papiex-oss/papiex-oss-install/bin/papi_component_avail| sed -n -e '/Active/,$p' | grep perf_event &gt;/dev/null
-            ../papiex-oss/papiex-oss-install/bin/papi_command_line PERF_COUNT_SW_CPU_CLOCK| sed -n -e '/PERF_COUNT_SW_CPU_CLOCK\ :/,$p' | grep PERF_COUNT_SW_CPU_CLOCK &gt; /dev/null
-            Pass
-WARNING:epmt_cmds:JOB_ID unset: Using session id 1 as JOB_ID
-WARNING:epmt_cmds:JOB_NAME unset: Using job id 1 as JOB_NAME
-WARNING:epmt_cmds:JOB_SCRIPTNAME unset: Using process name 1 as JOB_SCRIPTNAME
-WARNING:epmt_cmds:JOB_USER unset: Using username root as JOB_USER
-collect functionality (papiex+epmt)
-           epmt run -a /bin/sleep 1
-           Pass
+<h2 id="verifying-installation">Verifying Installation<a class="headerlink" href="#verifying-installation" title="Permanent link">&para;</a></h2>
+<p>It is best to check your installation and configuration using the <code>epmt check</code> command.</p>
+<p>Here is an example:</p>
+<div class="codehilite"><pre><span></span><code>$ epmt check
+settings.db_params = {&#39;url&#39;: &#39;sqlite:////home/chris/EPMT_DB_2.2.7.sqlite&#39;, &#39;echo&#39;: False}       Pass
+settings.install_prefix = /home/chris/Downloads/epmt-2.2.7/papiex-epmt-install/ Pass
+settings.epmt_output_prefix = /tmp/epmt/        Pass
+/proc/sys/kernel/perf_event_paranoid =  0       Pass
+settings.papiex_options = PERF_COUNT_SW_CPU_CLOCK       Pass
+epmt stage functionality        Pass
+WARNING:epmtlib:No job name found, defaulting to unknown
+epmt run functionality  Pass
+</code></pre></div>
 
-### Running unit tests with Python's `unittest` module
 
-We have a comprehensive set of unit tests. Navigate to the top-level folder
-in the installation, and run the following command:
+<p>We have a comprehensive set of unit tests. The epmt unittest command will begin those tests:</p>
+<div class="codehilite"><pre><span></span><code>$ epmt unittest
 
-</code></pre>
 
-<p>$ python -m unittest discover</p>
-<p>{'filename': ':memory:', 'provider': 'sqlite'}
-setUpModule: importing test/data/misc/<em>.tgz
-Imported successfully - job: failed-exitcode processes: 1 rate: 54.5643040323
-Imported successfully - job: 685000 processes: 3480 rate: 374.482987496
-'setUpModule' took: 10.2743 sec
-......
-{'filename': ':memory:', 'provider': 'sqlite'}
+Running test.test_lib
+test_dict_filter (test.test_lib.EPMTLib) ... ok
+test_merge_intervals (test.test_lib.EPMTLib) ... ok
+test_sqlite_json_support (test.test_lib.EPMTLib) ... ok
+test_url_to_db_params (test.test_lib.EPMTLib) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.086s
+
+OK
+
+
+Running test.test_settings
+test_default_settings (test.test_settings.EPMTSettings) ... ok
+test_epmt_settings (test.test_settings.EPMTSettings) ... ok
+test_settings_overrides_defaults (test.test_settings.EPMTSettings) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.001s
+
+OK
+
+
+Running test.test_anysh
+
+{&#39;url&#39;: &#39;sqlite:////home/chris/EPMT_DB_2.2.7.sqlite&#39;, &#39;echo&#39;: False}
+test_monolithic (test.test_anysh.EPMTShell) ... ok
+test_run_auto (test.test_anysh.EPMTShell) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 2.472s
+
+OK
+
+
+Running test.test_submit
+
+{&#39;url&#39;: &#39;sqlite:////home/chris/EPMT_DB_2.2.7.sqlite&#39;, &#39;echo&#39;: False}
 setUpModule: importing test/data/misc/685000.tgz
-'setUpModule' took: 0.0117 sec
-..
-{'filename': ':memory:', 'provider': 'sqlite'}
-setUpModdule: importing test/data/query/</em>.tgz
-Imported successfully - job: 685000 processes: 3480 rate: 367.989366376
-Imported successfully - job: 685003 processes: 3785 rate: 368.269617338
-Imported successfully - job: 685016 processes: 3412 rate: 368.965343103
-'setUpModule' took: 31.8878 sec
-...............
-{'filename': ':memory:', 'provider': 'sqlite'}
+Imported successfully - job: 685000 processes: 3480 rate: 200.55582779792528
+test_corrupted_csv (test.test_submit.EPMTSubmit) ... ok
+test_job_data (test.test_submit.EPMTSubmit) ... ok
+test_proc_data (test.test_submit.EPMTSubmit) ... ok
+test_unprocessed_jobs (test.test_submit.EPMTSubmit) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 37.892s
+
+OK
+
+
+Running test.test_cmds
+
+{&#39;url&#39;: &#39;sqlite:////home/chris/EPMT_DB_2.2.7.sqlite&#39;, &#39;echo&#39;: False}
+setUpModule: importing test/data/misc/685000.tgz
+test_daemon (test.test_cmds.EPMTCmds) ... ok
+test_dbsize_json (test.test_cmds.EPMTCmds) ... skipped &#39;requires postgres&#39;
+test_dbsize_provider (test.test_cmds.EPMTCmds) ... ok
+test_list_job_proc_tags (test.test_cmds.EPMTCmds) ... ok
+test_list_jobs (test.test_cmds.EPMTCmds) ... ok
+test_list_op_metrics (test.test_cmds.EPMTCmds) ... ok
+test_list_procs (test.test_cmds.EPMTCmds) ... ok
+test_list_refmodels (test.test_cmds.EPMTCmds) ... ok
+test_list_thread_metrics (test.test_cmds.EPMTCmds) ... ok
+test_zz_drop_db (test.test_cmds.EPMTCmds) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 42.324s
+
+OK (skipped=1)
+
+
+Running test.test_query
+
+{&#39;url&#39;: &#39;sqlite:////home/chris/EPMT_DB_2.2.7.sqlite&#39;, &#39;echo&#39;: False}
+setUpModdule: importing test/data/query/*.tgz
+Imported successfully - job: 685000 processes: 3480 rate: 231.56639963556242
+Imported successfully - job: 685003 processes: 3785 rate: 234.26530902131879
+Imported successfully - job: 685016 processes: 3412 rate: 230.75266148374908
+test_job (test.test_query.QueryAPI) ... ok
+test_job_advanced (test.test_query.QueryAPI) ... ok
+test_job_convert (test.test_query.QueryAPI) ... ok
+test_job_proc_tags (test.test_query.QueryAPI) ... ok
+test_job_roots (test.test_query.QueryAPI) ... ok
+test_jobs_annotations (test.test_query.QueryAPI) ... ok
+test_jobs_comparable (test.test_query.QueryAPI) ... ok
+test_op (test.test_query.QueryAPI) ... ok
+test_op_metrics (test.test_query.QueryAPI) ... ok
+test_op_metrics_grouped (test.test_query.QueryAPI) ... ok
+test_op_roots (test.test_query.QueryAPI) ... ok
+test_ops (test.test_query.QueryAPI) ... ok
+test_ops_dm_calc (test.test_query.QueryAPI) ... ok
+test_ops_dm_calc_iter (test.test_query.QueryAPI) ... ok
+test_process_tree (test.test_query.QueryAPI) ... ok
+test_procs (test.test_query.QueryAPI) ... ok
+test_procs_advanced (test.test_query.QueryAPI) ... ok
+test_procs_convert (test.test_query.QueryAPI) ... ok
+test_refmodel_crud (test.test_query.QueryAPI) ... ok
+test_root (test.test_query.QueryAPI) ... ok
+test_status (test.test_query.QueryAPI) ... ok
+test_timeline (test.test_query.QueryAPI) ... ok
+test_unanalyzed_jobs (test.test_query.QueryAPI) ... ok
+test_version (test.test_query.QueryAPI) ... ok
+test_zz_delete_jobs (test.test_query.QueryAPI) ... ok
+
+----------------------------------------------------------------------
+Ran 25 tests in 128.958s
+
+OK
+
+
+Running test.test_outliers
+
+{&#39;url&#39;: &#39;sqlite:////home/chris/EPMT_DB_2.2.7.sqlite&#39;, &#39;echo&#39;: False}
 setUpModule: importing test/data/outliers/*.tgz
-Imported successfully - job: kern-6656-20190614-190245 processes: 10600 rate: 353.525545172
-Imported successfully - job: kern-6656-20190614-192044-outlier processes: 10600 rate: 351.265328962
-Imported successfully - job: kern-6656-20190614-194024 processes: 10600 rate: 352.45282394
-Imported successfully - job: kern-6656-20190614-191138 processes: 10600 rate: 352.341328069
-'setUpModule' took: 132.7657 sec
-.........</p>
-<hr />
-<p>Ran 32 tests in 215.512s</p>
-<p>OK</p>
-<pre><code>
-## Collecting Performance Data
+Imported successfully - job: kern-6656-20190614-194024 processes: 10600 rate: 231.2331956455997
+Imported successfully - job: kern-6656-20190614-191138 processes: 10600 rate: 233.32790148913608
+Imported successfully - job: kern-6656-20190614-190245 processes: 10600 rate: 232.74203535896046
+Imported successfully - job: kern-6656-20190614-192044-outlier processes: 10600 rate: 232.31410778484795
+test_outlier_jobs (test.test_outliers.OutliersAPI) ... ok
+test_outlier_jobs_trained (test.test_outliers.OutliersAPI) ... ok
+test_outlier_ops (test.test_outliers.OutliersAPI) ... ok
+test_outlier_ops_trained (test.test_outliers.OutliersAPI) ... ok
+test_partition_jobs (test.test_outliers.OutliersAPI) ... ok
+test_partition_jobs_by_ops (test.test_outliers.OutliersAPI) ... ok
+test_rca_jobs (test.test_outliers.OutliersAPI) ... ok
+test_rca_ops (test.test_outliers.OutliersAPI) ... ok
+test_trained_model (test.test_outliers.OutliersAPI) ... ok
 
-Assuming you have EPMT installed and in your path, let's modify a job file:
+----------------------------------------------------------------------
+Ran 9 tests in 208.896s
 
-</code></pre>
-
-<p>$ cat my_job.sh</p>
-<h1 id="binbash">!/bin/bash</h1>
-<h1 id="example-job-script-for-torque-or-slurm">Example job script for Torque or SLURM</h1>
-<p>./compute_the_world --debug </p>
-<pre><code>
-This becomes:
-
-</code></pre>
-
-<p>$ cat my_job_epmt.sh</p>
-<h1 id="binbash_1">!/bin/bash</h1>
-<h1 id="example-job-script-for-torque-or-slurm_1">Example job script for Torque or SLURM</h1>
-<p>epmt start
-epmt run ./compute_the_world --debug 
-epmt stop</p>
-<pre><code>
-Or more succintlty by automating the start/stop cycle with the **--auto** or **-a** flag:  
-
-</code></pre>
-
-<p>$ cat my_job_epmt2.sh</p>
-<h1 id="binbash_2">!/bin/bash</h1>
-<h1 id="example-job-script-for-torque-or-slurm_2">Example job script for Torque or SLURM</h1>
-<p>epmt -a run ./compute_the_world --debug</p>
-<pre><code>
-But usually we want to run more than one executable. We could have any number of run statements:
-
-</code></pre>
-
-<p>$ cat my_job_epmt3.sh</p>
-<h1 id="binbash_3">!/bin/bash</h1>
-<h1 id="example-job-script-for-torque-or-slurm_3">Example job script for Torque or SLURM</h1>
-<h1 id="_1"></h1>
-<p>epmt start
-epmt run ./initialize_the_world --random 
-epmt run ./compute_the_world 
-epmt run ./postprocess_the_world 
-epmt stop</p>
-<pre><code>
-Let's skip all the markup, as we can do it with only environment variables. **EPMT** provides the configuration to export to the environment through the **source** command. The use for this is in a job file and is meant to be evaluated by the running shell, be that some form of Bash or Csh. **epmt source** just prints the required environment variables in Bash format **unless either the &quot;SHELL&quot; or &quot;_&quot; environment variable ends in csh**. 
-
-**Note the unset of LD_PRELOAD before stop!** This line is to prevent the data collection routine from running on **epmt stop** itself.
-
-</code></pre>
-
-<p>$ cat my_job_bash.sh</p>
-<h1 id="binbash_4">!/bin/bash</h1>
-<h1 id="example-job-script-for-torque-or-slurm_4">Example job script for Torque or SLURM</h1>
-<h1 id="_2"></h1>
-<h1 id="preamble-collect-job-metadata-and-monitor-all-processesthreads">Preamble, collect job metadata and monitor all processes/threads</h1>
-<p>epmt start
-eval <code>epmt source</code></p>
-<h1 id="_3"></h1>
-<p>./initialize_the_world --random 
-./compute_the_world 
-./postprocess_the_world </p>
-<h1 id="_4"></h1>
-<h1 id="postamble-disable-monitoring-and-collect-job-metadata">Postamble, disable monitoring and collect job metadata</h1>
-<p>unset LD_PRELOAD
-epmt stop</p>
-<pre><code>
-Here's an example for Csh, when run interactively, 
+OK
 
 
-</code></pre>
+Running test.test_db_schema
 
-<p>$ /bin/csh</p>
-<blockquote>
-<p>epmt -j1 source
-setenv PAPIEX_OPTIONS PERF_COUNT_SW_CPU_CLOCK;
-setenv PAPIEX_OUTPUT /tmp/epmt/1/;
-setenv LD_PRELOAD /Users/phil/Work/GFDL/epmt.git/../papiex-oss/papiex-oss-install/lib/libpapiex.so:/Users/phil/Work/GFDL/epmt.git/../papiex-oss/papiex-oss-install/lib/libpapi.so:/Users/phil/Work/GFDL/epmt.git/../papiex-oss/papiex-oss-install/lib/libpfm.so:/Users/phil/Work/GFDL/epmt.git/../papiex-oss/papiex-oss-install/lib/libmonitor.so</p>
-</blockquote>
-<pre><code>
-## Importing Data Into the Database
+{&#39;url&#39;: &#39;sqlite:////home/chris/EPMT_DB_2.2.7.sqlite&#39;, &#39;echo&#39;: False}
+test_schema (test.test_db_schema.EPMTDBSchema) ... ok
 
-After collecting the data, jobs (groups of processes) are imported into the database with the **submit** command. This command takes arguments in the form of directories or tar files that must contain a *job_metadata* file.   
+----------------------------------------------------------------------
+Ran 1 test in 0.004s
 
-Normal operation is to submit one or more directories:
-
-```epmt submit &lt;dir1/&gt; [...]```
-
-One can also submit a list of compressed tar files:
-
-```epmt submit &lt;compressed_dir_file.*z&gt; [...]```
-
-There is also a mode where the current environment is used to determine where to find the data.
-
-```epmt submit```
+OK
+All tests successfully PASSED
+</code></pre></div>
 
 
-### Examples
+<h2 id="collecting-performance-data">Collecting Performance Data<a class="headerlink" href="#collecting-performance-data" title="Permanent link">&para;</a></h2>
+<p>Assuming you have EPMT installed and in your path, let's modify a job file:</p>
+<div class="codehilite"><pre><span></span><code>$ cat my_job.sh
+#!/bin/bash
+# Example job script for Torque or SLURM
+./compute_the_world --debug 
+</code></pre></div>
 
-#### Submitting a directory of compressed job data
 
-This might happen at the end of the day via a cron job:
-
-</code></pre>
-
-<p>$ epmt submit <dir>/*tgz</p>
-<pre><code>
-### Submitting data directly from within a job
-
-These commands could be part of every users job, or in the batch systems configurable preambles/postambles.
-
-</code></pre>
-
-<p>$ cat my_job.sh</p>
-<h1 id="binbash_5">!/bin/bash</h1>
-<h1 id="example-job-script-for-torque-or-slurm_5">Example job script for Torque or SLURM</h1>
-<p>echo "$PBS_JOBID or $SLURM_JOBID"
+<p>This becomes:</p>
+<div class="codehilite"><pre><span></span><code>$ cat my_job_epmt.sh
+#!/bin/bash
+# Example job script for Torque or SLURM
 epmt start
 epmt run ./compute_the_world --debug 
 epmt stop
-epmt submit</p>
-<pre><code>
+</code></pre></div>
 
-The start/stop cycle can be removed with the **--auto** or **-a** flag, which performs start and stop for you.  
 
-</code></pre>
+<p>Or more succintlty by automating the start/stop cycle with the <strong>--auto</strong> or <strong>-a</strong> flag:  </p>
+<div class="codehilite"><pre><span></span><code>$ cat my_job_epmt2.sh
+#!/bin/bash
+# Example job script for Torque or SLURM
+epmt -a run ./compute_the_world --debug
+</code></pre></div>
 
-<p>$ epmt -a run ./debug_the_world --outliers
-$ epmt submit</p>
-<pre><code>
-### Submitting data from the current session
 
-If not inside of a batch environment, **epmt** will *attempt to fake-and-bake a job id*. This is quite useful when just performing interactive runs. **Note you may not be able to submit these jobs to a shared database. The session ID is not guaranteed to be unique across reboots, much less other systems** However, this use case is perfectly acceptable when using a private database.
+<p>But usually we want to run more than one executable. We could have any number of run statements:</p>
+<div class="codehilite"><pre><span></span><code>$ cat my_job_epmt3.sh
+#!/bin/bash
+# Example job script for Torque or SLURM
+#
+epmt start
+epmt run ./initialize_the_world --random 
+epmt run ./compute_the_world 
+epmt run ./postprocess_the_world 
+epmt stop
+</code></pre></div>
 
-</code></pre>
 
-<p>$ epmt start
+<p>Let's skip all the markup, as we can do it with only environment variables. <strong>EPMT</strong> provides the configuration to export to the environment through the <strong>source</strong> command. The use for this is in a job file and is meant to be evaluated by the running shell, be that some form of Bash or Csh. <strong>epmt source</strong> just prints the required environment variables in Bash format <strong>unless either the "SHELL" or "_" environment variable ends in csh</strong>. </p>
+<p><strong>Note the unset of LD_PRELOAD before stop!</strong> This line is to prevent the data collection routine from running on <strong>epmt stop</strong> itself.</p>
+<div class="codehilite"><pre><span></span><code>$ cat my_job_bash.sh
+#!/bin/bash
+# Example job script for Torque or SLURM
+
+### Preamble, collect job metadata and monitor all processes/threads  
+epmt start
+eval `epmt source`
+#
+./initialize_the_world --random 
+./compute_the_world 
+./postprocess_the_world 
+#
+# Postamble, disable monitoring and collect job metadata
+unset LD_PRELOAD
+epmt stop
+</code></pre></div>
+
+
+<p>Here's an example for Csh, when run interactively, </p>
+<div class="codehilite"><pre><span></span><code>$ /bin/csh
+&gt; epmt -j1 source
+setenv PAPIEX_OPTIONS PERF_COUNT_SW_CPU_CLOCK;
+setenv PAPIEX_OUTPUT /tmp/epmt/1/;
+setenv LD_PRELOAD /Users/phil/Work/GFDL/epmt.git/../papiex-oss/papiex-oss-install/lib/libpapiex.so:/Users/phil/Work/GFDL/epmt.git/../papiex-oss/papiex-oss-install/lib/libpapi.so:/Users/phil/Work/GFDL/epmt.git/../papiex-oss/papiex-oss-install/lib/libpfm.so:/Users/phil/Work/GFDL/epmt.git/../papiex-oss/papiex-oss-install/lib/libmonitor.so
+</code></pre></div>
+
+
+<h2 id="importing-data-into-the-database">Importing Data Into the Database<a class="headerlink" href="#importing-data-into-the-database" title="Permanent link">&para;</a></h2>
+<p>After collecting the data, jobs (groups of processes) are imported into the database with the <strong>submit</strong> command. This command takes arguments in the form of directories or tar files that must contain a <em>job_metadata</em> file.   </p>
+<p>Normal operation is to submit one or more directories:</p>
+<p><code>epmt submit &lt;dir1/&gt; [...]</code></p>
+<p>One can also submit a list of compressed tar files:</p>
+<p><code>epmt submit &lt;compressed_dir_file.*z&gt; [...]</code></p>
+<p>There is also a mode where the current environment is used to determine where to find the data.</p>
+<p><code>epmt submit</code></p>
+<h3 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h3>
+<h4 id="submitting-a-directory-of-compressed-job-data">Submitting a directory of compressed job data<a class="headerlink" href="#submitting-a-directory-of-compressed-job-data" title="Permanent link">&para;</a></h4>
+<p>This might happen at the end of the day via a cron job:</p>
+<div class="codehilite"><pre><span></span><code>$ epmt submit &lt;dir&gt;/*tgz
+</code></pre></div>
+
+
+<h3 id="submitting-data-directly-from-within-a-job">Submitting data directly from within a job<a class="headerlink" href="#submitting-data-directly-from-within-a-job" title="Permanent link">&para;</a></h3>
+<p>These commands could be part of every users job, or in the batch systems configurable preambles/postambles.</p>
+<div class="codehilite"><pre><span></span><code>$ cat my_job.sh
+#!/bin/bash
+# Example job script for Torque or SLURM
+echo &quot;$PBS_JOBID or $SLURM_JOBID&quot;
+epmt start
+epmt run ./compute_the_world --debug 
+epmt stop
+epmt submit
+</code></pre></div>
+
+
+<p>The start/stop cycle can be removed with the <strong>--auto</strong> or <strong>-a</strong> flag, which performs start and stop for you.  </p>
+<div class="codehilite"><pre><span></span><code>$ epmt -a run ./debug_the_world --outliers
+$ epmt submit
+</code></pre></div>
+
+
+<h3 id="submitting-data-from-the-current-session">Submitting data from the current session<a class="headerlink" href="#submitting-data-from-the-current-session" title="Permanent link">&para;</a></h3>
+<p>If not inside of a batch environment, <strong>epmt</strong> will <em>attempt to fake-and-bake a job id</em>. This is quite useful when just performing interactive runs. <strong>Note you may not be able to submit these jobs to a shared database. The session ID is not guaranteed to be unique across reboots, much less other systems</strong> However, this use case is perfectly acceptable when using a private database.</p>
+<div class="codehilite"><pre><span></span><code>$ epmt start
 WARNING:epmt_cmds:JOB_ID unset: Using session id 6948 as JOB_ID
 WARNING:epmt_cmds:JOB_NAME unset: Using job id 6948 as JOB_NAME
 WARNING:epmt_cmds:JOB_SCRIPTNAME unset: Using process name 6948 as JOB_SCRIPTNAME
 WARNING:epmt_cmds:JOB_USER unset: Using username phil as JOB_USE$ epmt run ./debug_the_world --outliers
 $ epmt stop
-$ epmt submit</p>
-<pre><code>
-To initialize a new session leader, consider using the **setsid** command. 
+$ epmt submit
+</code></pre></div>
 
-## Usage and Configuration
 
-**EPMT** gets all of it's configuration from two places, environment variables and the **settings.py** file. One can examine all the current settings by passing the **--help** option.
-
-</code></pre>
-
-<p>$ ./epmt help
+<p>To initialize a new session leader, consider using the <strong>setsid</strong> command. </p>
+<h2 id="usage-and-configuration">Usage and Configuration<a class="headerlink" href="#usage-and-configuration" title="Permanent link">&para;</a></h2>
+<p><strong>EPMT</strong> gets all of it's configuration from two places, environment variables and the <strong>settings.py</strong> file. One can examine all the current settings by passing the <strong>--help</strong> option.</p>
+<div class="codehilite"><pre><span></span><code>$ ./epmt help
 usage: epmt [-n] [-d] [-h] [-a] [--drop]
-            [epmt_cmd] [epmt_cmd_args [epmt_cmd_args ...]]</p>
-<p>positional arguments:
+            [epmt_cmd] [epmt_cmd_args [epmt_cmd_args ...]]
+
+positional arguments:
   epmt_cmd       start, run, stop, submit, dump
-  epmt_cmd_args  Additional arguments, command dependent</p>
-<p>optional arguments:
-  -n, --dry-run  Don't touch the database
+  epmt_cmd_args  Additional arguments, command dependent
+
+optional arguments:
+  -n, --dry-run  Don&#39;t touch the database
   -v, --verbose  Increase level of verbosity/debug
   -h, --help     Show this help message and exit
   -a, --auto     Do start/stop when running
-  --drop         Drop all tables/data and recreate before importing</p>
-<p>settings.py (overridden by below env. vars):
-db_params               {'host': 'localhost', 'password': 'example', 'user': 'postgres', 'dbname': 'EPMT', 'provider': 'postgres'}
-debug                   False                                                 <br />
-input_pattern           <em>-papiex-[0-9]</em>-[0-9]*.csv                            <br />
-install_prefix          ../papiex-oss/papiex-oss-install/                     <br />
-papiex_options          PERF_COUNT_SW_CPU_CLOCK                               <br />
-epmt_output_prefix      /tmp/epmt/                                              </p>
-<p>environment variables (overrides settings.py):</p>
-<pre><code>
-## Environment Variables
+  --drop         Drop all tables/data and recreate before importing
 
-The following variables replace, at run-time, the values in the **db_params** dictionary found in **settings.py**.
+settings.py (overridden by below env. vars):
+db_params               {&#39;host&#39;: &#39;localhost&#39;, &#39;password&#39;: &#39;example&#39;, &#39;user&#39;: &#39;postgres&#39;, &#39;dbname&#39;: &#39;EPMT&#39;, &#39;provider&#39;: &#39;postgres&#39;}
+debug                   False                                                   
+input_pattern           *-papiex-[0-9]*-[0-9]*.csv                              
+install_prefix          ../papiex-oss/papiex-oss-install/                       
+papiex_options          PERF_COUNT_SW_CPU_CLOCK                                 
+epmt_output_prefix      /tmp/epmt/                                              
 
-</code></pre>
+environment variables (overrides settings.py):
+</code></pre></div>
 
-<p>EPMT_DB_PROVIDER
+
+<h2 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h2>
+<p>The following variables replace, at run-time, the values in the <strong>db_params</strong> dictionary found in <strong>settings.py</strong>.</p>
+<div class="codehilite"><pre><span></span><code>EPMT_DB_PROVIDER
 EPMT_DB_USER
 EPMT_DB_PASSWORD
 EPMT_DB_HOST
 EPMT_DB_DBNAME
-EPMT_DB_FILENAME</p>
-<pre><code>
-## settings.py
+EPMT_DB_FILENAME
+</code></pre></div>
 
-There are a number of example files provided. See **INSTALL.md** for more details.
 
-</code></pre>
-
-<p>$ ls settings
+<h3 id="settingspy">settings.py<a class="headerlink" href="#settingspy" title="Permanent link">&para;</a></h3>
+<p>There are a number of example files provided. See <strong>INSTALL.md</strong> for more details.</p>
+<div class="codehilite"><pre><span></span><code>$ ls settings
 settings_pg_container.py    settings_sqlite_inmem.py
 settings_pg_localhost.py    settings_sqlite_localfile.py
 $
@@ -516,80 +906,67 @@ $ cp /path/to/install/settings/settings_sqlite_inmem.py /path/to/install/setting
 $ 
 $ # Persistent and on disk
 $ cp /path/to/install/settings/settings_sqlite_localfile.py /path/to/install/settings.py
-$ epmt -v -v submit /dir/to/jobdata</p>
-<pre><code>
-## Debugging
+$ epmt -v -v submit /dir/to/jobdata
+</code></pre></div>
 
-**EPMT** can be passed noth **-n** (dry-run) and **-v** (verbosity) to help with debugging. Add more **-v** flags to increase the level of information printed.
 
-</code></pre>
+<h2 id="debugging">Debugging<a class="headerlink" href="#debugging" title="Permanent link">&para;</a></h2>
+<p><strong>EPMT</strong> can be passed noth <strong>-n</strong> (dry-run) and <strong>-v</strong> (verbosity) to help with debugging. Add more <strong>-v</strong> flags to increase the level of information printed.</p>
+<div class="codehilite"><pre><span></span><code>$ epmt -v start
+</code></pre></div>
 
-<p>$ epmt -v start</p>
-<pre><code>
-Or to attempt a submit without touching the database:
 
-</code></pre>
+<p>Or to attempt a submit without touching the database:</p>
+<div class="codehilite"><pre><span></span><code>$ epmt -v -v -n submit /dir/to/jobdata
+</code></pre></div>
 
-<p>$ epmt -v -v -n submit /dir/to/jobdata</p>
-<pre><code>
-Also, one can decode and dump the job_metadata file in a dir or compressed dir.
 
-</code></pre>
+<p>Also, one can decode and dump the job_metadata file in a dir or compressed dir.</p>
+<div class="codehilite"><pre><span></span><code>$ epmt dump ~/Downloads/yrs05-25.20190221/CM4_piControl_C_atmos_00050101.papiex.gfdl.19712961.tgz 
+exp_component           atmos                                                   
+exp_jobname             CM4_piControl_C_atmos_00050101                          
+exp_name                CM4_piControl_C                                         
+exp_oname               00050101                                                
+job_el_env_changes      {}                                                      
+job_el_env_changes_len  0                                                       
+job_el_from_batch       []                                                      
+job_el_status           0                                                       
+job_el_stop             2019-02-20 22:13:23.131187                              
+job_pl_env              {&#39;LANG&#39;: &#39;en_US&#39;, &#39;PBS_QUEUE&#39;: &#39;batch&#39;, &#39;SHELL&#39;: &#39;/bin/csh&#39;, &#39;PBS_ENVIRONMENT&#39;: &#39;PBS_BATCH&#39;, &#39;PAPIEX_TAGS&#39;: &#39;atmos&#39;, &#39;SHLVL&#39;: &#39;3&#39;, &#39;PBS_WALLTIME&#39;: &#39;216000&#39;, &#39;MOAB_NODELIST&#39;: &#39;pp057.princeton.rdhpcs.noaa.gov&#39;, &#39;PBS_VERSION&#39;: &#39;TORQUE-6.0.2&#39;, &#39;PAPIEX_OUTPUT&#39;: &#39;/vftmp/Foo.Bar/pbs20345339/papiex&#39;,  &#39;LOADEDMODULES&#39;: &#39;&#39;, &#39;LC_TIME&#39;: &#39;C&#39;, &#39;MACHTYPE&#39;: &#39;x86_64&#39;, &#39;PAPIEX_OPTIONS&#39;: &#39;PERF_COUNT_SW_CPU_CLOCK&#39;, &#39;MOAB_GROUP&#39;: &#39;f&#39;}
+job_pl_env_len          81                                                      
+job_pl_from_batch       []                                                      
+job_pl_groupnames       [&#39;f&#39;, &#39;f&#39;]                                              
+job_pl_hostname         pp057                                                   
+job_pl_id               20345339.moab01.princeton.rdhpcs.noaa.gov               
+job_pl_jobname          CM4_piControl_C_atmos_00050101                          
+job_pl_scriptname       CM4_piControl_C_atmos_00050101                          
+job_pl_start            2019-02-20 19:58:41.274267                              
+job_pl_submit           2019-02-20 19:58:41.274463                              
+job_pl_username         Foo.Bar                                        
+</code></pre></div>
 
-<p>$ epmt dump ~/Downloads/yrs05-25.20190221/CM4_piControl_C_atmos_00050101.papiex.gfdl.19712961.tgz 
-exp_component           atmos                                                 <br />
-exp_jobname             CM4_piControl_C_atmos_00050101                        <br />
-exp_name                CM4_piControl_C                                       <br />
-exp_oname               00050101                                              <br />
-job_el_env_changes      {}                                                    <br />
-job_el_env_changes_len  0                                                     <br />
-job_el_from_batch       []                                                    <br />
-job_el_status           0                                                     <br />
-job_el_stop             2019-02-20 22:13:23.131187                            <br />
-job_pl_env              {'LANG': 'en_US', 'PBS_QUEUE': 'batch', 'SHELL': '/bin/csh', 'PBS_ENVIRONMENT': 'PBS_BATCH', 'PAPIEX_TAGS': 'atmos', 'SHLVL': '3', 'PBS_WALLTIME': '216000', 'MOAB_NODELIST': 'pp057.princeton.rdhpcs.noaa.gov', 'PBS_VERSION': 'TORQUE-6.0.2', 'PAPIEX_OUTPUT': '/vftmp/Foo.Bar/pbs20345339/papiex',  'LOADEDMODULES': '', 'LC_TIME': 'C', 'MACHTYPE': 'x86_64', 'PAPIEX_OPTIONS': 'PERF_COUNT_SW_CPU_CLOCK', 'MOAB_GROUP': 'f'}
-job_pl_env_len          81                                                    <br />
-job_pl_from_batch       []                                                    <br />
-job_pl_groupnames       ['f', 'f']                                            <br />
-job_pl_hostname         pp057                                                 <br />
-job_pl_id               20345339.moab01.princeton.rdhpcs.noaa.gov             <br />
-job_pl_jobname          CM4_piControl_C_atmos_00050101                        <br />
-job_pl_scriptname       CM4_piControl_C_atmos_00050101                        <br />
-job_pl_start            2019-02-20 19:58:41.274267                            <br />
-job_pl_submit           2019-02-20 19:58:41.274463                            <br />
-job_pl_username         Foo.Bar                                        </p>
-<pre><code>
-## EPMT under Docker 
 
-Using the epmt-command docker image, we run **epmt** on a local directory to submit and set the submission DB host environment variable:
+<h2 id="epmt-under-docker">EPMT under Docker<a class="headerlink" href="#epmt-under-docker" title="Permanent link">&para;</a></h2>
+<p>Using the epmt-command docker image, we run <strong>epmt</strong> on a local directory to submit and set the submission DB host environment variable:</p>
+<div class="codehilite"><pre><span></span><code>$ docker run --network=host -ti --rm -v `pwd`:/app -w /app -e EPMT_DB_HOST=&lt;hostname&gt; epmt-command:latest -v submit &lt;localdir/&gt;
+</code></pre></div>
 
-</code></pre>
 
-<p>$ docker run --network=host -ti --rm -v <code>pwd</code>:/app -w /app -e EPMT_DB_HOST=<hostname> epmt-command:latest -v submit <localdir/></p>
-<pre><code>
-This could be easilt aliased for convenience.
+<p>This could be easily aliased for convenience.</p>
+<h2 id="analysis-of-epmt-data">Analysis of EPMT Data<a class="headerlink" href="#analysis-of-epmt-data" title="Permanent link">&para;</a></h2>
+<p>Current analytics are performed in an iPython notebook, specifically the SciPy-Notebook as described on <a href="https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html">their homepage</a>.  </p>
+<p>If you have Jupyter installed locally <strong>and</strong> you have installed the prerequisite Python modules (see <strong>INSTALL.md</strong>), there is no need to use the Docker image. You can simply load the <strong>EPMT.ipynb</strong> from the source directory in your environment and begin.</p>
+<p>However, for those without an environment, using Docker (and assuming you build the images as described in <strong>INSTALL.md</strong>):</p>
+<div class="codehilite"><pre><span></span><code>$ docker-compose up notebook
+</code></pre></div>
 
-# Analysis of EPMT Data 
 
-Current analytics are performed in an iPython notebook, specifically the SciPy-Notebook as described on [their homepage](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html).  
-
-If you have Jupyter installed locally **and** you have installed the prerequisite Python modules (see **INSTALL.md**), there is no need to use the Docker image. You can simply load the **EPMT.ipynb** from the source directory in your environment and begin.
-
-However, for those without an environment, using Docker (and assuming you build the images as described in **INSTALL.md**):
-
-</code></pre>
-
-<p>$ docker-compose up notebook</p>
-<pre><code>
-Follow the instructions printed to the screen to navigate to **EPMT.ipynb** or try this link [http://localhost:8888/notebooks/EPMT.ipynb]() and enter the encryption key. You must be in the directory where EPMT.ipynb exists when you start the notebook service. Further documentation exists in that file.
-
-## Data Dictionary
-
-EPMT collects data both from the job runtime and the applications run in that environment. See the **models/** directory for what fixed data is stored related to each object. Metric data is stored differently and the data collector's data directionary can be found in papiex-oss/README.md. At the time of this writing it looked like this:
-
-</code></pre>
-
-<h2 id="key-source-description">Key                     Source                          Description</h2>
-<p>exename         PAPI                            Name of the application, usually argv[0]
+<p>Follow the instructions printed to the screen to navigate to <strong>EPMT.ipynb</strong> or try this link <a href="">http://localhost:8888/notebooks/EPMT.ipynb</a> and enter the encryption key. You must be in the directory where EPMT.ipynb exists when you start the notebook service. Further documentation exists in that file.</p>
+<h2 id="data-dictionary">Data Dictionary<a class="headerlink" href="#data-dictionary" title="Permanent link">&para;</a></h2>
+<p>EPMT collects data both from the job runtime and the applications run in that environment. See the <strong>models/</strong> directory for what fixed data is stored related to each object. Metric data is stored differently and the data collector's data directionary can be found in papiex-oss/README.md. At the time of this writing it looked like this:</p>
+<div class="codehilite"><pre><span></span><code>Key                     Source                          Description
+-------------------------------------------------------------------------------------------------------------------------------------
+exename         PAPI                            Name of the application, usually argv[0]
 path            PAPI                            Path to the application
 args            monitor                         All arguments to the application not including argv[0]
 pid         getpid()                        Process id
@@ -610,102 +987,127 @@ inblock         getrusage(RUSAGE_THREAD)                512B blocks read from I/
 outblock        getrusage(RUSAGE_THREAD)                512B blocks written to I/O 
 vol_ctxsw       getrusage(RUSAGE_THREAD)                Boluntary context switches (yields)
 invol_ctxsw     getrusage(RUSAGE_THREAD)                Involuntary context switches (preemptions)
-num_threads     /proc/<pid>/task/<tid>/stat field 20                Threads in process at finish
-starttime       /proc/<pid>/task/<tid>/stat field 22                    Timestamp in jiffies after boot thread was started
-processor       /proc/<pid>/task/<tid>/stat field 39                    CPU this thread last ran on
-delayacct_blkio_time    /proc/<pid>/task/<tid>/stat field 42                    Jiffies process was blocked in D state on I/O device
-guest_time      /proc/<pid>/task/<tid>/stat field 43                    Jiffies running a virtual CPU for a guest OS
-rchar           /proc/<pid>/task/<tid>/io line 1                Bytes read via syscall (may come from pagecache not I/O device)
-wchar           /proc/<pid>/task/<tid>/io line 2                Bytes written via syscall (may go to pagecache not I/O device)
-syscr           /proc/<pid>/task/<tid>/io line 3                Read syscalls 
-syscw           /proc/<pid>/task/<tid>/io line 4                Write syscalls
-read_bytes      /proc/<pid>/task/<tid>/io line 4                Bytes read from I/O device
-write_bytes     /proc/<pid>/task/<tid>/io line 4                Bytes written to I/O device
-cancelled_write_bytes   /proc/<pid>/task/<tid>/io line 4                Number of bytes discarded by truncation
-time_oncpu      /proc/<pid>/task/<tid>/schedstat                Time in jiffies spent running the CPI
-time_waiting        /proc/<pid>/task/<tid>/schedstat                Time in jiffies waiting for a run queue while runnable
-timeslices      /proc/<pid>/task/<tid>/schedstat                Number of run periods on CPU
-rdtsc_duration      <Hardware RDTSC>                        Real time cycle counter duration of thread</p>
-<pre><code>
-Additional metrics can be configured either in two ways:
-* The papiex_options string In **settings.py** if using ```epmt run``` or ```epmt source```
-* The value of the **PAPIEX_OPTIONS** environment variable if using ```LD_PRELOAD``` directly.
+num_threads     /proc/&lt;pid&gt;/task/&lt;tid&gt;/stat field 20                Threads in process at finish
+starttime       /proc/&lt;pid&gt;/task/&lt;tid&gt;/stat field 22                    Timestamp in jiffies after boot thread was started
+processor       /proc/&lt;pid&gt;/task/&lt;tid&gt;/stat field 39                    CPU this thread last ran on
+delayacct_blkio_time    /proc/&lt;pid&gt;/task/&lt;tid&gt;/stat field 42                    Jiffies process was blocked in D state on I/O device
+guest_time      /proc/&lt;pid&gt;/task/&lt;tid&gt;/stat field 43                    Jiffies running a virtual CPU for a guest OS
+rchar           /proc/&lt;pid&gt;/task/&lt;tid&gt;/io line 1                Bytes read via syscall (may come from pagecache not I/O device)
+wchar           /proc/&lt;pid&gt;/task/&lt;tid&gt;/io line 2                Bytes written via syscall (may go to pagecache not I/O device)
+syscr           /proc/&lt;pid&gt;/task/&lt;tid&gt;/io line 3                Read syscalls 
+syscw           /proc/&lt;pid&gt;/task/&lt;tid&gt;/io line 4                Write syscalls
+read_bytes      /proc/&lt;pid&gt;/task/&lt;tid&gt;/io line 4                Bytes read from I/O device
+write_bytes     /proc/&lt;pid&gt;/task/&lt;tid&gt;/io line 4                Bytes written to I/O device
+cancelled_write_bytes   /proc/&lt;pid&gt;/task/&lt;tid&gt;/io line 4                Number of bytes discarded by truncation
+time_oncpu      /proc/&lt;pid&gt;/task/&lt;tid&gt;/schedstat                Time in jiffies spent running the CPI
+time_waiting        /proc/&lt;pid&gt;/task/&lt;tid&gt;/schedstat                Time in jiffies waiting for a run queue while runnable
+timeslices      /proc/&lt;pid&gt;/task/&lt;tid&gt;/schedstat                Number of run periods on CPU
+rdtsc_duration      &lt;Hardware RDTSC&gt;                        Real time cycle counter duration of thread
+</code></pre></div>
 
-The value of these should be a comma separated string:
-</code></pre>
 
-<p>$ export PAPIEX_OPTIONS="PERF_COUNT_SW_CPU_CLOCK,PAPI_CYCLES"</p>
-<pre><code>
-To list available and functioning metrics, use one of the included command line tools:
+<p>Additional metrics can be configured either in two ways:
+* The papiex_options string In <strong>settings.py</strong> if using <code>epmt run</code> or <code>epmt source</code>
+* The value of the <strong>PAPIEX_OPTIONS</strong> environment variable if using <code>LD_PRELOAD</code> directly.</p>
+<p>The value of these should be a comma separated string:</p>
+<div class="codehilite"><pre><span></span><code>$ export PAPIEX_OPTIONS=&quot;PERF_COUNT_SW_CPU_CLOCK,PAPI_CYCLES&quot;
+</code></pre></div>
+
+
+<p>To list available and functioning metrics, use one of the included command line tools:
  * papi_avail
  * papi_native_avail
  * check_events (libpfm)
  * showevtinfo (libpfm)
- * perf list (linux)
+ * perf list (linux)</p>
+<p><strong>The PERF_COUNT_SW_* events should work on any system that has the proper /proc/sys/kernel/perf_event_paranoid setting</strong>.</p>
+<p>One should verify the functionality of the metric using the <code>papi_command_line</code> tool:</p>
+<div class="codehilite"><pre><span></span><code>$ papi_command_line PERF_COUNT_SW_CPU_CLOCK
 
-**The PERF_COUNT_SW_* events should work on any system that has the proper /proc/sys/kernel/perf_event_paranoid setting**.
+$ papi_command_line CYCLES
+</code></pre></div>
 
-One should verify the functionality of the metric using the ```papi_command_line``` tool:
 
-</code></pre>
+<p>Note that often in virtual environments, hardware counters are not often available in the VM. </p>
+                
+              
+              
+                
 
-<p>$ papi_command_line PERF_COUNT_SW_CPU_CLOCK</p>
-<p>$ papi_command_line CYCLES</p>
-<p>```</p>
-<p>Note that often in virtual environments, hardware counters are not often available in the VM. </p></div>
-            </div>
+
+              
+            </article>
+          </div>
         </div>
-
-        <footer class="col-md-12">
-            <hr>
-            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
-        </footer>
-        <script>
-            var base_url = ".",
-                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
-        </script>
-        <script src="js/base.js" defer></script>
-
-        <div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
-                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+      </main>
+      
+        
+<footer class="md-footer">
+  
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid" aria-label="Footer">
+        
+          <a href="INSTALL.html" title="EPMT Install" class="md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
             </div>
-            <div class="modal-body">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th style="width: 20%;">Keys</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td class="help shortcut"><kbd>?</kbd></td>
-                    <td>Open this help</td>
-                  </tr>
-                  <tr>
-                    <td class="next shortcut"><kbd>n</kbd></td>
-                    <td>Next page</td>
-                  </tr>
-                  <tr>
-                    <td class="prev shortcut"><kbd>p</kbd></td>
-                    <td>Previous page</td>
-                  </tr>
-                  <tr>
-                    <td class="search shortcut"><kbd>s</kbd></td>
-                    <td>Search</td>
-                  </tr>
-                </tbody>
-              </table>
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Previous
+                </span>
+                EPMT Install
+              </div>
             </div>
-            <div class="modal-footer">
+          </a>
+        
+        
+          <a href="epmt_cmds.html" title="EPMT Commands" class="md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-footer-nav__title">
+              <div class="md-ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                EPMT Commands
+              </div>
             </div>
-        </div>
+            <div class="md-footer-nav__button md-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
     </div>
-</div>
-
-    </body>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-footer-copyright">
+        
+        Made with
+        <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+          Material for MkDocs
+        </a>
+      </div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    
+      <script src="assets/javascripts/vendor.a0c4167b.min.js"></script>
+      <script src="assets/javascripts/bundle.fb26dd1d.min.js"></script><script id="__lang" type="application/json">{"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents"}</script>
+      
+      <script>
+        app = initialize({
+          base: ".",
+          features: [],
+          search: Object.assign({
+            worker: "assets/javascripts/worker/search.37585f48.min.js"
+          }, typeof search !== "undefined" && search)
+        })
+      </script>
+      
+    
+  </body>
 </html>
