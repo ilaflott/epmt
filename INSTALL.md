@@ -6,7 +6,7 @@ This is a tool to collect metadata and performance data about an entire job down
 
 The software contained in this repository was written by Philip Mucci of Minimal Metrics LLC.
 
-# Installation With Release File
+## Installation With Release File
 
 The release file includes EPMT, Data Collection Libraries, Notebook and EPMT Interface 
 
@@ -16,7 +16,7 @@ For installing with a release file you'll need:
 * Release file `EPMT-release-(Version)-(OS).tgz` ex: EPMT-release-3.8.20-centos-7.tgz
 * Installer script `epmt-installer`
 
-## Run Install Script
+### Run Install Script
 
 Use the provided epmt-installer script 
 
@@ -56,10 +56,13 @@ epmt-installer  EPMT-release-3.8.20-centos-7.tgz
 
 ### Add EPMT to path
 
- >chris@chrisOpti:/tmp/ep-inst$ export PATH="/tmp/ep-inst/epmt-3.8.20/epmt-install/epmt:$PATH"
- chris@chrisOpti:/tmp/ep-inst$ cd /tmp/
- chris@chrisOpti:/tmp/$ epmt --version
- EPMT 3.8.20
+```text
+chris@chrisOpti:/tmp/ep-inst$ export PATH="/tmp/ep-inst/epmt-3.8.20/epmt-install/epmt:$PATH"
+# Move away from install directory to test updating path
+chris@chrisOpti:/tmp/ep-inst$ cd /tmp/
+chris@chrisOpti:/tmp/$ epmt --version
+EPMT 3.8.20
+```
 
 ### Verify installation
 Here I add a verbosity switch to get a detailed check output
@@ -112,9 +115,9 @@ Here I add a verbosity switch to get a detailed check output
 ---
 
 
-# Installation From Source
+## Installation From Source
 
-## Requirements
+### Requirements
 
 A Linux (or container image) with:
 
@@ -128,9 +131,6 @@ For a stock Ubuntu 16.04 (or container):
 ```text
  $ apt-get update
  $ apt-get install -y python python-pip git gcc 
-$ apt-get install -y python python-pip git gcc 
- $ apt-get install -y python python-pip git gcc 
-
 ```
 
 ## Source Code
@@ -158,7 +158,7 @@ You also need the **papiex** data collection libraries, **papiex-epmt** branch i
 
 ```
 
-## Installation of the Data Collection Libraries
+### Installation of the Data Collection Libraries
 
 Compile the data collection libraries used by **EPMT**:
 
@@ -180,8 +180,8 @@ Compile the data collection libraries used by **EPMT**:
 
 The we run the data collection tests. If a test is *SKIPPED*, the test suite will still report a failure. 
 
-```text
-cd papiex; make PREFIX=/home/chris/Documents/Playground/MM/build/papiex-oss/papiex-epmt-install LIBPAPIEX=/home/chris/Documents/Playground/MM/build/papiex-oss/papiex-epmt-install/lib/libpapiex.so check
+```
+ cd papiex
  build/papiex-oss$ make check
  make[1]: Entering directory '/home/chris/Documents/Playground/MM/build/papiex-oss/papiex'
  make -C /home/chris/Documents/Playground/MM/build/papiex-oss/papiex/x86_64-Linux -f /home/ chris/Documents/Playground/MM/build/papiex-oss/papiex/src/Makefile check
@@ -279,18 +279,7 @@ For detailed hardware and software performance metrics to collected by non-privi
 
 This isn't necessary unless one would like to collect metrics exposed by [PAPI](http://icl.utk.edu/papi/), [libpfm](http://perfmon2.sourceforge.net/) and the [perfevent](http://web.eece.maine.edu/~vweaver/projects/perf_events/) subsystems. But collecting this data is, after all, the entire point of this tool. See [Stack Overflow](https://stackoverflow.com/questions/51911368/what-restriction-is-perf-event-paranoid-1-actually-putting-on-x86-perf) for a discussion of the setting. A setting of 1 is perfectly safe for production systems.
 
-
-## Installation of EPMT
-
-As there is no virtual environment at the moment, the source tree should be copied in its entirety to the target machines. Here we use *build/epmt* as our source dir, parallel to *build/papiex-epmt-install* as above. 
-
-```text
-$ cd build
-$ # 
-$ # We already did this above
-$ # git clone https://<user>@bitbucket.org/minimalmetrics/epmt.git
-$ cd epmt
-```
+## Modes of EPMT
 
 There are three modes to **EPMT** usage, collection, submission and analysis, and have an increasing number of dependencies:
 
@@ -338,7 +327,7 @@ Tests pass!
 We can now collect some test data.  
 
 ```text
-$ ./epmt -a run firefox
+$ ./epmt run -a firefox
 $ ls /tmp/epmt/1/
 job_metadata  linuxkit-025000000001-papiex-14346-0.csv
 ```
@@ -347,17 +336,7 @@ If this fails, then it's likely the papiex installation is either missing or mis
 
 ### Submission
 
-In order to submit data to the database, we need to install the dependencies. It is recommended that one use the Docker image which contains all the dependencies and **requires no user setup**. However, one may install these in a Python virtual environment, to the system Python or the user's local repository, using **pip install** as below:
-
-```text
-$ cat requirements.txt
-pandas==0.17.1
-pony==0.7.6
-psycopg2-binary==2.7.5
-$ pip install --user -r requirements.txt
-```
-
-Now we can submit our previous job to the default, in-memory, database defined in **settings.py**:
+We can submit our previous job to the default, in-memory, database defined in **settings.py**:
 
 ```text
 $ ./epmt -v submit /tmp/epmt/1/
@@ -409,7 +388,7 @@ INFO:epmt_cmds:Committed job 1 to database: Job[u'1']
 
 You are ready to configure a real database.
 
-### Configuring a Database
+#### Configuring a Database
 
 There is a prebuilt settings.py file to connect to the localhost.
 
@@ -423,68 +402,53 @@ db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','h
 
 The database is ready to go.
 
-### Dropping and Recreating Database 
-
-You can do this with the provided **Adminer** console: [http://localhost:8080/?pgsql=db&username=postgres]() or via the command line with **psql**. 
-
-```text
-$ sudo su - postgres
-$ psql -c "create database EPMT"
+#### Dropping and Recreating Database 
+The drop command will confirm you wish to drop the database.
 ```
-
+$ epmt drop
+This will drop the entire database. This action cannot be reversed. Are you sure (yes/NO): y
+WARNING:orm.sqlalchemy:DROPPING ALL DATA AND TABLES!
+```
 ## Analysis and Visualization
 
 
-Here we need a working **ipython notebook** data analytics environment along with **EPMT**'s dependencies. It's easiest to build/use the existing the **epmt-notebook** container image, which uses the supported [jupyter/scipy-notebook]() container image from Docker Hub. 
+EPMT Uses a **ipython notebook** data analytics environment.  Starting the jupyter notebook is easy from the **epmt notebook** command.
 
 ```text
-$ make
-.
-.
-.
-$ docker images
-REPOSITORY               TAG                 IMAGE ID            CREATED              SIZE
-epmt-notebook            latest              045023fc0ccc        About a minute ago   4.3GB
-epmt-command             latest              530fe3198a1d        About a minute ago   1.1GB
-python-epmt              latest              5b99ede4828d        About a minute ago   1.1GB
+$ epmt notebook
+[I 15:39:24.236 NotebookApp] Serving notebooks from local directory: /home/chris/Documents/playground/MM/build/epmt
+[I 15:39:24.236 NotebookApp] The Jupyter Notebook is running at:
+[I 15:39:24.236 NotebookApp] http://localhost:8888/?token=9c7529e19e12cb8121d66ff471e96fdd3056f6acc4480274
+[I 15:39:24.236 NotebookApp]  or http://127.0.0.1:8888/?token=9c7529e19e12cb8121d66ff471e96fdd3056f6acc4480274
+[I 15:39:24.236 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+[C 15:39:24.263 NotebookApp] 
+    
+    To access the notebook, open this file in a browser:
+        file:///home/chris/.local/share/jupyter/runtime/nbserver-18690-open.html
+    Or copy and paste one of these URLs:
+        http://localhost:8888/?token=9c7529e19e12cb8121d66ff471e96fdd3056f6acc4480274
+     or http://127.0.0.1:8888/?token=9c7529e19e12cb8121d66ff471e96fdd3056f6acc4480274
 ```
 
-Once **epmt-notebook** is built, one starts the notebook via the command line. 
-
-```text
-$ docker-compose up notebook
-Creating epmt_notebook_1 ... done
-Attaching to epmt_notebook_1
-notebook_1  | Executing the command: jupyter notebook
-notebook_1  | [I 16:21:22.330 NotebookApp] JupyterLab extension loaded from /opt/conda/lib/python3.6/site-packages/jupyterlab
-notebook_1  | [I 16:21:22.330 NotebookApp] JupyterLab application directory is /opt/conda/share/jupyter/lab
-notebook_1  | [I 16:21:22.332 NotebookApp] Serving notebooks from local directory: /home/jovyan
-notebook_1  | [I 16:21:22.333 NotebookApp] The Jupyter Notebook is running at:
-notebook_1  | [I 16:21:22.333 NotebookApp] http://(9a7974f0ffb9 or 127.0.0.1):8888/?token=c9d7cb543a82a7a278197b874c789da99a7ed91cd2f84016
-notebook_1  | [I 16:21:22.333 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
-notebook_1  | [C 16:21:22.339 NotebookApp] 
-notebook_1  |     
-notebook_1  |     Copy/paste this URL into your browser when you connect for the first time,
-notebook_1  |     to login with a token:
-notebook_1  |         http://(9a7974f0ffb9 or 127.0.0.1):8888/?token=c9d7cb543a82a7a278197b874c789da99a7ed91cd2f84016
+The notebook command offers paramaters such as host IP for sharing access to the notebook with machines on the local network, notebook token and notebook password
+```
+./epmt notebook -- --ip 0.0.0.0 --NotebookApp.token='thisisatoken' --NotebookApp.password='hereisa$upersecurepassword'
 ```
 
-and then login and load the **EPMT.ipynb** file.
-
-# Troubleshooting
+## Troubleshooting
 
 ### Error: `version GLIBC_x.xx not found`
 
 The collector library may not have been built for the current environement or the release
 OS version does not match the current environment. 
 
-# Appendix
+## Appendix
 
-## Docker Images for the running the EPMT command
+### Docker Images for the running the EPMT command
 
 The image **epmt-command** is the image that contains a working **epmt** install and all it's dependencies. It's mean to be run as a command with arguments via **docker run**. See **README.md** for more details.
 
-## Testing EPMT Collection with Various Python Versions under Docker
+### Testing EPMT Collection with Various Python Versions under Docker
 
 One can test **EPMT** on various versions of python with the following make commands. Each will test against a minimal install of Python, without installing any dependencies. 
 

@@ -7,13 +7,16 @@ theme:
     primary: blue
     accent: grey
   navigation_depth: 2
+  include_search_page: true
+  search_index_only: false
+
 markdown_extensions:
   - admonition
   - codehilite:
       guess_lang: false
   - toc:
       permalink: true
-plugins: []
+
 use_directory_urls: false
 
 nav:
