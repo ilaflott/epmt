@@ -213,8 +213,8 @@ def verify_perf():
         with open(f, 'r') as content_file:
             value = int(content_file.read())
             print(" = ",value, end='')
-            if value > 1:
-                logger.error("bad %s value of %d, should be 1 or less to allow cpu events",f,value)
+            if value > 2:
+                logger.error("bad %s value of %d, 2 or less to allow perf subsystem events",f,value)
                 PrintFail()
                 return False
             logger.info("perf_event_paranoid is %d",value)
@@ -1008,7 +1008,7 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True,from_anno
                 logger.debug("rmtree(%s)",path.dirname(indir)+".original")
                 rmtree(path.dirname(indir)+".original")
             except Exception as e:
-                logger.error("Something went wrong while juggling a collated %s: %s",indir,str(e))
+                logger.error("Something went wrong while juggling a collated file in %s: %s",indir,str(e))
                 return False
 
     if not path.exists(indir + "/job_metadata"):
