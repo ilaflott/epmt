@@ -1,4 +1,4 @@
-#!/bin/tcsh
+#!/bin/csh
 
 setenv SHELL /bin/tcsh
 epmt start             # Generate prolog
