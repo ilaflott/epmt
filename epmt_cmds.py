@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 from __future__ import print_function
 from datetime import datetime
-from os import environ, makedirs, mkdir, path, getpid, chdir, remove, rename, uname
+from os import environ, makedirs, mkdir, path, getpid, chdir, remove,  uname
 from socket import gethostname
 from subprocess import call as forkexecwait
 from glob import glob
 from sys import stderr
 from json import dumps, loads
-from shutil import copyfile, rmtree
+from shutil import copyfile, rmtree, move
 import errno
 import fnmatch
 import pickle
@@ -990,25 +990,38 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True,from_anno
                 return False
 # end HACK
         if status == True and collated_file and len(collated_file) > 0:
-            logger.info("Collated file is %s",collated_file)
+            logger.info("Collated file is %s, indir is %s",collated_file,indir)
             try:
-                # make the dir, copy in collated file and job metadata
+                # make dir.collated, copy in collated file and job metadata
                 newdir = path.dirname(indir)+".collated"
                 logger.debug("mkdir(%s)",newdir)
                 mkdir(newdir)
                 logger.debug("copyfile(%s,%s)",indir+"job_metadata",newdir+"/job_metadata")
                 copyfile(indir+"job_metadata",newdir+"/job_metadata")
-                logger.debug("rename(%s,%s)",collated_file,newdir+"/"+collated_file)
-                copyfile(collated_file,newdir+"/"+collated_file)
-                remove(collated_file)
-                logger.debug("rename(%s,%s)",path.dirname(indir),path.dirname(indir)+".original")
-                rename(path.dirname(indir),path.dirname(indir)+".original")
-                logger.debug("rename(%s,%s)",path.dirname(indir)+".collated",path.dirname(indir))
-                rename(path.dirname(indir)+".collated",path.dirname(indir))
+                logger.debug("move(%s,%s)",collated_file,newdir)
+                move(collated_file,newdir)
+
+                # Move dir to dir.original
+                logger.debug("move(%s,%s)",path.dirname(indir),path.dirname(indir)+".original")
+                move(path.dirname(indir),path.dirname(indir)+".original")
+
+                # Move dir.collated to dir
+                logger.debug("move(%s,%s)",newdir,path.dirname(indir))
+                move(newdir,path.dirname(indir))
+
+                # Remove dir.original 
                 logger.debug("rmtree(%s)",path.dirname(indir)+".original")
                 rmtree(path.dirname(indir)+".original")
             except Exception as e:
-                logger.error("Something went wrong while juggling a collated file in %s: %s",indir,str(e))
+                logger.error("Something went wrong while staging collated job in %s: %s",indir,str(e))
+                try:
+                    rmtree(indir+".original")
+                except:
+                    pass
+                try:
+                    rmtree(indir+".collated")
+                except:
+                    pass
                 return False
 
     if not path.exists(indir + "/job_metadata"):
