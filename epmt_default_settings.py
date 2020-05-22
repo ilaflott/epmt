@@ -67,3 +67,9 @@ post_process_job_on_ingest = True
 # when first needed. This also means the the process.inclusive_cpu_time
 # will be unavailable until the process tree is computed.
 lazy_compute_process_tree = True
+
+# If enabled, directly ingest CSV files directly into a staging process table
+# using database primitives.
+# This option will only be honored when using SQLA+Postgresql
+# For all other combinations this option, even if enabled, will be ignored
+db_copy_csv = True

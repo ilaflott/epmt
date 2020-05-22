@@ -26,7 +26,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (4,0,0)
+_version = (4,0,1)
 
 def version():
     return _version
@@ -168,10 +168,17 @@ def init_settings(settings):
     if not hasattr(settings, 'lazy_compute_process_tree'):
         logger.warning("missing settings.lazy_compute_process_tree")
         settings.lazy_compute_process_tree = True
+    if not hasattr(settings, 'db_copy_csv'):
+        settings.db_copy_csv = False
     if ((settings.orm != 'sqlalchemy') and (not(settings.post_process_job_on_ingest))):
         err_msg += '\n - post_process_job_on_ingest set as False is only permitted with sqlalchemy'
     if not hasattr(settings, 'db_params'):
         err_msg += "\n - missing settings.db_params"
+    else:
+        # silently disable copy CSV to db, as it's unsupported
+        # on all platforms except postgres+SQLA
+        if settings.db_copy_csv and (settings.orm != 'sqlalchemy' or not('postgres' in settings.db_params)):
+            settings.db_copy_csv = False
     if err_msg:
         err_msg = "The following error(s) were detecting in your settings: " + err_msg
         logger.error(err_msg)
