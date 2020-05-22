@@ -61,12 +61,12 @@ echo;echo "epmt check..."
 epmt check
 (( retval += $? ))
 
-echo;echo "Running unit tests..."
+echo;echo "epmt unittest..."
 epmt unittest
 (( retval += $? ))
 
-echo;echo "Running integration tests..."
-${install_path}/test/integration/run_integration
+echo;echo "epmt integration..."
+epmt integration
 (( retval += $? ))
 
 exit $retval
