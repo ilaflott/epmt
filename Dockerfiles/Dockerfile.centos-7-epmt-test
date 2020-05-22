@@ -11,15 +11,10 @@ ARG release_tests
 ARG settings=settings_sqlite_inmem_sqlalchemy.py
 ARG destdir=/opt/epmt
 
-ADD epmt-${release}.tgz ${destdir}
-ADD test-epmt-${release}.tgz .
-COPY preset_settings/${settings} ${destdir}/epmt-install/epmt/settings.py
+ADD ${release}.tgz ${destdir}
 WORKDIR /home/epmt-install-tests
+ADD ${release_tests}.tgz .
+COPY preset_settings/${settings} ${destdir}/epmt-install/epmt/settings.py
 ENV PATH="${destdir}/epmt-install/epmt:${PATH}"
-
-# Allow perf events
-# RUN echo -e "#!/bin/bash\nmount -o remount rw /proc\nsysctl -w kernel.perf_event_paranoid=0\n\$\*" > /tmp/init.sh
-# CMD ["/bin/bash","/tmp/init.sh","make","check-python-shells"]
-# Unit tests not supported because python3 and requirements not installed
 
 CMD ["make","check-python-shells"]
