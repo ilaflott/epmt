@@ -17,3 +17,4 @@ RUN echo -ne "\n\n" | ./epmt-installer `basename ${epmt_full_release}`
 ENV PATH="${install_path}/epmt-${epmt_version}/epmt-install/epmt:${PATH}"
 RUN rm -f *.tgz epmt-installer
 
+CMD ["/bin/bash", "-c", "epmt check; epmt unittest; epmt integration"]
