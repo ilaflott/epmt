@@ -29,7 +29,7 @@ dist:
 	cp epmt-example.*sh epmt-install/examples
 	mkdir epmt-install/slurm
 	cp SLURM/slurm_task_*log_epmt.sh epmt-install/slurm
-	-@mkdir release
+	-@mkdir release 2>/dev/null
 	tar -czf release/$(EPMT_RELEASE) epmt-install
 	rm -rf epmt-install build
 
@@ -37,7 +37,7 @@ dist-test:
 	rm -rf epmt-install-tests
 	mkdir epmt-install-tests
 	cp -Rp test epmt-install-tests
-	-@mkdir release
+	-@mkdir release 2>/dev/null
 	tar -czf release/test-$(EPMT_RELEASE) epmt-install-tests
 	rm -rf epmt-install-tests
 
@@ -84,33 +84,37 @@ clean:
 
 distclean: clean
 	rm -f settings.py release/*$(OS_TARGET)*
+
 # 
 # Simple python version testing with no database
 #
+
+# We should get rid of this in favor of a sequence of epmt commands.
+
 check: check-python-shells check-unittests check-integration-tests
 
 EPMT_TEST_ENV=PATH=${PWD}:${PATH} SLURM_JOB_USER=`whoami`
 
 check-python-shells:
-	@if [ -d /tmp/epmt ]; then echo "Directory /tmp/epmt exists! Hit return to remove it, Control-C to stop now."; read yesno; fi
 	@rm -rf /tmp/epmt
-	@echo "epmt-example.csh (tcsh)" ; env -i SLURM_JOB_ID=111 ${EPMT_TEST_ENV} /bin/tcsh -e epmt-example.csh
+	@echo "epmt-example.tcsh (tcsh)" ; env -i SLURM_JOB_ID=111 ${EPMT_TEST_ENV} /bin/tcsh -e epmt-example.tcsh
 	@rm -rf /tmp/epmt
-	@echo "epmt-example.sh (bash)" ; env -i SLURM_JOB_ID=222 ${EPMT_TEST_ENV} /bin/bash -Eeu epmt-example.sh
+	@echo "epmt-example.csh (csh)" ; env -i SLURM_JOB_ID=111 ${EPMT_TEST_ENV} /bin/csh -e epmt-example.csh
 	@rm -rf /tmp/epmt
-check-unittests:
-	@echo; echo "Testing built-in unit tests..."
+	@echo "epmt-example.bash (bash)" ; env -i SLURM_JOB_ID=222 ${EPMT_TEST_ENV} /bin/bash -Eeu epmt-example.bash
+	@rm -rf /tmp/epmt
+	@echo "epmt-example.sh (tcsh)" ; env -i SLURM_JOB_ID=111 ${EPMT_TEST_ENV} /bin/sh -e epmt-example.sh
+	@rm -rf /tmp/epmt
+check-unittests: # Why not test all of them?
 	python3 -V
 	@env -i PATH=${PWD}:${PATH} python3 -m unittest -v -f test.test_lib test.test_stat test.test_settings test.test_anysh test.test_submit test.test_cmds test.test_query test.test_explore test.test_outliers test.test_db_schema test.test_db_migration
-
 check-integration-tests:
 	test/integration/run_integration
-
-FORCE:
 
 #
 # Not used
 #
+
 docker-test-dist: release/$(EPMT_RELEASE) release/test-$(EPMT_RELEASE)
 	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test -t $(OS_TARGET)-epmt-test --build-arg release=release/$(EPMT_RELEASE) --build-arg release_test=release/$(EPMT_RELEASE) .
 	docker run --rm -it $(OS_TARGET)-epmt-test
