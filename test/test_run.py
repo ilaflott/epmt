@@ -84,9 +84,13 @@ class EPMTShell(unittest.TestCase):
         #remove_jobid_envs()
         from epmt_cmds import epmt_run
         remove_stale_files()
+        # quell the error messages
+        epmt_logging_init(-2)
         with capture() as (out,err):
             results = epmt_run(['sleep 1'],wrapit=True,dry_run=False,debug=False)
             self.assertEqual(1, results)
+        # restore logging level
+        epmt_logging_init(-1)
     # A dry run should not create an output directory
     def test_run_dry_run(self):
         remove_jobid_envs()
@@ -104,9 +108,13 @@ class EPMTShell(unittest.TestCase):
         #environ['SLURM_JOB_ID'] = jobid
         from epmt_cmds import epmt_run
         remove_stale_files()
+        # quell the error messages
+        epmt_logging_init(-2)
         with capture() as (out,err):
             results = epmt_run(['sleep 1'],wrapit=True,dry_run=True,debug=False)
             self.assertEqual(1, results)
+        # restore logging level
+        epmt_logging_init(-1)
     def test_run_nowrap(self):
         remove_jobid_envs()
         from os import environ
