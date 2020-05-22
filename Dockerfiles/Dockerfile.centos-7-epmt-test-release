@@ -14,7 +14,6 @@ WORKDIR ${install_path}
 COPY ${epmt_full_release} .
 COPY utils/epmt-installer .
 RUN echo -ne "\n\n" | ./epmt-installer `basename ${epmt_full_release}`
-ADD utils/check-release epmt-${epmt_version}
 ENV PATH="${install_path}/epmt-${epmt_version}/epmt-install/epmt:${PATH}"
 RUN rm -f *.tgz epmt-installer
 
