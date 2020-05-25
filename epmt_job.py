@@ -3,7 +3,7 @@ from os.path import basename
 from os import environ
 from logging import getLogger
 from json import dumps, loads
-from epmtlib import tag_from_string, sum_dicts, timing, dotdict, get_first_key_match, check_fix_metadata
+from epmtlib import tag_from_string, sum_dicts, timing, dotdict, get_first_key_match, check_fix_metadata,csv_format
 from datetime import datetime, timedelta
 from functools import reduce
 import time
@@ -787,6 +787,9 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 # fix below
     j.env_dict = env_dict
     j.env_changes_dict = env_changes_dict
+    if job_tags:
+        logger.info('Job tags: {}'.format(job_tags))
+    j.tags = job_tags if job_tags else {}
     job_init_fini_time = time.time()
     logger.debug('job init took: %2.5f sec', job_init_fini_time - job_init_start_time)
 
@@ -820,6 +823,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         cnt = 0
         nrecs = 0
         fileno = 0
+        copy_csv_direct = False
         csv = datetime.now()
         for f in files:
             fileno += 1
@@ -840,6 +844,35 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 flo = tarfile.extractfile(info)
             else:
                 flo = f
+
+            if (settings.db_copy_csv and (orm_db_provider() == 'postgres') and (csv_format(flo) == '2.0')):
+                logger.info('Doing a fast ingest of {}'.format(flo.name))
+                import psycopg2
+                from epmt_convert_csv import OUTPUT_CSV_FIELDS, OUTPUT_CSV_SEP
+                _conn_start_ts = time.time()
+                try:
+                    conn = psycopg2.connect(settings.db_params['url'])
+                except Exception as e:
+                    logger.error('Error establishing connection to PostgreSQL database: %s', str(e))
+                    raise
+
+                try:
+                    cur = conn.cursor()
+                    _copy_start_ts = time.time()
+                    logger.debug('establishing connection to DB took: %2.5f sec', _copy_start_ts - _conn_start_ts)
+                    cur.copy_from(flo, 'processes_staging', sep=OUTPUT_CSV_SEP, columns=OUTPUT_CSV_FIELDS)
+                    conn.commit()
+                except Exception as e:
+                    logger.error('Error copying CSV to processes_staging: %s', str(e))
+                    raise
+                if conn:
+                    conn.close()
+                copy_processes_staging = time.time() - _copy_start_ts
+                logger.debug('copy CSV to processes_staging took: %2.5f sec', copy_processes_staging)
+                didsomething = True
+                copy_csv_direct = True
+                flo.close()
+                continue
 
             csv_file = StringIO(flo.read().decode('utf8'))
                 
@@ -928,53 +961,50 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         if cnt:
             didsomething = True
 
-#    stdout.write('\b')            # erase the last written char
-    logger.debug('file I/O time took: %2.5f sec', file_io_time)
-    logger.debug('process load ops took: %2.5f sec', df_process_time)
-    logger.debug('  - load process from dictlist took: %2.5f sec', load_process_from_df_time)
-    logger.debug('    - {0}'.format([ "%s: %2.5f sec" % (k, v)  for (k,v) in profile.load_process.items()]))
-    logger.debug('  - tag processing took: %2.5f sec', proc_tag_process_time)
-    logger.debug('  - proc misc. processing took: %2.5f sec', proc_misc_time)
-    logger.debug('  - get_proc_rows took: %2.5f sec', df_process_time - load_process_from_df_time - proc_tag_process_time - proc_misc_time)
+    if not copy_csv_direct:
+        logger.debug('file I/O time took: %2.5f sec', file_io_time)
+        logger.debug('process load ops took: %2.5f sec', df_process_time)
+        logger.debug('  - load process from dictlist took: %2.5f sec', load_process_from_df_time)
+        logger.debug('    - {0}'.format([ "%s: %2.5f sec" % (k, v)  for (k,v) in profile.load_process.items()]))
+        logger.debug('  - tag processing took: %2.5f sec', proc_tag_process_time)
+        logger.debug('  - proc misc. processing took: %2.5f sec', proc_misc_time)
+        logger.debug('  - get_proc_rows took: %2.5f sec', df_process_time - load_process_from_df_time - proc_tag_process_time - proc_misc_time)
 
-    if filedict:
-        if not didsomething:
-            logger.warning("Something went wrong in parsing CSV files")
-            return (False, "Error parsing CSV")
-    else:
-        logger.warning("job %s, user %s, jobname %s has no CSV data",jobid,username,jobname)
+        if filedict:
+            if not didsomething:
+                logger.warning("Something went wrong in parsing CSV files")
+                return (False, "Error parsing CSV")
+        else:
+            logger.warning("job %s, user %s, jobname %s has no CSV data",jobid,username,jobname)
 
-    # save naive datetime objects in the database
-    j.start = start_ts.replace(tzinfo=None)
-    j.end = stop_ts.replace(tzinfo=None)
-    j.submit = submit_ts.replace(tzinfo=None) # Wait time is start - submit and should probably be stored
-    j.info_dict = {'tz': start_ts.tzinfo.tzname(None), 'status': job_status}
+        # save naive datetime objects in the database
+        j.start = start_ts.replace(tzinfo=None)
+        j.end = stop_ts.replace(tzinfo=None)
+        j.submit = submit_ts.replace(tzinfo=None) # Wait time is start - submit and should probably be stored
+        j.info_dict = {'tz': start_ts.tzinfo.tzname(None), 'status': job_status}
 
-    d = j.end - j.start
-    j.duration = int(d.total_seconds()*1000000)
-    j.cpu_time = reduce(lambda c, p: c + p.cpu_time, all_procs, 0)
-    # j.cpu_time = sum([p.cpu_time for p in all_procs])
-    #logger.info("Earliest process start: %s",j.start)
-    #logger.info("Latest process end: %s",j.end)
-    logger.info("Computed duration of job: %f us, %.2f m",j.duration,j.duration/60000000)
+        d = j.end - j.start
+        j.duration = int(d.total_seconds()*1000000)
+        j.cpu_time = reduce(lambda c, p: c + p.cpu_time, all_procs, 0)
+        # j.cpu_time = sum([p.cpu_time for p in all_procs])
+        #logger.info("Earliest process start: %s",j.start)
+        #logger.info("Latest process end: %s",j.end)
+        logger.info("Computed duration of job: %f us, %.2f m",j.duration,j.duration/60000000)
 
-    if root_proc:
-        # if root_proc.exitcode != j.exitcode:
-        #     logger.warning('metadata shows the job exit code is {0}, but root process exit code is {1}'.format(j.exitcode, root_proc.exitcode))
-        j.exitcode = root_proc.exitcode
-        logger.info('job exit code (using exit code of root process): {0}'.format(j.exitcode))
-    if j.exitcode != 0:
-        logger.warning('Job failed with a non-zero exit code({})'.format(j.exitcode))
-    if job_tags:
-        logger.info('Job tags: {}'.format(job_tags))
-    j.tags = job_tags if job_tags else {}
+        if root_proc:
+            # if root_proc.exitcode != j.exitcode:
+            #     logger.warning('metadata shows the job exit code is {0}, but root process exit code is {1}'.format(j.exitcode, root_proc.exitcode))
+            j.exitcode = root_proc.exitcode
+            logger.info('job exit code (using exit code of root process): {0}'.format(j.exitcode))
+        if j.exitcode != 0:
+            logger.warning('Job failed with a non-zero exit code({})'.format(j.exitcode))
 
-    if settings.bulk_insert and all_procs:
-        logger.info('doing a bulk insert of {0} processes'.format(len(all_procs)))
-        _b0 = time.time()
-        #thr_data.engine.execute(Process.__table__.insert(), all_procs)
-        Session.bulk_insert_mappings(Process, all_procs)
-        logger.info('bulk insert of processes took: %2.5f sec', time.time() - _b0)
+        if settings.bulk_insert and all_procs:
+            logger.info('doing a bulk insert of {0} processes'.format(len(all_procs)))
+            _b0 = time.time()
+            #thr_data.engine.execute(Process.__table__.insert(), all_procs)
+            Session.bulk_insert_mappings(Process, all_procs)
+            logger.info('bulk insert of processes took: %2.5f sec', time.time() - _b0)
 
     
     if settings.post_process_job_on_ingest:

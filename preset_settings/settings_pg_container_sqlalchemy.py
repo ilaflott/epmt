@@ -59,4 +59,5 @@ bulk_insert = True
 # using database primitives.
 # This option will only be honored when using SQLA+Postgresql
 # For all other combinations this option, even if enabled, will be ignored
+# If db_copy_csv is enabled, it will silently disable post_process_job_on_ingest
 db_copy_csv = True

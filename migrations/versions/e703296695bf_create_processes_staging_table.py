@@ -33,7 +33,7 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('jobid', sa.String(), nullable=False),
     sa.Column('start', sa.Float(), nullable=False),
-    sa.Column('end', sa.Float(), nullable=False),
+    sa.Column('finish', sa.Float(), nullable=False),
     sa.Column('tags', sa.String(), nullable=True),
     sa.Column('host_id', sa.String(), nullable=True),
     sa.Column('threads_df', ARRAY(sa.Float), nullable=True),

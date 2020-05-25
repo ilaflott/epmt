@@ -16,6 +16,11 @@ from glob import glob
 # these fields must be present at a minimum or our sanity
 # check will flag an error
 INPUT_CSV_FIELDS = {'tags','hostname','exename','path','args','exitcode','pid','generation','ppid','pgid','sid','numtids','tid','start','end'}
+# Only the fields present in the list below will be output and the order will match the list order
+OUTPUT_CSV_FIELDS = ['tags', 'threads_sums', 'threads_df', 'jobid', 'host_id', 'numtids', 'exename', 'path', 'args', 'pid', 'ppid', 'pgid', 'sid', 'gen', 'exitcode', 'start', 'finish']
+# we need to use a character that doesn't occur in the
+# input as the postgres copy_from cannot handle quoted delimiters
+OUTPUT_CSV_SEP = '\t'
 
 # Expected input format
 # tags,hostname,exename,path,args,exitcode,pid,generation,ppid,pgid,sid,numtids,tid,start,end,usertime,systemtime,rssmax,minflt,majflt,inblock,outblock,vol_ctxsw,invol_ctxsw,num_threads,starttime,processor,delayacct_blkio_time,guest_time,rchar,wchar,syscr,syscw,read_bytes,write_bytes,cancelled_write_bytes,time_oncpu,time_waiting,timeslices,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
@@ -83,14 +88,11 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = ''):
     # open a file for writing if we have a string, otherwise assume
     # its an already open file-handle
     with open(outfile, 'w', newline='') as csvfile:
-        # Only the fields present in this list will be output
-        # and the order will match the list order
-        fieldnames = ['tags', 'threads_sums', 'threads_df', 'jobid', 'host_id', 'numtids', 'exename', 'path', 'args', 'pid', 'ppid', 'pgid', 'sid', 'gen', 'exitcode', 'start', 'end']
         # log a helpful line so we know how to use \COPY command
-        logger.debug("Use the following line in postgres:\n  \COPY processes_staging({}) FROM '{}' DELIMITER ',' CSV".format(",".join(fieldnames), abspath(outfile)).replace('end', '"end"'))
+        logger.debug("Use the following line in postgres:\n  \COPY processes_staging({}) FROM '{}' DELIMITER ',' CSV".format(",".join(OUTPUT_CSV_FIELDS), abspath(outfile)).replace('end', '"end"'))
 
         # initialize the output file
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer = csv.DictWriter(csvfile, fieldnames=OUTPUT_CSV_FIELDS, delimiter=OUTPUT_CSV_SEP)
         # No header in output file (to distinguish it from input format)
         # writer.writeheader()
 
@@ -131,13 +133,20 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = ''):
             # r['host_id'] = r['hostname']
             r['host_id'] = 'pp208'
             r['gen'] = r['generation']
+
+            # replace postgres eof marker in the args field
+            # https://stackoverflow.com/questions/23790995/postgres-9-3-end-of-copy-marker-corrupt-any-way-to-change-this-setting
+            if '\.' in r['args']:
+                r['args'] = r['args'].replace('\.', '\\\.')
+
             # r['cpu_time'] = float(r['usertime']) + float(r['systemtime'])
             for field in ['pid', 'ppid', 'pgid', 'sid', 'gen', 'start', 'end']:
                 r[field] = int(r[field])
+            r['finish'] = r['end'] # end is reserved word in sql
 
             outrow = {}
             outrows += 1
-            for f in fieldnames:
+            for f in OUTPUT_CSV_FIELDS:
                 outrow[f] = r[f]
                 # postgrsql requires arrays to use curly braces instead
                 # of the square brackets we get with list objects in Python
@@ -256,7 +265,8 @@ def _extract_jobid_from_collated_csv(collated_csv):
 if __name__ == "__main__":
     logger = getLogger("epmt_convert_csv")
     epmt_logging_init(intlvl=2)
+    import sys
     # conv_csv_for_dbcopy('pp208-collated-papiex-685000-0.csv', 'out.csv')
     # conv_csv_for_dbcopy('in-collated-papiex-685000-0.csv')
     # conv_csv_for_dbcopy('685000', 'out.csv', 'out2.csv')
-    convert_csv_in_tar('685000.tgz')
+    convert_csv_in_tar(sys.argv[1])
