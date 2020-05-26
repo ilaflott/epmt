@@ -49,7 +49,7 @@ def dump_config(outf, sep = ":"):
 # "PAPIEX_OPTIONS","PAPIEX_DEBUG","PAPI_DEBUG","MONITOR_DEBUG","LIBPFM_DEBUG"
 #              ]:
         if v in environ:
-            print("%%s%s" % (v,sep,environ[v]), file=outf)
+            print("%s%s%s" % (v,sep,environ[v]), file=outf)
 
 def read_job_metadata_direct(file):
     try:
