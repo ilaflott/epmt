@@ -439,7 +439,7 @@ The notebook command offers paramaters such as host IP for sharing access to the
 
 ### Error: `version GLIBC_x.xx not found`
 
-The collector library may not have been built for the current environement or the release
+The collector library may not have been built for the current environment or the release
 OS version does not match the current environment. 
 
 ## Appendix

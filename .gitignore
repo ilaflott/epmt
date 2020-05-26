@@ -52,6 +52,10 @@ Thumbs.db
 .local
 OutliersData/*.dir
 
+# Release generated files #
+######################
+epmtdocs/site/*
+
 # user settings
 settings.py
 

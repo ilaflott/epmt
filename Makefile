@@ -78,6 +78,12 @@ release7:
 
 release-all: release6 release7
 
+release6-test-web:
+# Using the centos-6-test-release docker, start the interface, documentation and jupyter
+# Start Documentation(localhost:8050), Dash(localhost:8080) and Jupyter(localhost:8888)
+	OS_TARGET=centos-6
+	docker run --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release -it -p 8080:8080 -p 8050:8050 -p 8888:8888 -w /opt/minimalmetrics/epmt-$(EPMT_VERSION)/epmt-install/epmt/ --rm -h ernie $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c './epmt notebook -- --ip=0.0.0.0 --allow-root --notebook-dir=../notebooks/ & ./epmt gui'
+
 #
 #
 #

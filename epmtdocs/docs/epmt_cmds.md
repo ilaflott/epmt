@@ -1,8 +1,8 @@
-## - epmt check
+## epmt check
 
 Check will verify basic epmt configuration and functionality.
 
-## - epmt source
+## epmt source
 
 Source provides commands to begin automatic performance instrumentation of all
 subsequent shell commands. Standard use of this is via the shell's eval method
@@ -20,28 +20,47 @@ Two shell functions/aliases are created to pause/restart instrumentation:
 enabled here with the -s or --slurm option. For more info, see:
 https://slurm.schedmd.com/prolog_epilog.html
 
-## - epmt start
+## epmt start
 
 Start will create a metadata log file with the current environment variables.
 
 
-## - epmt run
+## epmt run
 
 Run will execute a command in the shell, typically used with the auto -a flag
 to perform metadata collection before and after instrumentation.
 
-## - epmt stop
+## epmt stop
 
 Stop will append to the metadata log file with the environment variables at
 stop time.
 
-## - epmt submit
+## epmt stage
+
+Stage will compress job or job directories into tgz files for midterm storage
+then remove original job files and job directory.
+
+Stage optional arguments:
+
+-e, --error
+
+Stage will exit at the first sign of trouble
+
+--no-collate
+
+Do not collate the files
+
+--no-compress-and-tar
+
+Don't compress and tar the output
+
+## epmt submit
 
 Submit accepts job directories and updates the database configured with
 directories given. When run with -n submit will not touch the database and
 displays the commands leading up to submission.
 
-## - epmt dump
+## epmt dump
 
 Information about a job
 
