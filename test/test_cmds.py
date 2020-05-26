@@ -136,6 +136,10 @@ class EPMTCmds(unittest.TestCase):
         epmt_logging_init(-2)
         from os import remove, path
         errorfile=settings.error_dest+'/pp053-papiex-615503-0.csv.error'
+        if path.exists(errorfile):
+            remove(errorfile)
+        if path.exists('test/data/corrupted_csv.orig'):
+            rmtree('test/data/corrupted_csv.orig')
         with capture() as (out, err):
             retval = epmt_stage(['test/data/corrupted_csv'],keep_going=False)
         self.assertTrue(retval == False, "corrupted CSV files, should have returned False")

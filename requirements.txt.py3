@@ -29,6 +29,7 @@ jupyter-console==6.0.0
 jupyter-core==4.6.1
 kiwisolver==1.1.0
 kmodes==0.10.2
+kneed==0.6.0
 lazy-object-proxy==1.4.3
 line-profiler==3.0.2
 llvmlite==0.31.0
@@ -51,6 +52,7 @@ numpy==1.17.2
 pandas==0.25.1
 pandocfilters==1.4.2
 parso==0.5.1
+patsy==0.5.1
 pexpect==4.7.0
 pickleshare==0.7.5
 pony==0.7.10
@@ -77,6 +79,7 @@ seaborn==0.10.0
 Send2Trash==1.5.0
 six==1.12.0
 SQLAlchemy==1.3.8
+statsmodels==0.11.1
 suod==0.0.2
 terminado==0.8.3
 testpath==0.4.4

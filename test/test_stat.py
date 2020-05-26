@@ -79,6 +79,26 @@ class EPMTStat(unittest.TestCase):
         self.assertTrue(x2.iloc[0].equals(df.iloc[0]))
         self.assertTrue(x2.iloc[1].equals(df.iloc[1]))
         self.assertTrue(x2.iloc[-1].equals(df.iloc[0]))
+    def test_modes(self):
+        import numpy as np
+        from epmt_stat import get_modes
+        N = 100
+        np.random.seed(1)
+        # unimodal (normal)
+        X = np.random.normal(0, 1, N)
+        modes = get_modes(X)
+        self.assertEqual(len(modes), 1)
+        self.assertEqual(sorted(list(modes.round(0))), [0]) 
+        # bimodal
+        X = np.concatenate((np.random.normal(0, 1, int(0.3 * N)), np.random.normal(5, 1, int(0.7 * N))))
+        modes = get_modes(X)
+        self.assertEqual(len(modes), 2)
+        self.assertEqual(sorted(list(modes.round(0))), [0, 5]) 
+        # trimodal
+        X = np.concatenate((np.random.normal(0, 1, int(0.3 * N)), np.random.normal(5, 1, int(0.3 * N)),np.random.normal(10,1,int(0.4*N)))) 
+        modes = get_modes(X)
+        self.assertEqual(len(modes), 3)
+        self.assertEqual(sorted(list(modes.round(0))), [0, 5, 10]) 
 
 if __name__ == '__main__':
     unittest.main()
