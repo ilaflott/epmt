@@ -26,7 +26,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (4,1,2)
+_version = (4,1,3)
 
 def version():
     return _version
@@ -180,10 +180,6 @@ def init_settings(settings):
         if settings.db_copy_csv:
             if (settings.orm != 'sqlalchemy' or not('postgres' in settings.db_params['url'])):
                 err_msg + "\n - db_copy_csv can only be enabled on postgres+SQLAlchemy combination"
-            else:
-                # automatically disable post_process_job_on_ingest as
-                # we do not have a populated processes table during ingestion
-                settings.post_process_job_on_ingest = False
     if err_msg:
         err_msg = "The following error(s) were detecting in your settings: " + err_msg
         logger.error(err_msg)
@@ -1048,8 +1044,8 @@ def csv_has_header(f):
     if type(f) == str:
         close_file = True
         f = open(f)
-    # read the first 40 characters
-    s = f.read(40)
+    # read the first 40 characters and convert from bytes to string
+    s = "".join( chr(x) for x in f.read(40))
     if close_file:
         f.close()
     else:

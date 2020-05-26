@@ -839,17 +839,19 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 # oldproctag (after comment char) is outdated as a process tag but kept for posterities sake
             skiprows,oldproctag = extract_tags_from_comment_line(f,tarfile=tarfile)
             logger.debug("%s had %d comment rows, oldproctags %s",f,skiprows,oldproctag)
-
             if tarfile:
+                logger.debug('extracting {} from tar'.format(f))
                 info = tarfile.getmember(f)
                 flo = tarfile.extractfile(info)
             else:
                 flo = f
-
             if (csv_format(flo) == '2.0'):
                 if (orm_db_provider() != 'postgres' or (settings.orm != 'sqlalchemy')):
                     raise ValueError('CSV file {} is meant for ingestion using Postgres direct-copy, and can only be used with PostgreSQL+SQLAlchemy'.format(flo.name))
                 logger.info('Doing a fast ingest of {}'.format(flo.name))
+                # force the setting below, as CSV copying means we
+                # will have no processes in the process table to post-process
+                settings.post_process_job_on_ingest = False
                 import psycopg2
                 from epmt_convert_csv import OUTPUT_CSV_FIELDS, OUTPUT_CSV_SEP
                 _conn_start_ts = time.time()
