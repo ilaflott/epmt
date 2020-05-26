@@ -796,6 +796,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     didsomething = False
     all_tags = set()
     all_procs = []
+    total_procs = 0
     root_proc = None
 
     # a pid_map is used to create the process graph
@@ -809,6 +810,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     profile = dotdict()
     profile.load_process = dotdict({'init': 0, 'misc': 0, 'proc_tags': 0, 'thread_sums': 0, 'to_json': 0})
 
+    copy_csv_direct = False
     for hostname, files in filedict.items():
         if hostname == "unknown":
             logger.warning('could not determine hostname from filedict, picking it from metadata instead')
@@ -823,7 +825,6 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         cnt = 0
         nrecs = 0
         fileno = 0
-        copy_csv_direct = False
         csv = datetime.now()
         for f in files:
             fileno += 1
@@ -845,7 +846,9 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             else:
                 flo = f
 
-            if (settings.db_copy_csv and (orm_db_provider() == 'postgres') and (csv_format(flo) == '2.0')):
+            if (csv_format(flo) == '2.0'):
+                if (orm_db_provider() != 'postgres' or (settings.orm != 'sqlalchemy')):
+                    raise ValueError('CSV file {} is meant for ingestion using Postgres direct-copy, and can only be used with PostgreSQL+SQLAlchemy'.format(flo.name))
                 logger.info('Doing a fast ingest of {}'.format(flo.name))
                 import psycopg2
                 from epmt_convert_csv import OUTPUT_CSV_FIELDS, OUTPUT_CSV_SEP
@@ -856,22 +859,25 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                     logger.error('Error establishing connection to PostgreSQL database: %s', str(e))
                     raise
 
+                cur = conn.cursor()
+                _copy_start_ts = time.time()
+                logger.debug('establishing connection to DB took: %2.5f sec', _copy_start_ts - _conn_start_ts)
                 try:
-                    cur = conn.cursor()
-                    _copy_start_ts = time.time()
-                    logger.debug('establishing connection to DB took: %2.5f sec', _copy_start_ts - _conn_start_ts)
                     cur.copy_from(flo, 'processes_staging', sep=OUTPUT_CSV_SEP, columns=OUTPUT_CSV_FIELDS)
                     conn.commit()
+                    num_procs_copied = cur.rowcount
                 except Exception as e:
                     logger.error('Error copying CSV to processes_staging: %s', str(e))
+                    conn.rollback()
                     raise
                 if conn:
                     conn.close()
-                copy_processes_staging = time.time() - _copy_start_ts
-                logger.debug('copy CSV to processes_staging took: %2.5f sec', copy_processes_staging)
-                didsomething = True
-                copy_csv_direct = True
+                copy_processes_time = time.time() - _copy_start_ts
                 flo.close()
+                logger.info('direct CSV copy of %d processes took: %2.5f sec, at %2.5f procs/sec', num_procs_copied, copy_processes_time, num_procs_copied/copy_processes_time)
+                didsomething = (num_procs_copied > 0)
+                copy_csv_direct = True
+                total_procs += num_procs_copied
                 continue
 
             csv_file = StringIO(flo.read().decode('utf8'))
@@ -920,6 +926,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 # assert(p.pid not in pid_map)
                 pid_map[p.pid] = p
                 all_procs.append(p)
+                total_procs += 1
 # Compute duration of job
                 if (p.start < earliest_process):
                     earliest_process = p.start
@@ -1035,9 +1042,9 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     logger.debug("commit time: %2.5f sec", time.time() - _c0)
     now = datetime.now()
     logger.info("Staged import of %d processes took %s, %f processes/sec",
-                len(all_procs), now - then,len(all_procs)/float((now-then).total_seconds()))
-    print("Imported successfully - job:",jobid,"processes:",len(all_procs),"rate:",len(all_procs)/float((now-then).total_seconds()))
-    return (True, 'Import successful', (j.jobid, len(all_procs)))
+                total_procs, now - then,total_procs/float((now-then).total_seconds()))
+    print("Imported successfully - job:",jobid,"processes:",total_procs,"rate:",total_procs/float((now-then).total_seconds()))
+    return (True, 'Import successful', (j.jobid, total_procs))
 
 #
 # We should remove below here
