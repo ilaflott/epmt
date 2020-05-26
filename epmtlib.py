@@ -26,7 +26,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (4,1,1)
+_version = (4,1,2)
 
 def version():
     return _version
@@ -179,7 +179,7 @@ def init_settings(settings):
         # on all platforms except postgres+SQLA
         if settings.db_copy_csv:
             if (settings.orm != 'sqlalchemy' or not('postgres' in settings.db_params['url'])):
-                settings.db_copy_csv = False
+                err_msg + "\n - db_copy_csv can only be enabled on postgres+SQLAlchemy combination"
             else:
                 # automatically disable post_process_job_on_ingest as
                 # we do not have a populated processes table during ingestion
