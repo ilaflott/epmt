@@ -19,32 +19,104 @@ build:
 	python -O -bb -m py_compile *.py orm/*.py orm/*/*.py test/*.py
 
 dist: 
-	rm -rf epmt-install
+	rm -rf epmt-install build
 	pyinstaller --clean --distpath=epmt-install epmt.spec
 	cp -Rp preset_settings epmt-install
 	cp -Rp notebooks epmt-install
 	cp -Rp migrations epmt-install
 	cp -p alembic.ini epmt-install
 	mkdir epmt-install/examples
-	cp epmt-example.sh epmt-example.csh epmt-install/examples
+	cp epmt-example.*sh epmt-install/examples
 	mkdir epmt-install/slurm
 	cp SLURM/slurm_task_*log_epmt.sh epmt-install/slurm
-	rm -f $(EPMT_RELEASE); tar cvfz $(EPMT_RELEASE) epmt-install
+	-@mkdir release 2>/dev/null
+	tar -czf release/$(EPMT_RELEASE) epmt-install
 	rm -rf epmt-install build
 
 dist-test:
 	rm -rf epmt-install-tests
 	mkdir epmt-install-tests
-	cp -Rp test Makefile epmt-example.csh epmt-example.sh epmt-install-tests
-	rm -f test-$(EPMT_RELEASE); tar cvfz test-$(EPMT_RELEASE) epmt-install-tests
+	cp -Rp test epmt-install-tests
+	-@mkdir release 2>/dev/null
+	tar -czf release/test-$(EPMT_RELEASE) epmt-install-tests
 	rm -rf epmt-install-tests
 
-docker-dist $(EPMT_RELEASE) test-$(EPMT_RELEASE): 
+docker-dist release/$(EPMT_RELEASE): 
+	@echo " - building epmt and epmt-test tarball"
 	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build -t $(OS_TARGET)-epmt-build .
-	docker run -i --tty --rm --volume=$(PWD):$(PWD):z -w $(PWD) $(OS_TARGET)-epmt-build make OS_TARGET=$(OS_TARGET) distclean dist dist-test
+	docker run -it --rm --volume=$(PWD):$(PWD):z -w $(PWD) $(OS_TARGET)-epmt-build make OS_TARGET=$(OS_TARGET) distclean dist dist-test
 
-docker-test-dist: $(EPMT_RELEASE) test-$(EPMT_RELEASE)
-	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test -t $(OS_TARGET)-epmt-test --build-arg release=$(EPMT_VERSION) .
+docker-dist-test release/test-$(EPMT_RELEASE):
+	docker run -it --rm --volume=$(PWD):$(PWD):z -w $(PWD) $(OS_TARGET)-epmt-build make OS_TARGET=$(OS_TARGET) dist-test
+
+papiex-dist release/$(PAPIEX_RELEASE):
+	@echo " - building papiex tarball"
+	if [ ! -f $(PAPIEX_SRC)/$(PAPIEX_RELEASE) ]; then make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) docker-dist > /dev/null; fi
+	cp $(PAPIEX_SRC)/$(PAPIEX_RELEASE) $(PWD)/release
+
+release epmt-full-release release/$(EPMT_FULL_RELEASE): release/$(EPMT_RELEASE) release/test-$(EPMT_RELEASE) release/$(PAPIEX_RELEASE)
+	@echo "Making EPMT $(EPMT_VERSION) for $(OS_TARGET): $^"
+	cd release; tar -czf $(EPMT_FULL_RELEASE) $(notdir $^)
+	echo "release/$(EPMT_FULL_RELEASE)"
+
+check-release release-test-docker: release/$(EPMT_FULL_RELEASE)
+	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test-release -t $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) --build-arg epmt_version=$(EPMT_VERSION) --build-arg install_path=/opt/minimalmetrics --build-arg epmt_full_release=release/$(EPMT_FULL_RELEASE) .
+	docker run --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --privileged -it --rm -h ernie $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c "epmt check; epmt unittest; epmt integration"
+
+release6:
+# Force rebuild
+	rm -f release/$(EPMT_RELEASE) release/test-$(EPMT_RELEASE) release/$(PAPIEX_RELEASE) $(PAPIEX_SRC)/$(PAPIEX_RELEASE)
+	$(MAKE) OS_TARGET=centos-6 release check-release
+
+release7:
+# Force rebuild
+	rm -f release/$(EPMT_RELEASE) release/test-$(EPMT_RELEASE) release/$(PAPIEX_RELEASE) $(PAPIEX_SRC)/$(PAPIEX_RELEASE)
+	$(MAKE) OS_TARGET=centos-7 release check-release
+
+release-all: release6 release7
+
+#
+#
+#
+clean:
+	find . -name "*~" -o -name "*.pyc" -o -name epmt.log -o -name core -exec rm -f {} \; 
+	rm -rf __pycache__ build epmt-install epmt-install-tests
+
+distclean: clean
+	rm -f settings.py release/*$(OS_TARGET)*
+
+# 
+# Simple python version testing with no database
+#
+
+# We should get rid of this in favor of a sequence of epmt commands.
+
+check: check-python-shells check-unittests check-integration-tests
+
+EPMT_TEST_ENV=PATH=${PWD}:${PATH} SLURM_JOB_USER=`whoami`
+
+check-python-shells:
+	@rm -rf /tmp/epmt
+	@echo "epmt-example.tcsh (tcsh)" ; env -i SLURM_JOB_ID=111 ${EPMT_TEST_ENV} /bin/tcsh -e epmt-example.tcsh
+	@rm -rf /tmp/epmt
+	@echo "epmt-example.csh (csh)" ; env -i SLURM_JOB_ID=111 ${EPMT_TEST_ENV} /bin/csh -e epmt-example.csh
+	@rm -rf /tmp/epmt
+	@echo "epmt-example.bash (bash)" ; env -i SLURM_JOB_ID=222 ${EPMT_TEST_ENV} /bin/bash -Eeu epmt-example.bash
+	@rm -rf /tmp/epmt
+	@echo "epmt-example.sh (tcsh)" ; env -i SLURM_JOB_ID=111 ${EPMT_TEST_ENV} /bin/sh -e epmt-example.sh
+	@rm -rf /tmp/epmt
+check-unittests: # Why not test all of them?
+	python3 -V
+	@env -i PATH=${PWD}:${PATH} python3 -m unittest -v -f test.test_lib test.test_stat test.test_settings test.test_anysh test.test_submit test.test_run test.test_cmds test.test_query test.test_explore test.test_outliers test.test_db_schema test.test_db_migration
+check-integration-tests:
+	test/integration/run_integration
+
+#
+# Not used
+#
+
+docker-test-dist: release/$(EPMT_RELEASE) release/test-$(EPMT_RELEASE)
+	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test -t $(OS_TARGET)-epmt-test --build-arg release=release/$(EPMT_RELEASE) --build-arg release_test=release/$(EPMT_RELEASE) .
 	docker run --rm -it $(OS_TARGET)-epmt-test
 
 docker-dist-slurm: $(EPMT_RELEASE)
@@ -73,55 +145,4 @@ docker-test-dist-slurm: slurm-start
 	docker exec $(OS_TARGET)-slurm epmt submit 6.tgz 7.tgz
 	docker stop $(OS_TARGET)-slurm
 
-
-release6:
-	$(MAKE) OS_TARGET=centos-6 release check-release
-
-release7:
-	$(MAKE) OS_TARGET=centos-7 release check-release
-
-check-release:
-	-utils/check-release $(EPMT_FULL_RELEASE)
-
-release:  
-	@if [ -f $(EPMT_FULL_RELEASE) ]; then echo "$(EPMT_FULL_RELEASE) already exists. Please remove it and try again"; exit 1; fi
-	@echo "Making EPMT release for $(OS_TARGET): $(EPMT_VERSION)"
-	@echo " - building epmt and epmt-test tarball"
-	make OS_TARGET=$(OS_TARGET) docker-dist > /dev/null
-	@ls $(EPMT_RELEASE) test-$(EPMT_RELEASE)
-	@echo " - building papiex tarball for $(OS_TARGET): $(PAPIEX_VERSION)"
-	cd $(PAPIEX_SRC); rm -f $(PAPIEX_RELEASE); make OS_TARGET=$(OS_TARGET) docker-dist > /dev/null; cp -v $(PAPIEX_RELEASE) $(PWD)
-	tar -czf $(EPMT_FULL_RELEASE) $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(PAPIEX_RELEASE)
-	@echo "$(EPMT_VERSION) release prepared for $(OS_TARGET): $(EPMT_FULL_RELEASE)"
-
-release-all:
-	$(MAKE) release6
-	$(MAKE) release7
-
-clean:
-	find . -name "*~" -o -name "*.pyc" -o -name epmt.log -o -name core -exec rm -f {} \; 
-	rm -rf __pycache__
-distclean: clean
-	rm -f settings.py test-$(EPMT_RELEASE) $(EPMT_RELEASE)
-	rm -rf epmt-install epmt-install-tests build
-# 
-# Simple python version testing with no database
-#
-check: check-python-shells check-unittests check-integration-tests
-
-EPMT_TEST_ENV=PATH=${PWD}:${PATH} SLURM_JOB_USER=`whoami`
-
-check-python-shells:
-	@if [ -d /tmp/epmt ]; then echo "Directory /tmp/epmt exists! Hit return to remove it, Control-C to stop now."; read yesno; fi
-	@rm -rf /tmp/epmt
-	@echo "epmt-example.csh (tcsh)" ; env -i SLURM_JOB_ID=111 ${EPMT_TEST_ENV} /bin/tcsh -e epmt-example.csh
-	@rm -rf /tmp/epmt
-	@echo "epmt-example.sh (bash)" ; env -i SLURM_JOB_ID=222 ${EPMT_TEST_ENV} /bin/bash -Eeu epmt-example.sh
-	@rm -rf /tmp/epmt
-check-unittests:
-	@echo; echo "Testing built-in unit tests..."
-	python3 -V
-	@env -i PATH=${PWD}:${PATH} python3 -m unittest -v -f test.test_lib test.test_stat test.test_settings test.test_anysh test.test_submit test.test_cmds test.test_query test.test_explore test.test_outliers test.test_db_schema test.test_db_migration
-
-check-integration-tests:
-	test/integration/run_integration
+FORCE:

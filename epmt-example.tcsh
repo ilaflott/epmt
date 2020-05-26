@@ -1,6 +1,6 @@
-#!/bin/csh
+#!/bin/tcsh
 
-setenv SHELL /bin/csh
+setenv SHELL /bin/tcsh
 epmt start             # Generate prolog
 eval `epmt source`     # Setup environment
 /bin/sleep 1 >& /dev/null   # Workload
