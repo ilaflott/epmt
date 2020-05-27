@@ -3,7 +3,7 @@ from os.path import basename
 from os import environ
 from logging import getLogger
 from json import dumps, loads
-from epmtlib import tag_from_string, sum_dicts, timing, dotdict, get_first_key_match, check_fix_metadata,csv_format
+from epmtlib import tag_from_string, sum_dicts, timing, dotdict, get_first_key_match, check_fix_metadata,csv_probe_format
 from datetime import datetime, timedelta
 from functools import reduce
 import time
@@ -845,7 +845,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 flo = tarfile.extractfile(info)
             else:
                 flo = f
-            if (csv_format(flo) == '2.0'):
+            if (csv_probe_format(flo) == '2.0'):
                 if (orm_db_provider() != 'postgres' or (settings.orm != 'sqlalchemy')):
                     raise ValueError('CSV file {} is meant for ingestion using Postgres direct-copy, and can only be used with PostgreSQL+SQLAlchemy'.format(flo.name))
                 logger.info('Doing a fast ingest of {}'.format(flo.name))
@@ -864,8 +864,13 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 cur = conn.cursor()
                 _copy_start_ts = time.time()
                 logger.debug('establishing connection to DB took: %2.5f sec', _copy_start_ts - _conn_start_ts)
+                copy_sql = "COPY processes_staging({}) FROM STDIN DELIMITER '{}' CSV HEADER".format(",".join(OUTPUT_CSV_FIELDS), OUTPUT_CSV_SEP)
+                logger.debug(copy_sql)
                 try:
-                    cur.copy_from(flo, 'processes_staging', sep=OUTPUT_CSV_SEP, columns=OUTPUT_CSV_FIELDS)
+                    # copy_from is deprecated and copy_expert is recommended
+                    # Also, copy_from cannot handle a HEADER option
+                    # cur.copy_from(flo, 'processes_staging', sep=OUTPUT_CSV_SEP, columns=OUTPUT_CSV_FIELDS)
+                    cur.copy_expert(copy_sql, flo)
                     conn.commit()
                     num_procs_copied = cur.rowcount
                 except Exception as e:

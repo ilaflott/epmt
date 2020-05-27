@@ -53,11 +53,6 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = ''):
 
     Notes
     -----
-    The output CSV will not contain a header, and that 
-    also distinguishes it from input files, which will contain a 
-    header. Input CSV files not containing headers will be skipped
-    with a warning.
-
     If the input and output filenames are the same, then a
     temporary file will be created for the output CSV. Finally
     the input CSV will be replaced with the temporary file.
@@ -93,8 +88,7 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = ''):
 
         # initialize the output file
         writer = csv.DictWriter(csvfile, fieldnames=OUTPUT_CSV_FIELDS, delimiter=OUTPUT_CSV_SEP)
-        # No header in output file (to distinguish it from input format)
-        # writer.writeheader()
+        writer.writeheader()
 
         row_num = 0 # input row being processed
         outrows = 0 # number of rows output (we combine threads into one row)
