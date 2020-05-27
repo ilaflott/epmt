@@ -15,7 +15,7 @@ from logging import getLogger
 
 logger = getLogger(__name__)  # you can use other name
 import epmt_settings as settings
-from epmtlib import get_username, epmt_logging_init, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm, dict_filter, check_fix_metadata
+from epmtlib import get_username, epmt_logging_init, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm, dict_filter, check_fix_metadata, logfn
 
 def find_diffs_in_envs(start_env,stop_env):
     env = {}
@@ -959,101 +959,72 @@ def submit_to_db(input, pattern, dry_run=True, remove_file=False):
     # logger.info("Committed job %s to database: %s",j.jobid,j)
     # return (j.jobid, process_count)
 
-
+@logfn
 def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True,from_annotate=False):
-    logger.debug("stage_job(%s,collate=%s,compress_and_tar=%s,keep_going=%s,from_annotate=%s)",indir,str(collate),str(compress_and_tar),str(keep_going),str(from_annotate))
     if not indir or len(indir) == 0:
         logger.error("stage_job: indir is epmty")
         return False
     if not settings.stage_command or not settings.stage_command_dest or len(settings.stage_command) == 0 or len(settings.stage_command_dest) == 0: 
         logger.debug("stage_job: no stage commands to do")
         return True
+
+    # Always collate into local temp dir
     if collate:
+        from tempfile import mkdtemp, gettempdir
         from epmt_concat import csvjoiner
-        logger.debug("csvjoiner(%s)",indir)
-        status, collated_file, badfiles = csvjoiner(indir, keep_going=keep_going, errdir=settings.error_dest)
+
+        tempdir = mkdtemp(prefix='epmt_stage_',dir=gettempdir())
+        copyfile(indir+"job_metadata",tempdir+"/job_metadata")
+        status, collated_file, badfiles = csvjoiner(indir, outpath=tempdir+"/", keep_going=keep_going, errdir=settings.error_dest)
         if status == False:
             logger.debug("csvjoiner returned status = %s",status)
+            rmtree(tempdir)
             return False
         if (badfiles) and not from_annotate:
             d={}
             d["epmt_stage_error"]=str(badfiles)
             logger.error("Job being annotated with %s",str(d))
 # begin HACK: should call a real annotate function            
-            metadatafile = indir+"job_metadata"
+            metadatafile = tempdir+"/job_metadata"
             metadata = read_job_metadata(metadatafile)
             if not metadata:
                 logger.error("Failed to get %s for annotation of erroneous stage",metadatafile)
+                rmtree(tempdir)
                 return False
             if not merge_and_write_annotations(metadatafile,metadata,d,replace=False):
                 logger.error("Failed to write to %s annotations of erroneous stage",metadatafile)
+                rmtree(tempdir)
                 return False
+        if compress_and_tar:
+            filetostage = gettempdir()+"/"+path.basename(path.dirname(indir))+".tgz"
+            cmd = "tar -C "+tempdir+" -cz -f "+filetostage+" ."
+            logger.debug(cmd)
+            return_code = forkexecwait(cmd, shell=True)
+            rmtree(tempdir)
+            if return_code != 0:
+                return False
+        else:
+            filetostage = gettempdir()+"/"+path.basename(path.dirname(indir))
+            move(tempdir,filetostage)
+            
 # end HACK
-        if status == True and collated_file and len(collated_file) > 0:
-            logger.info("Collated file is %s, indir is %s",collated_file,indir)
-            try:
-                # make dir.collated, copy in collated file and job metadata
-                newdir = path.dirname(indir)+".collated"
-                logger.debug("mkdir(%s)",newdir)
-                mkdir(newdir)
-                logger.debug("copyfile(%s,%s)",indir+"job_metadata",newdir+"/job_metadata")
-                copyfile(indir+"job_metadata",newdir+"/job_metadata")
-                logger.debug("move(%s,%s)",collated_file,newdir)
-                move(collated_file,newdir)
-
-                # Move dir to dir.original
-                logger.debug("move(%s,%s)",path.dirname(indir),path.dirname(indir)+".original")
-                move(path.dirname(indir),path.dirname(indir)+".original")
-
-                # Move dir.collated to dir
-                logger.debug("move(%s,%s)",newdir,path.dirname(indir))
-                move(newdir,path.dirname(indir))
-
-                # Remove dir.original 
-                logger.debug("rmtree(%s)",path.dirname(indir)+".original")
-                rmtree(path.dirname(indir)+".original")
-            except Exception as e:
-                logger.error("Something went wrong while staging collated job in %s: %s",indir,str(e))
-                try:
-                    rmtree(indir+".original")
-                except:
-                    pass
-                try:
-                    rmtree(indir+".collated")
-                except:
-                    pass
-                return False
-
-    if not path.exists(indir + "/job_metadata"):
-        logger.error("job_metadata file missing in %s",indir)
-        return False
-
-    filetostage = path.dirname(indir)
-    if compress_and_tar:
-        cmd = "tar -C "+indir+" -cz -f "+path.dirname(indir)+".tgz ."
-        logger.debug(cmd)
-        return_code = forkexecwait(cmd, shell=True)
-        if return_code != 0:
-            return False
-        filetostage += ".tgz "
-
     cmd = settings.stage_command + " " + filetostage + " " + settings.stage_command_dest
     logger.debug(cmd)
     return_code = forkexecwait(cmd, shell=True)
-    if return_code != 0:
-        if not ((settings.stage_command == "mv") and
-                ((path.dirname(filetostage) == path.dirname(settings.stage_command_dest)) or
-                 ((path.dirname(filetostage) == "") and (path.dirname(settings.stage_command_dest) == ".")))):
-            return False
-
     try:
-        logger.info("rmtree(%s)",indir)
-        rmtree(indir)
+        logger.info("rmtree(%s)",filetostage)
+        rmtree(filetostage)
     except Exception as e:
-        logger.warning("rmtree(%s): %s",indir,str(e))
-
-    print(path.normpath(settings.stage_command_dest)+"/"+path.basename(filetostage))
-    return True
+        logger.debug("rmtree(%s): %s",filetostage,str(e))
+    if return_code == 0:
+        print(path.normpath(settings.stage_command_dest)+"/"+path.basename(filetostage))
+        try:
+            logger.info("rmtree(%s)",indir)
+            rmtree(indir)
+        except Exception as e:
+            logger.warning("rmtree(%s): %s",indir,str(e))
+        return True
+    return False
 
 def epmt_stage(dirs, keep_going=True, collate=True, compress_and_tar=True):
     logger.debug("epmt_stage(%s,collate=%s,compress_and_tar=%s,keep_going=%s)",dirs,str(collate),str(compress_and_tar),str(keep_going))
