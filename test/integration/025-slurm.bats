@@ -14,10 +14,10 @@ verify_staged_file() {
 }
 
 setup() {
-#  sinfo || skip
-#  sbatch || skip
-#  srun || skip
-  epmt -V || skip
+  sinfo || skip
+  sbatch || skip
+  srun || skip
+  epmt -V
   install_path=$(dirname `command -v epmt`)
   stage_dest=$(epmt -h | sed -n 's/stage_command_dest://p')
   test -n "${stage_dest}" || fail
