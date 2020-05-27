@@ -1,4 +1,4 @@
-site_name: EPMT
+site_name: Experiment Performance Management Tool
 theme:
   name: material
   favicon: favicon.ico
@@ -20,6 +20,7 @@ markdown_extensions:
 use_directory_urls: false
 
 nav:
+  - EPMT Quick Start: Quickstart.md
   - EPMT Install: INSTALL.md
   - EPMT Readme: README.md
   - EPMT Commands: epmt_cmds.md
