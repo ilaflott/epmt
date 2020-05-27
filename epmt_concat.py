@@ -39,15 +39,15 @@ def rename_bad_files(outfile, errdir, badfiles):
     logger = getLogger('rename_bad_files')
     logger.debug("%s,%s,%s",outfile,errdir,str(badfiles))
     if not errdir:
-        logger.debug("Skipping renaming bad files!")
+        logger.warning("No error dir specified, skipping renaming of bad CSV files!")
         return badfiles
     ed=path.normpath(errdir)
     if not path.exists(ed):
         try:
             makedirs(ed) 
         except OSError as e:
-            logger.error("makedirs(%s): %s",ed,str(e))
-            return False
+            logger.error("makedirs(%s): %s, skipping renamng of bad CSV files!",ed,str(e))
+            return badfiles
     renamed_badfiles = []
     for f in badfiles:
         p=path.basename(path.normpath(f))
