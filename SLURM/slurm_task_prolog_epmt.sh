@@ -1,5 +1,4 @@
 #!/bin/bash 
-EPMT=/opt/epmt/epmt-install/epmt/epmt
 
 # The task prolog is executed with the same environment as the user tasks to be initiated.
 # The standard output of that program is read and processed as follows:
@@ -9,6 +8,9 @@ EPMT=/opt/epmt/epmt-install/epmt/epmt
 #
 # See https://slurm.schedmd.com/prolog_epilog.html
 #
+
+# This is edited during install to correct path
+EPMT=/opt/epmt/epmt-install/epmt/epmt
 
 err_report() {
     echo "print $0: Error at line $1"
