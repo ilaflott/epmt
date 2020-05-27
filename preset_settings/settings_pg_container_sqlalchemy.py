@@ -55,8 +55,6 @@ bulk_insert = True
 # will be unavailable until the process tree is computed.
 # lazy_compute_process_tree = True
 
-# If enabled, directly ingest CSV files directly into a staging process table
-# using postgresql copy primitive
-# This option can only be enabled when using SQLA + Postgres
-# If db_copy_csv is enabled, it will silently disable post_process_job_on_ingest 
-db_copy_csv = True
+# csv format - 1.0 (portable but slower ingestion)
+#            - 2.0 (suitable for direct ingestion on postgresql+SQLAlchemy
+csv_format = '2.0'

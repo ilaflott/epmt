@@ -26,7 +26,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (4,1,4)
+_version = (4,2,0)
 
 def version():
     return _version
@@ -168,18 +168,17 @@ def init_settings(settings):
     if not hasattr(settings, 'lazy_compute_process_tree'):
         logger.warning("missing settings.lazy_compute_process_tree")
         settings.lazy_compute_process_tree = True
-    if not hasattr(settings, 'db_copy_csv'):
-        settings.db_copy_csv = False
+    if not hasattr(settings, 'csv_format'):
+        settings.csv_format = '1.0'
     if ((settings.orm != 'sqlalchemy') and (not(settings.post_process_job_on_ingest))):
         err_msg += '\n - post_process_job_on_ingest set as False is only permitted with sqlalchemy'
     if not hasattr(settings, 'db_params'):
         err_msg += "\n - missing settings.db_params"
     else:
-        # silently disable copy CSV to db, as it's unsupported
         # on all platforms except postgres+SQLA
-        if settings.db_copy_csv:
+        if settings.csv_format == '2.0':
             if (settings.orm != 'sqlalchemy' or not('postgres' in settings.db_params['url'])):
-                err_msg + "\n - db_copy_csv can only be enabled on postgres+SQLAlchemy combination"
+                err_msg + "\n - csv_format 2.0 is presently only supported on postgres+SQLAlchemy"
     if err_msg:
         err_msg = "The following error(s) were detecting in your settings: " + err_msg
         logger.error(err_msg)

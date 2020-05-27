@@ -25,7 +25,7 @@ OUTPUT_CSV_SEP = '\t'
 # Expected input format
 # tags,hostname,exename,path,args,exitcode,pid,generation,ppid,pgid,sid,numtids,tid,start,end,usertime,systemtime,rssmax,minflt,majflt,inblock,outblock,vol_ctxsw,invol_ctxsw,num_threads,starttime,processor,delayacct_blkio_time,guest_time,rchar,wchar,syscr,syscw,read_bytes,write_bytes,cancelled_write_bytes,time_oncpu,time_waiting,timeslices,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
 # ,pp208,tcsh,/bin/tcsh,-f /home/Jeffrey.Durachta/ESM4/DECK/ESM4_historical_D151/gfdl.ncrc4-intel16-prod-openmp/scripts/postProcess/ESM4_historical_D151_ocean_annual_rho2_1x1deg_18840101.tags,0,6099,0,6098,6089,6084,1,6099,1560599524133795,1560599524134048,2999,0,2852,387,0,0,0,0,0,0,1296261120000,0,0,0,17618,0,40,0,0,0,0,3604195,47138,1,846248,246094
-def conv_csv_for_dbcopy(infile, outfile = '', jobid = ''):
+def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_CSV_FIELDS):
     '''
     Convert a CSV into a format suitable for ingestion using PostgreSQL COPY
 
@@ -45,6 +45,9 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = ''):
         jobid : string, optional
                 Job ID. If not provided it will be determined from
                 `infile`
+ input_fields : set, optional
+                Expected set of input fields. If provided, the input
+                CSV fields must exactly match this
 
 
     Returns
@@ -68,7 +71,7 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = ''):
         in_place = False
 
     if not jobid:
-        jobid = _extract_jobid_from_collated_csv(infile)
+        jobid = extract_jobid_from_collated_csv(infile)
         if not jobid:
             logger.error('Could not determine jobid from input path: ' + infile)
             return False
@@ -95,7 +98,7 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = ''):
         for r in reader:
             row_num += 1
             if row_num == 1:
-                if not(set(r.keys()) >= INPUT_CSV_FIELDS):
+                if input_fields and not(set(r.keys()) == input_fields):
                     # sanity check to make sure our input file has the correct format
                     logger.error('Input CSV format is not correct. Likely missing  header row..')
                     return False
@@ -119,13 +122,8 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = ''):
             # only populate threads_sums for multithreaded processes
             r['threads_sums'] = [ int(thread_metric_sums[k]) for k in thr_fields ] if numtids > 1 else []
             r['threads_df'] = threads_df
-
-            # r['info_dict'] = {}
-            # r['user_id'] = user
             r['jobid'] = jobid
-            # r['duration'] = float(r['end']) - float(r['start'])
-            # r['host_id'] = r['hostname']
-            r['host_id'] = 'pp208'
+            r['host_id'] = r['hostname']
             r['gen'] = r['generation']
 
             # replace postgres eof marker in the args field
@@ -133,7 +131,6 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = ''):
             if '\.' in r['args']:
                 r['args'] = r['args'].replace('\.', '\\\.')
 
-            # r['cpu_time'] = float(r['usertime']) + float(r['systemtime'])
             for field in ['pid', 'ppid', 'pgid', 'sid', 'gen', 'start', 'end']:
                 r[field] = int(r[field])
             r['finish'] = r['end'] # end is reserved word in sql
@@ -249,7 +246,7 @@ def convert_csv_in_tar(in_tar, out_tar = ''):
     shutil.rmtree(tempdir)
 
     
-def _extract_jobid_from_collated_csv(collated_csv):
+def extract_jobid_from_collated_csv(collated_csv):
     '''
     Returns a jobid from a collated CSV file
     '''
