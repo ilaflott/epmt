@@ -98,7 +98,7 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
         for r in reader:
             row_num += 1
             if row_num == 1:
-                if input_fields and not(set(r.keys()) == input_fields):
+                if input_fields and not(set(r.keys()) >= input_fields):
                     # sanity check to make sure our input file has the correct format
                     logger.error('Input CSV format is not correct. Likely missing  header row..')
                     return False
