@@ -142,23 +142,23 @@ class EPMTCmds(unittest.TestCase):
         if path.exists(errorfile):
             remove(errorfile)
         tempdir = mkdtemp(prefix='epmt_',dir=gettempdir())
-        copytree("test/data/corrupted_csv",tempdir)
+        copytree("test/data/corrupted_csv",tempdir+"/corrupted_csv")
         with capture() as (out, err):
-            retval = epmt_stage([tempdir],keep_going=False)
+            retval = epmt_stage([tempdir+"/corrupted_csv"],keep_going=False)
         self.assertTrue(retval == False, "corrupted CSV files, should have returned False")
         self.assertFalse(path.exists(errorfile))
-        rmtree(tempdir)
+        rmtree(tempdir+"/corrupted_csv")
         
         if path.exists(errorfile):
             remove(errorfile)
         tempdir = mkdtemp(prefix='epmt_',dir=gettempdir())
-        copytree("test/data/corrupted_csv",tempdir)
+        copytree("test/data/corrupted_csv",tempdir+"/corrupted_csv")
         with capture() as (out, err):
-            retval = epmt_stage([tempdir],keep_going=True)
+            retval = epmt_stage([tempdir+"/corrupted_csv"],keep_going=True)
         self.assertTrue(retval == True, "corrupted CSV files but keep_going, should have returned True")
         self.assertTrue(path.exists(errorfile))
+        self.assertFalse(path.exists(tempdir+"/corrupted_csv"))
         remove(errorfile) # cleanup after ourselves
-        rmtree(tempdir)
         # restore logging level
         epmt_logging_init(-1)
         
