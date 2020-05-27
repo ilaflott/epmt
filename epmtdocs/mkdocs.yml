@@ -28,5 +28,5 @@ nav:
     - Outliers: http://localhost:8888/notebooks/Outliers.ipynb" target="_blank
     - Query API: http://localhost:8888/notebooks/Query-API.ipynb" target="_blank
     - Graphing API: http://localhost:8888/notebooks/Graphing-API.ipynb" target="_blank
-  - Interface: http://localhost:8050" target="_blank
-  - Interface Readme: index_ui.md
+  - EPMT Workflow GUI: http://localhost:8050" target="_blank
+  - EPMT Workflow GUI Readme: index_ui.md

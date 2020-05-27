@@ -8,7 +8,7 @@ The software contained in this repository was written by Philip Mucci of Minimal
 
 ## Installation With Release File
 
-The release file includes EPMT, Data Collection Libraries, Notebook and EPMT Interface 
+The release file includes EPMT, Data Collection Libraries, Notebook and EPMT Workflow GUI. 
 
 For installing with a release file you'll need:
 
@@ -115,153 +115,6 @@ Here I add a verbosity switch to get a detailed check output
 ---
 
 
-## Installation From Source
-
-### Requirements
-
-A Linux (or container image) with:
-
-* python (2.6 or higher)
-* pip (python-pip)
-* gcc
-* git 
-
-For a stock Ubuntu 16.04 (or container):
-
-```text
- $ apt-get update
- $ apt-get install -y python python-pip git gcc 
-```
-
-## Source Code
-
-Before you start, please make sure you have a copy of **EPMT** in a directory called **build**:
-
-```text
- $ mkdir build
- $ cd build/
- $ git clone https://<user>@gitlab.com:minimal-metrics-llc/epmt/epmt.git
-```
-
-You also need the **papiex** data collection libraries, **papiex-epmt** branch in the **build** directory:
-
-```text
- build$ git clone -b papiex-epmt git@gitlab.com:minimal-metrics-llc/papiex.git
- Cloning into 'papiex'...
- remote: Enumerating objects: 5149, done.
- remote: Counting objects: 100% (5149/5149), done.
- remote: Compressing objects: 100% (2231/2231), done.
- remote: Total 5149 (delta 2850), reused 5130 (delta 2831), pack-reused 0
- Receiving objects: 100% (5149/5149), 6.76 MiB | 5.62 MiB/s, done.
- Resolving deltas: 100% (2850/2850), done.
-
-
-```
-
-### Installation of the Data Collection Libraries
-
-Compile the data collection libraries used by **EPMT**:
-
-```text
- $ cd papiex/
- $ make
- cd monitor; ./configure --prefix=/home/chris/Documents/Playground/MM/build/papiex-oss/ papiex-epmt-install
- checking for a BSD-compatible install... /usr/bin/install -c
- checking whether build environment is sane... yes
- checking for a thread-safe mkdir -p... /bin/mkdir -p
- checking for gawk... no
- checking for mawk... mawk
- checking whether make sets $(MAKE)... yes
- checking whether make supports nested variables... yes
- checking whether to enable maintainer-specific portions of Makefiles... no
- checking for style of include used by make... GNU
- ....
-```
-
-The we run the data collection tests. If a test is *SKIPPED*, the test suite will still report a failure. 
-
-```
- cd papiex
- build/papiex-oss$ make check
- make[1]: Entering directory '/home/chris/Documents/Playground/MM/build/papiex-oss/papiex'
- make -C /home/chris/Documents/Playground/MM/build/papiex-oss/papiex/x86_64-Linux -f /home/ chris/Documents/Playground/MM/build/papiex-oss/papiex/src/Makefile check
- make[2]: Entering directory '/home/chris/Documents/Playground/MM/build/papiex-oss/papiex/ x86_64-Linux'
- cp -Rp /home/chris/Documents/Playground/MM/build/papiex-oss/papiex/src/tests/* /home/chris/ Documents/Playground/MM/build/papiex-oss/papiex/x86_64-Linux/tests
- cd tests; PAPIEX_PREFIX=/home/chris/Documents/Playground/MM/build/papiex-oss/ papiex-epmt-install ./test.sh
- ./test.sh: line 4: /proc/sys/kernel/perf_event_paranoid: Permission denied
- Test dir: /home/chris/Documents/Playground/MM/build/papiex-oss/papiex/x86_64-Linux/tests/.
- Temp output pattern: /tmp/*-papiex-*
- Test output data dir: /home/chris/Documents/Playground/MM/build/papiex-oss/ papiex-epmt-install/tmp
- Environment: PAPIEX_PREFIX=/home/chris/Documents/Playground/MM/build/papiex-oss/ papiex-epmt-install
- Environment: PAPIEX_OPTIONS=PERF_COUNT_SW_CPU_CLOCK
- Invocation: PAPIEX_OUTPUT=/tmp/ PAPIEX_OPTIONS=PERF_COUNT_SW_CPU_CLOCK LD_PRELOAD=/home/chris/ Documents/Playground/MM/build/papiex-oss/papiex-epmt-install/lib/libpapiex.so:/home/chris/ Documents/Playground/MM/build/papiex-oss/papiex-epmt-install/lib/libmonitor.so
- sysctl kernel.perf_event_paranoid = 0
- 
- -- Test Data --
- /home/chris/Documents/Playground/MM/build/papiex-oss/papiex-epmt-install/bin/ papi_command_line PERF_COUNT_SW_CPU_CLOCK: PASS
- gcc -Wall unit1.c -o unit1a: PASS
- gcc -Wall -fPIC -shared dumb-mpi.c -o dumb-mpi.so: PASS
- gcc -Wall dumb-mpi-main.c ./dumb-mpi.so -o dumb-mpi: PASS
- gcc -Wall unit1.c -o unit1a: PASS
- gcc -pthread dotprod_mutex.c -o dotprod_mutex: PASS
- g++ -fopenmp md_openmp.cpp -o md_openmp: PASS
- gfortran -fopenmp fft_openmp.f90 -o fft_openmp: SKIPPED executable not found
- ./unit1a: PASS
- ./dotprod_mutex: PASS
- ./md_openmp: PASS
- ./fft_openmp: SKIPPED executable not found
- ./dumb-mpi: PASS
- sleep 1: PASS
- ps -fade: PASS
- host google.com: PASS
- sed -e s/,//g: PASS
- bash --noprofile sieve.sh 100: PASS
- tcsh -f sieve.csh 100: SKIPPED executable not found
- csh -f sieve.csh 100: SKIPPED executable not found
- python2 sieve.py: PASS
- python3 sieve.py: PASS
- perl sieve.pl: PASS
- tcsh -f module-test.csh: SKIPPED executable not found
- bash --noprofile -c 'sleep 1': PASS
- tcsh -f -c 'sleep 1': SKIPPED executable not found
- csh -f -c 'sleep 1': SKIPPED executable not found
- tcsh -f evilcsh.csh: SKIPPED executable not found
- csh -f evilcsh.csh: SKIPPED executable not found
- The authenticity of host localhost '(127.0.0.1)' cant be established.
- ECDSA key fingerprint is SHA256:fDSW/zfzeDWdTO1FpwDbVjXCWwEC9c2ZvZiytP/KqJk.
- Are you sure you want to continue connecting (yes/no)? yes
- Warning: Permanently added 'localhost' (ECDSA) to the list of known hosts.
- chris@localhost: Permission denied (publickey,password).
- ssh -o PreferredAuthentications=publickey localhost /bin/true: SKIPPED ssh failed, keys  missing
- cshsucks@localhost: Permission denied (publickey,password).
- ssh -o PreferredAuthentications=publickey cshsucks@localhost /bin/true: SKIPPED ssh failed,  keys missing
- tcshsucks@localhost: Permission denied (publickey,password).
- ssh -o PreferredAuthentications=publickey tcshsucks@localhost /bin/true: SKIPPED ssh failed,  keys missing
- ./noop: PASS
- ./_noop x: PASS
- ./_noop,: PASS
- /bin/sleep 10: PASS
- -- Test Results --
-  PASSED: 24
- SKIPPED: 12
-  FAILED: 0 (0 expected)
- 
- PASSED
- make[2]: Leaving directory '/home/chris/Documents/Playground/MM/build/papiex-oss/papiex/ x86_64-Linux'
- make[1]: Leaving directory '/home/chris/Documents/Playground/MM/build/papiex-oss/papiex'
- ln -s /home/chris/Documents/Playground/MM/build/papiex-oss/papiex-epmt-install/tmp ./ sample-data.build
-
-```
-
-The collection agent is now installed in the **papiex-epmt-install** directory.
-
-```text
-$ ls papiex-epmt-install/
-bin  include  lib  share
-```
-
-If there are errors, often it is a problem with the a Linux setting that prevents access to performance data, see the next section:
-
 ### Perf Event System Setting
 
 For detailed hardware and software performance metrics to collected by non-privileged users, the following setting must be verified/modified:
@@ -277,7 +130,7 @@ For detailed hardware and software performance metrics to collected by non-privi
 
 ```
 
-This isn't necessary unless one would like to collect metrics exposed by [PAPI](http://icl.utk.edu/papi/), [libpfm](http://perfmon2.sourceforge.net/) and the [perfevent](http://web.eece.maine.edu/~vweaver/projects/perf_events/) subsystems. But collecting this data is, after all, the entire point of this tool. See [Stack Overflow](https://stackoverflow.com/questions/51911368/what-restriction-is-perf-event-paranoid-1-actually-putting-on-x86-perf) for a discussion of the setting. A setting of 1 is perfectly safe for production systems.
+This isn't necessary unless one would like to collect metrics exposed by [PAPI](http://icl.utk.edu/papi/), [libpfm](http://perfmon2.sourceforge.net/) and the [perfevent](http://web.eece.maine.edu/~vweaver/projects/perf_events/) subsystems. Collecting subsystem data is the premise of EPMT. See [Stack Overflow](https://stackoverflow.com/questions/51911368/what-restriction-is-perf-event-paranoid-1-actually-putting-on-x86-perf) for a discussion of the setting. A setting of 1 is perfectly safe for production systems.
 
 ## Modes of EPMT
 
@@ -388,16 +241,15 @@ INFO:epmt_cmds:Committed job 1 to database: Job[u'1']
 
 You are ready to configure a real database.
 
-#### Configuring a Database
+#### Connecting EPMT to a Database
 
-There is a prebuilt settings.py file to connect to the localhost.
-
+Using the prebuilt settings files located in the epmt install directory(/opt/minimalmetrics/epmt-(Version)/epmt-install/preset_settings)
 ```text
-$ rm settings.py settings.pyc
-$ ln -s settings/settings_pg_localhost.py settings.py
+$ cd /opt/minimalmetrics/epmt-3.8.20/epmt-install/epmt
+$ rm settings.py
+$ ln -s ../preset_settings/settings_pg_container_sqlalchemy.py settings.py
 $ grep db_params settings.py
-db_params = {'provider': 'postgres', 'user': 'postgres','password': 'example','host': 'localhost', 'dbname': 'EPMT'}
-
+db_params = { 'url': 'postgresql://postgres:example@postgres:5432/EPMT', 'echo': False }
 ```
 
 The database is ready to go.
