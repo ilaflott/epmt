@@ -18,7 +18,7 @@ setup() {
 #  sbatch || skip
 #  srun || skip
   epmt -V || skip
-  install_path=$(dirname `which epmt`)
+  install_path=$(dirname `command -v epmt`)
   stage_dest=$(epmt -h | sed -n 's/stage_command_dest://p')
   test -n "${stage_dest}" || fail
   bash -c 'echo -e "#!/bin/tcsh\nsleep 1\n" > /tmp/sleeptest.tcsh'
