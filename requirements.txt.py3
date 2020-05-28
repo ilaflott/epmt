@@ -87,7 +87,6 @@ tornado==6.0.3
 traitlets==4.3.3
 typed-ast==1.4.0
 tzlocal==2.0.0
-waitress==1.4.3
 wcwidth==0.1.7
 webencodings==0.5.1
 widgetsnbextension==3.5.1

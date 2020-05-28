@@ -1,4 +1,4 @@
-site_name: Experiment Performance Management Tool
+site_name: Experiment Performance Management Tool (EPMT)
 theme:
   name: material
   favicon: favicon.ico

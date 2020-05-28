@@ -70,6 +70,8 @@ All three modes reference the **settings.py** file as well as **environment vari
 ```
 
 ### Collection
+
+
 Automatic **Collection** with SLURM
 ---
 
@@ -99,7 +101,7 @@ If this fails, then it's likely the papiex installation is either missing or mis
 We can submit our previous job to the database defined in **settings.py** just run the epmt submit command with the directory returned by stage (found in location set by settings.py epmt_output_prefix):
 
 ```text
-$ ./epmt -v submit /tmp/epmt/1/
+$ epmt -v submit /tmp/epmt/1/
 INFO:epmt_cmds:submit_to_db(/tmp/epmt/1/,*-papiex-[0-9]*-[0-9]*.csv,False)
 INFO:epmt_cmds:Unpickling from /tmp/epmt/1/job_metadata
 INFO:epmt_cmds:1 files to submit
@@ -146,8 +148,7 @@ INFO:epmt_job:Staged import took 0:00:00.189151, 5.286781 processes per second
 INFO:epmt_cmds:Committed job 1 to database: Job[u'1']
 ```
 
-## Analysis
-Analysis and Visualization
+## Analysis and Visualization
 ---
 
 EPMT Uses a **ipython notebook** data analytics environment.  Starting the jupyter notebook is easy from the **epmt notebook** command.
@@ -168,9 +169,9 @@ $ epmt notebook
      or http://127.0.0.1:8888/?token=9c7529e19e12cb8121d66ff471e96fdd3056f6acc4480274
 ```
 
-The notebook command offers paramaters such as host IP for sharing access to the notebook with machines on the local network, notebook token and notebook password
+The notebook command offers passing paramaters to jupyter such as host IP for sharing access to the notebook with machines on the local network, notebook token and notebook password
 ```
-./epmt notebook -- --ip 0.0.0.0 --NotebookApp.token='thisisatoken' --NotebookApp.password='hereisa$upersecurepassword'
+$ epmt notebook -- --ip 0.0.0.0 --NotebookApp.token='thisisatoken' --NotebookApp.password='hereisa$upersecurepassword'
 ```
 
 
@@ -380,7 +381,7 @@ $ epmt -v -v submit /dir/to/jobdata
 
 ## Debugging
 
-**EPMT** can be passed noth **-n** (dry-run) and **-v** (verbosity) to help with debugging. Add more **-v** flags to increase the level of information printed.
+**EPMT** can be passed both **-n** (dry-run) and **-v** (verbosity) to help with debugging. Add more **-v** flags to increase the level of information printed **-vvv**.
 
 ```
 $ epmt -v start
@@ -420,65 +421,63 @@ job_pl_username         Foo.Bar
 ```
 
 
-## Analysis of EPMT Data 
-
-Current analytics are performed in an iPython notebook, specifically the SciPy-Notebook as described on [their homepage](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html).  
-
-If you have Jupyter installed locally **and** you have installed the prerequisite Python modules (see **INSTALL.md**), there is no need to use the Docker image. You can simply load the **EPMT.ipynb** from the source directory in your environment and begin.
-
-However, for those without an environment, using Docker (and assuming you build the images as described in **INSTALL.md**):
-
-```
-$ docker-compose up notebook
-```
-
-Follow the instructions printed to the screen to navigate to **EPMT.ipynb** or try this link [http://localhost:8888/notebooks/EPMT.ipynb]() and enter the encryption key. You must be in the directory where EPMT.ipynb exists when you start the notebook service. Further documentation exists in that file.
-
-## Data Dictionary
+## Performance Metrics Data Dictionary
 
 EPMT collects data both from the job runtime and the applications run in that environment. See the **models/** directory for what fixed data is stored related to each object. Metric data is stored differently and the data collector's data directionary can be found in papiex-oss/README.md. At the time of this writing it looked like this:
 
-```
-Key                     Source							Description
--------------------------------------------------------------------------------------------------------------------------------------
-exename			PAPI							Name of the application, usually argv[0]
-path			PAPI							Path to the application
-args			monitor							All arguments to the application not including argv[0]
-pid			getpid()						Process id
-generation		monitor 						Incremented after every exec()
-ppid			getppid()						Parent process id
-pgid			getpgid()						Process group id
-sid			getsid()						Process session id
-numtids			monitor							Number of threads caught by instrumentation
-tid			gettid()						Thread id
-start			gettimeofday() 						Microsecond timestamp at start
-end			gettimeofday() 						Microsecond timestamp at end
-usertime		getrusage(RUSAGE_THREAD) 				Microsecond user time 
-systemtime		getrusage(RUSAGE_THREAD) 				Microsecond system time
-rssmax			getrusage(RUSAGE_THREAD) 				Kb max resident set size
-minflt			getrusage(RUSAGE_THREAD) 				Minor faults (TLB misses/new page frames)
-majflt			getrusage(RUSAGE_THREAD) 				Major page faults (requiring I/O)
-inblock			getrusage(RUSAGE_THREAD) 				512B blocks read from I/O 
-outblock		getrusage(RUSAGE_THREAD) 				512B blocks written to I/O 
-vol_ctxsw		getrusage(RUSAGE_THREAD) 				Boluntary context switches (yields)
-invol_ctxsw		getrusage(RUSAGE_THREAD) 				Involuntary context switches (preemptions)
-num_threads		/proc/<pid>/task/<tid>/stat field 20 	     	 	Threads in process at finish
-starttime		/proc/<pid>/task/<tid>/stat field 22 	     	      	Timestamp in jiffies after boot thread was started
-processor		/proc/<pid>/task/<tid>/stat field 39 	     	      	CPU this thread last ran on
-delayacct_blkio_time	/proc/<pid>/task/<tid>/stat field 42 	     	      	Jiffies process was blocked in D state on I/O device
-guest_time		/proc/<pid>/task/<tid>/stat field 43 	     	      	Jiffies running a virtual CPU for a guest OS
-rchar			/proc/<pid>/task/<tid>/io line 1  		      	Bytes read via syscall (may come from pagecache not I/O device)
-wchar			/proc/<pid>/task/<tid>/io line 2  		      	Bytes written via syscall (may go to pagecache not I/O device)
-syscr			/proc/<pid>/task/<tid>/io line 3  		      	Read syscalls 
-syscw			/proc/<pid>/task/<tid>/io line 4  		      	Write syscalls
-read_bytes		/proc/<pid>/task/<tid>/io line 4  		      	Bytes read from I/O device
-write_bytes		/proc/<pid>/task/<tid>/io line 4  		      	Bytes written to I/O device
-cancelled_write_bytes	/proc/<pid>/task/<tid>/io line 4  		      	Number of bytes discarded by truncation
-time_oncpu		/proc/<pid>/task/<tid>/schedstat		      	Time in jiffies spent running the CPI
-time_waiting		/proc/<pid>/task/<tid>/schedstat		      	Time in jiffies waiting for a run queue while runnable
-timeslices		/proc/<pid>/task/<tid>/schedstat		      	Number of run periods on CPU
-rdtsc_duration		<Hardware RDTSC>				      	Real time cycle counter duration of thread
-```
+
+| Key                       	| Source                     	| Datatype       	| Scope   	| Description                                            	|
+|---------------------------	|----------------------------	|----------------	|---------	|--------------------------------------------------------	|
+| 1. tags                   	| getenv("PAPIEX_TAGS")      	| Escaped string 	| Process 	| User specified tags for this executable                	|
+| 2. hostname               	| gethostname()              	| String         	| Process 	| hostname                                               	|
+| 3. exename                	| PAPI                       	| String         	| Process 	| Name of the application, usually argv[0]               	|
+| 4. path                   	| PAPI                       	| String         	| Process 	| Path to the application                                	|
+| 5. args                   	| monitor                    	| Escaped string 	| Process 	| All arguments to exe excluding argv[0]                 	|
+| 6. exitcode               	| exit()                     	| Integer        	| Process 	| Exit code                                              	|
+| 7. exitsignal             	| monitor                    	| Integer        	| Process 	| Exited due to a signal                                 	|
+| 8. pid                    	| getpid()                   	| Integer        	| Process 	| Process id                                             	|
+| 9. generation             	| monitor                    	| Integer        	| Process 	| Incremented after every exec() or PID wrap             	|
+| 10. ppid                  	| getppid()                  	| Integer        	| Process 	| Parent process id                                      	|
+| 11. pgid                  	| getpgid()                  	| Integer        	| Process 	| Process group id                                       	|
+| 12. sid                   	| getsid()                   	| Integer        	| Process 	| Process session id                                     	|
+| 13. numtids               	| monitor                    	| Integer        	| Process 	| Number of threads caught by instrumentation            	|
+| 14. numranks              	| monitor(MPI)               	| Integer        	| Process 	| Number of MPI ranks detected                           	|
+| 15. tid                   	| gettid()                   	| Integer        	| Process 	| Thread id                                              	|
+| 16. mpirank               	| monitor(MPI)               	| Integer        	| Thread  	| MPI rank                                               	|
+| 17. start                 	| gettimeofday()             	| Integer        	| Process 	| Microsecond timestamp at start                         	|
+| 18. end                   	| gettimeofday()             	| Integer        	| Process 	| Microsecond timestamp at end                           	|
+| 19. usertime              	| getrusage(RUSAGE_THREAD)   	| Integer        	| Thread  	| Microsecond user time                                  	|
+| 20. systemtime            	| getrusage(RUSAGE_THREAD)   	| Integer        	| Thread  	| Microsecond system time                                	|
+| 21. rssmax                	| getrusage(RUSAGE_THREAD)   	| Integer        	| Thread  	| Kb max resident set size                               	|
+| 22. minflt                	| getrusage(RUSAGE_THREAD)   	| Integer        	| Thread  	| Minor faults (TLB misses/new page frames)              	|
+| 23. majflt                	| getrusage(RUSAGE_THREAD)   	| Integer        	| Thread  	| Major page faults (requiring I/O)                      	|
+| 24. inblock               	| getrusage(RUSAGE_THREAD)   	| Integer        	| Thread  	| 512B blocks read from I/O                              	|
+| 25. outblock              	| getrusage(RUSAGE_THREAD)   	| Integer        	| Thread  	| 512B blocks written to I/O                             	|
+| 26. vol_ctxsw             	| getrusage(RUSAGE_THREAD)   	| Integer        	| Thread  	| Voluntary context switches (yields)                    	|
+| 27. invol_ctxsw           	| getrusage(RUSAGE_THREAD)   	| Integer        	| Thread  	| Involuntary context switches (preemptions)             	|
+| 28. cminflt               	| /proc//task//stat field 11 	| Integer        	| Process 	| minflt (20) for all wait()ed children                  	|
+| 29. cmajflt               	| /proc//task//stat field 22 	| Integer        	| Thread  	| majflt (21) for all wait()ed children                  	|
+| 30. cutime                	| /proc//task//stat field 20 	| Integer        	| Process 	| utime (17) for all wait()ed children                   	|
+| 31. cstime                	| /proc//task//stat field 22 	| Integer        	| Thread  	| stime (18) for all wait()ed children                   	|
+| 32. num_threads           	| /proc//task//stat field 20 	| Integer        	| Process 	| Threads in process at finish                           	|
+| 33. starttime             	| /proc//task//stat field 22 	| Integer        	| Thread  	| Timestamp in jiffies after boot thread was started     	|
+| 34. processor             	| /proc//task//stat field 39 	| Integer        	| Thread  	| CPU this thread last ran on                            	|
+| 35. delayacct_blkio_time  	| /proc//task//stat field 42 	| Integer        	| Thread  	| Jiffies process blocked in D state on I/O device       	|
+| 36. guest_time            	| /proc//task//stat field 43 	| Integer        	| Thread  	| Jiffies running a virtual CPU for a guest OS           	|
+| 37. rchar                 	| /proc//task//io line 1     	| Integer        	| Thread  	| Bytes read via syscall (maybe from cache not dev I/O)  	|
+| 38. wchar                 	| /proc//task//io line 2     	| Integer        	| Thread  	| Bytes written via syscall (maybe to cache not dev I/O) 	|
+| 39. syscr                 	| /proc//task//io line 3     	| Integer        	| Thread  	| Read syscalls                                          	|
+| 40. syscw                 	| /proc//task//io line 4     	| Integer        	| Thread  	| Write syscalls                                         	|
+| 41. read_bytes            	| /proc//task//io line 5     	| Integer        	| Thread  	| Bytes read from I/O device                             	|
+| 42. write_bytes           	| /proc//task//io line 6     	| Integer        	| Thread  	| Bytes written to I/O device                            	|
+| 43. cancelled_write_bytes 	| /proc//task//io line 7     	| Integer        	| Thread  	| Bytes discarded by truncation                          	|
+| 44. time_oncpu            	| /proc//task//schedstat     	| Integer        	| Thread  	| Nanoseconds spent running                              	|
+| 45. time_waiting          	| /proc//task//schedstat     	| Integer        	| Thread  	| Nanoseconds runnable but waiting                       	|
+| 46. timeslices            	| /proc//task//schedstat     	| Integer        	| Thread  	| Number of run periods on CPU                           	|
+| 47. rdtsc_duration        	| PAPI                       	| Integer        	| Thread  	| If PAPI, real time cycle duration of thread            	|
+| *                         	| PAPI                       	| Integer        	| Thread  	| PAPI metrics                                           	|
+
+### Addition of new metrics
 
 Additional metrics can be configured either in two ways:
 * The papiex_options string In **settings.py** if using ```epmt run``` or ```epmt source```
