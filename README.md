@@ -54,7 +54,7 @@ There are three modes to **EPMT** usage, collection, submission and analysis, an
 * **Submission** requires Python packages for data and database interaction
 * **Analysis** requires [Jupyter](https://jupyter.org), an iPython notebook environment, as well as additional python data analysis libraries.
 
-### Configuration
+#### Configuration
   
 All three modes reference the **settings.py** file as well as **environment variables**. EPMT uses uses a in-memory, temporary database by default, see **Configuring a Database**.  
 
@@ -69,7 +69,9 @@ All three modes reference the **settings.py** file as well as **environment vari
  # DO NOT TOUCH THIS
 ```
 
-### Automatic **Collection** with SLURM
+### Collection
+Automatic **Collection** with SLURM
+---
 
 Using configured prolog and epilogs with SLURM tasks allows one to skip job instrumentation entirely, with the exception of job tags (***EPMT_JOB_TAGS***) and process tags (***PAPIEX_TAGS***). These are configured in `slurm.conf` for jobs submitted with `sbatch` but they can be tested on the command line when using `srun`. 
 
@@ -92,6 +94,7 @@ TaskEpilog=EPMT_PREFIX/epmt-install/slurm/slurm_task_epilog_epmt.sh
 If this fails, then it's likely the papiex installation is either missing or misconfigured in **settings.py**. The **-a** flag tells **EPMT** to treat this run as an entire **job**. See **README.md** for further details.
 
 ### Submission
+---
 
 We can submit our previous job to the database defined in **settings.py** just run the epmt submit command with the directory returned by stage (found in location set by settings.py epmt_output_prefix):
 
@@ -143,29 +146,9 @@ INFO:epmt_job:Staged import took 0:00:00.189151, 5.286781 processes per second
 INFO:epmt_cmds:Committed job 1 to database: Job[u'1']
 ```
 
-
-#### Connecting EPMT to a Database
-
-Using the prebuilt settings files located in the epmt install directory(/opt/minimalmetrics/epmt-(Version)/epmt-install/preset_settings)
-```text
-$ cd /opt/minimalmetrics/epmt-3.8.20/epmt-install/epmt
-$ rm settings.py
-$ ln -s ../preset_settings/settings_pg_container_sqlalchemy.py settings.py
-$ grep db_params settings.py
-db_params = { 'url': 'postgresql://postgres:example@postgres:5432/EPMT', 'echo': False }
-```
-
-The database is ready to go.
-
-#### Dropping and Recreating Database 
-The drop command will confirm you wish to drop the database.
-```
-$ epmt drop
-This will drop the entire database. This action cannot be reversed. Are you sure (yes/NO): y
-WARNING:orm.sqlalchemy:DROPPING ALL DATA AND TABLES!
-```
-## Analysis and Visualization
-
+## Analysis
+Analysis and Visualization
+---
 
 EPMT Uses a **ipython notebook** data analytics environment.  Starting the jupyter notebook is easy from the **epmt notebook** command.
 
