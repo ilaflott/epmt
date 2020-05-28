@@ -543,6 +543,8 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     if j.proc_sums:
         logger.warning('skipped processing jobid {0} as it is not unprocessed'.format(j.jobid))
         return False
+    if not j.info_dict.get('procs_in_process_table', 1):
+        populate_process_table_from_staging(j)
     logger.info("Starting post-process of job..")
     proc_sums = {}
 
@@ -677,6 +679,53 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
 #    metadata['job_el_exitcode'] = exitcode
 #    metadata['job_el_reason'] = reason
 
+def populate_process_table_from_staging(j):
+    import datetime as dt
+    import psycopg2
+    jobid = j.jobid
+    logger.info('populating process table from staging for job {}'.format(jobid))
+    metric_names = j.info_dict['metric_names'].split(',')
+    staged_procs = orm_raw_sql("SELECT id, threads_sums, threads_df, start, finish, tags, host_id, numtids, exename, path, args, pid, ppid, pgid, sid, gen, exitcode FROM processes_staging WHERE jobid = '{}'".format(jobid))
+    proc_ids = []
+    nprocs = 0
+    insert_sql = ""
+    prefix_insert_sql = "INSERT INTO processes(jobid,duration,tags,host_id,threads_df,threads_sums,numtids,cpu_time,exename,path,args,pid,ppid,pgid,sid,gen,exitcode) VALUES "
+    for proc_row in staged_procs:
+        if nprocs > 100:
+            break
+        nprocs += 1
+        (proc_id, threads_sums, threads_df, start, finish, tags, host_id, numtids, exename, path, args, pid, ppid, pgid, sid, gen, exitcode) = proc_row
+        proc_ids.append(proc_id)
+        duration = finish - start  # in us
+        start = dt.datetime.fromtimestamp(start / 1e6)
+        end = dt.datetime.fromtimestamp(finish / 1e6)
+        tags = psycopg2.extensions.adapt(dumps(tag_from_string(tags) if tags else {}))
+        # args = psycopg2.extensions.adapt(args)
+        args = ""
+        if numtids == 1:
+            # for the unithreaded case threads_sums isn't populated to we fill
+            # it from threads_df
+            threads_sums = { metric_names[i]: threads_df[i] for i in range(len(metric_names)) }
+        else:
+            threads_sums = { metric_names[i]: threads_sums[i] for i in range(len(metric_names)) }
+        cpu_time = threads_sums.get('usertime', 0) + threads_sums.get('systemtime',0)
+        threads_sums = dumps(threads_sums)
+
+        # threads_df is a flattened list where each thread's metrics are
+        # are placed next the previous one. Here we make it into a 
+        # list of dicts
+        _thr_dict_list = []
+        for t in range(numtids):
+            _thr_dict_list.append( { metric_names[i]: threads_df[t*len(metric_names) + i] for i in range(len(metric_names)) })
+        # logger.debug('translated {} into {}'.format(threads_df, _thr_dict_list))
+        threads_df = dumps(_thr_dict_list)
+
+        insert_sql += prefix_insert_sql + """('{jobid}',{duration},{tags},'{host_id}','{threads_df}','{threads_sums}',{numtids},{cpu_time},'{exename}','{path}','{args}',{pid},{ppid},{pgid},{sid},{gen},{exitcode});\n""".format(jobid=jobid, start=start, end=end, duration=duration, tags=tags, host_id=host_id, threads_df=threads_df, threads_sums=threads_sums, numtids=numtids, cpu_time=cpu_time, exename=exename, path=path, args=args, pid=pid, ppid=ppid, pgid=pgid, sid=sid, gen=gen, exitcode=exitcode)
+    # insert_sql += ";\n"
+    delete_sql = "DELETE FROM processes_staging WHERE jobid = '{}'".format(jobid)
+    orm_raw_sql(insert_sql+delete_sql, commit=True)
+
+
 @db_session
 def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     logger = getLogger(__name__)  # you can use other name
@@ -792,6 +841,13 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     j.tags = job_tags if job_tags else {}
     job_init_fini_time = time.time()
     logger.debug('job init took: %2.5f sec', job_init_fini_time - job_init_start_time)
+    # save naive datetime objects in the database
+    j.start = start_ts.replace(tzinfo=None)
+    j.end = stop_ts.replace(tzinfo=None)
+    j.submit = submit_ts.replace(tzinfo=None) # Wait time is start - submit and should probably be stored
+    info_dict = {'tz': start_ts.tzinfo.tzname(None), 'status': job_status, 'procs_in_process_table': 0}
+    j.duration = int((j.end - j.start).total_seconds()*1000000)
+    logger.info("Computed duration of job: %f us, %.2f m",j.duration,j.duration/60000000)
 
     didsomething = False
     all_tags = set()
@@ -845,15 +901,19 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 flo = tarfile.extractfile(info)
             else:
                 flo = f
-            if (csv_probe_format(flo) == '2.0'):
+            (fmt, cols) = csv_probe_format(flo)
+            if (fmt == '2.0'):
                 if (orm_db_provider() != 'postgres' or (settings.orm != 'sqlalchemy')):
                     raise ValueError('CSV file {} is meant for ingestion using Postgres direct-copy, and can only be used with PostgreSQL+SQLAlchemy'.format(flo.name))
+                import psycopg2
+                from epmt_convert_csv import OUTPUT_CSV_FIELDS, OUTPUT_CSV_SEP
                 logger.info('Doing a fast ingest of {}'.format(flo.name))
+                metric_names = ",".join(cols[OUTPUT_CSV_FIELDS.index('threads_df')].split('|'))
+                logger.debug('per-thread metric names: {}'.format(metric_names))
+                info_dict['metric_names'] = metric_names
                 # force the setting below, as CSV copying means we
                 # will have no processes in the process table to post-process
                 settings.post_process_job_on_ingest = False
-                import psycopg2
-                from epmt_convert_csv import OUTPUT_CSV_FIELDS, OUTPUT_CSV_SEP
                 _conn_start_ts = time.time()
                 try:
                     conn = psycopg2.connect(settings.db_params['url'])
@@ -991,19 +1051,12 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         else:
             logger.warning("job %s, user %s, jobname %s has no CSV data",jobid,username,jobname)
 
-        # save naive datetime objects in the database
-        j.start = start_ts.replace(tzinfo=None)
-        j.end = stop_ts.replace(tzinfo=None)
-        j.submit = submit_ts.replace(tzinfo=None) # Wait time is start - submit and should probably be stored
-        j.info_dict = {'tz': start_ts.tzinfo.tzname(None), 'status': job_status}
-
-        d = j.end - j.start
-        j.duration = int(d.total_seconds()*1000000)
+        # procs are not in staging table they will be in the processes table
+        info_dict['procs_in_process_table'] = 1
         j.cpu_time = reduce(lambda c, p: c + p.cpu_time, all_procs, 0)
         # j.cpu_time = sum([p.cpu_time for p in all_procs])
         #logger.info("Earliest process start: %s",j.start)
         #logger.info("Latest process end: %s",j.end)
-        logger.info("Computed duration of job: %f us, %.2f m",j.duration,j.duration/60000000)
 
         if root_proc:
             # if root_proc.exitcode != j.exitcode:
@@ -1021,6 +1074,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             logger.info('bulk insert of processes took: %2.5f sec', time.time() - _b0)
 
     
+    j.info_dict = info_dict
     if settings.post_process_job_on_ingest:
         # _post_process_start_ts = time.time()
         if settings.bulk_insert:

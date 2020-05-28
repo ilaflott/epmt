@@ -26,7 +26,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (4,2,2)
+_version = (4,2,3)
 
 def version():
     return _version
@@ -1017,7 +1017,7 @@ def logfn(func):
 
 def csv_probe_format(f):
     '''
-    Returns the CSV file format
+    Returns the CSV file format and header
 
     Parameters
     ----------
@@ -1027,7 +1027,11 @@ def csv_probe_format(f):
 
     Returns
     -------
-    string ('1.0' or '2.0')
+    (version, header)
+     version : string
+               '1.0' or '2.0'
+      header : list
+               list of header columns (in-order)
 
     Notes
     -----
@@ -1043,15 +1047,17 @@ def csv_probe_format(f):
         close_file = True
         f = open(f)
     # read the first few characters and check for the delimiter
-    s = "".join([chr(x) for x in f.read(20)])
+    s = "".join([chr(x) for x in f.read(1024)])
     if close_file:
         f.close()
     else:
         f.seek(0) # restore file position to beginning of file
-    if '\t' in s: 
-        return '2.0'
+    if '\t' in s:
+        # the second element is a list of CSV column names
+        return ('2.0', s.split('\n')[0].split('\t'))
     elif ',' in s: 
-        return '1.0'
+        # the second element is a list of CSV column names
+        return ('1.0', s.split('\n')[0].split(','))
     # if we reached here, then we don't understand the CSV format
     raise ValueError("CSV file -- {} -- has an unknown file format. Is it corrupted?".format(f.name))
 
