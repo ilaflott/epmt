@@ -352,7 +352,7 @@ def create_job_dir(dir):
         logger.info("created dir %s",dir)
     except OSError as e:
         if e.errno != errno.EEXIST:
-            logger.error("dir %s: %s",dir,e)
+            logger.error("dir %s: %s",dir,str(e))
             return False
         logger.debug("dir exists %s",dir)
     return dir
@@ -562,11 +562,12 @@ def epmt_annotate(argslist, replace = False):
                     return False
                 jobid = metadata['job_pl_id']
                 username = metadata['job_pl_username']
+# Wrong, this should go a mkdtemp!
                 datadir = settings.epmt_output_prefix + username + "/" + jobid + "/"
                 metadatafile = datadir + "job_metadata"
                 logger.debug('extracting {0} to {1}'.format(infile, datadir))
                 tar.extractall(path=datadir)
-               
+           
         else:
 # HERE WE SHOULD CHECK BOTH THE DATABASE AND THE FILESYSTEM
 # BECAUSE WE MAY WANT TO ANNOTATE A DIRECTORY!
@@ -589,10 +590,21 @@ def epmt_annotate(argslist, replace = False):
     # are done.
     
     retval = merge_and_write_annotations(metadatafile,metadata,d,replace=replace)
-    
-    # for staged job we need to recreate the staged file
+    # No error handling or messages?
+
+    # for .tgz file (has been staged), we need to recreate the .tgz file but not call stage!
     if retval and mode == 1:
-        stage_job(datadir, collate=False, from_annotate=True)
+        # we should be using a temporary dir and tar file
+        cmd = "tar -C "+datadir+" -cz -f "+infile+" ."
+        logger.debug(cmd)
+        return_code = forkexecwait(cmd, shell=True)
+        try:
+            rmtree(datadir)
+        except OSError as e:
+            logger.warning("rmtree(%s) failed: %s",datadir,str(e))
+        if return_code != 0:
+            logger.error("%s failed",cmd)
+            return False
 
     return retval
 
