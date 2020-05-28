@@ -17,15 +17,15 @@ verify_staged_file() {
 }
 
 setup() {
-  command -v sinfo || skip
-  command -v srun || skip
-  command -v sbatch || skip
+  command -v sinfo > /dev/null || skip
+  command -v srun > /dev/null || skip
+  command -v sbatch > /dev/null || skip
   stage_dest=$(epmt -h | sed -n 's/stage_command_dest://p')
-  echo "stage_dest:${stage_dest}"
+  # echo "stage_dest:${stage_dest}"
   test -n "${stage_dest}" || fail
   test -d ${stage_dest} || fail
   resource_path=$(dirname `command -v epmt`)/..
-  echo "resource_path:${resource_path}"
+  # echo "resource_path:${resource_path}"
   test -n "${resource_path}" || fail
   test -d ${resource_path} || fail
   bash -c 'echo -e "#!/bin/tcsh\nsleep 1\n" > /tmp/sleeptest.tcsh'
