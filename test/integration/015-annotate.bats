@@ -10,7 +10,6 @@ setup() {
   test -d ${resource_path} || fail
   epmt_output_prefix=$(epmt -h | sed -n 's/epmt_output_prefix://p')
   test -n "${epmt_output_prefix}" || fail
-  test -d ${epmt_output_prefix} || fail
   rm -rf ${epmt_output_prefix}/${USER}/3456
   rm -f ${stage_dest}/3456.tgz
 } 
