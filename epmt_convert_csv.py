@@ -17,6 +17,7 @@ from glob import glob
 # check will flag an error
 INPUT_CSV_FIELDS = {'tags','hostname','exename','path','args','exitcode','pid','generation','ppid','pgid','sid','numtids','tid','start','end'}
 # Only the fields present in the list below will be output and the order will match the list order
+# Please note, threads_df will be replaced by a string of metric names
 OUTPUT_CSV_FIELDS = ['tags', 'threads_sums', 'threads_df', 'jobid', 'host_id', 'numtids', 'exename', 'path', 'args', 'pid', 'ppid', 'pgid', 'sid', 'gen', 'exitcode', 'start', 'finish']
 # we need to use a character that doesn't occur in the
 # input as the postgres copy_from cannot handle quoted delimiters
@@ -89,9 +90,6 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
         # log a helpful line so we know how to use \COPY command
         logger.debug("Use the following line in postgres:\n  \COPY processes_staging({}) FROM '{}' DELIMITER ',' CSV".format(",".join(OUTPUT_CSV_FIELDS), abspath(outfile)).replace('end', '"end"'))
 
-        # initialize the output file
-        writer = csv.DictWriter(csvfile, fieldnames=OUTPUT_CSV_FIELDS, delimiter=OUTPUT_CSV_SEP)
-        writer.writeheader()
 
         row_num = 0 # input row being processed
         outrows = 0 # number of rows output (we combine threads into one row)
@@ -102,8 +100,15 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
                     # sanity check to make sure our input file has the correct format
                     logger.error('Input CSV format is not correct. Likely missing  header row..')
                     return False
+                thr_fields = sorted(set(r.keys()) - set(settings.skip_for_thread_sums) - set(settings.per_process_fields))
+                metric_names = "|".join(thr_fields)
+                # initialize the output file
+                output_fields = OUTPUT_CSV_FIELDS
+                output_fields[output_fields.index('threads_df')] = metric_names
+                writer = csv.DictWriter(csvfile, fieldnames=output_fields, delimiter=OUTPUT_CSV_SEP)
+                writer.writeheader()
+                
             
-            thr_fields = sorted(set(r.keys()) - set(settings.skip_for_thread_sums) - set(settings.per_process_fields))
             thread_metric_sums = {k: int(r[k]) for k in thr_fields }
             threads_df = [ int(r[k]) for k in thr_fields ] # array of ints
             numtids = int(r['numtids'])
@@ -121,7 +126,7 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
                 threads_df.extend(thr_data)
             # only populate threads_sums for multithreaded processes
             r['threads_sums'] = [ int(thread_metric_sums[k]) for k in thr_fields ] if numtids > 1 else []
-            r['threads_df'] = threads_df
+            r[metric_names] = threads_df
             r['jobid'] = jobid
             r['host_id'] = r['hostname']
             r['gen'] = r['generation']
@@ -137,11 +142,11 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
 
             outrow = {}
             outrows += 1
-            for f in OUTPUT_CSV_FIELDS:
+            for f in output_fields:
                 outrow[f] = r[f]
                 # postgrsql requires arrays to use curly braces instead
                 # of the square brackets we get with list objects in Python
-                if f in ('threads_sums', 'threads_df'):
+                if f in ('threads_sums', metric_names):
                     outrow[f] = json.dumps(r[f]).replace('[', '{').replace(']', '}')
             writer.writerow(outrow)
     _finish_time = time.time()

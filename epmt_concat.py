@@ -387,18 +387,15 @@ def concat_v2(infiles, outfile):
     from epmt_convert_csv import OUTPUT_CSV_FIELDS, OUTPUT_CSV_SEP, extract_jobid_from_collated_csv
     # expected fields in input file, initialized on first file
     exp_input_fields = set([])
-    fileno = 0  # file number, first file is 0
+    fileno = 0  # file number, first file is 1
     outrows = 0 # number of rows output (we combine threads into one row)
     thr_fields = [] # thread metric fields, determined dynamically 
     jobid = '' # initialized from first csv file name
     badfiles = []
     _start_time = time.time()
     with open(outfile, 'w', newline='') as out_csv:
-        # initialize the output file
-        writer = csv.DictWriter(out_csv, fieldnames=OUTPUT_CSV_FIELDS, delimiter=OUTPUT_CSV_SEP)
-        writer.writeheader()
-
         for infile in infiles:
+            fileno += 1
             if not jobid:
                 jobid = extract_jobid_from_collated_csv(outfile)
                 if not jobid:
@@ -415,6 +412,17 @@ def concat_v2(infiles, outfile):
             for r in reader:
                 row += 1
                 if row == 1:
+                    # only initialize thr_fields once
+                    if not thr_fields:
+                        thr_fields = sorted(set(r.keys()) - set(settings.skip_for_thread_sums) - set(settings.per_process_fields))
+                        metric_names = "|".join(thr_fields)
+                    if fileno == 1:
+                        # initialize the output file
+                        output_fields = OUTPUT_CSV_FIELDS
+                        # replace threads_df in output CSV fields with metric names
+                        output_fields[output_fields.index('threads_df')] = metric_names
+                        writer = csv.DictWriter(out_csv,fieldnames=output_fields,delimiter=OUTPUT_CSV_SEP)
+                        writer.writeheader()
                     # first row has the header
                     inp_fields = set(r.keys())
                     if exp_input_fields and (inp_fields != exp_input_fields):
@@ -422,9 +430,6 @@ def concat_v2(infiles, outfile):
                         break
                     else:
                         exp_input_fields = inp_fields
-                # only initialize thr_fields once
-                if not thr_fields:
-                    thr_fields = sorted(set(r.keys()) - set(settings.skip_for_thread_sums) - set(settings.per_process_fields))
 
                 thread_metric_sums = {k: int(r[k]) for k in thr_fields }
                 threads_df = [ int(r[k]) for k in thr_fields ] # array of ints
@@ -443,7 +448,7 @@ def concat_v2(infiles, outfile):
                     threads_df.extend(thr_data)
                 # only populate threads_sums for multithreaded processes
                 r['threads_sums'] = [ int(thread_metric_sums[k]) for k in thr_fields ] if numtids > 1 else []
-                r['threads_df'] = threads_df
+                r[metric_names] = threads_df
                 r['jobid'] = jobid
                 r['host_id'] = r['hostname']
                 r['gen'] = r['generation']
@@ -459,11 +464,11 @@ def concat_v2(infiles, outfile):
                 outrow = {}
                 outrows += 1
                 outrows_from_this_inp += 1
-                for field in OUTPUT_CSV_FIELDS:
+                for field in output_fields:
                     outrow[field] = r[field]
                     # postgrsql requires arrays to use curly braces instead
                     # of the square brackets we get with list objects in Python
-                    if field in ('threads_sums', 'threads_df'):
+                    if field in ('threads_sums', metric_names):
                         outrow[field] = json.dumps(r[field]).replace('[', '{').replace(']', '}')
                 writer.writerow(outrow)
             if not outrows_from_this_inp:
