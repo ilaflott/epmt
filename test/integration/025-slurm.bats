@@ -1,9 +1,6 @@
 load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 
-resource_path=
-stage_dest=
-
 verify_staged_file() {
   local wait_seconds=10
   oldpwd=`pwd`
@@ -24,9 +21,11 @@ setup() {
   command -v srun || skip
   command -v sbatch || skip
   stage_dest=$(epmt -h | sed -n 's/stage_command_dest://p')
+  echo "stage_dest:${stage_dest}"
   test -n "${stage_dest}" || fail
   test -d ${stage_dest} || fail
   resource_path=$(dirname `command -v epmt`)/..
+  echo "resource_path:${resource_path}"
   test -n "${resource_path}" || fail
   test -d ${resource_path} || fail
   bash -c 'echo -e "#!/bin/tcsh\nsleep 1\n" > /tmp/sleeptest.tcsh'
@@ -71,25 +70,25 @@ teardown() {
       assert_success
 }
 @test "srun prolog/epilog (tcsh)" {
-      srun -n1 --task-prolog="${resource_path}/slurm/slurm_task_prolog_epmt.sh" --task-epilog="${install_path}/slurm/slurm_task_epilog_epmt.sh" /tmp/sleeptest.tcsh
+      srun -n1 --task-prolog="${resource_path}/slurm/slurm_task_prolog_epmt.sh" --task-epilog="${resource_path}/slurm/slurm_task_epilog_epmt.sh" /tmp/sleeptest.tcsh
       assert_success
       verify_staged_file
       assert_success
 }
 @test "srun prolog/epilog (csh)" {
-      srun -n1 --task-prolog="${install_path}/slurm/slurm_task_prolog_epmt.sh" --task-epilog="${install_path}/slurm/slurm_task_epilog_epmt.sh" /tmp/sleeptest.csh
+      srun -n1 --task-prolog="${resource_path}/slurm/slurm_task_prolog_epmt.sh" --task-epilog="${resource_path}/slurm/slurm_task_epilog_epmt.sh" /tmp/sleeptest.csh
       assert_success
       verify_staged_file
       assert_success
 }
 @test "srun prolog/epilog (bash)" {
-      srun -n1 --task-prolog="${install_path}/slurm/slurm_task_prolog_epmt.sh" --task-epilog="${install_path}/slurm/slurm_task_epilog_epmt.sh" /tmp/sleeptest.bash
+      srun -n1 --task-prolog="${resource_path}/slurm/slurm_task_prolog_epmt.sh" --task-epilog="${resource_path}/slurm/slurm_task_epilog_epmt.sh" /tmp/sleeptest.bash
       assert_success
       verify_staged_file
       assert_success
 }
 @test "srun prolog/epilog (sh)" {
-      srun -n1 --task-prolog="${install_path}/slurm/slurm_task_prolog_epmt.sh" --task-epilog="${install_path}/slurm/slurm_task_epilog_epmt.sh" /tmp/sleeptest.sh
+      srun -n1 --task-prolog="${resource_path}/slurm/slurm_task_prolog_epmt.sh" --task-epilog="${resource_path}/slurm/slurm_task_epilog_epmt.sh" /tmp/sleeptest.sh
       assert_success
       verify_staged_file
       assert_success
