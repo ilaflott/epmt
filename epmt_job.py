@@ -544,7 +544,10 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
         logger.warning('skipped processing jobid {0} as it is not unprocessed'.format(j.jobid))
         return False
     if not j.info_dict.get('procs_in_process_table', 1):
-        populate_process_table_from_staging(j)
+        stage_copy_result = populate_process_table_from_staging(j)
+        if not stage_copy_result:
+            logger.error('Aborting post-process of job %s as process copy from staging failed', j.jobid)
+            return False
     logger.info("Starting post-process of job..")
     proc_sums = {}
 
@@ -683,25 +686,31 @@ def populate_process_table_from_staging(j):
     import datetime as dt
     import psycopg2
     jobid = j.jobid
+    job_info_dict = j.info_dict
     logger.info('populating process table from staging for job {}'.format(jobid))
     metric_names = j.info_dict['metric_names'].split(',')
     staged_procs = orm_raw_sql("SELECT id, threads_sums, threads_df, start, finish, tags, host_id, numtids, exename, path, args, pid, ppid, pgid, sid, gen, exitcode FROM processes_staging WHERE jobid = '{}'".format(jobid))
     proc_ids = []
     nprocs = 0
     insert_sql = ""
+    _start_time = time.time()
     prefix_insert_sql = "INSERT INTO processes(jobid,duration,tags,host_id,threads_df,threads_sums,numtids,cpu_time,exename,path,args,pid,ppid,pgid,sid,gen,exitcode) VALUES "
     for proc_row in staged_procs:
-        if nprocs > 100:
-            break
         nprocs += 1
+        # if nprocs > 10: break
         (proc_id, threads_sums, threads_df, start, finish, tags, host_id, numtids, exename, path, args, pid, ppid, pgid, sid, gen, exitcode) = proc_row
         proc_ids.append(proc_id)
         duration = finish - start  # in us
         start = dt.datetime.fromtimestamp(start / 1e6)
         end = dt.datetime.fromtimestamp(finish / 1e6)
         tags = psycopg2.extensions.adapt(dumps(tag_from_string(tags) if tags else {}))
-        # args = psycopg2.extensions.adapt(args)
-        args = ""
+        if args is None: args = ''
+        args = args.replace('%', '%%')
+        args = psycopg2.extensions.adapt(args)
+        
+        # args = dumps(args)
+        # args = ""
+        # print(args)
         if numtids == 1:
             # for the unithreaded case threads_sums isn't populated to we fill
             # it from threads_df
@@ -720,11 +729,19 @@ def populate_process_table_from_staging(j):
         # logger.debug('translated {} into {}'.format(threads_df, _thr_dict_list))
         threads_df = dumps(_thr_dict_list)
 
-        insert_sql += prefix_insert_sql + """('{jobid}',{duration},{tags},'{host_id}','{threads_df}','{threads_sums}',{numtids},{cpu_time},'{exename}','{path}','{args}',{pid},{ppid},{pgid},{sid},{gen},{exitcode});\n""".format(jobid=jobid, start=start, end=end, duration=duration, tags=tags, host_id=host_id, threads_df=threads_df, threads_sums=threads_sums, numtids=numtids, cpu_time=cpu_time, exename=exename, path=path, args=args, pid=pid, ppid=ppid, pgid=pgid, sid=sid, gen=gen, exitcode=exitcode)
+        insert_sql += prefix_insert_sql + """('{jobid}',{duration},{tags},'{host_id}','{threads_df}','{threads_sums}',{numtids},{cpu_time},'{exename}','{path}',{args},{pid},{ppid},{pgid},{sid},{gen},{exitcode});\n""".format(jobid=jobid, start=start, end=end, duration=duration, tags=tags, host_id=host_id, threads_df=threads_df, threads_sums=threads_sums, numtids=numtids, cpu_time=cpu_time, exename=exename, path=path, args=args, pid=pid, ppid=ppid, pgid=pgid, sid=sid, gen=gen, exitcode=exitcode)
     # insert_sql += ";\n"
-    delete_sql = "DELETE FROM processes_staging WHERE jobid = '{}'".format(jobid)
-    orm_raw_sql(insert_sql+delete_sql, commit=True)
-
+    delete_sql = "DELETE FROM processes_staging WHERE jobid = '{}';\n".format(jobid)
+    job_info_dict['procs_in_process_table'] = 1
+    update_job_sql = "UPDATE jobs SET info_dict = '{}' WHERE jobid = '{}'".format(dumps(job_info_dict), jobid)
+    try:
+        orm_raw_sql(insert_sql+delete_sql+update_job_sql, commit=True)
+    except Exception as e:
+        logger.error('Error copying from staging to process table for job %s: %s', jobid, str(e))
+        return False
+    table_copy_time = time.time() - _start_time
+    logger.info("Copied %d processes from staging in %2.5f sec at %2.5f procs/sec", nprocs, table_copy_time, nprocs/table_copy_time)
+    return True
 
 @db_session
 def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
@@ -908,7 +925,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 import psycopg2
                 from epmt_convert_csv import OUTPUT_CSV_FIELDS, OUTPUT_CSV_SEP
                 logger.info('Doing a fast ingest of {}'.format(flo.name))
-                metric_names = ",".join(cols[OUTPUT_CSV_FIELDS.index('threads_df')].split('|'))
+                metric_names = cols[OUTPUT_CSV_FIELDS.index('threads_df')]
                 logger.debug('per-thread metric names: {}'.format(metric_names))
                 info_dict['metric_names'] = metric_names
                 # force the setting below, as CSV copying means we

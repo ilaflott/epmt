@@ -101,7 +101,7 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
                     logger.error('Input CSV format is not correct. Likely missing  header row..')
                     return False
                 thr_fields = sorted(set(r.keys()) - set(settings.skip_for_thread_sums) - set(settings.per_process_fields))
-                metric_names = "|".join(thr_fields)
+                metric_names = ",".join(thr_fields)
                 # initialize the output file
                 output_fields = OUTPUT_CSV_FIELDS
                 output_fields[output_fields.index('threads_df')] = metric_names
