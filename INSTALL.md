@@ -1,5 +1,3 @@
-# EPMT
-
 Experiment Performance Management Tool a.k.a Workflow DB
 
 This is a tool to collect metadata and performance data about an entire job down to the individual threads in individual processes. This tool uses **papiex** to perform the process monitoring. This tool is targeted at batch or ephemeral jobs, not daemon processes. 
