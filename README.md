@@ -426,56 +426,56 @@ job_pl_username         Foo.Bar
 EPMT collects data both from the job runtime and the applications run in that environment. See the **models/** directory for what fixed data is stored related to each object. Metric data is stored differently and the data collector's data directionary can be found in papiex-oss/README.md. At the time of this writing it looked like this:
 
 
-| Key                       	| Source                     	| Datatype       	| Scope   	| Description                                            	|
-|---------------------------	|----------------------------	|----------------	|---------	|--------------------------------------------------------	|
-| 1. tags                   	| getenv("PAPIEX_TAGS")      	| Escaped string 	| Process 	| User specified tags for this executable                	|
-| 2. hostname               	| gethostname()              	| String         	| Process 	| hostname                                               	|
-| 3. exename                	| PAPI                       	| String         	| Process 	| Name of the application, usually argv[0]               	|
-| 4. path                   	| PAPI                       	| String         	| Process 	| Path to the application                                	|
-| 5. args                   	| monitor                    	| Escaped string 	| Process 	| All arguments to exe excluding argv[0]                 	|
-| 6. exitcode               	| exit()                     	| Integer        	| Process 	| Exit code                                              	|
-| 7. exitsignal             	| monitor                    	| Integer        	| Process 	| Exited due to a signal                                 	|
-| 8. pid                    	| getpid()                   	| Integer        	| Process 	| Process id                                             	|
-| 9. generation             	| monitor                    	| Integer        	| Process 	| Incremented after every exec() or PID wrap             	|
-| 10. ppid                  	| getppid()                  	| Integer        	| Process 	| Parent process id                                      	|
-| 11. pgid                  	| getpgid()                  	| Integer        	| Process 	| Process group id                                       	|
-| 12. sid                   	| getsid()                   	| Integer        	| Process 	| Process session id                                     	|
-| 13. numtids               	| monitor                    	| Integer        	| Process 	| Number of threads caught by instrumentation            	|
-| 14. numranks              	| monitor(MPI)               	| Integer        	| Process 	| Number of MPI ranks detected                           	|
-| 15. tid                   	| gettid()                   	| Integer        	| Process 	| Thread id                                              	|
-| 16. mpirank               	| monitor(MPI)               	| Integer        	| Thread  	| MPI rank                                               	|
-| 17. start                 	| gettimeofday()             	| Integer        	| Process 	| Microsecond timestamp at start                         	|
-| 18. end                   	| gettimeofday()             	| Integer        	| Process 	| Microsecond timestamp at end                           	|
-| 19. usertime              	| getrusage(RUSAGE_THREAD)   	| Integer        	| Thread  	| Microsecond user time                                  	|
-| 20. systemtime            	| getrusage(RUSAGE_THREAD)   	| Integer        	| Thread  	| Microsecond system time                                	|
-| 21. rssmax                	| getrusage(RUSAGE_THREAD)   	| Integer        	| Thread  	| Kb max resident set size                               	|
-| 22. minflt                	| getrusage(RUSAGE_THREAD)   	| Integer        	| Thread  	| Minor faults (TLB misses/new page frames)              	|
-| 23. majflt                	| getrusage(RUSAGE_THREAD)   	| Integer        	| Thread  	| Major page faults (requiring I/O)                      	|
-| 24. inblock               	| getrusage(RUSAGE_THREAD)   	| Integer        	| Thread  	| 512B blocks read from I/O                              	|
-| 25. outblock              	| getrusage(RUSAGE_THREAD)   	| Integer        	| Thread  	| 512B blocks written to I/O                             	|
-| 26. vol_ctxsw             	| getrusage(RUSAGE_THREAD)   	| Integer        	| Thread  	| Voluntary context switches (yields)                    	|
-| 27. invol_ctxsw           	| getrusage(RUSAGE_THREAD)   	| Integer        	| Thread  	| Involuntary context switches (preemptions)             	|
-| 28. cminflt               	| /proc//task//stat field 11 	| Integer        	| Process 	| minflt (20) for all wait()ed children                  	|
-| 29. cmajflt               	| /proc//task//stat field 22 	| Integer        	| Thread  	| majflt (21) for all wait()ed children                  	|
-| 30. cutime                	| /proc//task//stat field 20 	| Integer        	| Process 	| utime (17) for all wait()ed children                   	|
-| 31. cstime                	| /proc//task//stat field 22 	| Integer        	| Thread  	| stime (18) for all wait()ed children                   	|
-| 32. num_threads           	| /proc//task//stat field 20 	| Integer        	| Process 	| Threads in process at finish                           	|
-| 33. starttime             	| /proc//task//stat field 22 	| Integer        	| Thread  	| Timestamp in jiffies after boot thread was started     	|
-| 34. processor             	| /proc//task//stat field 39 	| Integer        	| Thread  	| CPU this thread last ran on                            	|
-| 35. delayacct_blkio_time  	| /proc//task//stat field 42 	| Integer        	| Thread  	| Jiffies process blocked in D state on I/O device       	|
-| 36. guest_time            	| /proc//task//stat field 43 	| Integer        	| Thread  	| Jiffies running a virtual CPU for a guest OS           	|
-| 37. rchar                 	| /proc//task//io line 1     	| Integer        	| Thread  	| Bytes read via syscall (maybe from cache not dev I/O)  	|
-| 38. wchar                 	| /proc//task//io line 2     	| Integer        	| Thread  	| Bytes written via syscall (maybe to cache not dev I/O) 	|
-| 39. syscr                 	| /proc//task//io line 3     	| Integer        	| Thread  	| Read syscalls                                          	|
-| 40. syscw                 	| /proc//task//io line 4     	| Integer        	| Thread  	| Write syscalls                                         	|
-| 41. read_bytes            	| /proc//task//io line 5     	| Integer        	| Thread  	| Bytes read from I/O device                             	|
-| 42. write_bytes           	| /proc//task//io line 6     	| Integer        	| Thread  	| Bytes written to I/O device                            	|
-| 43. cancelled_write_bytes 	| /proc//task//io line 7     	| Integer        	| Thread  	| Bytes discarded by truncation                          	|
-| 44. time_oncpu            	| /proc//task//schedstat     	| Integer        	| Thread  	| Nanoseconds spent running                              	|
-| 45. time_waiting          	| /proc//task//schedstat     	| Integer        	| Thread  	| Nanoseconds runnable but waiting                       	|
-| 46. timeslices            	| /proc//task//schedstat     	| Integer        	| Thread  	| Number of run periods on CPU                           	|
-| 47. rdtsc_duration        	| PAPI                       	| Integer        	| Thread  	| If PAPI, real time cycle duration of thread            	|
-| *                         	| PAPI                       	| Integer        	| Thread  	| PAPI metrics                                           	|
+| Key                       	| Scope   	| Description                                            	|
+|---------------------------	|---------	|--------------------------------------------------------	|
+| 1. tags                   	| Process 	| User specified tags for this executable                	|
+| 2. hostname               	| Process 	| hostname                                               	|
+| 3. exename                	| Process 	| Name of the application, usually argv[0]               	|
+| 4. path                   	| Process 	| Path to the application                                	|
+| 5. args                   	| Process 	| All arguments to exe excluding argv[0]                 	|
+| 6. exitcode               	| Process 	| Exit code                                              	|
+| 7. exitsignal             	| Process 	| Exited due to a signal                                 	|
+| 8. pid                    	| Process 	| Process id                                             	|
+| 9. generation             	| Process 	| Incremented after every exec() or PID wrap             	|
+| 10. ppid                  	| Process 	| Parent process id                                      	|
+| 11. pgid                  	| Process 	| Process group id                                       	|
+| 12. sid                   	| Process 	| Process session id                                     	|
+| 13. numtids               	| Process 	| Number of threads caught by instrumentation            	|
+| 14. numranks              	| Process 	| Number of MPI ranks detected                           	|
+| 15. tid                   	| Process 	| Thread id                                              	|
+| 16. mpirank               	| Thread  	| MPI rank                                               	|
+| 17. start                 	| Process 	| Microsecond timestamp at start                         	|
+| 18. end                   	| Process 	| Microsecond timestamp at end                           	|
+| 19. usertime              	| Thread  	| Microsecond user time                                  	|
+| 20. systemtime            	| Thread  	| Microsecond system time                                	|
+| 21. rssmax                	| Thread  	| Kb max resident set size                               	|
+| 22. minflt                	| Thread  	| Minor faults (TLB misses/new page frames)              	|
+| 23. majflt                	| Thread  	| Major page faults (requiring I/O)                      	|
+| 24. inblock               	| Thread  	| 512B blocks read from I/O                              	|
+| 25. outblock              	| Thread  	| 512B blocks written to I/O                             	|
+| 26. vol_ctxsw             	| Thread  	| Voluntary context switches (yields)                    	|
+| 27. invol_ctxsw           	| Thread  	| Involuntary context switches (preemptions)             	|
+| 28. cminflt               	| Process 	| minflt (20) for all wait()ed children                  	|
+| 29. cmajflt               	| Thread  	| majflt (21) for all wait()ed children                  	|
+| 30. cutime                	| Process 	| utime (17) for all wait()ed children                   	|
+| 31. cstime                	| Thread  	| stime (18) for all wait()ed children                   	|
+| 32. num_threads           	| Process 	| Threads in process at finish                           	|
+| 33. starttime             	| Thread  	| Timestamp in jiffies after boot thread was started     	|
+| 34. processor             	| Thread  	| CPU this thread last ran on                            	|
+| 35. delayacct_blkio_time  	| Thread  	| Jiffies process blocked in D state on I/O device       	|
+| 36. guest_time            	| Thread  	| Jiffies running a virtual CPU for a guest OS           	|
+| 37. rchar                 	| Thread  	| Bytes read via syscall (maybe from cache not dev I/O)  	|
+| 38. wchar                 	| Thread  	| Bytes written via syscall (maybe to cache not dev I/O) 	|
+| 39. syscr                 	| Thread  	| Read syscalls                                          	|
+| 40. syscw                 	| Thread  	| Write syscalls                                         	|
+| 41. read_bytes            	| Thread  	| Bytes read from I/O device                             	|
+| 42. write_bytes           	| Thread  	| Bytes written to I/O device                            	|
+| 43. cancelled_write_bytes 	| Thread  	| Bytes discarded by truncation                          	|
+| 44. time_oncpu            	| Thread  	| Nanoseconds spent running                              	|
+| 45. time_waiting          	| Thread  	| Nanoseconds runnable but waiting                       	|
+| 46. timeslices            	| Thread  	| Number of run periods on CPU                           	|
+| 47. rdtsc_duration        	| Thread  	| If PAPI, real time cycle duration of thread            	|
+| *                         	| Thread  	| PAPI metrics                                           	|
 
 ### Addition of new metrics
 
