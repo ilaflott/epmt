@@ -23,6 +23,7 @@ nav:
   - EPMT Quick Start: Quickstart.md
   - EPMT Install: INSTALL.md
   - EPMT Readme: README.md
+  - EPMT Explore Command: epmt-explore-cli.md
   - EPMT Commands: epmt_cmds.md
   - migrations.md
   - Notebooks: 
@@ -31,3 +32,4 @@ nav:
     - Graphing API: http://localhost:8888/notebooks/Graphing-API.ipynb" target="_blank
   - EPMT Workflow GUI: http://localhost:8050" target="_blank
   - EPMT Workflow GUI Readme: index_ui.md
+  - Release Notes: RELEASE_NOTES.md
