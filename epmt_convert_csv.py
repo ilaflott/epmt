@@ -18,7 +18,7 @@ from glob import glob
 INPUT_CSV_FIELDS = {'tags','hostname','exename','path','args','exitcode','pid','generation','ppid','pgid','sid','numtids','tid','start','end'}
 # Only the fields present in the list below will be output and the order will match the list order
 # Please note, threads_df will be replaced by a string of metric names
-OUTPUT_CSV_FIELDS = ['tags', 'threads_sums', 'threads_df', 'jobid', 'host_id', 'numtids', 'exename', 'path', 'args', 'pid', 'ppid', 'pgid', 'sid', 'gen', 'exitcode', 'start', 'finish']
+OUTPUT_CSV_FIELDS = ['threads_df', 'tags', 'hostname', 'exename', 'path', 'exitcode', 'exitsignal', 'pid', 'generation', 'ppid', 'pgid', 'sid', 'numtids', 'start', 'finish', 'args']
 # we need to use a character that doesn't occur in the
 # input as the postgres copy_from cannot handle quoted delimiters
 OUTPUT_CSV_SEP = '\t'
@@ -109,7 +109,7 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
                 writer.writeheader()
                 
             
-            thread_metric_sums = {k: int(r[k]) for k in thr_fields }
+            # thread_metric_sums = {k: int(r[k]) for k in thr_fields }
             threads_df = [ int(r[k]) for k in thr_fields ] # array of ints
             numtids = int(r['numtids'])
             # now read in remaining thread rows (if the process is multithreaded)
@@ -119,24 +119,26 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
                 row_num += 1
                 thr_data = []
                 for k in thr_fields:
-                    thread_metric_sums[k] += int(thr[k])
+                    # thread_metric_sums[k] += int(thr[k])
                     thr_data.append(int(thr[k]))
                 # flatten multiple thread metrics into a 1-d array
                 # to speed up ingestion
                 threads_df.extend(thr_data)
             # only populate threads_sums for multithreaded processes
-            r['threads_sums'] = [ int(thread_metric_sums[k]) for k in thr_fields ] if numtids > 1 else []
+            # r['threads_sums'] = [ int(thread_metric_sums[k]) for k in thr_fields ] if numtids > 1 else []
             r[metric_names] = threads_df
             r['jobid'] = jobid
-            r['host_id'] = r['hostname']
-            r['gen'] = r['generation']
+            # r['host_id'] = r['hostname']
+            # r['gen'] = r['generation']
+            if not 'exitsignal' in r:
+                r['exitsignal'] = 0
 
             # replace postgres eof marker in the args field
             # https://stackoverflow.com/questions/23790995/postgres-9-3-end-of-copy-marker-corrupt-any-way-to-change-this-setting
             if '\.' in r['args']:
                 r['args'] = r['args'].replace('\.', '\\\.')
 
-            for field in ['pid', 'ppid', 'pgid', 'sid', 'gen', 'start', 'end']:
+            for field in ['pid', 'ppid', 'pgid', 'sid', 'generation', 'exitcode', 'exitsignal', 'start', 'end']:
                 r[field] = int(r[field])
             r['finish'] = r['end'] # end is reserved word in sql
 
@@ -146,7 +148,7 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
                 outrow[f] = r[f]
                 # postgrsql requires arrays to use curly braces instead
                 # of the square brackets we get with list objects in Python
-                if f in ('threads_sums', metric_names):
+                if f == metric_names:
                     outrow[f] = json.dumps(r[f]).replace('[', '{').replace(']', '}')
             writer.writerow(outrow)
     _finish_time = time.time()

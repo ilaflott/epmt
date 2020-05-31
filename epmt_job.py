@@ -689,7 +689,8 @@ def populate_process_table_from_staging(j):
     job_info_dict = j.info_dict
     logger.info('populating process table from staging for job {}'.format(jobid))
     metric_names = j.info_dict['metric_names'].split(',')
-    staged_procs = orm_raw_sql("SELECT id, threads_sums, threads_df, start, finish, tags, host_id, numtids, exename, path, args, pid, ppid, pgid, sid, gen, exitcode FROM processes_staging WHERE jobid = '{}'".format(jobid))
+    (first_proc_id, last_proc_id) = j.info_dict['procs_staging_ids']
+    staged_procs = orm_raw_sql("SELECT id, threads_df, start, finish, tags, hostname, numtids, exename, path, args, pid, ppid, pgid, sid, generation, exitcode, exitsignal FROM processes_staging WHERE id BETWEEN {} AND {}".format(first_proc_id, last_proc_id))
     proc_ids = []
     nprocs = 0
     insert_sql = ""
@@ -698,7 +699,7 @@ def populate_process_table_from_staging(j):
     for proc_row in staged_procs:
         nprocs += 1
         # if nprocs > 10: break
-        (proc_id, threads_sums, threads_df, start, finish, tags, host_id, numtids, exename, path, args, pid, ppid, pgid, sid, gen, exitcode) = proc_row
+        (proc_id, threads_df, start, finish, tags, host_id, numtids, exename, path, args, pid, ppid, pgid, sid, gen, exitcode, exitsignal) = proc_row
         proc_ids.append(proc_id)
         duration = finish - start  # in us
         start = dt.datetime.fromtimestamp(start / 1e6)
@@ -711,14 +712,16 @@ def populate_process_table_from_staging(j):
         # args = dumps(args)
         # args = ""
         # print(args)
-        if numtids == 1:
-            # for the unithreaded case threads_sums isn't populated to we fill
-            # it from threads_df
-            threads_sums = { metric_names[i]: threads_df[i] for i in range(len(metric_names)) }
-        else:
-            threads_sums = { metric_names[i]: threads_sums[i] for i in range(len(metric_names)) }
+       
+        threads_sums = { metric_names[i]: threads_df[i] for i in range(len(metric_names)) }
+        for t in range(1, numtids):
+            for i in range(len(metric_names)):
+                # threads_df is a flattened list where each thread's metrics are
+                # adjacent to the previous 
+                threads_sums[metric_names[i]] = threads_df[t*len(metric_names) + i]
         cpu_time = threads_sums.get('usertime', 0) + threads_sums.get('systemtime',0)
         threads_sums = dumps(threads_sums)
+
 
         # threads_df is a flattened list where each thread's metrics are
         # are placed next the previous one. Here we make it into a 
@@ -731,8 +734,10 @@ def populate_process_table_from_staging(j):
 
         insert_sql += prefix_insert_sql + """('{jobid}',{duration},{tags},'{host_id}','{threads_df}','{threads_sums}',{numtids},{cpu_time},'{exename}','{path}',{args},{pid},{ppid},{pgid},{sid},{gen},{exitcode});\n""".format(jobid=jobid, start=start, end=end, duration=duration, tags=tags, host_id=host_id, threads_df=threads_df, threads_sums=threads_sums, numtids=numtids, cpu_time=cpu_time, exename=exename, path=path, args=args, pid=pid, ppid=ppid, pgid=pgid, sid=sid, gen=gen, exitcode=exitcode)
     # insert_sql += ";\n"
-    delete_sql = "DELETE FROM processes_staging WHERE jobid = '{}';\n".format(jobid)
+    delete_sql = "DELETE FROM processes_staging WHERE id BETWEEN {} AND {};\n".format(first_proc_id, last_proc_id)
     job_info_dict['procs_in_process_table'] = 1
+    # this field is meaningless after procs have been moved to the processes table
+    del job_info_dict['procs_staging_ids']
     update_job_sql = "UPDATE jobs SET info_dict = '{}' WHERE jobid = '{}'".format(dumps(job_info_dict), jobid)
     try:
         orm_raw_sql(insert_sql+delete_sql+update_job_sql, commit=True)
@@ -925,9 +930,9 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 import psycopg2
                 from epmt_convert_csv import OUTPUT_CSV_FIELDS, OUTPUT_CSV_SEP
                 logger.info('Doing a fast ingest of {}'.format(flo.name))
-                metric_names = cols[OUTPUT_CSV_FIELDS.index('threads_df')]
-                logger.debug('per-thread metric names: {}'.format(metric_names))
-                info_dict['metric_names'] = metric_names
+                # metric_names = cols[OUTPUT_CSV_FIELDS.index('threads_df')]
+                # logger.debug('per-thread metric names: {}'.format(metric_names))
+                # info_dict['metric_names'] = metric_names
                 # force the setting below, as CSV copying means we
                 # will have no processes in the process table to post-process
                 settings.post_process_job_on_ingest = False
@@ -941,15 +946,19 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 cur = conn.cursor()
                 _copy_start_ts = time.time()
                 logger.debug('establishing connection to DB took: %2.5f sec', _copy_start_ts - _conn_start_ts)
-                copy_sql = "COPY processes_staging({}) FROM STDIN DELIMITER '{}' CSV HEADER".format(",".join(OUTPUT_CSV_FIELDS), OUTPUT_CSV_SEP)
+                copy_sql = "COPY processes_staging({}) FROM STDIN DELIMITER '{}' CSV".format(",".join(OUTPUT_CSV_FIELDS), OUTPUT_CSV_SEP)
                 logger.debug(copy_sql)
                 try:
                     # copy_from is deprecated and copy_expert is recommended
                     # Also, copy_from cannot handle a HEADER option
                     # cur.copy_from(flo, 'processes_staging', sep=OUTPUT_CSV_SEP, columns=OUTPUT_CSV_FIELDS)
                     cur.copy_expert(copy_sql, flo)
-                    conn.commit()
                     num_procs_copied = cur.rowcount
+                    # we need to determine the last row id, so we
+                    # know the job spans from which row to which row
+                    cur.execute('SELECT LASTVAL()')
+                    lastid = cur.fetchone()[0]
+                    conn.commit()
                 except Exception as e:
                     logger.error('Error copying CSV to processes_staging: %s', str(e))
                     conn.rollback()
@@ -962,6 +971,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 didsomething = (num_procs_copied > 0)
                 copy_csv_direct = True
                 total_procs += num_procs_copied
+                info_dict['procs_staging_ids'] = (lastid - num_procs_copied + 1, lastid)
                 continue
 
             csv_file = StringIO(flo.read().decode('utf8'))
