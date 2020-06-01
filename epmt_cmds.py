@@ -983,13 +983,31 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True,from_anno
     # Always collate into local temp dir
     if collate:
         from tempfile import mkdtemp, gettempdir
-        from epmt_concat import csvjoiner
 
         tempdir = mkdtemp(prefix='epmt_stage_',dir=gettempdir())
         copyfile(indir+"job_metadata",tempdir+"/job_metadata")
-        status, collated_file, badfiles = csvjoiner(indir, outpath=tempdir+"/", keep_going=keep_going, errdir=settings.error_dest)
+        if settings.csv_format == '2.0':
+            copyfile(indir+"papiex-csv-header.txt",tempdir+"/papiex-csv-header.txt")
+            from epmt_concat import determine_output_filename
+            # we use iglob to not load the full file-list,
+            # we only want a single csv filename to determine the
+            # output filename.
+            # iglob creates an iterator
+            from glob import iglob
+            _one_file = next(iglob(indir + '/*.csv'))
+            output_file = tempdir + '/' + determine_output_filename(_one_file)
+            cmd = "find {} -maxdepth 1 -type f -name '*.csv' -print0 | xargs -0 cat >> {}".format(indir, output_file)
+            logger.debug(cmd)
+            retval = forkexecwait(cmd, shell = True)
+            status = (retval == 0)
+            # TODO: figure out how to get a list of bad files
+            badfiles = []
+        else:
+            # the old csv 1.0 concatenation using csvjoiner
+            from epmt_concat import csvjoiner
+            status, collated_file, badfiles = csvjoiner(indir, outpath=tempdir+"/", keep_going=keep_going, errdir=settings.error_dest)
         if status == False:
-            logger.debug("csvjoiner returned status = %s",status)
+            logger.debug("csv concatenation returned status = %s",status)
             rmtree(tempdir)
             return False
         if (badfiles) and not from_annotate:
@@ -1023,11 +1041,12 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True,from_anno
     cmd = settings.stage_command + " " + filetostage + " " + settings.stage_command_dest
     logger.debug(cmd)
     return_code = forkexecwait(cmd, shell=True)
-    try:
-        logger.info("rmtree(%s)",filetostage)
-        rmtree(filetostage)
-    except Exception as e:
-        logger.debug("rmtree(%s): %s",filetostage,str(e))
+    if path.exists(filetostage):
+        try:
+            logger.debug("rmtree(%s)",filetostage)
+            rmtree(filetostage)
+        except Exception as e:
+            logger.debug("rmtree(%s): %s",filetostage,str(e))
     if return_code == 0:
         print(path.normpath(settings.stage_command_dest)+"/"+path.basename(filetostage))
         try:
