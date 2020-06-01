@@ -986,6 +986,8 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True,from_anno
 
         tempdir = mkdtemp(prefix='epmt_stage_',dir=gettempdir())
         copyfile(indir+"job_metadata",tempdir+"/job_metadata")
+        import time
+        _start_concat_time = time.time()
         if settings.csv_format == '2.0':
             copyfile(indir+"papiex-csv-header.txt",tempdir+"/papiex-csv-header.txt")
             from epmt_concat import determine_output_filename
@@ -1025,6 +1027,7 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True,from_anno
                 logger.error("Failed to write to %s annotations of erroneous stage",metadatafile)
                 rmtree(tempdir)
                 return False
+        logger.debug('csv concat took: %2.5f sec', time.time() - _start_concat_time)
         if compress_and_tar:
             filetostage = gettempdir()+"/"+path.basename(path.dirname(indir))+".tgz"
             cmd = "tar -C "+tempdir+" -cz -f "+filetostage+" ."

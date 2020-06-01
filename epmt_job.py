@@ -695,7 +695,7 @@ def populate_process_table_from_staging(j):
     nprocs = 0
     insert_sql = ""
     _start_time = time.time()
-    prefix_insert_sql = "INSERT INTO processes(jobid,duration,tags,host_id,threads_df,threads_sums,numtids,cpu_time,exename,path,args,pid,ppid,pgid,sid,gen,exitcode) VALUES "
+    prefix_insert_sql = "INSERT INTO processes(jobid,duration,tags,host_id,threads_df,threads_sums,numtids,cpu_time,exename,path,args,pid,ppid,pgid,sid,gen,exitcode,start,\"end\") VALUES "
     for proc_row in staged_procs:
         nprocs += 1
         # if nprocs > 10: break
@@ -732,7 +732,7 @@ def populate_process_table_from_staging(j):
         # logger.debug('translated {} into {}'.format(threads_df, _thr_dict_list))
         threads_df = dumps(_thr_dict_list)
 
-        insert_sql += prefix_insert_sql + """('{jobid}',{duration},{tags},'{host_id}','{threads_df}','{threads_sums}',{numtids},{cpu_time},'{exename}','{path}',{args},{pid},{ppid},{pgid},{sid},{gen},{exitcode});\n""".format(jobid=jobid, start=start, end=end, duration=duration, tags=tags, host_id=host_id, threads_df=threads_df, threads_sums=threads_sums, numtids=numtids, cpu_time=cpu_time, exename=exename, path=path, args=args, pid=pid, ppid=ppid, pgid=pgid, sid=sid, gen=gen, exitcode=exitcode)
+        insert_sql += prefix_insert_sql + """('{jobid}',{duration},{tags},'{host_id}','{threads_df}','{threads_sums}',{numtids},{cpu_time},'{exename}','{path}',{args},{pid},{ppid},{pgid},{sid},{gen},{exitcode},'{start}','{end}');\n""".format(jobid=jobid, start=start, end=end, duration=duration, tags=tags, host_id=host_id, threads_df=threads_df, threads_sums=threads_sums, numtids=numtids, cpu_time=cpu_time, exename=exename, path=path, args=args, pid=pid, ppid=ppid, pgid=pgid, sid=sid, gen=gen, exitcode=exitcode)
     # insert_sql += ";\n"
     delete_sql = "DELETE FROM processes_staging WHERE id BETWEEN {} AND {};\n".format(first_proc_id, last_proc_id)
     job_info_dict['procs_in_process_table'] = 1
