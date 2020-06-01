@@ -3,7 +3,7 @@ from os.path import basename
 from os import environ
 from logging import getLogger
 from json import dumps, loads
-from epmtlib import tag_from_string, sum_dicts, timing, dotdict, get_first_key_match, check_fix_metadata,csv_probe_format
+from epmtlib import tag_from_string, sum_dicts, timing, dotdict, get_first_key_match, check_fix_metadata
 from datetime import datetime, timedelta
 from functools import reduce
 import time
@@ -904,6 +904,35 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         nrecs = 0
         fileno = 0
         csv = datetime.now()
+        fmt = '1.0' # default csv format
+        if tarfile:
+            logger.debug('checking if tarfile contains CSV v2 files')
+            try:
+                # TODO: move hardcoded file name to settings
+                csv_hdr_info = tarfile.getmember('./papiex-csv-header.txt')
+                csv_hdr_flo = tarfile.extractfile(csv_hdr_info)
+                fmt = '2.0'
+            except KeyError:
+                # that means the header does not exist and we have CSV v1 format
+                pass
+            except Exception as e:
+                msg = "could not extract CSV v2 header file: ", str(e)
+                logger.error(msg)
+                return (False, msg)
+
+        # get the metric names from the CSV header file if we have csv v2
+        if fmt == '2.0':
+            from epmt_convert_csv import OUTPUT_CSV_FIELDS, OUTPUT_CSV_SEP
+            logger.debug('CSV v2 files detected in tar')
+            csv_headers = csv_hdr_flo.read()
+            csv_hdr_flo.close()
+            logger.debug(csv_headers)
+            csv_headers = "".join(map(chr,csv_headers)).split(OUTPUT_CSV_SEP)
+            metric_names = csv_headers[OUTPUT_CSV_FIELDS.index('threads_df')]
+            metric_names = metric_names.replace('{','').replace('}','')
+            logger.debug('per-thread metric names: {}'.format(metric_names))
+            info_dict['metric_names'] = metric_names
+
         for f in files:
             fileno += 1
             _file_io_start_ts = time.time()
@@ -923,16 +952,11 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 flo = tarfile.extractfile(info)
             else:
                 flo = f
-            (fmt, cols) = csv_probe_format(flo)
             if (fmt == '2.0'):
                 if (orm_db_provider() != 'postgres' or (settings.orm != 'sqlalchemy')):
                     raise ValueError('CSV file {} is meant for ingestion using Postgres direct-copy, and can only be used with PostgreSQL+SQLAlchemy'.format(flo.name))
                 import psycopg2
-                from epmt_convert_csv import OUTPUT_CSV_FIELDS, OUTPUT_CSV_SEP
                 logger.info('Doing a fast ingest of {}'.format(flo.name))
-                # metric_names = cols[OUTPUT_CSV_FIELDS.index('threads_df')]
-                # logger.debug('per-thread metric names: {}'.format(metric_names))
-                # info_dict['metric_names'] = metric_names
                 # force the setting below, as CSV copying means we
                 # will have no processes in the process table to post-process
                 settings.post_process_job_on_ingest = False
@@ -947,7 +971,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 _copy_start_ts = time.time()
                 logger.debug('establishing connection to DB took: %2.5f sec', _copy_start_ts - _conn_start_ts)
                 copy_sql = "COPY processes_staging({}) FROM STDIN DELIMITER '{}' CSV".format(",".join(OUTPUT_CSV_FIELDS), OUTPUT_CSV_SEP)
-                logger.debug(copy_sql)
+                logger.debug('Issuing direct-copy SQL: ' +copy_sql)
                 try:
                     # copy_from is deprecated and copy_expert is recommended
                     # Also, copy_from cannot handle a HEADER option
@@ -972,6 +996,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 copy_csv_direct = True
                 total_procs += num_procs_copied
                 info_dict['procs_staging_ids'] = (lastid - num_procs_copied + 1, lastid)
+                logger.debug('job process_staging ID range: {}'.format(lastid if num_procs_copied == 1 else info_dict['procs_staging_ids']))
                 continue
 
             csv_file = StringIO(flo.read().decode('utf8'))
