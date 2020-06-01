@@ -1155,6 +1155,8 @@ def epmt_entrypoint(args):
         from threading import Thread
         from ui import init_app, app
         from serve_static import app as docsapp
+        # Bug in pyinstaller does not import the idna encoding
+        import encodings.idna
         # Here app is the content of the dash interface
         init_app()
         ui = Thread(target=app.run_server, kwargs={'port':8050, 'host':'0.0.0.0'})

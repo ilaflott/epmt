@@ -78,7 +78,7 @@ release7:
 
 release-all: release6 release7
 
-release6-test-web:
+release6-demo-web:
 # Using the centos-6-test-release docker, start the interface, documentation and jupyter
 # Start Documentation(localhost:8050), Dash(localhost:8080) and Jupyter(localhost:8888)
 	OS_TARGET=centos-6
