@@ -28,7 +28,6 @@ from glob import glob
 from logging import getLogger
 logger = getLogger('epmt_concat')  # you can use other name
 from epmtlib import epmt_logging_init
-import epmt_settings as settings
 
 class InvalidFileFormat(RuntimeError):
     pass
@@ -320,166 +319,33 @@ def csvjoiner(indir,
     if any(("collated" in FL for FL in fileList)):
         logger.error("Collated output file in input")
         return False, None, badfiles
-
-    if settings.csv_format == '2.0':
-        logger.info('Using the newer and faster 2.0 format for CSV collation')
-        (retval, badfiles) = concat_v2(fileList, outfile)
-        if badfiles:
-            logger.debug("parseFile returned some bad files: %s",str(badfiles))
-            if not keep_going:
-                return False, None, badfiles
-            badfiles_renamed = rename_bad_files(outfile,errdir,badfiles)
-        else:
-            badfiles_renamed = []
-        return (retval, outfile if retval else None, badfiles_renamed)
-    else:
-        logger.info('Using the slower 1.0 format for CSV collation')
-        # iterate each file building result
-        badfiles = []
-        badfiles_renamed = []
-        for f in fileList:
-            logger.info("Collating file:{}".format(f))
-            comments, masterHeader, masterHeaderFile, data = parseFile(f, masterHeader, masterHeaderFile, delim, commentDelim)
-            if not data:
-                badfiles.append(f)
-            else:
-                commentsList += comments
-                dataList += data
-        if badfiles:
-            logger.debug("parseFile returned some bad files: %s",str(badfiles))
-            if not keep_going:
-                return False, None, badfiles
-            badfiles_renamed = rename_bad_files(outfile,errdir,badfiles)
-            
-        if masterHeader and masterHeaderFile and dataList:
-            rv = writeCSV(outfile, commentsList, masterHeader, dataList)
-            if (rv is True) and verifyOut(list(set(fileList)-set(badfiles)), outfile):
-                return True, outfile, badfiles_renamed
-            else:
-                return False, None, badfiles_renamed
-
-        logger.error("Missing dataList, masterHeader or masterHeaderFile: %s",str(fileList))
-        return False, None, badfiles_renamed
-
-
-def concat_v2(infiles, outfile):
-    '''
-    Create a CSV file by collating multiple CSV files
-
-    Parameters
-    ----------
-         infiles : list
-                   List of strings, each a path to an input CSV file
-         outfile : string
-                   Output filename. If already existing, it will be overwritten
-
-    Returns
-    -------
-    (retval, badfiles)
-          retval : boolean
-                   True on success, False on error
-        badfiles : list
-                   list of files with errors, possibly empty
-    '''
-    import time
-    import csv
-    import json
-    from epmt_convert_csv import OUTPUT_CSV_FIELDS, OUTPUT_CSV_SEP, extract_jobid_from_collated_csv
-    # expected fields in input file, initialized on first file
-    exp_input_fields = set([])
-    fileno = 0  # file number, first file is 1
-    outrows = 0 # number of rows output (we combine threads into one row)
-    thr_fields = [] # thread metric fields, determined dynamically 
-    jobid = '' # initialized from first csv file name
+    # iterate each file building result
     badfiles = []
-    _start_time = time.time()
-    with open(outfile, 'w', newline='') as out_csv:
-        for infile in infiles:
-            fileno += 1
-            if not jobid:
-                jobid = extract_jobid_from_collated_csv(outfile)
-                if not jobid:
-                    logger.error('Could not determine jobid from input path: ' + infile)
-                    return (False, [])
-                logger.debug('determined jobid ' + jobid + ' from csv filename')
-            logger.debug('processing input file {}'.format(infile))
-            f = open(infile, newline='') if (type(infile) == str) else infile
-            reader = csv.DictReader(f, escapechar='\\')
-            row = 0 # row in input file (first row is 1)
-            outrows_from_this_inp = 0  # output rows generated from this input file
+    badfiles_renamed = []
+    for f in fileList:
+        logger.info("Collating file:{}".format(f))
+        comments, masterHeader, masterHeaderFile, data = parseFile(f, masterHeader, masterHeaderFile, delim, commentDelim)
+        if not data:
+            badfiles.append(f)
+        else:
+            commentsList += comments
+            dataList += data
 
-            # now iterate over rows of the input file
-            for r in reader:
-                row += 1
-                if row == 1:
-                    # only initialize thr_fields once
-                    if not thr_fields:
-                        thr_fields = sorted(set(r.keys()) - set(settings.skip_for_thread_sums) - set(settings.per_process_fields))
-                        metric_names = "|".join(thr_fields)
-                    if fileno == 1:
-                        # initialize the output file
-                        output_fields = OUTPUT_CSV_FIELDS
-                        # replace threads_df in output CSV fields with metric names
-                        output_fields[output_fields.index('threads_df')] = metric_names
-                        writer = csv.DictWriter(out_csv,fieldnames=output_fields,delimiter=OUTPUT_CSV_SEP)
-                        writer.writeheader()
-                    # first row has the header
-                    inp_fields = set(r.keys())
-                    if exp_input_fields and (inp_fields != exp_input_fields):
-                        logger.error('Expected input fields: {}, input file {} contains {}'.format(sorted(exp_input_fields), infile, sorted(inp_fields)))
-                        break
-                    else:
-                        exp_input_fields = inp_fields
+    if badfiles:
+        logger.debug("parseFile returned some bad files: %s",str(badfiles))
+        if not keep_going:
+            return False, None, badfiles
+        badfiles_renamed = rename_bad_files(outfile,errdir,badfiles)
+        
+    if masterHeader and masterHeaderFile and dataList:
+        rv = writeCSV(outfile, commentsList, masterHeader, dataList)
+        if (rv is True) and verifyOut(list(set(fileList)-set(badfiles)), outfile):
+            return True, outfile, badfiles_renamed
+        else:
+            return False, None, badfiles_renamed
 
-                thread_metric_sums = {k: int(r[k]) for k in thr_fields }
-                threads_df = [ int(r[k]) for k in thr_fields ] # array of ints
-                numtids = int(r['numtids'])
-                # now read in remaining thread rows (if the process is multithreaded)
-                # and combine into threads_df/threads_sums 
-                for i in range(1, numtids):
-                    thr = next(reader)
-                    row += 1
-                    thr_data = []
-                    for k in thr_fields:
-                        thread_metric_sums[k] += int(thr[k])
-                        thr_data.append(int(thr[k]))
-                    # flatten multiple thread metrics into a 1-d array
-                    # to speed up ingestion
-                    threads_df.extend(thr_data)
-                # only populate threads_sums for multithreaded processes
-                r['threads_sums'] = [ int(thread_metric_sums[k]) for k in thr_fields ] if numtids > 1 else []
-                r[metric_names] = threads_df
-                r['jobid'] = jobid
-                r['host_id'] = r['hostname']
-                r['gen'] = r['generation']
-                # replace postgres eof marker in the args field
-                # https://stackoverflow.com/questions/23790995/postgres-9-3-end-of-copy-marker-corrupt-any-way-to-change-this-setting
-                if '\.' in r['args']:
-                    r['args'] = r['args'].replace('\.', '\\\.')
-
-                for field in ['pid', 'ppid', 'pgid', 'sid', 'gen', 'start', 'end']:
-                    r[field] = int(r[field])
-                r['finish'] = r['end'] # end is reserved word in sql
-
-                outrow = {}
-                outrows += 1
-                outrows_from_this_inp += 1
-                for field in output_fields:
-                    outrow[field] = r[field]
-                    # postgrsql requires arrays to use curly braces instead
-                    # of the square brackets we get with list objects in Python
-                    if field in ('threads_sums', metric_names):
-                        outrow[field] = json.dumps(r[field]).replace('[', '{').replace(']', '}')
-                writer.writerow(outrow)
-            if not outrows_from_this_inp:
-                badfiles.append(infile)
-            else:
-                logger.debug('{} generated {} lines of output'.format(infile, outrows_from_this_inp))
-            f.close()
-    _finish_time = time.time()
-    logger.info('Wrote {} rows at {:.2f} procs/sec'.format(outrows,(outrows/(_finish_time - _start_time))))
-    return (True, badfiles)
-
+    logger.error("Missing dataList, masterHeader or masterHeaderFile: %s",str(fileList))
+    return False, None, badfiles_renamed
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
