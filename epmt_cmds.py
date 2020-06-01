@@ -987,9 +987,11 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True,from_anno
         tempdir = mkdtemp(prefix='epmt_stage_',dir=gettempdir())
         copyfile(indir+"job_metadata",tempdir+"/job_metadata")
         import time
+        # TODO: Move the hardcoded path to settings
+        PAPIEX_CSV_HEADER_FILE = "papiex-csv-header.txt"
         _start_concat_time = time.time()
-        if settings.csv_format == '2.0':
-            copyfile(indir+"papiex-csv-header.txt",tempdir+"/papiex-csv-header.txt")
+        if (path.exists(indir+PAPIEX_CSV_HEADER_FILE)):
+            copyfile(indir+PAPIEX_CSV_HEADER_FILE,tempdir+"/" + PAPIEX_CSV_HEADER_FILE)
             from epmt_concat import determine_output_filename
             # we use iglob to not load the full file-list,
             # we only want a single csv filename to determine the

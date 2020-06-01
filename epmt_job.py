@@ -911,7 +911,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 # TODO: move hardcoded file name to settings
                 csv_hdr_info = tarfile.getmember('./papiex-csv-header.txt')
                 csv_hdr_flo = tarfile.extractfile(csv_hdr_info)
-                fmt = '2.0'
+                fmt = '2'
             except KeyError:
                 # that means the header does not exist and we have CSV v1 format
                 pass
@@ -921,7 +921,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 return (False, msg)
 
         # get the metric names from the CSV header file if we have csv v2
-        if fmt == '2.0':
+        if fmt == '2':
             from epmt_convert_csv import OUTPUT_CSV_FIELDS, OUTPUT_CSV_SEP
             logger.debug('CSV v2 files detected in tar')
             csv_headers = csv_hdr_flo.read()
@@ -952,7 +952,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 flo = tarfile.extractfile(info)
             else:
                 flo = f
-            if (fmt == '2.0'):
+            if (fmt == '2'):
                 if (orm_db_provider() != 'postgres' or (settings.orm != 'sqlalchemy')):
                     raise ValueError('CSV file {} is meant for ingestion using Postgres direct-copy, and can only be used with PostgreSQL+SQLAlchemy'.format(flo.name))
                 import psycopg2

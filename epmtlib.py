@@ -26,7 +26,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (4,2,7)
+_version = (4,2,8)
 
 def version():
     return _version
@@ -168,17 +168,10 @@ def init_settings(settings):
     if not hasattr(settings, 'lazy_compute_process_tree'):
         logger.warning("missing settings.lazy_compute_process_tree")
         settings.lazy_compute_process_tree = True
-    if not hasattr(settings, 'csv_format'):
-        settings.csv_format = '1.0'
     if ((settings.orm != 'sqlalchemy') and (not(settings.post_process_job_on_ingest))):
         err_msg += '\n - post_process_job_on_ingest set as False is only permitted with sqlalchemy'
     if not hasattr(settings, 'db_params'):
         err_msg += "\n - missing settings.db_params"
-    else:
-        # on all platforms except postgres+SQLA
-        if settings.csv_format == '2.0':
-            if (settings.orm != 'sqlalchemy' or not('postgres' in settings.db_params['url'])):
-                err_msg + "\n - csv_format 2.0 is presently only supported on postgres+SQLAlchemy"
     if err_msg:
         err_msg = "The following error(s) were detecting in your settings: " + err_msg
         logger.error(err_msg)
@@ -1029,14 +1022,14 @@ def csv_probe_format(f):
     -------
     (version, header)
      version : string
-               '1.0' or '2.0'
+               '1' or '2'
       header : list
                list of header columns (in-order)
 
     Notes
     -----
-    EPMT supports two file formats (1.0) and (2.0)
-    1.0 is a comma-separated file, while 2.0 is a tab
+    EPMT supports two file formats '1' and '2'
+    '1' is a comma-separated file, while '2' is a tab
     separated file. If the file does not have either
     of the above formats, we will raise an exception
     '''
@@ -1054,10 +1047,10 @@ def csv_probe_format(f):
         f.seek(0) # restore file position to beginning of file
     if '\t' in s:
         # the second element is a list of CSV column names
-        return ('2.0', s.split('\n')[0].split('\t'))
+        return ('2', s.split('\n')[0].split('\t'))
     elif ',' in s: 
         # the second element is a list of CSV column names
-        return ('1.0', s.split('\n')[0].split(','))
+        return ('1', s.split('\n')[0].split(','))
     # if we reached here, then we don't understand the CSV format
     raise ValueError("CSV file -- {} -- has an unknown file format. Is it corrupted?".format(f.name))
 
