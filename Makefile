@@ -32,7 +32,8 @@ dist:
 # slurm
 	mkdir epmt-install/slurm
 	cp SLURM/slurm_task_*log_epmt.sh epmt-install/slurm
-# docs
+# docs (allowed to fail)
+	rm -rf epmtdocs/site;
 	mkdir -p epmt-install/epmt/epmtdocs
 	-mkdocs build -f epmtdocs/mkdocs.yml && cp -Rp epmtdocs/site epmt-install/epmt/epmtdocs
 # release
@@ -91,6 +92,7 @@ clean:
 
 distclean: clean
 	rm -f settings.py release/*$(OS_TARGET)*
+	rm -rf epmtdocs/site
 
 # 
 # Simple python version testing with no database
