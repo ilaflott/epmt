@@ -26,7 +26,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (3,8,20)
+_version = (4,2,11)
 
 def version():
     return _version
@@ -1008,7 +1008,52 @@ def logfn(func):
         return func(*func_args, **func_kwargs)
     return log_func
 
-    
+def csv_probe_format(f):
+    '''
+    Returns the CSV file format and header
+
+    Parameters
+    ----------
+            f : file handle or string
+                If `f` is a file handle, it must be positioned at 
+                the beginning of the file
+
+    Returns
+    -------
+    (version, header)
+     version : string
+               '1' or '2'
+      header : list
+               list of header columns (in-order)
+
+    Notes
+    -----
+    EPMT supports two file formats '1' and '2'
+    '1' is a comma-separated file, while '2' is a tab
+    separated file. If the file does not have either
+    of the above formats, we will raise an exception
+    '''
+    # handle the case where somebody gave us a file name
+    close_file = False
+
+    if type(f) == str:
+        close_file = True
+        f = open(f)
+    # read the first few characters and check for the delimiter
+    s = "".join([chr(x) for x in f.read(1024)])
+    if close_file:
+        f.close()
+    else:
+        f.seek(0) # restore file position to beginning of file
+    if '\t' in s:
+        # the second element is a list of CSV column names
+        return ('2', s.split('\n')[0].split('\t'))
+    elif ',' in s: 
+        # the second element is a list of CSV column names
+        return ('1', s.split('\n')[0].split(','))
+    # if we reached here, then we don't understand the CSV format
+    raise ValueError("CSV file -- {} -- has an unknown file format. Is it corrupted?".format(f.name))
+
 
 if __name__ == "__main__":
     print(version_str(True))

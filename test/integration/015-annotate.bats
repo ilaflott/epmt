@@ -2,22 +2,31 @@ load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 
 setup() {
-  rm -rf /tmp/epmt/*/3456
-  rm -f 3456.tgz
+  stage_dest=$(epmt -h | sed -n 's/stage_command_dest://p')
+  test -n "${stage_dest}" || fail
+  test -d ${stage_dest} || fail
+  resource_path=$(dirname `command -v epmt`)
+  test -n "${resource_path}" || fail
+  test -d ${resource_path} || fail
+  epmt_output_prefix=$(epmt -h | sed -n 's/epmt_output_prefix://p')
+  test -n "${epmt_output_prefix}" || fail
+  rm -rf ${epmt_output_prefix}/${USER}/3456
+  rm -f ${stage_dest}/3456.tgz
 } 
 
 teardown() {
-  rm -rf /tmp/epmt/*/3456
-  rmdir --ignore-fail-on-non-empty /tmp/epmt/$USER
-  rmdir --ignore-fail-on-non-empty /tmp/epmt
-  rm -f 3456.tgz
+  rm -rf ${epmt_output_prefix}/${USER}/3456
+  rm -f ${stage_dest}/3456.tgz
 } 
 
 @test "epmt annotate" {
-  run test/integration/epmt-annotate.sh
-  run test -f 3456.tgz
-  run epmt dump -k annotations 3456.tgz
-
+  run ${resource_path}/test/integration/epmt-annotate.sh
+  assert_success
+  run test -f ${stage_dest}/3456.tgz
+  assert_success
+  run epmt dump -k annotations ${stage_dest}/3456.tgz
+  assert_success
+  
   # the order of keys in the dict might change based on underlying db
   assert_output "{'a': 100, 'b': 200, 'inbetween_1': 1, 'inbetween_2': 1, 'c': 200, 'd': 400, 'e': 300, 'f': 600}"
 

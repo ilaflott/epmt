@@ -97,6 +97,7 @@ def setup_db(settings,drop=False,create=True):
         # for tbl in Base.metadata.sorted_tables:
         #     engine.execute(tbl.delete())
         # remove alembic version table
+        engine.execute('DROP TABLE IF EXISTS processes_staging')
         engine.execute('DROP TABLE IF EXISTS alembic_version')
 
     # migrations won't work with in-memory databases

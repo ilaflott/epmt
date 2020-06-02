@@ -22,12 +22,12 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from sys import exit
 from re import findall, search
-from os import path, remove
+from os import path, remove, makedirs
 from shutil import copyfile
 from glob import glob
 from logging import getLogger
 logger = getLogger('epmt_concat')  # you can use other name
-from epmtlib import epmt_logging_init
+from epmtlib import epmt_logging_init, logfn
 
 class InvalidFileFormat(RuntimeError):
     pass
@@ -39,9 +39,15 @@ def rename_bad_files(outfile, errdir, badfiles):
     logger = getLogger('rename_bad_files')
     logger.debug("%s,%s,%s",outfile,errdir,str(badfiles))
     if not errdir:
-        logger.debug("Skipping renaming bad files!")
+        logger.warning("No error dir specified, skipping renaming of bad CSV files!")
         return badfiles
     ed=path.normpath(errdir)
+    if not path.exists(ed):
+        try:
+            makedirs(ed) 
+        except OSError as e:
+            logger.error("makedirs(%s): %s, skipping renamng of bad CSV files!",ed,str(e))
+            return badfiles
     renamed_badfiles = []
     for f in badfiles:
         p=path.basename(path.normpath(f))
@@ -250,8 +256,10 @@ def determine_output_filename(instr):
 # delim - CSV Delimiter character defaults to comma
 # comment - CSV Comment character defaults to hashtag
 # debug - Defaults to intlvl=2, set "false" to disable debug
+@logfn
 def csvjoiner(indir,
               outfile="",
+              outpath="",
               delim=',', comment='#', debug=0, keep_going=True, errdir="/tmp/"):
     """ CSVJoiner will collate the csv files within the indir
         The resulting collated file can be designated with outfile paramater. """
@@ -290,10 +298,6 @@ def csvjoiner(indir,
         logger.info("Collate in directory {}".format(indir))
         fileList = sorted(glob(indir + "/*.csv"))
         logger.debug("Filelist:{}".format(fileList))
-        if(len(fileList) == 0):
-            msg = "{} has no CSV files to concatenate".format(indir)
-            logger.warning(msg)
-            return True, "", badfiles
 # List Mode #########################################
     if(type(indir) == list):
         logger.info("Collate list")
@@ -307,18 +311,22 @@ def csvjoiner(indir,
             if(not path.isfile(test)):
                 logger.error(test + " does not exist or is not a file")
                 return False, None, badfiles
-
+    if(len(fileList) == 0):
+        msg = "{} has no CSV files to concatenate".format(indir)
+        logger.warning(msg)
+        return True, None, badfiles
+    if any(("collated" in FL for FL in fileList)):
+        logger.error("Collated output file in input")
+        return False, None, badfiles
     if outfile == "":
         outfile = determine_output_filename(fileList[0])
         if outfile == "":
             return False, None, badfiles
-# Main pass
+    outfile = outpath+outfile
     if (path.exists(outfile)):
         logger.error("Output {} already exists".format(outfile))
         return False, None, badfiles
-    if any(("collated" in FL for FL in fileList)):
-        logger.error("Collated output file in input")
-        return False, None, badfiles
+
     # iterate each file building result
     badfiles = []
     badfiles_renamed = []

@@ -5,6 +5,7 @@
 # See https://slurm.schedmd.com/prolog_epilog.html
 #
 
+# This is edited during install to correct path
 EPMT=/opt/epmt/epmt-install/epmt/epmt
 
 err_report() {

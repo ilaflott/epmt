@@ -135,24 +135,30 @@ class EPMTCmds(unittest.TestCase):
         # quell the error messages
         epmt_logging_init(-2)
         from os import remove, path
+        from shutil import copytree, rmtree
+        from tempfile import gettempdir, mkdtemp
+
         errorfile=settings.error_dest+'/pp053-papiex-615503-0.csv.error'
         if path.exists(errorfile):
             remove(errorfile)
-        if path.exists('test/data/corrupted_csv.orig'):
-            rmtree('test/data/corrupted_csv.orig')
+        tempdir = mkdtemp(prefix='epmt_',dir=gettempdir())
+        copytree("test/data/corrupted_csv",tempdir+"/corrupted_csv")
         with capture() as (out, err):
-            retval = epmt_stage(['test/data/corrupted_csv'],keep_going=False)
+            retval = epmt_stage([tempdir+"/corrupted_csv"],keep_going=False)
         self.assertTrue(retval == False, "corrupted CSV files, should have returned False")
         self.assertFalse(path.exists(errorfile))
-        from shutil import copytree,rmtree
-        copytree("test/data/corrupted_csv","test/data/corrupted_csv.orig")
+        rmtree(tempdir+"/corrupted_csv")
+        
+        if path.exists(errorfile):
+            remove(errorfile)
+        tempdir = mkdtemp(prefix='epmt_',dir=gettempdir())
+        copytree("test/data/corrupted_csv",tempdir+"/corrupted_csv")
         with capture() as (out, err):
-            retval = epmt_stage(['test/data/corrupted_csv'],keep_going=True)
+            retval = epmt_stage([tempdir+"/corrupted_csv"],keep_going=True)
         self.assertTrue(retval == True, "corrupted CSV files but keep_going, should have returned True")
         self.assertTrue(path.exists(errorfile))
+        self.assertFalse(path.exists(tempdir+"/corrupted_csv"))
         remove(errorfile) # cleanup after ourselves
-        copytree("test/data/corrupted_csv.orig","test/data/corrupted_csv")
-        rmtree("test/data/corrupted_csv.orig")
         # restore logging level
         epmt_logging_init(-1)
         
