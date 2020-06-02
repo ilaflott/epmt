@@ -86,7 +86,7 @@ release-all: release6 release7
 #
 #
 clean:
-	find . -name "*~" -o -name "*.pyc" -o -name epmt.log -o -name core -exec rm -f {} \; 
+	find . -name "*~" -o -name "*.pyc" -o -name epmt.log -o -name core -type f -exec rm -f {} \; 
 	rm -rf __pycache__ build epmt-install epmt-install-tests
 
 distclean: clean
