@@ -21,14 +21,21 @@ build:
 dist: 
 	rm -rf epmt-install build
 	pyinstaller --clean --distpath=epmt-install epmt.spec
+# resources
 	cp -Rp preset_settings epmt-install
 	cp -Rp notebooks epmt-install
 	cp -Rp migrations epmt-install
 	cp -p alembic.ini epmt-install
+# examples
 	mkdir epmt-install/examples
 	cp epmt-example.*sh epmt-install/examples
+# slurm
 	mkdir epmt-install/slurm
 	cp SLURM/slurm_task_*log_epmt.sh epmt-install/slurm
+# docs
+	mkdir -p epmt-install/epmt/epmtdocs
+	-mkdocs build -f epmtdocs/mkdocs.yml && cp -Rp epmtdocs/site epmt-install/epmt/epmtdocs
+# release
 	-@mkdir release 2>/dev/null
 	tar -czf release/$(EPMT_RELEASE) epmt-install
 	rm -rf epmt-install build
