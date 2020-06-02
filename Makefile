@@ -19,8 +19,7 @@ build:
 	python -O -bb -m py_compile *.py orm/*.py orm/*/*.py test/*.py
 
 dist: 
-	rm -rf epmt-install build epmtdocs/site
-	mkdocs build -f epmtdocs/mkdocs.yml
+	rm -rf epmt-install build
 	pyinstaller --clean --distpath=epmt-install epmt.spec
 	cp -Rp preset_settings epmt-install
 	cp -Rp notebooks epmt-install
@@ -30,8 +29,6 @@ dist:
 	cp epmt-example.*sh epmt-install/examples
 	mkdir epmt-install/slurm
 	cp SLURM/slurm_task_*log_epmt.sh epmt-install/slurm
-	mkdir epmt-install/epmt/epmtdocs/
-	cp -Rp epmtdocs/site epmt-install/epmt/epmtdocs/
 	-@mkdir release 2>/dev/null
 	tar -czf release/$(EPMT_RELEASE) epmt-install
 	rm -rf epmt-install build
@@ -77,12 +74,6 @@ release7:
 	$(MAKE) OS_TARGET=centos-7 release check-release
 
 release-all: release6 release7
-
-release6-demo-web:
-# Using the centos-6-test-release docker, start the interface, documentation and jupyter
-# Start Documentation(localhost:8050), Dash(localhost:8080) and Jupyter(localhost:8888)
-	OS_TARGET=centos-6
-	docker run --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release -it --network epmt_default -p 8080:8080 -p 8050:8050 -p 8888:8888 -w /opt/minimalmetrics/epmt-$(EPMT_VERSION)/epmt-install/epmt/ --rm -h ernie $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c './epmt notebook -- --ip=0.0.0.0 --allow-root --notebook-dir=../notebooks/ & ./epmt gui'
 
 #
 #
