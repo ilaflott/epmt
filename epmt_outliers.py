@@ -1491,7 +1491,7 @@ def pca_feature_rank(jobs, inp_features = []):
     sorted_features = list(zip(sorted_df.iloc[-1].index, sorted_df.iloc[-1].round(4)))
     return (sorted_df, sorted_features)
 
-def feature_scatter_plot(jobs, features = [], annotate = False):
+def feature_scatter_plot(jobs, features = [], outfile='', annotate = False):
     '''
     Create a 2-D scatter plot showing job features::Outlier Detection
 
@@ -1546,7 +1546,11 @@ def feature_scatter_plot(jobs, features = [], annotate = False):
     plt.update_traces(textposition='top center')
     plt.update_layout(
         xaxis=dict(title_text=features[0]+x_label_ext),)
-    plt.show()
+    if outfile:
+        print('Plotly Cannot export static images, Feature coming soon')
+    else:
+        plt.show()
+
 
     
 # Sanitize feature list by removing blacklisted features
