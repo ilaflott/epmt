@@ -33,7 +33,6 @@ dist:
 	mkdir epmt-install/slurm
 	cp SLURM/slurm_task_*log_epmt.sh epmt-install/slurm
 # docs (allowed to fail)
-	rm -rf epmtdocs/site;
 	mkdir -p epmt-install/epmt/epmtdocs
 	-mkdocs build -f epmtdocs/mkdocs.yml && cp -Rp epmtdocs/site epmt-install/epmt/epmtdocs
 # release
