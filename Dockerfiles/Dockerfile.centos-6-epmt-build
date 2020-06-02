@@ -22,11 +22,5 @@ COPY ui/requirements-ui.txt.py3 requirements.txt.py3 /tmp/
 RUN python3 -V && pip3 install --upgrade pip && pip3 install -r /tmp/requirements-ui.txt.py3 -r /tmp/requirements.txt.py3
 RUN pip3 install pyinstaller
 
-# GROSS HACK
-RUN yum install -y patch
-COPY matplotlib_init.patch /tmp
-RUN patch < /tmp/matplotlib_init.patch /usr/lib/python3.7/site-packages/matplotlib/__init__.py
-RUN rm /tmp/matplotlib_init.patch
-
 RUN yum clean all
 RUN rm -rf /usr/src /var/cache/yum /usr/share/man

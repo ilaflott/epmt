@@ -34,7 +34,6 @@ llvmlite==0.31.0
 lockfile==0.12.2
 Mako==1.1.0
 MarkupSafe==1.1.1
-matplotlib==3.1.2
 mccabe==0.6.1
 memory-profiler==0.57.0
 mistune==0.8.4
