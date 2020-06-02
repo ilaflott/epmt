@@ -68,7 +68,7 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
 
     if infile == outfile:
         outfd, outfile = tempfile.mkstemp(prefix = 'epmt_conv_outcsv_', suffix = '.csv')
-        logger.debug('in-place CSV conversion, so creating a tempfile {}'.format(outfile))
+        # logger.debug('in-place CSV conversion, so creating a tempfile {}'.format(outfile))
         in_place = True
     else:
         in_place = False
@@ -194,6 +194,7 @@ def convert_csv_in_tar(in_tar, out_tar = ''):
     format conversion. This method will also add a file PAPIEX_CSV_HEADER_FILENAME
     in the newly-created tar.
     '''
+    logger = getLogger(__name__)  # you can use other name
     if not in_tar.endswith('.tgz') or in_tar.endswith('.tar.gz') or in_tar.endswith('.tar'):
         raise ValueError('input file must have a .tar, .tgz or .tar.gz suffix')
 
@@ -208,6 +209,7 @@ def convert_csv_in_tar(in_tar, out_tar = ''):
         in_place = True
         _, out_tar = tempfile.mkstemp(prefix='epmt_conv_outtar_', suffix = '.tgz')
         atexit.register(_cleanup, out_tar)
+        logger.info('Doing in-place CSV format conversion in {}'.format(in_tar))
         logger.debug('Will create a temporary output tar ({}) as we are doing in-place conversion'.format(out_tar))
     else:
         in_place = False
@@ -220,6 +222,7 @@ def convert_csv_in_tar(in_tar, out_tar = ''):
 
     tempdir = tempfile.mkdtemp(prefix='epmt_conv_csv_')
     atexit.register(_cleanup, tempdir)
+    logger.info('Extracting files from archive..')
     try:
         tar.extractall(tempdir)
         tar_contents = tar.getnames()
@@ -234,6 +237,7 @@ def convert_csv_in_tar(in_tar, out_tar = ''):
     if not in_csv_files:
         logger.error('No CSV files found in {}'.format(in_tar))
         return False
+    logger.info('Converting format of CSV files..')
     for input_csv in in_csv_files:
         logger.debug('converting {} in-place'.format(input_csv))
         hdr = conv_csv_for_dbcopy(input_csv)
@@ -244,10 +248,10 @@ def convert_csv_in_tar(in_tar, out_tar = ''):
 
     with open('{}/{}'.format(tempdir, PAPIEX_CSV_HDR_FILENAME), 'w') as csv_hdr_flo:
         csv_hdr_flo.write(hdr)
-    logger.info("Created CSV header file: {}".format(PAPIEX_CSV_HDR_FILENAME))
+    logger.debug("Created CSV header file: {}".format(PAPIEX_CSV_HDR_FILENAME))
     tar_contents.append("./" + PAPIEX_CSV_HDR_FILENAME)
 
-    logger.info('Creating {} and adding contents to it'.format(out_tar))
+    logger.debug('Creating {} and adding contents to it'.format(out_tar))
     try:
         tar = tarfile.open(out_tar, 'w|gz')
     except Exception as e:
@@ -268,10 +272,11 @@ def convert_csv_in_tar(in_tar, out_tar = ''):
     # return to the original working dir
     os.chdir(owd)
     tar.close()
-    logger.info('Finished creating archive: {}'.format(out_tar))
+    logger.debug('Finished creating archive: {}'.format(out_tar))
     if in_place:
-        logger.info('Replacing input tar {} with {}'.format(in_tar, out_tar))
+        logger.debug('Replacing {} with newly-created archive'.format(in_tar))
         shutil.move(out_tar, in_tar)
+    logger.info('CSV format conversion successful!')
     shutil.rmtree(tempdir)
 
     
@@ -289,4 +294,4 @@ if __name__ == "__main__":
     # conv_csv_for_dbcopy('pp208-collated-papiex-685000-0.csv', 'out.csv')
     # conv_csv_for_dbcopy('in-collated-papiex-685000-0.csv')
     # conv_csv_for_dbcopy('685000', 'out.csv', 'out2.csv')
-    convert_csv_in_tar(sys.argv[1])
+    convert_csv_in_tar(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else '')

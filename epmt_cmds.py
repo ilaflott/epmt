@@ -1153,6 +1153,9 @@ def epmt_entrypoint(args):
         else:
             epmt_shell(ipython = False)
         return 0
+    if args.command == 'convert':
+        from epmt_convert_csv import convert_csv_in_tar
+        return (convert_csv_in_tar(args.src_tgz, args.dest_tgz) == False)
     if args.command == 'explore':
         from epmt_exp_explore import exp_explore
         exp_explore(args.epmt_cmd_args, metric = args.metric, limit = args.limit)
