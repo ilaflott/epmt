@@ -4,7 +4,7 @@ import csv
 import json
 from epmtlib import tag_from_string, logfn, epmt_logging_init, timing
 import epmt_settings as settings
-from os.path import abspath
+from os.path import abspath, isdir, isfile
 import os
 import shutil
 from logging import getLogger
@@ -12,6 +12,7 @@ import time
 import tempfile
 import tarfile
 from glob import glob
+import atexit
 
 # these fields must be present at a minimum or our sanity
 # check will flag an error
@@ -22,6 +23,7 @@ OUTPUT_CSV_FIELDS = ['threads_df', 'tags', 'hostname', 'exename', 'path', 'exitc
 # we need to use a character that doesn't occur in the
 # input as the postgres copy_from cannot handle quoted delimiters
 OUTPUT_CSV_SEP = '\t'
+PAPIEX_CSV_HDR_FILENAME = 'papiex-csv-header.txt'
 
 # Expected input format
 # tags,hostname,exename,path,args,exitcode,pid,generation,ppid,pgid,sid,numtids,tid,start,end,usertime,systemtime,rssmax,minflt,majflt,inblock,outblock,vol_ctxsw,invol_ctxsw,num_threads,starttime,processor,delayacct_blkio_time,guest_time,rchar,wchar,syscr,syscw,read_bytes,write_bytes,cancelled_write_bytes,time_oncpu,time_waiting,timeslices,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
@@ -53,7 +55,7 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
 
     Returns
     -------
-    True on sucess, False otherwise
+    string representing the header, False otherwise
 
     Notes
     -----
@@ -87,10 +89,6 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
     # open a file for writing if we have a string, otherwise assume
     # its an already open file-handle
     with open(outfile, 'w', newline='') as csvfile:
-        # log a helpful line so we know how to use \COPY command
-        logger.debug("Use the following line in postgres:\n  \COPY processes_staging({}) FROM '{}' DELIMITER ',' CSV".format(",".join(OUTPUT_CSV_FIELDS), abspath(outfile)).replace('end', '"end"'))
-
-
         row_num = 0 # input row being processed
         outrows = 0 # number of rows output (we combine threads into one row)
         for r in reader:
@@ -98,15 +96,16 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
             if row_num == 1:
                 if input_fields and not(set(r.keys()) >= input_fields):
                     # sanity check to make sure our input file has the correct format
-                    logger.error('Input CSV format is not correct. Likely missing  header row..')
+                    logger.error('Input CSV format is not correct. Likely missing  header row. Is it already in v2 format?')
                     return False
                 thr_fields = sorted(set(r.keys()) - set(settings.skip_for_thread_sums) - set(settings.per_process_fields))
                 metric_names = ",".join(thr_fields)
+                header = OUTPUT_CSV_SEP.join(OUTPUT_CSV_FIELDS).replace('threads_df', '{'+metric_names+'}')
                 # initialize the output file
                 output_fields = OUTPUT_CSV_FIELDS
                 output_fields[output_fields.index('threads_df')] = metric_names
                 writer = csv.DictWriter(csvfile, fieldnames=output_fields, delimiter=OUTPUT_CSV_SEP)
-                writer.writeheader()
+                # writer.writeheader()
                 
             
             # thread_metric_sums = {k: int(r[k]) for k in thr_fields }
@@ -156,7 +155,19 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
     if in_place:
         logger.debug('overwriting input file {} with {}'.format(infile, outfile))
         shutil.move(outfile, infile)
-    return True
+    return header
+
+
+def _cleanup(path):
+    if isfile(path):
+        try:
+            os.remove(path)
+        except: pass
+    elif isdir(path):
+        try:
+            shutil.rmtree(path)
+        except: pass
+    
 
 def convert_csv_in_tar(in_tar, out_tar = ''):
     '''
@@ -180,7 +191,8 @@ def convert_csv_in_tar(in_tar, out_tar = ''):
     If input and output paths are identical, the input will be
     overwritten. This action will not cause a warning to be issued,
     since there are legitimate cases where one may want in-place
-    format conversion
+    format conversion. This method will also add a file PAPIEX_CSV_HEADER_FILENAME
+    in the newly-created tar.
     '''
     if not in_tar.endswith('.tgz') or in_tar.endswith('.tar.gz') or in_tar.endswith('.tar'):
         raise ValueError('input file must have a .tar, .tgz or .tar.gz suffix')
@@ -195,6 +207,7 @@ def convert_csv_in_tar(in_tar, out_tar = ''):
         # and then replace the input file
         in_place = True
         _, out_tar = tempfile.mkstemp(prefix='epmt_conv_outtar_', suffix = '.tgz')
+        atexit.register(_cleanup, out_tar)
         logger.debug('Will create a temporary output tar ({}) as we are doing in-place conversion'.format(out_tar))
     else:
         in_place = False
@@ -206,6 +219,7 @@ def convert_csv_in_tar(in_tar, out_tar = ''):
         return False
 
     tempdir = tempfile.mkdtemp(prefix='epmt_conv_csv_')
+    atexit.register(_cleanup, tempdir)
     try:
         tar.extractall(tempdir)
         tar_contents = tar.getnames()
@@ -213,19 +227,27 @@ def convert_csv_in_tar(in_tar, out_tar = ''):
         logger.error('Error extracting {} to {}: {}'.format(in_tar, tempdir, e))
         return False
     tar.close()
+    if "./" + PAPIEX_CSV_HDR_FILENAME in tar_contents:
+        logger.error('{} already contains CSV files in v2 format'.format(in_tar))
+        return False
     in_csv_files = glob('{}/*.csv'.format(tempdir))
     if not in_csv_files:
         logger.error('No CSV files found in {}'.format(in_tar))
         return False
     for input_csv in in_csv_files:
         logger.debug('converting {} in-place'.format(input_csv))
-        retval = conv_csv_for_dbcopy(input_csv)
-        if not retval:
+        hdr = conv_csv_for_dbcopy(input_csv)
+        if not hdr:
             logger.error('Error converting {}'.format(input_csv))
             return False
     logger.info('Finished converting CSV files in {}'.format(in_tar))
-    logger.info('Creating {} and adding contents to it'.format(out_tar))
 
+    with open('{}/{}'.format(tempdir, PAPIEX_CSV_HDR_FILENAME), 'w') as csv_hdr_flo:
+        csv_hdr_flo.write(hdr)
+    logger.info("Created CSV header file: {}".format(PAPIEX_CSV_HDR_FILENAME))
+    tar_contents.append("./" + PAPIEX_CSV_HDR_FILENAME)
+
+    logger.info('Creating {} and adding contents to it'.format(out_tar))
     try:
         tar = tarfile.open(out_tar, 'w|gz')
     except Exception as e:

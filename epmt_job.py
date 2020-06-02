@@ -906,10 +906,11 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         csv = datetime.now()
         fmt = '1.0' # default csv format
         if tarfile:
+            from epmt_convert_csv import PAPIEX_CSV_HDR_FILENAME
             logger.debug('checking if tarfile contains CSV v2 files')
             try:
                 # TODO: move hardcoded file name to settings
-                csv_hdr_info = tarfile.getmember('./papiex-csv-header.txt')
+                csv_hdr_info = tarfile.getmember('./' + PAPIEX_CSV_HDR_FILENAME)
                 csv_hdr_flo = tarfile.extractfile(csv_hdr_info)
                 fmt = '2'
             except KeyError:
