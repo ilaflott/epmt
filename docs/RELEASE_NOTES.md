@@ -5,6 +5,7 @@ Version 3.7.22
   Release date: 04/22/2020
 
   The list includes features added since version 3.3.20.
+
   - Support for automatic database migration under SQLAlchemy added
   - `epmt help api` and `epmt help api <function>` provide
     concise list of API index and function docstrings

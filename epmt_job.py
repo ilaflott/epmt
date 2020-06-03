@@ -543,6 +543,11 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     if j.proc_sums:
         logger.warning('skipped processing jobid {0} as it is not unprocessed'.format(j.jobid))
         return False
+    if not j.info_dict.get('procs_in_process_table', 1):
+        stage_copy_result = populate_process_table_from_staging(j)
+        if not stage_copy_result:
+            logger.error('Aborting post-process of job %s as process copy from staging failed', j.jobid)
+            return False
     logger.info("Starting post-process of job..")
     proc_sums = {}
 
@@ -677,6 +682,72 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
 #    metadata['job_el_exitcode'] = exitcode
 #    metadata['job_el_reason'] = reason
 
+def populate_process_table_from_staging(j):
+    import datetime as dt
+    import psycopg2
+    jobid = j.jobid
+    job_info_dict = j.info_dict
+    logger.info('populating process table from staging for job {}'.format(jobid))
+    metric_names = j.info_dict['metric_names'].split(',')
+    (first_proc_id, last_proc_id) = j.info_dict['procs_staging_ids']
+    staged_procs = orm_raw_sql("SELECT id, threads_df, start, finish, tags, hostname, numtids, exename, path, args, pid, ppid, pgid, sid, generation, exitcode, exitsignal FROM processes_staging WHERE id BETWEEN {} AND {}".format(first_proc_id, last_proc_id))
+    proc_ids = []
+    nprocs = 0
+    insert_sql = ""
+    _start_time = time.time()
+    prefix_insert_sql = "INSERT INTO processes(jobid,duration,tags,host_id,threads_df,threads_sums,numtids,cpu_time,exename,path,args,pid,ppid,pgid,sid,gen,exitcode,start,\"end\") VALUES "
+    for proc_row in staged_procs:
+        nprocs += 1
+        # if nprocs > 10: break
+        (proc_id, threads_df, start, finish, tags, host_id, numtids, exename, path, args, pid, ppid, pgid, sid, gen, exitcode, exitsignal) = proc_row
+        proc_ids.append(proc_id)
+        duration = finish - start  # in us
+        start = dt.datetime.fromtimestamp(start / 1e6)
+        end = dt.datetime.fromtimestamp(finish / 1e6)
+        tags = psycopg2.extensions.adapt(dumps(tag_from_string(tags) if tags else {}))
+        if args is None: args = ''
+        args = args.replace('%', '%%')
+        args = psycopg2.extensions.adapt(args)
+        
+        # args = dumps(args)
+        # args = ""
+        # print(args)
+       
+        threads_sums = { metric_names[i]: threads_df[i] for i in range(len(metric_names)) }
+        for t in range(1, numtids):
+            for i in range(len(metric_names)):
+                # threads_df is a flattened list where each thread's metrics are
+                # adjacent to the previous 
+                threads_sums[metric_names[i]] = threads_df[t*len(metric_names) + i]
+        cpu_time = threads_sums.get('usertime', 0) + threads_sums.get('systemtime',0)
+        threads_sums = dumps(threads_sums)
+
+
+        # threads_df is a flattened list where each thread's metrics are
+        # are placed next the previous one. Here we make it into a 
+        # list of dicts
+        _thr_dict_list = []
+        for t in range(numtids):
+            _thr_dict_list.append( { metric_names[i]: threads_df[t*len(metric_names) + i] for i in range(len(metric_names)) })
+        # logger.debug('translated {} into {}'.format(threads_df, _thr_dict_list))
+        threads_df = dumps(_thr_dict_list)
+
+        insert_sql += prefix_insert_sql + """('{jobid}',{duration},{tags},'{host_id}','{threads_df}','{threads_sums}',{numtids},{cpu_time},'{exename}','{path}',{args},{pid},{ppid},{pgid},{sid},{gen},{exitcode},'{start}','{end}');\n""".format(jobid=jobid, start=start, end=end, duration=duration, tags=tags, host_id=host_id, threads_df=threads_df, threads_sums=threads_sums, numtids=numtids, cpu_time=cpu_time, exename=exename, path=path, args=args, pid=pid, ppid=ppid, pgid=pgid, sid=sid, gen=gen, exitcode=exitcode)
+    # insert_sql += ";\n"
+    delete_sql = "DELETE FROM processes_staging WHERE id BETWEEN {} AND {};\n".format(first_proc_id, last_proc_id)
+    job_info_dict['procs_in_process_table'] = 1
+    # this field is meaningless after procs have been moved to the processes table
+    del job_info_dict['procs_staging_ids']
+    update_job_sql = "UPDATE jobs SET info_dict = '{}' WHERE jobid = '{}'".format(dumps(job_info_dict), jobid)
+    try:
+        orm_raw_sql(insert_sql+delete_sql+update_job_sql, commit=True)
+    except Exception as e:
+        logger.error('Error copying from staging to process table for job %s: %s', jobid, str(e))
+        return False
+    table_copy_time = time.time() - _start_time
+    logger.info("Copied %d processes from staging in %2.5f sec at %2.5f procs/sec", nprocs, table_copy_time, nprocs/table_copy_time)
+    return True
+
 @db_session
 def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     logger = getLogger(__name__)  # you can use other name
@@ -787,12 +858,23 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 # fix below
     j.env_dict = env_dict
     j.env_changes_dict = env_changes_dict
+    if job_tags:
+        logger.info('Job tags: {}'.format(job_tags))
+    j.tags = job_tags if job_tags else {}
     job_init_fini_time = time.time()
     logger.debug('job init took: %2.5f sec', job_init_fini_time - job_init_start_time)
+    # save naive datetime objects in the database
+    j.start = start_ts.replace(tzinfo=None)
+    j.end = stop_ts.replace(tzinfo=None)
+    j.submit = submit_ts.replace(tzinfo=None) # Wait time is start - submit and should probably be stored
+    info_dict = {'tz': start_ts.tzinfo.tzname(None), 'status': job_status, 'procs_in_process_table': 0}
+    j.duration = int((j.end - j.start).total_seconds()*1000000)
+    logger.info("Computed duration of job: %f us, %.2f m",j.duration,j.duration/60000000)
 
     didsomething = False
     all_tags = set()
     all_procs = []
+    total_procs = 0
     root_proc = None
 
     # a pid_map is used to create the process graph
@@ -806,6 +888,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     profile = dotdict()
     profile.load_process = dotdict({'init': 0, 'misc': 0, 'proc_tags': 0, 'thread_sums': 0, 'to_json': 0})
 
+    copy_csv_direct = False
     for hostname, files in filedict.items():
         if hostname == "unknown":
             logger.warning('could not determine hostname from filedict, picking it from metadata instead')
@@ -821,6 +904,36 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         nrecs = 0
         fileno = 0
         csv = datetime.now()
+        fmt = '1.0' # default csv format
+        if tarfile:
+            header_filename = "{}-papiex-header.tsv".format(hostname)
+            logger.debug('checking if tarfile contains CSV v2 files')
+            try:
+                csv_hdr_info = tarfile.getmember('./' + header_filename)
+                csv_hdr_flo = tarfile.extractfile(csv_hdr_info)
+                fmt = '2'
+            except KeyError:
+                # that means the header does not exist and we have CSV v1 format
+                pass
+            except Exception as e:
+                msg = "could not extract CSV v2 header file: ", str(e)
+                logger.error(msg)
+                return (False, msg)
+
+        # get the metric names from the CSV header file if we have csv v2
+        if fmt == '2':
+            from epmt_convert_csv import OUTPUT_CSV_FIELDS, OUTPUT_CSV_SEP
+            logger.debug('CSV v2 files detected in tar: {}'.format(",".join(files)))
+            # read the header file and get metric names to save in job info_dict
+            csv_headers = csv_hdr_flo.read()
+            csv_hdr_flo.close()
+            logger.debug(csv_headers)
+            csv_headers = "".join(map(chr,csv_headers)).split(OUTPUT_CSV_SEP)
+            metric_names = csv_headers[OUTPUT_CSV_FIELDS.index('threads_df')]
+            metric_names = metric_names.replace('{','').replace('}','')
+            logger.debug('per-thread metric names: {}'.format(metric_names))
+            info_dict['metric_names'] = metric_names
+
         for f in files:
             fileno += 1
             _file_io_start_ts = time.time()
@@ -834,12 +947,58 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 # oldproctag (after comment char) is outdated as a process tag but kept for posterities sake
             skiprows,oldproctag = extract_tags_from_comment_line(f,tarfile=tarfile)
             logger.debug("%s had %d comment rows, oldproctags %s",f,skiprows,oldproctag)
-
             if tarfile:
+                logger.debug('extracting {} from tar'.format(f))
                 info = tarfile.getmember(f)
                 flo = tarfile.extractfile(info)
             else:
                 flo = f
+            if (fmt == '2'):
+                if (orm_db_provider() != 'postgres' or (settings.orm != 'sqlalchemy')):
+                    raise ValueError('CSV file {} is meant for ingestion using Postgres direct-copy, and can only be used with PostgreSQL+SQLAlchemy'.format(flo.name))
+                import psycopg2
+                logger.info('Doing a fast ingest of {}'.format(flo.name))
+                # force the setting below, as CSV copying means we
+                # will have no processes in the process table to post-process
+                settings.post_process_job_on_ingest = False
+                _conn_start_ts = time.time()
+                try:
+                    conn = psycopg2.connect(settings.db_params['url'])
+                except Exception as e:
+                    logger.error('Error establishing connection to PostgreSQL database: %s', str(e))
+                    raise
+
+                cur = conn.cursor()
+                _copy_start_ts = time.time()
+                logger.debug('establishing connection to DB took: %2.5f sec', _copy_start_ts - _conn_start_ts)
+                copy_sql = "COPY processes_staging({}) FROM STDIN DELIMITER '{}' CSV".format(",".join(OUTPUT_CSV_FIELDS), OUTPUT_CSV_SEP)
+                logger.debug('Issuing direct-copy SQL: ' +copy_sql)
+                try:
+                    # copy_from is deprecated and copy_expert is recommended
+                    # Also, copy_from cannot handle a HEADER option
+                    # cur.copy_from(flo, 'processes_staging', sep=OUTPUT_CSV_SEP, columns=OUTPUT_CSV_FIELDS)
+                    cur.copy_expert(copy_sql, flo)
+                    num_procs_copied = cur.rowcount
+                    # we need to determine the last row id, so we
+                    # know the job spans from which row to which row
+                    cur.execute('SELECT LASTVAL()')
+                    lastid = cur.fetchone()[0]
+                    conn.commit()
+                except Exception as e:
+                    logger.error('Error copying CSV to processes_staging: %s', str(e))
+                    conn.rollback()
+                    raise
+                if conn:
+                    conn.close()
+                copy_processes_time = time.time() - _copy_start_ts
+                flo.close()
+                logger.info('direct CSV copy of %d processes took: %2.5f sec, at %2.5f procs/sec', num_procs_copied, copy_processes_time, num_procs_copied/copy_processes_time)
+                didsomething = (num_procs_copied > 0)
+                copy_csv_direct = True
+                total_procs += num_procs_copied
+                info_dict['procs_staging_ids'] = (lastid - num_procs_copied + 1, lastid)
+                logger.debug('job process_staging ID range: {}'.format(lastid if num_procs_copied == 1 else info_dict['procs_staging_ids']))
+                continue
 
             csv_file = StringIO(flo.read().decode('utf8'))
                 
@@ -887,6 +1046,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 # assert(p.pid not in pid_map)
                 pid_map[p.pid] = p
                 all_procs.append(p)
+                total_procs += 1
 # Compute duration of job
                 if (p.start < earliest_process):
                     earliest_process = p.start
@@ -928,55 +1088,46 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         if cnt:
             didsomething = True
 
-#    stdout.write('\b')            # erase the last written char
-    logger.debug('file I/O time took: %2.5f sec', file_io_time)
-    logger.debug('process load ops took: %2.5f sec', df_process_time)
-    logger.debug('  - load process from dictlist took: %2.5f sec', load_process_from_df_time)
-    logger.debug('    - {0}'.format([ "%s: %2.5f sec" % (k, v)  for (k,v) in profile.load_process.items()]))
-    logger.debug('  - tag processing took: %2.5f sec', proc_tag_process_time)
-    logger.debug('  - proc misc. processing took: %2.5f sec', proc_misc_time)
-    logger.debug('  - get_proc_rows took: %2.5f sec', df_process_time - load_process_from_df_time - proc_tag_process_time - proc_misc_time)
+    if not copy_csv_direct:
+        logger.debug('file I/O time took: %2.5f sec', file_io_time)
+        logger.debug('process load ops took: %2.5f sec', df_process_time)
+        logger.debug('  - load process from dictlist took: %2.5f sec', load_process_from_df_time)
+        logger.debug('    - {0}'.format([ "%s: %2.5f sec" % (k, v)  for (k,v) in profile.load_process.items()]))
+        logger.debug('  - tag processing took: %2.5f sec', proc_tag_process_time)
+        logger.debug('  - proc misc. processing took: %2.5f sec', proc_misc_time)
+        logger.debug('  - get_proc_rows took: %2.5f sec', df_process_time - load_process_from_df_time - proc_tag_process_time - proc_misc_time)
 
-    if filedict:
-        if not didsomething:
-            logger.warning("Something went wrong in parsing CSV files")
-            return (False, "Error parsing CSV")
-    else:
-        logger.warning("job %s, user %s, jobname %s has no CSV data",jobid,username,jobname)
+        if filedict:
+            if not didsomething:
+                logger.warning("Something went wrong in parsing CSV files")
+                return (False, "Error parsing CSV")
+        else:
+            logger.warning("job %s, user %s, jobname %s has no CSV data",jobid,username,jobname)
 
-    # save naive datetime objects in the database
-    j.start = start_ts.replace(tzinfo=None)
-    j.end = stop_ts.replace(tzinfo=None)
-    j.submit = submit_ts.replace(tzinfo=None) # Wait time is start - submit and should probably be stored
-    j.info_dict = {'tz': start_ts.tzinfo.tzname(None), 'status': job_status}
+        # procs are not in staging table they will be in the processes table
+        info_dict['procs_in_process_table'] = 1
+        j.cpu_time = reduce(lambda c, p: c + p.cpu_time, all_procs, 0)
+        # j.cpu_time = sum([p.cpu_time for p in all_procs])
+        #logger.info("Earliest process start: %s",j.start)
+        #logger.info("Latest process end: %s",j.end)
 
-    d = j.end - j.start
-    j.duration = int(d.total_seconds()*1000000)
-    j.cpu_time = reduce(lambda c, p: c + p.cpu_time, all_procs, 0)
-    # j.cpu_time = sum([p.cpu_time for p in all_procs])
-    #logger.info("Earliest process start: %s",j.start)
-    #logger.info("Latest process end: %s",j.end)
-    logger.info("Computed duration of job: %f us, %.2f m",j.duration,j.duration/60000000)
+        if root_proc:
+            # if root_proc.exitcode != j.exitcode:
+            #     logger.warning('metadata shows the job exit code is {0}, but root process exit code is {1}'.format(j.exitcode, root_proc.exitcode))
+            j.exitcode = root_proc.exitcode
+            logger.info('job exit code (using exit code of root process): {0}'.format(j.exitcode))
+        if j.exitcode != 0:
+            logger.warning('Job failed with a non-zero exit code({})'.format(j.exitcode))
 
-    if root_proc:
-        # if root_proc.exitcode != j.exitcode:
-        #     logger.warning('metadata shows the job exit code is {0}, but root process exit code is {1}'.format(j.exitcode, root_proc.exitcode))
-        j.exitcode = root_proc.exitcode
-        logger.info('job exit code (using exit code of root process): {0}'.format(j.exitcode))
-    if j.exitcode != 0:
-        logger.warning('Job failed with a non-zero exit code({})'.format(j.exitcode))
-    if job_tags:
-        logger.info('Job tags: {}'.format(job_tags))
-    j.tags = job_tags if job_tags else {}
-
-    if settings.bulk_insert and all_procs:
-        logger.info('doing a bulk insert of {0} processes'.format(len(all_procs)))
-        _b0 = time.time()
-        #thr_data.engine.execute(Process.__table__.insert(), all_procs)
-        Session.bulk_insert_mappings(Process, all_procs)
-        logger.info('bulk insert of processes took: %2.5f sec', time.time() - _b0)
+        if settings.bulk_insert and all_procs:
+            logger.info('doing a bulk insert of {0} processes'.format(len(all_procs)))
+            _b0 = time.time()
+            #thr_data.engine.execute(Process.__table__.insert(), all_procs)
+            Session.bulk_insert_mappings(Process, all_procs)
+            logger.info('bulk insert of processes took: %2.5f sec', time.time() - _b0)
 
     
+    j.info_dict = info_dict
     if settings.post_process_job_on_ingest:
         # _post_process_start_ts = time.time()
         if settings.bulk_insert:
@@ -1005,9 +1156,9 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     logger.debug("commit time: %2.5f sec", time.time() - _c0)
     now = datetime.now()
     logger.info("Staged import of %d processes took %s, %f processes/sec",
-                len(all_procs), now - then,len(all_procs)/float((now-then).total_seconds()))
-    print("Imported successfully - job:",jobid,"processes:",len(all_procs),"rate:",len(all_procs)/float((now-then).total_seconds()))
-    return (True, 'Import successful', (j.jobid, len(all_procs)))
+                total_procs, now - then,total_procs/float((now-then).total_seconds()))
+    print("Imported successfully - job:",jobid,"processes:",total_procs,"rate:",total_procs/float((now-then).total_seconds()))
+    return (True, 'Import successful', (j.jobid, total_procs))
 
 #
 # We should remove below here

@@ -8,6 +8,11 @@ Create Date: 2020-03-05 11:18:58.979034
 from alembic import op
 import sqlalchemy as sa
 
+# append the directory two-levels above this file
+# to the module search path (so we can find the orm module)
+import sys
+from os.path import dirname
+sys.path.append(dirname(__file__) + "/../..")
 from orm import orm_db_provider
 if orm_db_provider() == 'postgres':
     from sqlalchemy.dialects.postgresql import JSONB as JSON

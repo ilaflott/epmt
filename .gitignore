@@ -48,8 +48,13 @@ Thumbs.db
 .cache
 .ipython
 .jupyter
+.vscode
 .local
 OutliersData/*.dir
+
+# Release generated files #
+######################
+epmtdocs/site/*
 
 # user settings
 settings.py

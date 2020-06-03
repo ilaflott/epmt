@@ -17,3 +17,15 @@ services:
       - ./:/epmt
     links:
       - postgres
+  
+  centos:
+    build:
+      context: .
+      dockerfile: Dockerfiles/Dockerfile.epmt-test.centos
+    command: /bin/sh
+    volumes:
+      - ./:/epmt
+    links:
+      - postgres
+    stdin_open: true
+    tty: true

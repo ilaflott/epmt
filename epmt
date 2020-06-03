@@ -94,6 +94,12 @@ if (__name__ == "__main__"):
     db_schema_parser = subparser.add_parser('schema', help="Dump the database schema",
         description="schema will dump the database schema")
 
+    # csv convert
+    csv_convert_parser = subparser.add_parser('convert', help="Convert csv from v1 to v2 format",
+        description="Convert will convert the CSV files inside a .tgz staged file from v1 to v2 format")
+    csv_convert_parser.add_argument('src_tgz', action="store", help="Source .tgz file")
+    csv_convert_parser.add_argument('dest_tgz', action="store", nargs='?', help="Target .tgz file to create (optional). If not specified, the src .tgz file will be overwritten. Caution!")
+
     # Run
     run_parser = subparser.add_parser('run', help="Execute a process",
         description="Run will execute a command in the shell, typically used with the auto -a flag to perform metadata collection before and after instrumentation.")

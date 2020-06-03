@@ -21,14 +21,21 @@ build:
 dist: 
 	rm -rf epmt-install build
 	pyinstaller --clean --distpath=epmt-install epmt.spec
+# resources
 	cp -Rp preset_settings epmt-install
 	cp -Rp notebooks epmt-install
 	cp -Rp migrations epmt-install
 	cp -p alembic.ini epmt-install
+# examples
 	mkdir epmt-install/examples
 	cp epmt-example.*sh epmt-install/examples
+# slurm
 	mkdir epmt-install/slurm
 	cp SLURM/slurm_task_*log_epmt.sh epmt-install/slurm
+# docs (allowed to fail)
+	mkdir -p epmt-install/epmt/epmtdocs
+	-mkdocs build -f epmtdocs/mkdocs.yml && cp -Rp epmtdocs/site epmt-install/epmt/epmtdocs
+# release
 	-@mkdir release 2>/dev/null
 	tar -czf release/$(EPMT_RELEASE) epmt-install
 	rm -rf epmt-install build
@@ -79,11 +86,12 @@ release-all: release6 release7
 #
 #
 clean:
-	find . -name "*~" -o -name "*.pyc" -o -name epmt.log -o -name core -exec rm -f {} \; 
+	find . -type f \( -name "core" -or -name "*~" -or -name "*.pyc" -or -name "epmt.log" \) -exec rm -f {} \;
 	rm -rf __pycache__ build epmt-install epmt-install-tests
 
 distclean: clean
 	rm -f settings.py release/*$(OS_TARGET)*
+	rm -rf epmtdocs/site
 
 # 
 # Simple python version testing with no database

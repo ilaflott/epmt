@@ -10,6 +10,8 @@ decorator==4.4.1
 defusedxml==0.6.0
 docutils==0.15.2
 entrypoints==0.3
+Flask==1.1.1
+Flask-Compress==1.4.0
 frozendict==1.2
 importlib-metadata==0.23
 ipykernel==5.1.3
@@ -37,6 +39,8 @@ MarkupSafe==1.1.1
 mccabe==0.6.1
 memory-profiler==0.57.0
 mistune==0.8.4
+mkdocs==1.1
+mkdocs-bootstrap4==0.1.4
 more-itertools==7.2.0
 nbconvert==5.6.1
 nbformat==4.4.0

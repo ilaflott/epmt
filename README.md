@@ -8,85 +8,172 @@ This is a tool to collect metadata and performance data about an entire job down
 
 The software contained in this repository was written by Philip Mucci of Minimal Metrics LLC.
 
-## Table of Contents
-
-[TOC]
-
 ## Verifying Installation 
 
-It is best to check your installation and configuration using the ```epmt check``` command. Here is an example run from docker via the source tree. You will notice that we bind-mount the parent-directory of `epmt` to the container. This allows `epmt` to find the `papiex` install directory, lying adjacent to the `epmt` directory.
+It is best to check your installation and configuration using the ```epmt check``` command.
 
+Here is an example:
 ```
-$ docker run --privileged -it --rm -v $PWD/..:/tmp/foo -w /tmp/foo/epmt python-epmt:latest ./epmt check
-settings.db_params = {'filename': ':memory:', 'provider': 'sqlite'}
-		   Pass
-settings.install_prefix = ../papiex-oss/papiex-oss-install/
-			ls -l ../papiex-oss/papiex-oss-install/bin/monitor-run>/dev/null
-			ls -l ../papiex-oss/papiex-oss-install/lib/libpapiex.so>/dev/null
-			ls -l ../papiex-oss/papiex-oss-install/lib/libmonitor.so>/dev/null
-			ls -l ../papiex-oss/papiex-oss-install/lib/libpapi.so>/dev/null
-			ls -l ../papiex-oss/papiex-oss-install/lib/libpfm.so>/dev/null
-			ls -l ../papiex-oss/papiex-oss-install/bin/papi_command_line>/dev/null
-			Pass
-settings.epmt_output_prefix = /tmp/epmt/
-		   mkdir -p /tmp/epmt/
-		   mkdir -p /tmp/epmt/tmp
-		   ls -lR /tmp/epmt/ >/dev/null
-		   rm -rf /tmp/epmt/tmp
-		   Pass
-/proc/sys/kernel/perf_event_paranoid = 2
-WARNING:epmt_cmds:restrictive /proc/sys/kernel/perf_event_paranoid value of 2, should be 0 for non-privileged users
-			Pass
-settings.papiex_options = PERF_COUNT_SW_CPU_CLOCK
-			../papiex-oss/papiex-oss-install/bin/papi_component_avail| sed -n -e '/Active/,$p' | grep perf_event >/dev/null
-			../papiex-oss/papiex-oss-install/bin/papi_command_line PERF_COUNT_SW_CPU_CLOCK| sed -n -e '/PERF_COUNT_SW_CPU_CLOCK\ :/,$p' | grep PERF_COUNT_SW_CPU_CLOCK > /dev/null
-			Pass
-WARNING:epmt_cmds:JOB_ID unset: Using session id 1 as JOB_ID
-WARNING:epmt_cmds:JOB_NAME unset: Using job id 1 as JOB_NAME
-WARNING:epmt_cmds:JOB_SCRIPTNAME unset: Using process name 1 as JOB_SCRIPTNAME
-WARNING:epmt_cmds:JOB_USER unset: Using username root as JOB_USER
-collect functionality (papiex+epmt)
-	       epmt run -a /bin/sleep 1
-	       Pass
-
-### Running unit tests with Python's `unittest` module
-
-We have a comprehensive set of unit tests. Navigate to the top-level folder
-in the installation, and run the following command:
-
+$ epmt check
+settings.db_params = {'url': 'sqlite:////home/chris/EPMT_DB_2.2.7.sqlite', 'echo': False}       Pass
+settings.install_prefix = /home/chris/Downloads/epmt-2.2.7/papiex-epmt-install/ Pass
+settings.epmt_output_prefix = /tmp/epmt/        Pass
+/proc/sys/kernel/perf_event_paranoid =  0       Pass
+settings.papiex_options = PERF_COUNT_SW_CPU_CLOCK       Pass
+epmt stage functionality        Pass
+WARNING:epmtlib:No job name found, defaulting to unknown
+epmt run functionality  Pass
 ```
-$ python -m unittest discover
 
-{'filename': ':memory:', 'provider': 'sqlite'}
-setUpModule: importing test/data/misc/*.tgz
-Imported successfully - job: failed-exitcode processes: 1 rate: 54.5643040323
-Imported successfully - job: 685000 processes: 3480 rate: 374.482987496
-'setUpModule' took: 10.2743 sec
-......
-{'filename': ':memory:', 'provider': 'sqlite'}
-setUpModule: importing test/data/misc/685000.tgz
-'setUpModule' took: 0.0117 sec
-..
-{'filename': ':memory:', 'provider': 'sqlite'}
-setUpModdule: importing test/data/query/*.tgz
-Imported successfully - job: 685000 processes: 3480 rate: 367.989366376
-Imported successfully - job: 685003 processes: 3785 rate: 368.269617338
-Imported successfully - job: 685016 processes: 3412 rate: 368.965343103
-'setUpModule' took: 31.8878 sec
-...............
-{'filename': ':memory:', 'provider': 'sqlite'}
-setUpModule: importing test/data/outliers/*.tgz
-Imported successfully - job: kern-6656-20190614-190245 processes: 10600 rate: 353.525545172
-Imported successfully - job: kern-6656-20190614-192044-outlier processes: 10600 rate: 351.265328962
-Imported successfully - job: kern-6656-20190614-194024 processes: 10600 rate: 352.45282394
-Imported successfully - job: kern-6656-20190614-191138 processes: 10600 rate: 352.341328069
-'setUpModule' took: 132.7657 sec
-.........
+We have a comprehensive set of unit tests. The epmt unittest command will begin those tests:
+```
+$ epmt unittest
+
+
+Running test.test_lib
+test_dict_filter (test.test_lib.EPMTLib) ... ok
+test_merge_intervals (test.test_lib.EPMTLib) ... ok
+test_sqlite_json_support (test.test_lib.EPMTLib) ... ok
+test_url_to_db_params (test.test_lib.EPMTLib) ... ok
+
 ----------------------------------------------------------------------
-Ran 32 tests in 215.512s
+Ran 4 tests in 0.086s
 
 OK
+....
+
+OK
+All tests successfully PASSED
 ```
+
+## Modes of EPMT
+
+There are three modes to **EPMT** usage, collection, submission and analysis, and have an increasing number of dependencies:
+
+* **Collection** only requires a minimal Python installation of 2.6.x or higher
+* **Submission** requires Python packages for data and database interaction
+* **Analysis** requires [Jupyter](https://jupyter.org), an iPython notebook environment, as well as additional python data analysis libraries.
+
+#### Configuration
+  
+All three modes reference the **settings.py** file as well as **environment variables**. EPMT uses uses a in-memory, temporary database by default, see **Configuring a Database**.  
+
+```text
+ $ cat settings.py
+ db_params = {'provider': 'sqlite', 'filename': ':memory:'}
+ papiex_options = "PERF_COUNT_SW_CPU_CLOCK"
+ epmt_output_prefix = "/tmp/epmt/"
+ debug = False
+ input_pattern = "*-papiex-[0-9]*-[0-9]*.csv"
+ install_prefix = "../papiex-oss/papiex-oss-install/"
+ # DO NOT TOUCH THIS
+```
+
+### Collection
+
+
+Automatic **Collection** with SLURM
+---
+
+Using configured prolog and epilogs with SLURM tasks allows one to skip job instrumentation entirely, with the exception of job tags (***EPMT_JOB_TAGS***) and process tags (***PAPIEX_TAGS***). These are configured in `slurm.conf` for jobs submitted with `sbatch` but they can be tested on the command line when using `srun`. 
+
+The above Csh job is equivalent to the below sequence using a prolog and epilog, ***with the exception of the trailing submit statement.***
+
+```
+srun -n1 \\
+--task-prolog=$EPMT_PREFIX/epmt-install/slurm/slurm_task_prolog_epmt.sh \\
+--task-epilog=$EPMT_PREFIX/epmt-install/slurm/slurm_task_epilog_epmt.sh \\
+sleep 1
+```
+
+For this job to work using `sbatch` the following modifications in the `slurm.conf` would be made, substituting the appropriate path for EPMT_PREFIX:
+
+```
+TaskProlog=EPMT_PREFIX/epmt-install/slurm/slurm_task_prolog_epmt.sh
+TaskEpilog=EPMT_PREFIX/epmt-install/slurm/slurm_task_epilog_epmt.sh
+```
+
+If this fails, then it's likely the papiex installation is either missing or misconfigured in **settings.py**. The **-a** flag tells **EPMT** to treat this run as an entire **job**. See **README.md** for further details.
+
+### Submission
+---
+
+We can submit our previous job to the database defined in **settings.py** just run the epmt submit command with the directory returned by stage (found in location set by settings.py epmt_output_prefix):
+
+```text
+$ epmt -v submit /tmp/epmt/1/
+INFO:epmt_cmds:submit_to_db(/tmp/epmt/1/,*-papiex-[0-9]*-[0-9]*.csv,False)
+INFO:epmt_cmds:Unpickling from /tmp/epmt/1/job_metadata
+INFO:epmt_cmds:1 files to submit
+INFO:epmt_cmds:1 hosts found: ['linuxkit-025000000001-']
+INFO:epmt_cmds:host linuxkit-025000000001-: 1 files to import
+INFO:epmt_job:Binding to DB: {'filename': ':memory:', 'provider': 'sqlite'}
+INFO:epmt_job:Generating mapping from schema...
+INFO:epmt_job:Processing job id 1
+INFO:epmt_job:Creating user root
+INFO:epmt_job:Creating job 1
+INFO:epmt_job:Creating host linuxkit-025000000001-
+INFO:epmt_job:Creating metricname usertime
+INFO:epmt_job:Creating metricname systemtime
+INFO:epmt_job:Creating metricname rssmax
+INFO:epmt_job:Creating metricname minflt
+INFO:epmt_job:Creating metricname majflt
+INFO:epmt_job:Creating metricname inblock
+INFO:epmt_job:Creating metricname outblock
+INFO:epmt_job:Creating metricname vol_ctxsw
+INFO:epmt_job:Creating metricname invol_ctxsw
+INFO:epmt_job:Creating metricname num_threads
+INFO:epmt_job:Creating metricname starttime
+INFO:epmt_job:Creating metricname processor
+INFO:epmt_job:Creating metricname delayacct_blkio_time
+INFO:epmt_job:Creating metricname guest_time
+INFO:epmt_job:Creating metricname rchar
+INFO:epmt_job:Creating metricname wchar
+INFO:epmt_job:Creating metricname syscr
+INFO:epmt_job:Creating metricname syscw
+INFO:epmt_job:Creating metricname read_bytes
+INFO:epmt_job:Creating metricname write_bytes
+INFO:epmt_job:Creating metricname cancelled_write_bytes
+INFO:epmt_job:Creating metricname time_oncpu
+INFO:epmt_job:Creating metricname time_waiting
+INFO:epmt_job:Creating metricname timeslices
+INFO:epmt_job:Creating metricname rdtsc_duration
+INFO:epmt_job:Creating metricname PERF_COUNT_SW_CPU_CLOCK
+INFO:epmt_job:Adding 1 processes to job
+INFO:epmt_job:Earliest process start: 2019-03-06 15:36:56.948350
+INFO:epmt_job:Latest process end: 2019-03-06 15:37:06.996065
+INFO:epmt_job:Computed duration of job: 10047715.000000 us, 0.17 m
+INFO:epmt_job:Staged import of 1 processes, 1 threads
+INFO:epmt_job:Staged import took 0:00:00.189151, 5.286781 processes per second
+INFO:epmt_cmds:Committed job 1 to database: Job[u'1']
+```
+
+## Analysis and Visualization
+---
+
+EPMT Uses a **ipython notebook** data analytics environment.  Starting the jupyter notebook is easy from the **epmt notebook** command.
+
+```text
+$ epmt notebook
+[I 15:39:24.236 NotebookApp] Serving notebooks from local directory: /home/chris/Documents/playground/MM/build/epmt
+[I 15:39:24.236 NotebookApp] The Jupyter Notebook is running at:
+[I 15:39:24.236 NotebookApp] http://localhost:8888/?token=9c7529e19e12cb8121d66ff471e96fdd3056f6acc4480274
+[I 15:39:24.236 NotebookApp]  or http://127.0.0.1:8888/?token=9c7529e19e12cb8121d66ff471e96fdd3056f6acc4480274
+[I 15:39:24.236 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+[C 15:39:24.263 NotebookApp] 
+    
+    To access the notebook, open this file in a browser:
+        file:///home/chris/.local/share/jupyter/runtime/nbserver-18690-open.html
+    Or copy and paste one of these URLs:
+        http://localhost:8888/?token=9c7529e19e12cb8121d66ff471e96fdd3056f6acc4480274
+     or http://127.0.0.1:8888/?token=9c7529e19e12cb8121d66ff471e96fdd3056f6acc4480274
+```
+
+The notebook command offers passing paramaters to jupyter such as host IP for sharing access to the notebook with machines on the local network, notebook token and notebook password
+```
+$ epmt notebook -- --ip 0.0.0.0 --NotebookApp.token='thisisatoken' --NotebookApp.password='hereisa$upersecurepassword'
+```
+
 
 ## Collecting Performance Data
 
@@ -141,8 +228,8 @@ Let's skip all the markup, as we can do it with only environment variables. **EP
 $ cat my_job_bash.sh
 #!/bin/bash
 # Example job script for Torque or SLURM
-# 
-# Preamble, collect job metadata and monitor all processes/threads  
+ 
+### Preamble, collect job metadata and monitor all processes/threads  
 epmt start
 eval `epmt source`
 #
@@ -231,8 +318,6 @@ $ epmt stop
 $ epmt submit
 ```
 
-To initialize a new session leader, consider using the **setsid** command. 
-
 ## Usage and Configuration
 
 **EPMT** gets all of it's configuration from two places, environment variables and the **settings.py** file. One can examine all the current settings by passing the **--help** option.
@@ -277,7 +362,7 @@ EPMT_DB_DBNAME
 EPMT_DB_FILENAME
 ```
 
-## settings.py
+### settings.py
 
 There are a number of example files provided. See **INSTALL.md** for more details.
 
@@ -296,7 +381,7 @@ $ epmt -v -v submit /dir/to/jobdata
 
 ## Debugging
 
-**EPMT** can be passed noth **-n** (dry-run) and **-v** (verbosity) to help with debugging. Add more **-v** flags to increase the level of information printed.
+**EPMT** can be passed both **-n** (dry-run) and **-v** (verbosity) to help with debugging. Add more **-v** flags to increase the level of information printed **-vvv**.
 
 ```
 $ epmt -v start
@@ -305,7 +390,7 @@ $ epmt -v start
 Or to attempt a submit without touching the database:
 
 ```
-$ epmt -v -v -n submit /dir/to/jobdata
+$ epmt -vv submit -n /dir/to/jobdata
 ```
 
 Also, one can decode and dump the job_metadata file in a dir or compressed dir.
@@ -335,75 +420,64 @@ job_pl_username         Foo.Bar
 
 ```
 
-## EPMT under Docker 
 
-Using the epmt-command docker image, we run **epmt** on a local directory to submit and set the submission DB host environment variable:
-
-```
-$ docker run --network=host -ti --rm -v `pwd`:/app -w /app -e EPMT_DB_HOST=<hostname> epmt-command:latest -v submit <localdir/>
-```
-
-This could be easilt aliased for convenience.
-
-# Analysis of EPMT Data 
-
-Current analytics are performed in an iPython notebook, specifically the SciPy-Notebook as described on [their homepage](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html).  
-
-If you have Jupyter installed locally **and** you have installed the prerequisite Python modules (see **INSTALL.md**), there is no need to use the Docker image. You can simply load the **EPMT.ipynb** from the source directory in your environment and begin.
-
-However, for those without an environment, using Docker (and assuming you build the images as described in **INSTALL.md**):
-
-```
-$ docker-compose up notebook
-```
-
-Follow the instructions printed to the screen to navigate to **EPMT.ipynb** or try this link [http://localhost:8888/notebooks/EPMT.ipynb]() and enter the encryption key. You must be in the directory where EPMT.ipynb exists when you start the notebook service. Further documentation exists in that file.
-
-## Data Dictionary
+## Performance Metrics Data Dictionary
 
 EPMT collects data both from the job runtime and the applications run in that environment. See the **models/** directory for what fixed data is stored related to each object. Metric data is stored differently and the data collector's data directionary can be found in papiex-oss/README.md. At the time of this writing it looked like this:
 
-```
-Key                     Source							Description
--------------------------------------------------------------------------------------------------------------------------------------
-exename			PAPI							Name of the application, usually argv[0]
-path			PAPI							Path to the application
-args			monitor							All arguments to the application not including argv[0]
-pid			getpid()						Process id
-generation		monitor 						Incremented after every exec()
-ppid			getppid()						Parent process id
-pgid			getpgid()						Process group id
-sid			getsid()						Process session id
-numtids			monitor							Number of threads caught by instrumentation
-tid			gettid()						Thread id
-start			gettimeofday() 						Microsecond timestamp at start
-end			gettimeofday() 						Microsecond timestamp at end
-usertime		getrusage(RUSAGE_THREAD) 				Microsecond user time 
-systemtime		getrusage(RUSAGE_THREAD) 				Microsecond system time
-rssmax			getrusage(RUSAGE_THREAD) 				Kb max resident set size
-minflt			getrusage(RUSAGE_THREAD) 				Minor faults (TLB misses/new page frames)
-majflt			getrusage(RUSAGE_THREAD) 				Major page faults (requiring I/O)
-inblock			getrusage(RUSAGE_THREAD) 				512B blocks read from I/O 
-outblock		getrusage(RUSAGE_THREAD) 				512B blocks written to I/O 
-vol_ctxsw		getrusage(RUSAGE_THREAD) 				Boluntary context switches (yields)
-invol_ctxsw		getrusage(RUSAGE_THREAD) 				Involuntary context switches (preemptions)
-num_threads		/proc/<pid>/task/<tid>/stat field 20 	     	 	Threads in process at finish
-starttime		/proc/<pid>/task/<tid>/stat field 22 	     	      	Timestamp in jiffies after boot thread was started
-processor		/proc/<pid>/task/<tid>/stat field 39 	     	      	CPU this thread last ran on
-delayacct_blkio_time	/proc/<pid>/task/<tid>/stat field 42 	     	      	Jiffies process was blocked in D state on I/O device
-guest_time		/proc/<pid>/task/<tid>/stat field 43 	     	      	Jiffies running a virtual CPU for a guest OS
-rchar			/proc/<pid>/task/<tid>/io line 1  		      	Bytes read via syscall (may come from pagecache not I/O device)
-wchar			/proc/<pid>/task/<tid>/io line 2  		      	Bytes written via syscall (may go to pagecache not I/O device)
-syscr			/proc/<pid>/task/<tid>/io line 3  		      	Read syscalls 
-syscw			/proc/<pid>/task/<tid>/io line 4  		      	Write syscalls
-read_bytes		/proc/<pid>/task/<tid>/io line 4  		      	Bytes read from I/O device
-write_bytes		/proc/<pid>/task/<tid>/io line 4  		      	Bytes written to I/O device
-cancelled_write_bytes	/proc/<pid>/task/<tid>/io line 4  		      	Number of bytes discarded by truncation
-time_oncpu		/proc/<pid>/task/<tid>/schedstat		      	Time in jiffies spent running the CPI
-time_waiting		/proc/<pid>/task/<tid>/schedstat		      	Time in jiffies waiting for a run queue while runnable
-timeslices		/proc/<pid>/task/<tid>/schedstat		      	Number of run periods on CPU
-rdtsc_duration		<Hardware RDTSC>				      	Real time cycle counter duration of thread
-```
+
+| Key                       	| Scope   	| Description                                            	|
+|---------------------------	|---------	|--------------------------------------------------------	|
+| 1. tags                   	| Process 	| User specified tags for this executable                	|
+| 2. hostname               	| Process 	| hostname                                               	|
+| 3. exename                	| Process 	| Name of the application, usually argv[0]               	|
+| 4. path                   	| Process 	| Path to the application                                	|
+| 5. args                   	| Process 	| All arguments to exe excluding argv[0]                 	|
+| 6. exitcode               	| Process 	| Exit code                                              	|
+| 7. exitsignal             	| Process 	| Exited due to a signal                                 	|
+| 8. pid                    	| Process 	| Process id                                             	|
+| 9. generation             	| Process 	| Incremented after every exec() or PID wrap             	|
+| 10. ppid                  	| Process 	| Parent process id                                      	|
+| 11. pgid                  	| Process 	| Process group id                                       	|
+| 12. sid                   	| Process 	| Process session id                                     	|
+| 13. numtids               	| Process 	| Number of threads caught by instrumentation            	|
+| 14. numranks              	| Process 	| Number of MPI ranks detected                           	|
+| 15. tid                   	| Process 	| Thread id                                              	|
+| 16. mpirank               	| Thread  	| MPI rank                                               	|
+| 17. start                 	| Process 	| Microsecond timestamp at start                         	|
+| 18. end                   	| Process 	| Microsecond timestamp at end                           	|
+| 19. usertime              	| Thread  	| Microsecond user time                                  	|
+| 20. systemtime            	| Thread  	| Microsecond system time                                	|
+| 21. rssmax                	| Thread  	| Kb max resident set size                               	|
+| 22. minflt                	| Thread  	| Minor faults (TLB misses/new page frames)              	|
+| 23. majflt                	| Thread  	| Major page faults (requiring I/O)                      	|
+| 24. inblock               	| Thread  	| 512B blocks read from I/O                              	|
+| 25. outblock              	| Thread  	| 512B blocks written to I/O                             	|
+| 26. vol_ctxsw             	| Thread  	| Voluntary context switches (yields)                    	|
+| 27. invol_ctxsw           	| Thread  	| Involuntary context switches (preemptions)             	|
+| 28. cminflt               	| Process 	| minflt (20) for all wait()ed children                  	|
+| 29. cmajflt               	| Thread  	| majflt (21) for all wait()ed children                  	|
+| 30. cutime                	| Process 	| utime (17) for all wait()ed children                   	|
+| 31. cstime                	| Thread  	| stime (18) for all wait()ed children                   	|
+| 32. num_threads           	| Process 	| Threads in process at finish                           	|
+| 33. starttime             	| Thread  	| Timestamp in jiffies after boot thread was started     	|
+| 34. processor             	| Thread  	| CPU this thread last ran on                            	|
+| 35. delayacct_blkio_time  	| Thread  	| Jiffies process blocked in D state on I/O device       	|
+| 36. guest_time            	| Thread  	| Jiffies running a virtual CPU for a guest OS           	|
+| 37. rchar                 	| Thread  	| Bytes read via syscall (maybe from cache not dev I/O)  	|
+| 38. wchar                 	| Thread  	| Bytes written via syscall (maybe to cache not dev I/O) 	|
+| 39. syscr                 	| Thread  	| Read syscalls                                          	|
+| 40. syscw                 	| Thread  	| Write syscalls                                         	|
+| 41. read_bytes            	| Thread  	| Bytes read from I/O device                             	|
+| 42. write_bytes           	| Thread  	| Bytes written to I/O device                            	|
+| 43. cancelled_write_bytes 	| Thread  	| Bytes discarded by truncation                          	|
+| 44. time_oncpu            	| Thread  	| Nanoseconds spent running                              	|
+| 45. time_waiting          	| Thread  	| Nanoseconds runnable but waiting                       	|
+| 46. timeslices            	| Thread  	| Number of run periods on CPU                           	|
+| 47. rdtsc_duration        	| Thread  	| If PAPI, real time cycle duration of thread            	|
+| *                         	| Thread  	| PAPI metrics                                           	|
+
+### Addition of new metrics
 
 Additional metrics can be configured either in two ways:
 * The papiex_options string In **settings.py** if using ```epmt run``` or ```epmt source```
@@ -432,4 +506,13 @@ $ papi_command_line CYCLES
 
 ```
 
+
+## Troubleshooting
+
+### Error: `version GLIBC_x.xx not found`
+
+The collector library may not have been built for the current environment or the release
+OS version does not match the current environment. 
+
+### Virtual Environments:
 Note that often in virtual environments, hardware counters are not often available in the VM. 
