@@ -20,7 +20,7 @@ RUN cd /usr/src && echo "downloading python" && curl -o Python-3.7.4.tgz https:/
 RUN ldconfig
 COPY ui/requirements-ui.txt.py3 requirements.txt.py3 /tmp/
 RUN python3 -V && pip3 install --upgrade pip && pip3 install -r /tmp/requirements-ui.txt.py3 -r /tmp/requirements.txt.py3
-RUN pip3 install pyinstaller
+RUN pip3 install pyinstaller mkdocs mkdocs-material
 
 # GROSS HACK
 RUN yum install -y patch

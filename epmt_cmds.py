@@ -1156,15 +1156,18 @@ def epmt_entrypoint(args):
         exp_explore(args.epmt_cmd_args, metric = args.metric, limit = args.limit)
         return 0
     if args.command == 'gui':
-        import os
-        import sys
-        script_dir = os.path.dirname(__file__)
-        ui_dir = os.path.join(script_dir, 'ui')
-        sys.path.append(ui_dir)
-        sys.path.append(os.path.join(ui_dir, 'components'))
+        # Start both Dash interface and Static Web Server
+        from threading import Thread
         from ui import init_app, app
+        from serve_static import app as docsapp
+        # Bug in pyinstaller does not import the idna encoding
+        import encodings.idna
+        # Here app is the content of the dash interface
         init_app()
-        app.run_server(debug=False, host='0.0.0.0')
+        ui = Thread(target=app.run_server, kwargs={'port':8050, 'host':'0.0.0.0'})
+        docs = Thread(target=docsapp.run, kwargs={'port':8080, 'host':'0.0.0.0'})
+        ui.start()
+        docs.start()
         return 0
 
     if args.command == 'integration':
