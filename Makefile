@@ -114,10 +114,9 @@ check-python-shells:
 	@echo "epmt-example.sh (tcsh)" ; env -i SLURM_JOB_ID=111 ${EPMT_TEST_ENV} /bin/sh -e epmt-example.sh
 	@rm -rf /tmp/epmt
 check-unittests: # Why not test all of them?
-	python3 -V
-	@env -i PATH=${PWD}:${PATH} python3 -m unittest -v -f test.test_lib test.test_stat test.test_settings test.test_anysh test.test_submit test.test_run test.test_cmds test.test_query test.test_explore test.test_outliers test.test_db_schema test.test_db_migration
+	@env -i TERM=ansi PATH=${PWD}:${PATH} python3 -m unittest -v -f test.test_lib test.test_stat test.test_settings test.test_anysh test.test_submit test.test_run test.test_cmds test.test_query test.test_explore test.test_outliers test.test_db_schema test.test_db_migration
 check-integration-tests:
-	test/integration/run_integration
+	@env -i TERM=ansi PATH=${PWD}:${PATH} test/integration/run_integration
 
 #
 # Not used
