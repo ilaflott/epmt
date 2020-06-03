@@ -952,7 +952,8 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 info = tarfile.getmember(f)
                 flo = tarfile.extractfile(info)
             else:
-                flo = f
+                # Here flo type should match extractfile
+                flo = open(f,'rb')
             if (fmt == '2'):
                 if (orm_db_provider() != 'postgres' or (settings.orm != 'sqlalchemy')):
                     raise ValueError('CSV file {} is meant for ingestion using Postgres direct-copy, and can only be used with PostgreSQL+SQLAlchemy'.format(flo.name))

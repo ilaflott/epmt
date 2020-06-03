@@ -12,4 +12,6 @@ load 'libs/bats-assert/load'
   fi
   run epmt submit test/data/submit/692500.tgz
   assert_output --partial "Imported successfully - job: 692500 processes: 6486"
+  run epmt submit test/data/submit/804280/
+  assert_output --partial "Imported successfully - job: 804280 processes: 6039"
 }
