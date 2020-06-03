@@ -19,7 +19,8 @@ epmt_output_prefix = path.expandvars("$TMPDIR/epmt")
 # stage_command_dest = "./"
 stage_command_dest = "/nbhome/" + getuser()
 # verbose = 0
-# input_pattern = "*-papiex-*-[0-9]*.csv"
+# input pattern must match both csv v1 and v2 filenames
+#input_pattern = "*-papiex*.[ct]sv"
 install_prefix = "/home/Jeffrey.Durachta/workflowDB/EPMT/epmt-2.1.0-centos-6/papiex-epmt-install/"
 
 # when we are not attached to a terminal we log to the file below

@@ -20,7 +20,8 @@ stage_command_dest = "./"
 verbose = 0
 # gather profiling information or not
 profile = False
-input_pattern = "*-papiex-*-[0-9]*.csv"
+# input pattern must match both csv v1 and v2 filenames
+input_pattern = "*-papiex*.[ct]sv"
 install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-epmt-install/"
 # place for error'd CSV files
 error_dest = "/tmp"

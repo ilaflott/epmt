@@ -906,11 +906,10 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         csv = datetime.now()
         fmt = '1.0' # default csv format
         if tarfile:
-            from epmt_convert_csv import PAPIEX_CSV_HDR_FILENAME
+            header_filename = "{}-papiex-header.tsv".format(hostname)
             logger.debug('checking if tarfile contains CSV v2 files')
             try:
-                # TODO: move hardcoded file name to settings
-                csv_hdr_info = tarfile.getmember('./' + PAPIEX_CSV_HDR_FILENAME)
+                csv_hdr_info = tarfile.getmember('./' + header_filename)
                 csv_hdr_flo = tarfile.extractfile(csv_hdr_info)
                 fmt = '2'
             except KeyError:
@@ -924,7 +923,8 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         # get the metric names from the CSV header file if we have csv v2
         if fmt == '2':
             from epmt_convert_csv import OUTPUT_CSV_FIELDS, OUTPUT_CSV_SEP
-            logger.debug('CSV v2 files detected in tar')
+            logger.debug('CSV v2 files detected in tar: {}'.format(",".join(files)))
+            # read the header file and get metric names to save in job info_dict
             csv_headers = csv_hdr_flo.read()
             csv_hdr_flo.close()
             logger.debug(csv_headers)

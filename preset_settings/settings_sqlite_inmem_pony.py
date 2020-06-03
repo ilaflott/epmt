@@ -15,7 +15,8 @@ db_params = { 'url': 'sqlite:///:memory:' }
 # stage_command = "mv"
 # stage_command_dest = "./"
 # verbose = 0
-# input_pattern = "*-papiex-*-[0-9]*.csv"
+# input pattern must match both csv v1 and v2 filenames
+# input_pattern = "*-papiex*.[ct]sv"
 # install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-epmt-install/"
 
 # when we are not attached to a terminal we log to the file below
