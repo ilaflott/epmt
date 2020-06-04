@@ -54,6 +54,7 @@ parso==0.5.1
 patsy==0.5.1
 pexpect==4.7.0
 pickleshare==0.7.5
+plotly==4.5.4
 pony==0.7.10
 prometheus-client==0.7.1
 prompt-toolkit==2.0.10
