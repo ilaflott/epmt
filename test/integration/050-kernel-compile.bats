@@ -32,6 +32,7 @@ function kernel_build() {
 }
 
 @test "kernel compile with CSV_v1" {
+  skip
   jobid=`kernel_build CSV_v1`
   run tar tzf ./$jobid.tgz
   assert_output --partial -collated-
@@ -40,6 +41,7 @@ function kernel_build() {
 
 # this test only works with sqla+postgres
 @test "kernel compile with COLLATED_TSV" {
+  skip
   orm=$(epmt -h | grep orm:| cut -f2 -d:)
   [[ $orm == "sqlalchemy" ]] || skip
   db_params=$(epmt -h | grep db_params:| cut -f2- -d:)
