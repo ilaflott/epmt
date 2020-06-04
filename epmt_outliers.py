@@ -833,7 +833,7 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
     ops = eq.get_op_metrics(jobs=jobs, tags=tags_to_use)
     if len(ops) == 0:
         logger.warning('no matching tags found in the tag set: {0}'.format(tags_to_use))
-        return (None, {})
+        return False
     if pca and features and (features != '*'):
         logger.warning('It is strongly recommended to set features=[] when doing PCA')
     features = sanitize_features(features, ops, trained_model)
