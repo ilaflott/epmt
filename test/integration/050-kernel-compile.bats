@@ -10,8 +10,8 @@ function kernel_build() {
   export EPMT_JOB_TAGS="exp_name:kernel_build;papiex_options:$opt"
   epmt start           # Generate prolog
   # set up environment while forcing PAPIEX_OPTIONS to include the opt argument
-  if [ "$opt" == "" ]; then
-      eval `epmt source`
+  if [ "$opt" == "CSV_v1" ]; then
+      eval `epmt source| sed '/^PAPIEX_OPTIONS/ s/COLLATED_TSV//'`
   else
       eval `epmt source| sed '/^PAPIEX_OPTIONS/ s/PAPIEX_OPTIONS=/PAPIEX_OPTIONS='$opt',/'`
   fi
@@ -19,8 +19,23 @@ function kernel_build() {
   epmt_uninstrument    # End Workload, disable instrumentation
   epmt stop            # Wrap up job stats
   f=`epmt stage`       # Move to medium term storage ($PWD)
-  epmt submit $f > /dev/null      # Submit to DB
+  run tar tzf ./$jobid.tgz
+  assert_output --partial job_metadata
+  run epmt submit $f > /dev/null      # Submit to DB
+  assert_output --partial "Imported successfully"
+  assert_output --partial "processes: 10602"
+  run epmt list
+  assert_output --partial $jobid
+  run epmt dump -k tags $jobid
+  assert_output "{'exp_name': 'kernel_build', 'papiex_options': '"$opt"'}"
   echo $jobid
+}
+
+@test "kernel compile with CSV_v1" {
+  jobid=`kernel_build CSV_v1`
+  run tar tzf ./$jobid.tgz
+  assert_output --partial -collated-
+  rm -f $jobid.tgz
 }
 
 # this test only works with sqla+postgres
@@ -31,11 +46,7 @@ function kernel_build() {
   [[ "$db_params" =~ "postgres" ]] || skip
   jobid=`kernel_build COLLATED_TSV`
   run tar tzf ./$jobid.tgz
-  assert_output --partial ./job_metadata
   assert_output --partial papiex.tsv
   assert_output --partial papiex-header.tsv
-  run epmt list
-  assert_output --partial $jobid
-  # run epmt dump -k tags $jobid 
-  # assert_output "{'exp_name': 'kernel_build', 'papiex_options': 'COLLATED_TSV'}"
+  rm -f $jobid.tgz
 }
