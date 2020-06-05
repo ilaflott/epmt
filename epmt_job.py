@@ -651,6 +651,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     for (k, v) in threads_sums_across_procs.items():
         proc_sums[k] = v
     j.proc_sums = proc_sums
+    j.cpu_time = proc_sums['usertime'] + proc_sums['systemtime']
     # we need to create a copy so the ORM actually saves the modifications
     # Merely updating a dict often confuses the ORM and the changes are lost
     info_dict = dict.copy(j.info_dict or {})
@@ -745,12 +746,12 @@ def populate_process_table_from_staging(j):
         # args = ""
         # print(args)
        
-        threads_sums = { metric_names[i]: threads_df[i] for i in range(len(metric_names)) }
+        threads_sums = { metric_names[i]: int(threads_df[i]) for i in range(len(metric_names)) }
         for t in range(1, numtids):
             for i in range(len(metric_names)):
                 # threads_df is a flattened list where each thread's metrics are
                 # adjacent to the previous 
-                threads_sums[metric_names[i]] = threads_df[t*len(metric_names) + i]
+                threads_sums[metric_names[i]] += int(threads_df[t*len(metric_names) + i])
         cpu_time = threads_sums.get('usertime', 0) + threads_sums.get('systemtime',0)
         threads_sums = dumps(threads_sums)
 
@@ -760,7 +761,7 @@ def populate_process_table_from_staging(j):
         # list of dicts
         _thr_dict_list = []
         for t in range(numtids):
-            _thr_dict_list.append( { metric_names[i]: threads_df[t*len(metric_names) + i] for i in range(len(metric_names)) })
+            _thr_dict_list.append( { metric_names[i]: int(threads_df[t*len(metric_names) + i]) for i in range(len(metric_names)) })
         # logger.debug('translated {} into {}'.format(threads_df, _thr_dict_list))
         threads_df = dumps(_thr_dict_list)
 
@@ -768,8 +769,9 @@ def populate_process_table_from_staging(j):
     # insert_sql += ";\n"
     delete_sql = "DELETE FROM processes_staging WHERE id BETWEEN {} AND {};\n".format(first_proc_id, last_proc_id)
     job_info_dict['procs_in_process_table'] = 1
-    # this field is meaningless after procs have been moved to the processes table
+    # these fields are meaningless after procs have been moved to the processes table
     del job_info_dict['procs_staging_ids']
+    del job_info_dict['metric_names']
     update_job_sql = "UPDATE jobs SET info_dict = '{}' WHERE jobid = '{}'".format(dumps(job_info_dict), jobid)
     try:
         orm_raw_sql(insert_sql+delete_sql+update_job_sql, commit=True)
@@ -1142,8 +1144,11 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 
         # procs are not in staging table they will be in the processes table
         info_dict['procs_in_process_table'] = 1
-        j.cpu_time = reduce(lambda c, p: c + p.cpu_time, all_procs, 0)
+
+        # cpu_time is now computed during post-process
+        # j.cpu_time = reduce(lambda c, p: c + p.cpu_time, all_procs, 0)
         # j.cpu_time = sum([p.cpu_time for p in all_procs])
+
         #logger.info("Earliest process start: %s",j.start)
         #logger.info("Latest process end: %s",j.end)
 
