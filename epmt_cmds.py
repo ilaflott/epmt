@@ -1186,6 +1186,8 @@ def epmt_entrypoint(args):
         logger.info("Changing directory to: {}".format(script_dir))
         chdir(script_dir)
         TEST_MODULES = ['test.test_lib','test.test_settings','test.test_anysh','test.test_submit','test.test_run','test.test_cmds','test.test_query','test.test_outliers','test.test_db_schema' ]
+        if args.epmt_cmd_args:
+            TEST_MODULES = args.epmt_cmd_args
         for m in TEST_MODULES:
             mod = import_module(m)
             suite = unittest.TestLoader().loadTestsFromModule(mod)
