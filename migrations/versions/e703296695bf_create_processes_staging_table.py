@@ -16,8 +16,9 @@ sys.path.append(dirname(__file__) + "/../..")
 from orm import orm_db_provider
 if orm_db_provider() == 'postgres':
     from sqlalchemy.dialects.postgresql import ARRAY
+    postgres = True
 else:
-    from sqlalchemy import ARRAY
+    postgres = False
 
 
 # revision identifiers, used by Alembic.
@@ -32,7 +33,7 @@ def upgrade():
     sa.Column('created_at', sa.DateTime(), server_default=sa.func.now()),
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('jobid', sa.String(), nullable=True),
-    sa.Column('threads_df', ARRAY(sa.Float), nullable=True),
+    sa.Column('threads_df', ARRAY(sa.Float) if postgres else sa.Text(), nullable=True),
     sa.Column('hostname', sa.String(), nullable=True),
     sa.Column('tags', sa.String(), nullable=True),
     sa.Column('exename', sa.String(), nullable=True),
