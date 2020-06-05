@@ -83,7 +83,7 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_outlier_no_matched_tags(self):
-        retval = eod.detect_outlier_jobs(['kern-6656-20190614-190245'],tags=[{'op':'missing'}])
+        retval = eod.detect_outlier_ops(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'],tags=[{'op':'missing'}])
         self.assertFalse(retval, "No matched tags returned non False")
 
 
