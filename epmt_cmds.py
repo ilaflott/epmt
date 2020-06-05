@@ -744,11 +744,14 @@ def get_filedict(dirname,pattern,tar=False):
     else:
         files = glob(dirname+pattern)
 
+    # TODO: Remove this gross hack
+    files = [ f for f in files if not "papiex-header" in f ]
+
     if not files:
         logger.info("%s matched no files",pattern)
         return {}
 
-    logger.info("%d files to submit",len(files))
+    logger.info("%d files to submit: %s",len(files), str(files))
     if (len(files) > 30):
         logger.debug("Skipping printing files, too many")
     else:
@@ -771,6 +774,9 @@ def get_filedict(dirname,pattern,tar=False):
             continue
 # Byproduct of collation
         host = host.replace('-collated-','')
+        # for csv v2 files we will end with a trailing hyphen, so remove it
+        if host.endswith('-'):
+            host = host[:-1]
         if filedict.get(host):
             filedict[host].append(f)
         else:
@@ -979,32 +985,21 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True,from_anno
     if not settings.stage_command or not settings.stage_command_dest or len(settings.stage_command) == 0 or len(settings.stage_command_dest) == 0: 
         logger.debug("stage_job: no stage commands to do")
         return True
-
+    import time
+    _start_staging_time = time.time()
     # Always collate into local temp dir
     if collate:
         from tempfile import mkdtemp, gettempdir
-
         tempdir = mkdtemp(prefix='epmt_stage_',dir=gettempdir())
         copyfile(indir+"job_metadata",tempdir+"/job_metadata")
-        import time
-        # TODO: Move the hardcoded path to settings
-        PAPIEX_CSV_HEADER_FILE = "papiex-csv-header.txt"
-        _start_concat_time = time.time()
-        if (path.exists(indir+PAPIEX_CSV_HEADER_FILE)):
-            copyfile(indir+PAPIEX_CSV_HEADER_FILE,tempdir+"/" + PAPIEX_CSV_HEADER_FILE)
-            from epmt_concat import determine_output_filename
-            # we use iglob to not load the full file-list,
-            # we only want a single csv filename to determine the
-            # output filename.
-            # iglob creates an iterator
-            from glob import iglob
-            _one_file = next(iglob(indir + '/*.csv'))
-            output_file = tempdir + '/' + determine_output_filename(_one_file)
-            cmd = "find {} -maxdepth 1 -type f -name '*.csv' -print0 | xargs -0 cat >> {}".format(indir, output_file)
-            logger.debug(cmd)
-            retval = forkexecwait(cmd, shell = True)
-            status = (retval == 0)
-            # TODO: figure out how to get a list of bad files
+        tsv_files = glob(indir + '/*.tsv')
+        if (tsv_files):
+            assert(len(tsv_files) == 2)
+            for tsv in tsv_files:
+                _fn = path.basename(tsv)
+                copyfile(tsv,tempdir+"/" + _fn)
+            # TODO: figure out when something went wrong
+            status = True
             badfiles = []
         else:
             # the old csv 1.0 concatenation using csvjoiner
@@ -1029,7 +1024,6 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True,from_anno
                 logger.error("Failed to write to %s annotations of erroneous stage",metadatafile)
                 rmtree(tempdir)
                 return False
-        logger.debug('csv concat took: %2.5f sec', time.time() - _start_concat_time)
         if compress_and_tar:
             filetostage = gettempdir()+"/"+path.basename(path.dirname(indir))+".tgz"
             cmd = "tar -C "+tempdir+" -cz -f "+filetostage+" ."
@@ -1052,6 +1046,7 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True,from_anno
             rmtree(filetostage)
         except Exception as e:
             logger.debug("rmtree(%s): %s",filetostage,str(e))
+    logger.debug('staging took: %2.5f sec', time.time() - _start_staging_time)
     if return_code == 0:
         print(path.normpath(settings.stage_command_dest)+"/"+path.basename(filetostage))
         try:

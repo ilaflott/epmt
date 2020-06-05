@@ -4,7 +4,7 @@ import csv
 import json
 from epmtlib import tag_from_string, logfn, epmt_logging_init, timing
 import epmt_settings as settings
-from os.path import abspath, isdir, isfile
+from os.path import abspath, isdir, isfile, basename
 import os
 import shutil
 from logging import getLogger
@@ -23,7 +23,6 @@ OUTPUT_CSV_FIELDS = ['threads_df', 'tags', 'hostname', 'exename', 'path', 'exitc
 # we need to use a character that doesn't occur in the
 # input as the postgres copy_from cannot handle quoted delimiters
 OUTPUT_CSV_SEP = '\t'
-PAPIEX_CSV_HDR_FILENAME = 'papiex-csv-header.txt'
 
 # Expected input format
 # tags,hostname,exename,path,args,exitcode,pid,generation,ppid,pgid,sid,numtids,tid,start,end,usertime,systemtime,rssmax,minflt,majflt,inblock,outblock,vol_ctxsw,invol_ctxsw,num_threads,starttime,processor,delayacct_blkio_time,guest_time,rchar,wchar,syscr,syscw,read_bytes,write_bytes,cancelled_write_bytes,time_oncpu,time_waiting,timeslices,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
@@ -191,7 +190,7 @@ def convert_csv_in_tar(in_tar, out_tar = ''):
     If input and output paths are identical, the input will be
     overwritten. This action will not cause a warning to be issued,
     since there are legitimate cases where one may want in-place
-    format conversion. This method will also add a file PAPIEX_CSV_HEADER_FILENAME
+    format conversion. This method will also add a header file
     in the newly-created tar.
     '''
     logger = getLogger(__name__)  # you can use other name
@@ -230,26 +229,30 @@ def convert_csv_in_tar(in_tar, out_tar = ''):
         logger.error('Error extracting {} to {}: {}'.format(in_tar, tempdir, e))
         return False
     tar.close()
-    if "./" + PAPIEX_CSV_HDR_FILENAME in tar_contents:
-        logger.error('{} already contains CSV files in v2 format'.format(in_tar))
-        return False
     in_csv_files = glob('{}/*.csv'.format(tempdir))
     if not in_csv_files:
         logger.error('No CSV files found in {}'.format(in_tar))
         return False
-    logger.info('Converting format of CSV files..')
-    for input_csv in in_csv_files:
-        logger.debug('converting {} in-place'.format(input_csv))
-        hdr = conv_csv_for_dbcopy(input_csv)
-        if not hdr:
-            logger.error('Error converting {}'.format(input_csv))
-            return False
-    logger.info('Finished converting CSV files in {}'.format(in_tar))
+    # we should be having exactly 1 CSV file
+    assert(len(in_csv_files) == 1)
+    hostname = basename(in_csv_files[0]).split('-')[0]
+    header_filename = "{}-papiex-header.tsv".format(hostname)
+    if "./" + header_filename in tar_contents:
+        # a header file presence indicates v2 CSV
+        logger.error('{} already contains CSV files in v2 format'.format(in_tar))
+        return False
+    in_csv = in_csv_files[0]
+    out_csv = tempdir + "/" + "{}-papiex.tsv".format(hostname)
+    logger.info('Starting CSV conversion..')
+    hdr = conv_csv_for_dbcopy(in_csv, out_csv)
+    if not hdr:
+        logger.error('Error converting {}'.format(in_csv))
+        return False
 
-    with open('{}/{}'.format(tempdir, PAPIEX_CSV_HDR_FILENAME), 'w') as csv_hdr_flo:
+    with open('{}/{}'.format(tempdir, header_filename), 'w') as csv_hdr_flo:
         csv_hdr_flo.write(hdr)
-    logger.debug("Created CSV header file: {}".format(PAPIEX_CSV_HDR_FILENAME))
-    tar_contents.append("./" + PAPIEX_CSV_HDR_FILENAME)
+    logger.debug("Created CSV header file: {}".format(header_filename))
+    tar_contents.append("./" + header_filename)
 
     logger.debug('Creating {} and adding contents to it'.format(out_tar))
     try:
@@ -263,7 +266,9 @@ def convert_csv_in_tar(in_tar, out_tar = ''):
     except OSError as e:
         logger.error('Error changing directory to {} while creating tarfile: {}'.format(tempdir, e))
         return False
-    for f in tar_contents:
+    # copy files other than *.csv
+    for f in tar_contents + ["./" + basename(out_csv)]:
+        if f.endswith('.csv'): continue
         try:
             if os.path.isfile(f): tar.add(f)
         except Exception as e:
