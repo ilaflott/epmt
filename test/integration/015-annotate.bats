@@ -42,3 +42,40 @@ teardown() {
   fi
 }
 
+@test "epmt bad annotate" {
+  run epmt annotate abc
+  assert_failure
+  assert_output --partial "epmt_annotate: form must be"
+  run epmt annotate 3456 abc
+  assert_failure
+  assert_output --partial "epmt_annotate: form must be"
+}
+
+@test "epmt annotate incomplete" {
+  # First set known value
+  run epmt annotate --replace 3456 a=100 EPMT_JOB_TAGS="jobid:3456"
+  assert_success
+  # Incomplete annotation
+  run epmt annotate --replace 3456 'test'=
+  assert_failure
+  run epmt dump -k annotations 3456
+  assert_success
+  assert_output --partial "{'a': 100, 'EPMT_JOB_TAGS': 'jobid:3456'}"
+}
+
+@test "epmt annotate tag incomplete" {
+  # Incomplete Job tags
+  run epmt annotate 3456 'EPMT_JOB_TAGS'=
+  assert_failure
+  run epmt dump -k tags 3456
+  assert_success
+  assert_output --partial "{'jobid': '3456'}"
+}
+
+@test "epmt annotate backslash" {
+  run epmt annotate --replace 3456 'EPMT_JOB_TAGS'='\test:\hello'
+  assert_success
+  run epmt dump -k tags 3456
+  assert_success
+  assert_output --partial "{'\\\test': '\\\hello'}"
+}
