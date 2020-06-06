@@ -136,7 +136,7 @@ if (__name__ == "__main__"):
     # unittest
     unit_test_parser = subparser.add_parser('unittest', help="Run EPMT unit test suite",
         description = "runs unit tests")
-    unit_test_parser.add_argument('epmt_cmd_args', default=[], nargs='+', help='Specific unittest to run')
+    unit_test_parser.add_argument('epmt_cmd_args', default=[], nargs='*', help='Specific unittest to run')
     # integration tests
     integration_test_parser = subparser.add_parser('integration', help="Run EPMT integration tests",
         description = "runs integration tests")
