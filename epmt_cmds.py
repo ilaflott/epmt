@@ -608,22 +608,20 @@ def epmt_annotate(argslist, replace = False):
 
     return retval
 
+# These two functions could be squashed into one.
 def _papiex_opt_byhost(o):
     from cpuinfo import get_cpu_info
     from socket import gethostname
     from re import match
     if hasattr(o,'papiex_options_byhost'):
-        hostname = gethostname()
-#        print(hostname)
         if type(o.papiex_options_byhost) == dict:
+            hostname = gethostname()
             for key, value in o.papiex_options_byhost.items():
-#                print(key,hostname,value)
                 if match(key,hostname):
                     options = value
-#                    print("hostname matches pattern",options)
                     return options
         else:
-            print("Unsupported type for papiex_options_byhost; must be a dictionary")
+            logger.error("Unsupported type for papiex_options_byhost; must be a dictionary")
     return False
 
 def _papiex_opt_bycpu(o):
@@ -631,18 +629,15 @@ def _papiex_opt_bycpu(o):
     from socket import gethostname
     from re import match
     if hasattr(o,'papiex_options_bycpu'):
-        cpu_info = get_cpu_info()
-        cpu_fms = str(cpu_info['family']) + "/" + str(cpu_info['model']) + "/" + str(cpu_info['stepping'])
-#        print(cpu_fms)
         if type(o.papiex_options_bycpu) == dict:
+            cpu_info = get_cpu_info()
+            cpu_fms = str(cpu_info['family']) + "/" + str(cpu_info['model']) + "/" + str(cpu_info['stepping'])
             for key, value in o.papiex_options_bycpu.items():
-#                print(key,cpu_fms,value)
                 if match(key,cpu_fms):
                     options = value
-#                    print("cpu matches pattern",options)
                     return options
         else:
-            print("Unsupported type for papiex_options_bycpu; must be a dictionary")
+            logger.error("Unsupported type for papiex_options_bycpu; must be a dictionary")
     return False
 
 # We defer to CPU matches before HOSTNAME matches
