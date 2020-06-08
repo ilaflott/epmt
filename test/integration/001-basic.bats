@@ -11,7 +11,12 @@ setup() {
   # echo "resource_path:${resource_path}"
   test -n "${resource_path}" || fail
   test -d ${resource_path} || fail
-
+  # Cleanup
+  rm -rf  ${resource_path}/epmt/test/data/submit/804280/
+  # Create
+  mkdir  ${resource_path}/epmt/test/data/submit/804280/
+  # Extract
+  tar zxvf  ${resource_path}/epmt/test/data/submit/804280.tgz -C  ${resource_path}/epmt/test/data/submit/804280/
 } 
 
 @test "epmt submit" {
@@ -21,6 +26,7 @@ setup() {
   run epmt submit ${resource_path}/epmt/test/data/submit/692500.tgz
   assert_success
   assert_output --partial "Imported successfully - job: 692500 processes: 6486"
+
   run epmt submit ${resource_path}/epmt/test/data/submit/804280/
   assert_success
   assert_output --partial "Imported successfully - job: 804280 processes: 6039"
