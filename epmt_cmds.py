@@ -613,36 +613,44 @@ def _papiex_opt_byhost(o):
     from cpuinfo import get_cpu_info
     from socket import gethostname
     from re import match
+    from re import error as reerror
     if hasattr(o,'papiex_options_byhost'):
         if type(o.papiex_options_byhost) == dict:
             hostname = gethostname()
             logger.info("hostname to match papiex_options_byhost is %s",hostname)
             for key, value in o.papiex_options_byhost.items():
-                if match(key,hostname):
-                    logger.debug("%s matched %s",key,hostname)
-                    options = value
-                    return options
+                try:
+                    if match(key,hostname):
+                        logger.debug("%s matched %s",key,hostname)
+                        options = value
+                        return options
+                except reerror:
+                    logger.error("Invalid regular expression in papiex_options_bycpu: %s",key)
         else:
             logger.error("Unsupported type for papiex_options_byhost; must be a dictionary")
-    return False
+    return ""
 
 def _papiex_opt_bycpu(o):
     from cpuinfo import get_cpu_info
     from socket import gethostname
     from re import match
+    from re import error as reerror
     if hasattr(o,'papiex_options_bycpu'):
         if type(o.papiex_options_bycpu) == dict:
             cpu_info = get_cpu_info()
             cpu_fms = str(cpu_info['family']) + "/" + str(cpu_info['model']) + "/" + str(cpu_info['stepping'])
             logger.info("cpu F/M/S to match papiex_options_bycpu is %s",cpu_fms)
             for key, value in o.papiex_options_bycpu.items():
-                if match(key,cpu_fms):
-                    logger.debug("%s matched %s",key,cpu_fms)
-                    options = value
-                    return options
+                try:
+                    if match(key,cpu_fms):
+                        logger.debug("%s matched %s",key,cpu_fms)
+                        options = value
+                        return options
+                except reerror:
+                    logger.error("Invalid regular expression in papiex_options_bycpu: %s",key)
         else:
             logger.error("Unsupported type for papiex_options_bycpu; must be a dictionary")
-    return False
+    return ""
 
 # We defer to CPU matches before HOSTNAME matches
 def get_papiex_options(s):
