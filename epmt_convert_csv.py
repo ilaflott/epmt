@@ -85,9 +85,9 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
 
     # if infile is a string, then it's a path
     # else it's a file-handle
-    f = open(infile, newline='') if (type(infile) == str) else infile
+    infile_flo = open(infile, newline='') if (type(infile) == str) else infile
 
-    reader = csv.DictReader(f, escapechar='\\')
+    reader = csv.DictReader(infile_flo, escapechar='\\')
     # open a file for writing if we have a string, otherwise assume
     # its an already open file-handle
     with open(outfile, 'w', newline='') as csvfile:
@@ -104,7 +104,7 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
                 metric_names = ",".join(thr_fields)
                 header = OUTPUT_CSV_SEP.join(OUTPUT_CSV_FIELDS).replace('threads_df', '{'+metric_names+'}')
                 # initialize the output file
-                output_fields = OUTPUT_CSV_FIELDS
+                output_fields = OUTPUT_CSV_FIELDS.copy()
                 output_fields[output_fields.index('threads_df')] = metric_names
                 writer = csv.DictWriter(csvfile, fieldnames=output_fields, delimiter=OUTPUT_CSV_SEP)
                 # writer.writeheader()
@@ -158,6 +158,7 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
             writer.writerow(outrow)
     _finish_time = time.time()
     logger.info('Wrote {} rows at {:.2f} procs/sec'.format(outrows,(outrows/(_finish_time - _start_time))))
+    infile_flo.close() # close input file
     if in_place:
         logger.debug('overwriting input file {} with {}'.format(infile, outfile))
         shutil.move(outfile, infile)
@@ -290,6 +291,7 @@ def convert_csv_in_tar(in_tar, out_tar = ''):
         shutil.move(out_tar, in_tar)
     logger.info('CSV format conversion successful!')
     shutil.rmtree(tempdir)
+    return True
 
     
 def extract_jobid_from_collated_csv(collated_csv):
