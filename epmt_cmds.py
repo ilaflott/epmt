@@ -616,8 +616,10 @@ def _papiex_opt_byhost(o):
     if hasattr(o,'papiex_options_byhost'):
         if type(o.papiex_options_byhost) == dict:
             hostname = gethostname()
+            logger.info("hostname to match papiex_options_byhost is %s",hostname)
             for key, value in o.papiex_options_byhost.items():
                 if match(key,hostname):
+                    logger.debug("%s matched %s",key,hostname)
                     options = value
                     return options
         else:
@@ -632,8 +634,10 @@ def _papiex_opt_bycpu(o):
         if type(o.papiex_options_bycpu) == dict:
             cpu_info = get_cpu_info()
             cpu_fms = str(cpu_info['family']) + "/" + str(cpu_info['model']) + "/" + str(cpu_info['stepping'])
+            logger.info("cpu F/M/S to match papiex_options_bycpu is %s",cpu_fms)
             for key, value in o.papiex_options_bycpu.items():
                 if match(key,cpu_fms):
+                    logger.debug("%s matched %s",key,cpu_fms)
                     options = value
                     return options
         else:
