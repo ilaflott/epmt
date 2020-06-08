@@ -571,7 +571,10 @@ def mk_process_tree(j, all_procs = None, pid_map = None):
 def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, update_unprocessed_jobs_table = True):
     logger = getLogger(__name__)  # you can use other name
     if type(j) == str:
-        j = Job[j]
+        jobid = j
+        j = Job[jobid]
+    else:
+        jobid = j.jobid
     if j.proc_sums:
         logger.warning('skipped processing jobid {0} as it is not unprocessed'.format(j.jobid))
         return False
@@ -580,8 +583,14 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
         if not stage_copy_result:
             logger.error('Aborting post-process of job %s as process copy from staging failed', j.jobid)
             return False
+        # we need to expire the job object and make SQLAlchemy reload
+        # it as the processes table has changed
+        Session.expire(j)
     logger.info("Starting post-process of job..")
     proc_sums = {}
+
+    if not j.processes:
+        raise RuntimeError('No processes found in job. Did the populate of processes table happen?')
 
     _t0 = time.time()
 
@@ -651,11 +660,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     for (k, v) in threads_sums_across_procs.items():
         proc_sums[k] = v
     j.proc_sums = proc_sums
-    try:
-        j.cpu_time = proc_sums['usertime'] + proc_sums['systemtime']
-    except:
-        print("proc_sums: ", proc_sums)
-        raise
+    j.cpu_time = proc_sums['usertime'] + proc_sums['systemtime']
     # we need to create a copy so the ORM actually saves the modifications
     # Merely updating a dict often confuses the ORM and the changes are lost
     info_dict = dict.copy(j.info_dict or {})
@@ -997,9 +1002,6 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             if (fmt == '2' and (orm_db_provider() == 'postgres') and (settings.orm == 'sqlalchemy')):
                 import psycopg2
                 logger.info('Doing a fast ingest of {}'.format(flo.name))
-                # force the setting below, as CSV copying means we
-                # will have no processes in the process table to post-process
-                settings.post_process_job_on_ingest = False
                 _conn_start_ts = time.time()
                 try:
                     conn = psycopg2.connect(settings.db_params['url'])
@@ -1173,7 +1175,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 
     
     j.info_dict = info_dict
-    if settings.post_process_job_on_ingest:
+    if settings.post_process_job_on_ingest and not copy_csv_direct:
         # _post_process_start_ts = time.time()
         if settings.bulk_insert:
             # when doing bulk inserts we don't pass in all_procs

@@ -92,6 +92,26 @@ class EPMTSubmit(unittest.TestCase):
         self.assertTrue(eq.is_job_post_processed('685016'))
 
     @db_session
+    def test_collated_tsv(self):
+        datafile='test/data/csv/collated-tsv-2220.tgz'
+        with capture() as (out,err):
+            epmt_submit([datafile], dry_run=False, remove_file = False)
+        j = Job['2220']
+        if orm_db_provider() == 'postgres':
+            # in postgres the processes are put in a staging table 
+            self.assertFalse(eq.is_job_post_processed(j))
+            self.assertFalse(j.info_dict['procs_in_process_table'])
+            self.assertFalse(j.processes)
+            # the orm_to_dict will trigger moving the job
+            # to processes table and post-processing it in case it's
+            # not post_processes
+            j_dict = orm_to_dict(j)
+        self.assertTrue(eq.is_job_post_processed(j))
+        self.assertTrue(j.info_dict['procs_in_process_table'])
+        self.assertEqual(len(j.processes), 2)
+        self.assertEqual(j.proc_sums['rssmax'], 9952)
+
+    @db_session
     def test_corrupted_csv(self):
         datafile='test/data/misc/corrupted-csv.tgz'
         # quell the error message
@@ -108,8 +128,8 @@ class EPMTSubmit(unittest.TestCase):
 
     def check_lazy_compute(self, j, lazy_eval):
         from epmt_job import is_process_tree_computed, mk_process_tree
-        is_pt_computed = is_process_tree_computed(j)
         p = eq.get_procs(j, limit=1, fmt='orm')[0]
+        is_pt_computed = is_process_tree_computed(j)
         if lazy_eval:
             self.assertFalse(is_pt_computed)
             self.assertIsNone(p.parent)
@@ -133,7 +153,7 @@ class EPMTSubmit(unittest.TestCase):
         settings.lazy_compute_process_tree = not(orig_lazy_eval) # toggle setting
         with capture() as (out,err):
             epmt_submit(glob(datafiles), dry_run=False)
-        self.check_lazy_compute(Job['804268'], not(orig_lazy_eval))
+        self.check_lazy_compute(Job['804268'], settings.lazy_compute_process_tree)
         settings.lazy_compute_process_tree = orig_lazy_eval # restore old setting
 
     def test_submit_remove(self):
