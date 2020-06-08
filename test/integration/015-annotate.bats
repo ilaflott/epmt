@@ -12,6 +12,8 @@ setup() {
   test -n "${epmt_output_prefix}" || fail
   rm -rf ${epmt_output_prefix}/${USER}/3456
   rm -f ${stage_dest}/3456.tgz
+  run ${resource_path}/test/integration/epmt-annotate.sh || fail
+  run test -f ${stage_dest}/3456.tgz || fail
 } 
 
 teardown() {
@@ -20,26 +22,53 @@ teardown() {
 } 
 
 @test "epmt annotate" {
-  run ${resource_path}/test/integration/epmt-annotate.sh
-  assert_success
-  run test -f ${stage_dest}/3456.tgz
-  assert_success
   run epmt dump -k annotations ${stage_dest}/3456.tgz
   assert_success
   
   # the order of keys in the dict might change based on underlying db
   assert_output "{'a': 100, 'b': 200, 'inbetween_1': 1, 'inbetween_2': 1, 'c': 200, 'd': 400, 'e': 300, 'f': 600}"
 
-  # the last test only works with a persistent db
-  if  epmt help| grep db_params| grep postgres > /dev/null; then
-      epmt annotate 3456 g=400 h=800  # annotate job in database as well
-      run epmt dump -k annotations 3456
-      assert_output "{'a': 100, 'b': 200, 'c': 200, 'd': 400, 'e': 300, 'f': 600, 'g': 400, 'h': 800, 'inbetween_1': 1, 'inbetween_2': 1}"
-      # special annotation, check we set the tags field
-      epmt annotate 3456 EPMT_JOB_TAGS='exp_name:abc;exp_component:def;exp_time:18540101'
-      run epmt dump -k tags 3456
-      assert_output "{'exp_name': 'abc', 'exp_time': '18540101', 'exp_component': 'def'}"
-  fi
+  epmt annotate 3456 g=400 h=800  # annotate job in database as well
+  run epmt dump -k annotations 3456
+  assert_output "{'a': 100, 'b': 200, 'inbetween_1': 1, 'inbetween_2': 1, 'c': 200, 'd': 400, 'e': 300, 'f': 600, 'g': 400, 'h': 800}"
+  # special annotation, check we set the tags field
+  epmt annotate 3456 EPMT_JOB_TAGS='exp_name:abc;exp_component:def;exp_time:18540101'
+  run epmt dump -k tags 3456
+  assert_output "{'exp_name': 'abc', 'exp_time': '18540101', 'exp_component': 'def'}"
+}
+
+# Replace is used on setting state on all tests
+# Be sure it works well
+@test "epmt annotate replace" {
+  # first set and verify known tags state
+  run epmt annotate --replace 3456 a=100 EPMT_JOB_TAGS="jobid:3456"
+  assert_success
+  run epmt dump -k tags 3456
+  assert_success
+  assert_output --partial "{'jobid': '3456'}"
+  # Tags with backslash
+  run epmt annotate --replace 3456 a=200
+  assert_success
+  run epmt dump -k annotations 3456
+  assert_success
+  # Note 1 escaped backslash is dropped in the test
+  # This appears tested as {'\\test': '\\hello'}
+  assert_output --partial "{'a': 200}"
+}
+
+@test "epmt annotate replace jobtags" {
+  # first set and verify known tags state
+  run epmt annotate --replace 3456 a=100 EPMT_JOB_TAGS="jobid:3456"
+  assert_success
+  run epmt dump -k tags 3456
+  assert_success
+  assert_output --partial "{'jobid': '3456'}"
+  # Tags with backslash
+  run epmt annotate --replace 3456 'EPMT_JOB_TAGS'='jobid:123'
+  assert_success
+  run epmt dump -k tags 3456
+  assert_success
+  assert_output --partial "{'jobid': '123'}"
 }
 
 @test "epmt bad annotate" {
@@ -52,9 +81,12 @@ teardown() {
 }
 
 @test "epmt annotate incomplete" {
-  # First set known value
+  # first set and verify known annotation state
   run epmt annotate --replace 3456 a=100 EPMT_JOB_TAGS="jobid:3456"
   assert_success
+  run epmt dump -k annotations 3456
+  assert_success
+  assert_output --partial "{'a': 100"
   # Incomplete annotation
   run epmt annotate --replace 3456 'test'=
   assert_failure
@@ -64,6 +96,12 @@ teardown() {
 }
 
 @test "epmt annotate tag incomplete" {
+  # first set and verify known tag state
+  run epmt annotate --replace 3456 a=100 EPMT_JOB_TAGS="jobid:3456"
+  assert_success
+  run epmt dump -k tags 3456
+  assert_success
+  assert_output --partial "{'jobid': '3456'}"
   # Incomplete Job tags
   run epmt annotate 3456 'EPMT_JOB_TAGS'=
   assert_failure
@@ -73,9 +111,18 @@ teardown() {
 }
 
 @test "epmt annotate backslash" {
+  # first set and verify known tags state
+  run epmt annotate --replace 3456 a=100 EPMT_JOB_TAGS="jobid:3456"
+  assert_success
+  run epmt dump -k tags 3456
+  assert_success
+  assert_output --partial "{'jobid': '3456'}"
+  # Tags with backslash
   run epmt annotate --replace 3456 'EPMT_JOB_TAGS'='\test:\hello'
   assert_success
   run epmt dump -k tags 3456
   assert_success
+  # Note 1 escaped backslash is dropped in the test
+  # This appears tested as {'\\test': '\\hello'}
   assert_output --partial "{'\\\test': '\\\hello'}"
 }
