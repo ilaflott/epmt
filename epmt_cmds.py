@@ -978,7 +978,7 @@ def submit_to_db(input, pattern, dry_run=True, remove_file=False):
     # return (j.jobid, process_count)
 
 @logfn
-def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True,from_annotate=False):
+def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True):
     if not indir or len(indir) == 0:
         logger.error("stage_job: indir is epmty")
         return False
@@ -991,39 +991,49 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True,from_anno
     if collate:
         from tempfile import mkdtemp, gettempdir
         tempdir = mkdtemp(prefix='epmt_stage_',dir=gettempdir())
-        copyfile(indir+"job_metadata",tempdir+"/job_metadata")
+        try:
+            copyfile(indir+"job_metadata",tempdir+"/job_metadata")
+        except Exception as e:
+            logger.error("copyfile(%s,%s): %s",indir+"job_metadata",tempdir+"/job_metadata",str(e))
+            rmtree(tempdir)
+            return False
         tsv_files = glob(indir + '/*.tsv')
         if (tsv_files):
-            assert(len(tsv_files) == 2)
             for tsv in tsv_files:
                 _fn = path.basename(tsv)
-                copyfile(tsv,tempdir+"/" + _fn)
-            # TODO: figure out when something went wrong
+                try:
+                    copyfile(tsv,tempdir+"/" + _fn)
+                except Exception as e:
+                    logger.error("copyfile(%s,%s): %s",tsv,tempdir+"/" + _fn,str(e))
+                    rmtree(tempdir)
+                    return False
             status = True
             badfiles = []
+            collated_file = None
         else:
             # the old csv 1.0 concatenation using csvjoiner
             from epmt_concat import csvjoiner
             status, collated_file, badfiles = csvjoiner(indir, outpath=tempdir+"/", keep_going=keep_going, errdir=settings.error_dest)
-        if status == False:
-            logger.debug("csv concatenation returned status = %s",status)
-            rmtree(tempdir)
-            return False
-        if (badfiles) and not from_annotate:
-            d={}
-            d["epmt_stage_error"]=str(badfiles)
-            logger.error("Job being annotated with %s",str(d))
-# begin HACK: should call a real annotate function            
-            metadatafile = tempdir+"/job_metadata"
-            metadata = read_job_metadata(metadatafile)
-            if not metadata:
-                logger.error("Failed to get %s for annotation of erroneous stage",metadatafile)
+            if status == False:
+                logger.debug("csv concatenation returned status = %s",status)
                 rmtree(tempdir)
                 return False
-            if not merge_and_write_annotations(metadatafile,metadata,d,replace=False):
-                logger.error("Failed to write to %s annotations of erroneous stage",metadatafile)
-                rmtree(tempdir)
-                return False
+            if badfiles:
+                d={}
+                d["epmt_stage_error"]=str(badfiles)
+                logger.error("Job being annotated with %s",str(d))
+                # begin HACK: should call a real annotate function            
+                metadatafile = tempdir+"/job_metadata"
+                metadata = read_job_metadata(metadatafile)
+                if not metadata:
+                    logger.error("Failed to get %s for annotation of erroneous stage",metadatafile)
+                    rmtree(tempdir)
+                    return False
+                if not merge_and_write_annotations(metadatafile,metadata,d,replace=False):
+                    logger.error("Failed to write to %s annotations of erroneous stage",metadatafile)
+                    rmtree(tempdir)
+                    return False
+                
         if compress_and_tar:
             filetostage = gettempdir()+"/"+path.basename(path.dirname(indir))+".tgz"
             cmd = "tar -C "+tempdir+" -cz -f "+filetostage+" ."
@@ -1038,7 +1048,7 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True,from_anno
             
 # end HACK
     cmd = settings.stage_command + " " + filetostage + " " + settings.stage_command_dest
-    logger.debug(cmd)
+    logger.info(cmd)
     return_code = forkexecwait(cmd, shell=True)
     if path.exists(filetostage):
         try:

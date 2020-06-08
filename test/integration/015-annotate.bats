@@ -12,6 +12,7 @@ setup() {
   test -n "${epmt_output_prefix}" || fail
   rm -rf ${epmt_output_prefix}/${USER}/3456
   rm -f ${stage_dest}/3456.tgz
+  run epmt delete 3456
   run ${resource_path}/test/integration/epmt-annotate.sh || fail
   run test -f ${stage_dest}/3456.tgz || fail
 } 
@@ -19,6 +20,7 @@ setup() {
 teardown() {
   rm -rf ${epmt_output_prefix}/${USER}/3456
   rm -f ${stage_dest}/3456.tgz
+  run epmt delete 3456
 } 
 
 @test "epmt annotate" {
@@ -34,7 +36,7 @@ teardown() {
   # special annotation, check we set the tags field
   epmt annotate 3456 EPMT_JOB_TAGS='exp_name:abc;exp_component:def;exp_time:18540101'
   run epmt dump -k tags 3456
-  assert_output "{'exp_name': 'abc', 'exp_time': '18540101', 'exp_component': 'def'}"
+  assert_output "{'exp_name': 'abc', 'exp_component': 'def', 'exp_time': '18540101'}"
 }
 
 # Replace is used on setting state on all tests

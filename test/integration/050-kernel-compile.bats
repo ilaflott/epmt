@@ -1,7 +1,30 @@
 load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 
-resource_path=$(dirname `command -v epmt`)
+
+# the actual compile step
+# you will need the following deps installed:
+#   sudo apt-get install build-essential libncurses-dev bison flex libssl-dev libelf-dev coreutils
+function _compile() {
+    build_dir=$(tempfile -p epmt_ -s _kernel)
+    echo "creating build directory: $build_dir"
+    rm -rf $build_dir; mkdir -p $build_dir && cd $build_dir
+    
+    # download
+    PAPIEX_TAGS="op:download;op_instance:1;op_sequence:1" wget https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.1.7.tar.xz
+    PAPIEX_TAGS="op:untar;op_instance:1;op_sequence:1" tar -xf linux-5.1.7.tar.xz
+    cd linux-5.1.7
+    
+    # configure
+    # cp -v /boot/config-$(uname -r) .config
+    PAPIEX_TAGS="op:configure;op_instance:1;op_sequence:1" make tinyconfig
+    
+    # build
+    PAPIEX_TAGS="op:compile;op_instance:1;op_sequence:1" make -j $(nproc)
+
+    # cleanup
+    PAPIEX_TAGS="op:rm;op_instance:1;op_sequence:1" rm -rf $build_dir
+}
 
 function kernel_build() {
   opt=$1
@@ -15,8 +38,11 @@ function kernel_build() {
   else
       eval `epmt source| sed '/^PAPIEX_OPTIONS/ s/PAPIEX_OPTIONS=/PAPIEX_OPTIONS='$opt',/'`
   fi
-  ${resource_path}/test/integration/kernel_bld.sh >/dev/null 2>&1 # Workload
-  epmt_uninstrument    # End Workload, disable instrumentation
+
+  # workload
+  (_compile > /dev/null 2>&1)
+
+  epmt_uninstrument    # disable instrumentation
   epmt stop            # Wrap up job stats
   f=`epmt stage`       # Move to medium term storage ($PWD)
   run tar tzf ./$jobid.tgz

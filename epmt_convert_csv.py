@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 import csv
 import json
@@ -33,7 +34,7 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
 
     This file will convert a CSV from legacy format (with header)
     to a CSV that is suitable for ingestion into PostgreSQL using
-    its \COPY method. In particular the output will use strings
+    its COPY method. In particular the output will use strings
     or ARRAYs for JSON fields, and will remove extraneous computed fields. 
 
     Parameters
@@ -61,7 +62,9 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
     If the input and output filenames are the same, then a
     temporary file will be created for the output CSV. Finally
     the input CSV will be replaced with the temporary file.
+
     '''
+
     logger = getLogger(__name__)  # you can use other name
     outfile = outfile or infile   # empty outfile => overwrite infile
 
@@ -82,9 +85,9 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
 
     # if infile is a string, then it's a path
     # else it's a file-handle
-    f = open(infile, newline='') if (type(infile) == str) else infile
+    infile_flo = open(infile, newline='') if (type(infile) == str) else infile
 
-    reader = csv.DictReader(f, escapechar='\\')
+    reader = csv.DictReader(infile_flo, escapechar='\\')
     # open a file for writing if we have a string, otherwise assume
     # its an already open file-handle
     with open(outfile, 'w', newline='') as csvfile:
@@ -101,7 +104,7 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
                 metric_names = ",".join(thr_fields)
                 header = OUTPUT_CSV_SEP.join(OUTPUT_CSV_FIELDS).replace('threads_df', '{'+metric_names+'}')
                 # initialize the output file
-                output_fields = OUTPUT_CSV_FIELDS
+                output_fields = OUTPUT_CSV_FIELDS.copy()
                 output_fields[output_fields.index('threads_df')] = metric_names
                 writer = csv.DictWriter(csvfile, fieldnames=output_fields, delimiter=OUTPUT_CSV_SEP)
                 # writer.writeheader()
@@ -131,10 +134,14 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
             if not 'exitsignal' in r:
                 r['exitsignal'] = 0
 
+            # We no longer need to do the hack below, as we now use copy_expert
+            # for ingestion. The code below was only needed when using the deprecated
+            # copy_from postgres ingestion
+            #
             # replace postgres eof marker in the args field
             # https://stackoverflow.com/questions/23790995/postgres-9-3-end-of-copy-marker-corrupt-any-way-to-change-this-setting
-            if '\.' in r['args']:
-                r['args'] = r['args'].replace('\.', '\\\.')
+            #if '\.' in r['args']:
+            #    r['args'] = r['args'].replace('\.', '\\\.')
 
             for field in ['pid', 'ppid', 'pgid', 'sid', 'generation', 'exitcode', 'exitsignal', 'start', 'end']:
                 r[field] = int(r[field])
@@ -151,6 +158,7 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
             writer.writerow(outrow)
     _finish_time = time.time()
     logger.info('Wrote {} rows at {:.2f} procs/sec'.format(outrows,(outrows/(_finish_time - _start_time))))
+    infile_flo.close() # close input file
     if in_place:
         logger.debug('overwriting input file {} with {}'.format(infile, outfile))
         shutil.move(outfile, infile)
@@ -283,6 +291,7 @@ def convert_csv_in_tar(in_tar, out_tar = ''):
         shutil.move(out_tar, in_tar)
     logger.info('CSV format conversion successful!')
     shutil.rmtree(tempdir)
+    return True
 
     
 def extract_jobid_from_collated_csv(collated_csv):
