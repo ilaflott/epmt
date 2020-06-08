@@ -590,7 +590,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     proc_sums = {}
 
     if not j.processes:
-        raise RuntimeError('No processes found in job. Did the populate of processes table happen?')
+        logger.warning('Job {} contains no processes! Perhaps an error in collation or populating the staging data?'.format(jobid))
 
     _t0 = time.time()
 
@@ -660,7 +660,10 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     for (k, v) in threads_sums_across_procs.items():
         proc_sums[k] = v
     j.proc_sums = proc_sums
-    j.cpu_time = proc_sums['usertime'] + proc_sums['systemtime']
+
+    # the keys below would be missing if the job has no processes
+    j.cpu_time = proc_sums.get('usertime', 0) + proc_sums.get('systemtime', 0)
+
     # we need to create a copy so the ORM actually saves the modifications
     # Merely updating a dict often confuses the ORM and the changes are lost
     info_dict = dict.copy(j.info_dict or {})
