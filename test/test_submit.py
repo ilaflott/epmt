@@ -111,7 +111,7 @@ class EPMTSubmit(unittest.TestCase):
 
     @db_session
     def test_collated_tsv(self):
-        datafile='test/data/csv/collated-tsv-2220.tgz'
+        datafile='test/data/tsv/collated-tsv-2220.tgz'
         with capture() as (out,err):
             epmt_submit([datafile], dry_run=False, remove_file = False)
         j = Job['2220']
