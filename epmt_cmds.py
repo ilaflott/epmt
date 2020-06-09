@@ -165,8 +165,8 @@ def verify_epmt_output_prefix():
 
 
 def verify_papiex_options():
-    str = settings.papiex_options
-    print("settings.papiex_options =",str, end='')
+    s = get_papiex_options(settings)
+    print("papiex_options =",s, end='')
     retval = True
 # Check for any components
     cmd = settings.install_prefix+"bin/papi_component_avail 2>&1 "+"| sed -n -e '/Active/,$p' | grep perf_event >/dev/null 2>&1"
@@ -176,7 +176,7 @@ def verify_papiex_options():
         logger.error("%s failed",cmd)
         retval = False
 # Now check events
-    eventlist = str.split(',')
+    eventlist = s.split(',')
     for e in eventlist:
         cmd = settings.install_prefix+"bin/papi_command_line 2>&1 "+e+"| sed -n -e '/PERF_COUNT_SW_CPU_CLOCK\ :/,$p' | grep PERF_COUNT_SW_CPU_CLOCK > /dev/null 2>&1"
         logger.info("\t"+cmd)
@@ -608,6 +608,57 @@ def epmt_annotate(argslist, replace = False):
 
     return retval
 
+# These two functions could be squashed into one.
+def _papiex_opt_byhost(o):
+    from cpuinfo import get_cpu_info
+    from socket import gethostname
+    from re import match
+    from re import error as reerror
+    if hasattr(o,'papiex_options_byhost'):
+        if type(o.papiex_options_byhost) == dict:
+            hostname = gethostname()
+            logger.info("hostname to match papiex_options_byhost is %s",hostname)
+            for key, value in o.papiex_options_byhost.items():
+                try:
+                    if match(key,hostname):
+                        logger.debug("%s matched %s",key,hostname)
+                        options = value
+                        return options
+                except reerror:
+                    logger.error("Invalid regular expression in papiex_options_bycpu: %s",key)
+        else:
+            logger.error("Unsupported type for papiex_options_byhost; must be a dictionary")
+    return ""
+
+def _papiex_opt_bycpu(o):
+    from cpuinfo import get_cpu_info
+    from socket import gethostname
+    from re import match
+    from re import error as reerror
+    if hasattr(o,'papiex_options_bycpu'):
+        if type(o.papiex_options_bycpu) == dict:
+            cpu_info = get_cpu_info()
+            cpu_fms = str(cpu_info['family']) + "/" + str(cpu_info['model']) + "/" + str(cpu_info['stepping'])
+            logger.info("cpu F/M/S to match papiex_options_bycpu is %s",cpu_fms)
+            for key, value in o.papiex_options_bycpu.items():
+                try:
+                    if match(key,cpu_fms):
+                        logger.debug("%s matched %s",key,cpu_fms)
+                        options = value
+                        return options
+                except reerror:
+                    logger.error("Invalid regular expression in papiex_options_bycpu: %s",key)
+        else:
+            logger.error("Unsupported type for papiex_options_bycpu; must be a dictionary")
+    return ""
+
+# We defer to CPU matches before HOSTNAME matches
+def get_papiex_options(s):
+    option_h = _papiex_opt_byhost(s)
+    option_c = _papiex_opt_bycpu(s)
+    option_d = s.papiex_options # The non-arch specific options
+    return ','.join([option_d,option_c,option_h])
+
 def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run_cmd=False):
     """
 
@@ -657,7 +708,7 @@ def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run
     if monitor_debug: cmd = add_var(cmd,"MONITOR_DEBUG"+equals+"TRUE")
     if papiex_debug: cmd = add_var(cmd,"PAPIEX_DEBUG"+equals+"TRUE")
     cmd = add_var(cmd,"PAPIEX_OUTPUT"+equals+global_datadir) 
-    cmd = add_var(cmd,"PAPIEX_OPTIONS"+equals+settings.papiex_options)
+    cmd = add_var(cmd,"PAPIEX_OPTIONS"+equals+get_papiex_options(settings))
     old_pl_libs = environ.get("LD_PRELOAD","")
     papiex_pl_libs = settings.install_prefix+"lib/libpapiex.so:"+settings.install_prefix+"lib/libmonitor.so:"+settings.install_prefix+"lib/libpapi.so:"+settings.install_prefix+"lib/libpfm.so"
     if run_cmd:
@@ -978,7 +1029,7 @@ def submit_to_db(input, pattern, dry_run=True, remove_file=False):
     # return (j.jobid, process_count)
 
 @logfn
-def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True,from_annotate=False):
+def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True):
     if not indir or len(indir) == 0:
         logger.error("stage_job: indir is epmty")
         return False
@@ -991,39 +1042,49 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True,from_anno
     if collate:
         from tempfile import mkdtemp, gettempdir
         tempdir = mkdtemp(prefix='epmt_stage_',dir=gettempdir())
-        copyfile(indir+"job_metadata",tempdir+"/job_metadata")
+        try:
+            copyfile(indir+"job_metadata",tempdir+"/job_metadata")
+        except Exception as e:
+            logger.error("copyfile(%s,%s): %s",indir+"job_metadata",tempdir+"/job_metadata",str(e))
+            rmtree(tempdir)
+            return False
         tsv_files = glob(indir + '/*.tsv')
         if (tsv_files):
-            assert(len(tsv_files) == 2)
             for tsv in tsv_files:
                 _fn = path.basename(tsv)
-                copyfile(tsv,tempdir+"/" + _fn)
-            # TODO: figure out when something went wrong
+                try:
+                    copyfile(tsv,tempdir+"/" + _fn)
+                except Exception as e:
+                    logger.error("copyfile(%s,%s): %s",tsv,tempdir+"/" + _fn,str(e))
+                    rmtree(tempdir)
+                    return False
             status = True
             badfiles = []
+            collated_file = None
         else:
             # the old csv 1.0 concatenation using csvjoiner
             from epmt_concat import csvjoiner
             status, collated_file, badfiles = csvjoiner(indir, outpath=tempdir+"/", keep_going=keep_going, errdir=settings.error_dest)
-        if status == False:
-            logger.debug("csv concatenation returned status = %s",status)
-            rmtree(tempdir)
-            return False
-        if (badfiles) and not from_annotate:
-            d={}
-            d["epmt_stage_error"]=str(badfiles)
-            logger.error("Job being annotated with %s",str(d))
-# begin HACK: should call a real annotate function            
-            metadatafile = tempdir+"/job_metadata"
-            metadata = read_job_metadata(metadatafile)
-            if not metadata:
-                logger.error("Failed to get %s for annotation of erroneous stage",metadatafile)
+            if status == False:
+                logger.debug("csv concatenation returned status = %s",status)
                 rmtree(tempdir)
                 return False
-            if not merge_and_write_annotations(metadatafile,metadata,d,replace=False):
-                logger.error("Failed to write to %s annotations of erroneous stage",metadatafile)
-                rmtree(tempdir)
-                return False
+            if badfiles:
+                d={}
+                d["epmt_stage_error"]=str(badfiles)
+                logger.error("Job being annotated with %s",str(d))
+                # begin HACK: should call a real annotate function            
+                metadatafile = tempdir+"/job_metadata"
+                metadata = read_job_metadata(metadatafile)
+                if not metadata:
+                    logger.error("Failed to get %s for annotation of erroneous stage",metadatafile)
+                    rmtree(tempdir)
+                    return False
+                if not merge_and_write_annotations(metadatafile,metadata,d,replace=False):
+                    logger.error("Failed to write to %s annotations of erroneous stage",metadatafile)
+                    rmtree(tempdir)
+                    return False
+                
         if compress_and_tar:
             filetostage = gettempdir()+"/"+path.basename(path.dirname(indir))+".tgz"
             cmd = "tar -C "+tempdir+" -cz -f "+filetostage+" ."
@@ -1038,7 +1099,7 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True,from_anno
             
 # end HACK
     cmd = settings.stage_command + " " + filetostage + " " + settings.stage_command_dest
-    logger.debug(cmd)
+    logger.info(cmd)
     return_code = forkexecwait(cmd, shell=True)
     if path.exists(filetostage):
         try:

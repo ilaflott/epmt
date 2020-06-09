@@ -8,9 +8,11 @@ function die {
 dir=$(dirname $0)
 BATS="${dir}/libs/bats/bin/bats"
 test -x $BATS || die "Could not find bats in $BATS"
+command -v epmt >/dev/null 2>&1 || die "Could not find epmt in $PATH"
 
 # add directory containing EPMT to PATH
-export PATH="$dir/../..:${PATH}"
+# NO NO NO. This breaks things and is relative, so it doesn't work!
+# export PATH="$dir/../..:${PATH}"
 
 case $1 in
   "") $BATS "$dir"/*.bats ;;

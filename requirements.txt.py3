@@ -72,6 +72,7 @@ python-dateutil==2.8.0
 python-editor==1.0.4
 pytz==2019.2
 pyzmq==18.1.1
+py-cpuinfo==5.0.0
 qtconsole==4.6.0
 scikit-learn==0.22.1
 scipy==1.4.1
