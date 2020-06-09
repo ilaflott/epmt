@@ -27,21 +27,13 @@ teardown() {
 }
 
 @test "epmt submit" {
-  if epmt list | grep 692500 > /dev/null; then
-      epmt delete 692500
-  fi
   run epmt submit ${resource_path}/epmt/test/data/submit/692500.tgz
   assert_success
   assert_output --partial "Imported successfully - job: 692500 processes: 6486"
 }
 
 @test "epmt submit dir" {
-  if epmt list | grep 804280 > /dev/null; then
-      epmt delete 804280
-  fi
   run epmt submit ${tmp_job_dir}/
   assert_success
   assert_output --partial "Imported successfully - job: 804280 processes: 6039"
-  run epmt submit -n ${resource_path}/epmt/test/data/submit/804280/
-  assert_success
 }
