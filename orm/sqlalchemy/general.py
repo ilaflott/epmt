@@ -186,10 +186,10 @@ def orm_delete_jobs(jobs, use_orm = False):
         stmts = []
         for j in jobs:
             jobid = j.jobid
-            #stmts.append('DELETE FROM ancestor_descendant_associations WHERE EXISTS (SELECT ad.* from ancestor_descendant_associations ad INNER JOIN processes p ON (ad.ancestor = p.id OR ad.descendant = p.id) WHERE p.jobid = \'{0}\')'.format(jobid))
-            #stmts.append('DELETE FROM host_job_associations WHERE host_job_associations.jobid = \'{0}\''.format(jobid))
-            #stmts.append('DELETE FROM refmodel_job_associations WHERE refmodel_job_associations.jobid = \'{0}\''.format(jobid))
-            #stmts.append('DELETE FROM processes WHERE processes.jobid = \'{0}\''.format(jobid))
+            stmts.append('DELETE FROM ancestor_descendant_associations WHERE EXISTS (SELECT ad.* from ancestor_descendant_associations ad INNER JOIN processes p ON (ad.ancestor = p.id OR ad.descendant = p.id) WHERE p.jobid = \'{0}\')'.format(jobid))
+            stmts.append('DELETE FROM host_job_associations WHERE host_job_associations.jobid = \'{0}\''.format(jobid))
+            stmts.append('DELETE FROM refmodel_job_associations WHERE refmodel_job_associations.jobid = \'{0}\''.format(jobid))
+            stmts.append('DELETE FROM processes WHERE processes.jobid = \'{0}\''.format(jobid))
             stmts.append('DELETE FROM jobs WHERE jobs.jobid = \'{0}\''.format(jobid))
         try:
             orm_raw_sql(stmts, commit = True)
