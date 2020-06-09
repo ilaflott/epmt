@@ -47,7 +47,7 @@ teardown() {
   assert_success
   run epmt dump -k tags 3456
   assert_success
-  assert_output --partial "{'jobid': '3456'}"
+  assert_output "{'jobid': '3456'}"
   # Tags with backslash
   run epmt annotate --replace 3456 a=200
   assert_success
@@ -55,22 +55,22 @@ teardown() {
   assert_success
   # Note 1 escaped backslash is dropped in the test
   # This appears tested as {'\\test': '\\hello'}
-  assert_output --partial "{'a': 200}"
+  assert_output "{'a': 200}"
 }
 
 @test "epmt annotate replace jobtags" {
   # first set and verify known tags state
-  run epmt annotate --replace 3456 a=100 EPMT_JOB_TAGS="jobid:3456"
+  run epmt annotate --replace 3456 a=100 EPMT_JOB_TAGS="jobid:3456;ocn_res:0.5l75"
   assert_success
   run epmt dump -k tags 3456
   assert_success
-  assert_output --partial "{'jobid': '3456'}"
+  assert_output "{'jobid': '3456', 'ocn_res': '0.5l75'}"
   # Tags with backslash
   run epmt annotate --replace 3456 'EPMT_JOB_TAGS'='jobid:123'
   assert_success
   run epmt dump -k tags 3456
   assert_success
-  assert_output --partial "{'jobid': '123'}"
+  assert_output "{'jobid': '123'}"
 }
 
 @test "epmt bad annotate" {
@@ -88,13 +88,13 @@ teardown() {
   assert_success
   run epmt dump -k annotations 3456
   assert_success
-  assert_output --partial "{'a': 100"
+  assert_output "{'a': 100, 'EPMT_JOB_TAGS': 'jobid:3456'}"
   # Incomplete annotation
   run epmt annotate --replace 3456 'test'=
   assert_failure
   run epmt dump -k annotations 3456
   assert_success
-  assert_output --partial "{'a': 100, 'EPMT_JOB_TAGS': 'jobid:3456'}"
+  assert_output "{'a': 100, 'EPMT_JOB_TAGS': 'jobid:3456'}"
 }
 
 @test "epmt annotate tag incomplete" {
@@ -103,13 +103,13 @@ teardown() {
   assert_success
   run epmt dump -k tags 3456
   assert_success
-  assert_output --partial "{'jobid': '3456'}"
+  assert_output "{'jobid': '3456'}"
   # Incomplete Job tags
   run epmt annotate 3456 'EPMT_JOB_TAGS'=
   assert_failure
   run epmt dump -k tags 3456
   assert_success
-  assert_output --partial "{'jobid': '3456'}"
+  assert_output "{'jobid': '3456'}"
 }
 
 @test "epmt annotate backslash" {
@@ -118,7 +118,7 @@ teardown() {
   assert_success
   run epmt dump -k tags 3456
   assert_success
-  assert_output --partial "{'jobid': '3456'}"
+  assert_output "{'jobid': '3456'}"
   # Tags with backslash
   run epmt annotate --replace 3456 'EPMT_JOB_TAGS'='\test:\hello'
   assert_success
@@ -126,5 +126,5 @@ teardown() {
   assert_success
   # Note 1 escaped backslash is dropped in the test
   # This appears tested as {'\\test': '\\hello'}
-  assert_output --partial "{'\\\test': '\\\hello'}"
+  assert_output "{'\\\test': '\\\hello'}"
 }
