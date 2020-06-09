@@ -1549,7 +1549,7 @@ def feature_scatter_plot(jobs, features = [], outfile='', annotate = False):
     if outfile:
         print('Plotly Cannot export static images, Feature coming soon')
     else:
-        plt.show()
+        return plt
 
 
     
