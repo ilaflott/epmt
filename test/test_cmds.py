@@ -8,18 +8,51 @@ from epmt_cmd_delete import epmt_delete_jobs
 from epmt_cmd_list import  epmt_list_jobs, epmt_list_procs, epmt_list_job_proc_tags, epmt_list_refmodels, epmt_list_op_metrics, epmt_list_thread_metrics
 
 
+def do_cleanup():
+    eq.delete_jobs(['685000', '627919'], force=True, remove_models = True)
+
 @timing
 def setUpModule():
     print('\n' + str(settings.db_params))
-    setup_db(settings, drop=True)
+    setup_db(settings)
+    do_cleanup()
     datafiles='test/data/misc/685000.tgz'
     print('setUpModule: importing {0}'.format(datafiles))
     epmt_submit(glob(datafiles), dry_run=False)
     
-#def tearDownModule():
+def tearDownModule():
+    do_cleanup()
 
 class EPMTCmds(unittest.TestCase):
 
+    def test_get_papiex_options(self):
+        from epmt_cmds import get_papiex_options
+        from socket import gethostname
+        from cpuinfo import get_cpu_info
+        cpu_info = get_cpu_info()
+        cpu_fms = str(cpu_info['family']) + "/" + str(cpu_info['model']) + "/" + str(cpu_info['stepping'])
+        class S:
+            def __init__(self):
+                self.papiex_options_byhost = dict({gethostname(): "MATCH1"})
+                self.papiex_options_bycpu = dict({cpu_fms: "MATCH2"})
+                self.papiex_options = "DEFAULT"
+        s = S()
+        opts = get_papiex_options(s)
+        self.assertTrue("MATCH1" in opts and "MATCH2" in opts and "DEFAULT" in opts)
+        cpu_fms = str(cpu_info['family']) + "/" + ".*" + "/" + str(cpu_info['stepping'])
+        s.papiex_options_bycpu = dict({cpu_fms: "MATCH3"})
+        opts = get_papiex_options(s)
+        self.assertTrue("MATCH1" in opts and "MATCH3" in opts and "DEFAULT" in opts)
+        s.papiex_options_byhost = dict({".*": "MATCH4"})
+        opts = get_papiex_options(s)
+        self.assertTrue("MATCH4" in opts and "MATCH3" in opts and "DEFAULT" in opts)
+        s.papiex_options_byhost = dict({"*": "MATCH5"})
+        # quell the error messages
+        epmt_logging_init(-2)
+        opts = get_papiex_options(s)
+        epmt_logging_init(-1)
+        self.assertTrue("MATCH5" not in opts)
+        
     @db_session
     def test_daemon_ingest(self):
         from epmt_daemon import daemon_loop
@@ -130,6 +163,7 @@ class EPMTCmds(unittest.TestCase):
             self.assertEqual(type(d), dict, "wrong return type")
             self.assertTrue(len(d.keys()) > 0)
 
+  
     def test_stage(self):
         from epmt_cmds import epmt_stage
         # quell the error messages
@@ -179,6 +213,7 @@ class EPMTCmds(unittest.TestCase):
         jobs = eq.get_jobs(fmt='terse')
         self.assertFalse('627919' in jobs)
 
+    @unittest.skipUnless(orm_in_memory(), 'skip on persistent database')
     def test_zz_drop_db(self):
         jobs = eq.get_jobs(fmt='terse')
         self.assertTrue(len(jobs) > 0)

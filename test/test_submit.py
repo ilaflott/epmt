@@ -3,18 +3,21 @@
 # the import below is crucial to get a sane test environment
 from . import *
 
+def do_cleanup():
+    eq.delete_jobs(['685000', '685003', '685016', '2220', 'corrupted-csv', '804268', '692500'], force=True, remove_models=True)
 
 @timing
 def setUpModule():
     print('\n' + str(settings.db_params))
-    setup_db(settings, drop=True)
+    setup_db(settings)
+    do_cleanup()
     datafiles='test/data/misc/685000.tgz'
     print('setUpModule: importing {0}'.format(datafiles))
     settings.post_process_job_on_ingest = True
     epmt_submit(glob(datafiles), dry_run=False)
     
 def tearDownModule():
-    pass
+    do_cleanup()
 
 class EPMTSubmit(unittest.TestCase):
     @db_session
@@ -111,21 +114,24 @@ class EPMTSubmit(unittest.TestCase):
 
     @db_session
     def test_collated_tsv(self):
-        datafile='test/data/csv/collated-tsv-2220.tgz'
+        datafile='test/data/tsv/collated-tsv-2220.tgz'
         with capture() as (out,err):
             epmt_submit([datafile], dry_run=False, remove_file = False)
         j = Job['2220']
-        if orm_db_provider() == 'postgres':
-            # in postgres the processes are put in a staging table 
+        if orm_db_provider() == 'postgres' and settings.orm == 'sqlalchemy':
+            # in postgres+SQLA the processes are put in a staging table 
+            self.assertTrue(eq.is_job_in_staging(j))
             self.assertFalse(eq.is_job_post_processed(j))
-            self.assertFalse(j.info_dict['procs_in_process_table'])
             self.assertFalse(j.processes)
-            # the orm_to_dict will trigger moving the job
+            # the orm_to_dict will trigger moving the job from staging
             # to processes table and post-processing it in case it's
             # not post_processes
             j_dict = orm_to_dict(j)
+        # at this point the processes will be in the process table
+        # and would have been post-processed
+        self.assertFalse(eq.is_job_in_staging(j))
         self.assertTrue(eq.is_job_post_processed(j))
-        self.assertTrue(j.info_dict['procs_in_process_table'])
+        # confirm that the processing went right
         self.assertEqual(len(j.processes), 2)
         self.assertEqual(j.proc_sums['rssmax'], 9952)
 

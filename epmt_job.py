@@ -140,6 +140,7 @@ def lookup_or_create_user(username):
 # Generator function that returns a
 def get_proc_rows(csvfile, skiprows = 0, fmt='1', metric_names=[]):
     from epmt_convert_csv import OUTPUT_CSV_FIELDS, OUTPUT_CSV_SEP
+    # we only support two formats at present
     if fmt not in ('1', '2'):
         raise ValueError('CSV format ({}), not recognized'.format(fmt))
 
@@ -164,6 +165,8 @@ def get_proc_rows(csvfile, skiprows = 0, fmt='1', metric_names=[]):
             if (not (k in non_numeric_keys)) and r[k]:
                 r[k] = int(r[k])
         if fmt == '2':
+            # CSV v2 format has 'finish' instead of 'end'
+            # so here we adapt to make it like v1
             r['end'] = r['finish']
             del r['finish']
 
@@ -192,19 +195,21 @@ def get_proc_rows(csvfile, skiprows = 0, fmt='1', metric_names=[]):
             # We want to expand that into multiple rows
             # First we get the threads_df array. This a flattened 1-d
             # array of metrics from *all* threads. It is a comma-separated
-            # string enclosed in curly braces 
+            # string enclosed in curly braces. We read in the array and then
+            # split it into multiple rows like v1 format would expect
             thr_arr = row['threads_df'].replace('{','').replace('}','').split(',')
             num_metrics = len(metric_names)
             process_data = []
             for t in range(thr_count):
                 thr_metrics = { metric_names[i]: int(thr_arr[t*num_metrics+i]) for i in range(num_metrics) }
+                # make a new rwo
                 process_data.append(thr_metrics)
             # now merge the data in "row" with the thread 0 data, after removing
             # the threads_df key
             del row['threads_df']
             process_data[0].update(row)
             yield (process_data, row_num, nrows)
-            # advance row pointer
+            # advance row pointer by 1
             row_num += 1
 
 
@@ -728,36 +733,65 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
 #    metadata['job_el_reason'] = reason
 
 def populate_process_table_from_staging(j):
+    '''
+    Populate the processes table by moving the process rows
+    from the processes_staging table and doing necessary
+    field manipulations.
+
+    Parameters
+    ----------
+          j: ORM job object
+
+    Returns
+    -------
+    True on sucess, and False on error
+
+    Notes
+    -----
+    The database operations are done in a transaction so
+    they should be no partial state change. On success,
+    the rows from the staging table will be removed, and
+    have been added to the processes table. Unfortunately,
+    we cannot use a native database row copy, because the
+    field formats change and we need to do some field manipulations.
+    In particular, thread metric sums are computed, and a flattened
+    1-D threads_df is convered to a JSON.
+
+    It is implicitly assumed that we are connecting to a Postgresql
+    database (since SQLite doesn't support direct CSV copy in the
+    first place).
+    '''
     import datetime as dt
     import psycopg2
     jobid = j.jobid
     job_info_dict = j.info_dict
     logger.info('populating process table from staging for job {}'.format(jobid))
     metric_names = j.info_dict['metric_names'].split(',')
+    # get the row IDs of the starting and ending row for the job
+    # in the staging table
     (first_proc_id, last_proc_id) = j.info_dict['procs_staging_ids']
     staged_procs = orm_raw_sql("SELECT id, threads_df, start, finish, tags, hostname, numtids, exename, path, args, pid, ppid, pgid, sid, generation, exitcode, exitsignal FROM processes_staging WHERE id BETWEEN {} AND {}".format(first_proc_id, last_proc_id))
     proc_ids = []
     nprocs = 0
     insert_sql = ""
     _start_time = time.time()
+    # notice the quoted "end" field. end is a reserved word in SQL
     prefix_insert_sql = "INSERT INTO processes(jobid,duration,tags,host_id,threads_df,threads_sums,numtids,cpu_time,exename,path,args,pid,ppid,pgid,sid,gen,exitcode,start,\"end\") VALUES "
     for proc_row in staged_procs:
         nprocs += 1
-        # if nprocs > 10: break
         (proc_id, threads_df, start, finish, tags, host_id, numtids, exename, path, args, pid, ppid, pgid, sid, gen, exitcode, exitsignal) = proc_row
         proc_ids.append(proc_id)
         duration = finish - start  # in us
+        # convert from unix timestamp to python datetime
         start = dt.datetime.fromtimestamp(start / 1e6)
         end = dt.datetime.fromtimestamp(finish / 1e6)
+
+        # take care to escape characters using psycopg2's adapat
         tags = psycopg2.extensions.adapt(dumps(tag_from_string(tags) if tags else {}))
         if args is None: args = ''
         args = args.replace('%', '%%')
         args = psycopg2.extensions.adapt(args)
         
-        # args = dumps(args)
-        # args = ""
-        # print(args)
-       
         threads_sums = { metric_names[i]: int(threads_df[i]) for i in range(len(metric_names)) }
         for t in range(1, numtids):
             for i in range(len(metric_names)):
@@ -765,8 +799,8 @@ def populate_process_table_from_staging(j):
                 # adjacent to the previous 
                 threads_sums[metric_names[i]] += int(threads_df[t*len(metric_names) + i])
         cpu_time = threads_sums.get('usertime', 0) + threads_sums.get('systemtime',0)
+        # threads_sums is to be saved as JSON
         threads_sums = dumps(threads_sums)
-
 
         # threads_df is a flattened list where each thread's metrics are
         # are placed next the previous one. Here we make it into a 
@@ -774,17 +808,21 @@ def populate_process_table_from_staging(j):
         _thr_dict_list = []
         for t in range(numtids):
             _thr_dict_list.append( { metric_names[i]: int(threads_df[t*len(metric_names) + i]) for i in range(len(metric_names)) })
-        # logger.debug('translated {} into {}'.format(threads_df, _thr_dict_list))
+        # threads_df is to be saved as JSON
         threads_df = dumps(_thr_dict_list)
 
         insert_sql += prefix_insert_sql + """('{jobid}',{duration},{tags},'{host_id}','{threads_df}','{threads_sums}',{numtids},{cpu_time},'{exename}','{path}',{args},{pid},{ppid},{pgid},{sid},{gen},{exitcode},'{start}','{end}');\n""".format(jobid=jobid, start=start, end=end, duration=duration, tags=tags, host_id=host_id, threads_df=threads_df, threads_sums=threads_sums, numtids=numtids, cpu_time=cpu_time, exename=exename, path=path, args=args, pid=pid, ppid=ppid, pgid=pgid, sid=sid, gen=gen, exitcode=exitcode)
-    # insert_sql += ";\n"
+
+    # sql to delete the rows from the staging table
     delete_sql = "DELETE FROM processes_staging WHERE id BETWEEN {} AND {};\n".format(first_proc_id, last_proc_id)
+
     job_info_dict['procs_in_process_table'] = 1
     # these fields are meaningless after procs have been moved to the processes table
+    # so we remove them from the job info_dict
     del job_info_dict['procs_staging_ids']
     del job_info_dict['metric_names']
     update_job_sql = "UPDATE jobs SET info_dict = '{}' WHERE jobid = '{}'".format(dumps(job_info_dict), jobid)
+    # now do a transaction
     try:
         orm_raw_sql(insert_sql+delete_sql+update_job_sql, commit=True)
     except Exception as e:
@@ -965,6 +1003,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 msg = "could not extract CSV v2 header file: ", str(e)
                 logger.error(msg)
                 return (False, msg)
+        logger.info('CSV v{} files detected in tar: {}'.format(fmt, ",".join(files)))
 
         # get the metric names from the CSV header file if we have csv v2
         # for v1 they will be determined automatically from the headers in
@@ -973,7 +1012,6 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         metric_names = ''
         if fmt == '2':
             from epmt_convert_csv import OUTPUT_CSV_FIELDS, OUTPUT_CSV_SEP
-            logger.info('CSV v2 files detected in tar: {}'.format(",".join(files)))
             # read the header file and get metric names
             csv_headers = csv_hdr_flo.read()
             csv_hdr_flo.close()
@@ -1022,9 +1060,13 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                     # Also, copy_from cannot handle a HEADER option
                     # cur.copy_from(flo, 'processes_staging', sep=OUTPUT_CSV_SEP, columns=OUTPUT_CSV_FIELDS)
                     cur.copy_expert(copy_sql, flo)
+                    # the rowcount represents the number of rows copied
                     num_procs_copied = cur.rowcount
                     # we need to determine the last row id, so we
-                    # know the job spans from which row to which row
+                    # know the job spans from which row to which row.
+                    # We will save this information in the job metadata in the
+                    # database, so we know which rows to move from staging
+                    # to the process table when processing the job
                     cur.execute('SELECT LASTVAL()')
                     lastid = cur.fetchone()[0]
                     conn.commit()
@@ -1040,6 +1082,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 didsomething = (num_procs_copied > 0)
                 copy_csv_direct = True
                 total_procs += num_procs_copied
+                # save the staging table row id range for the job
                 info_dict['procs_staging_ids'] = (lastid - num_procs_copied + 1, lastid)
                 logger.debug('job process_staging ID range: {}'.format(lastid if num_procs_copied == 1 else info_dict['procs_staging_ids']))
                 # save the metric_names in job info_dict for future use (such as when creating
@@ -1135,6 +1178,8 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         if cnt:
             didsomething = True
 
+    # these stats and the processing below are meaningful for
+    # the case when the data has not been directly ingested into the db
     if not copy_csv_direct:
         logger.debug('file I/O time took: %2.5f sec', file_io_time)
         logger.debug('process load ops took: %2.5f sec', df_process_time)
@@ -1154,7 +1199,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         # procs are not in staging table they will be in the processes table
         info_dict['procs_in_process_table'] = 1
 
-        # cpu_time is now computed during post-process
+        # cpu_time is now computed during post-process to unify code paths
         # j.cpu_time = reduce(lambda c, p: c + p.cpu_time, all_procs, 0)
         # j.cpu_time = sum([p.cpu_time for p in all_procs])
 
@@ -1176,8 +1221,8 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             Session.bulk_insert_mappings(Process, all_procs)
             logger.info('bulk insert of processes took: %2.5f sec', time.time() - _b0)
 
-    
     j.info_dict = info_dict
+
     if settings.post_process_job_on_ingest and not copy_csv_direct:
         # _post_process_start_ts = time.time()
         if settings.bulk_insert:
@@ -1197,6 +1242,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             post_process_job(j, all_tags, all_procs, pid_map, False)
         # logger.debug('post process job took: %2.5f sec', time.time() - _post_process_start_ts)
     else:
+        # mark job as unprocessed. It will need post-processing later
         orm_create(UnprocessedJob, jobid=j.jobid)
         logger.info('Skipped post-processing and marked job as **UNPROCESSED**')
 

@@ -3,7 +3,13 @@
 from . import *
 import os
 
-def remove_stale_files():
+# These will be used in both tests
+# One can embed them in the class, but referring to them with
+# a class prefix is ugly
+jobid = '1011'
+tuser = 'testuser'
+
+def do_cleanup():
    for f in ['1', '1.tgz']:
        try:
            os.remove(f)
@@ -15,31 +21,27 @@ def remove_stale_files():
            shutil.rmtree('/tmp/epmt')
        except Exception:
            pass
+   eq.delete_jobs(jobid)
 
-# These will be used in both tests
-# One can embed them in the class, but referring to them with
-# a class prefix is ugly
-jobid = '1011'
-tuser = 'testuser'
 
 @timing
 def setUpModule():
     setup_db(settings)
     print('\n' + str(settings.db_params))
-    remove_stale_files()
+    do_cleanup()
     from os import environ
     environ['SLURM_JOB_ID'] = jobid
     environ['SLURM_JOB_USER'] = tuser
 
 def tearDownModule():
-    remove_stale_files()
+    do_cleanup()
 
 
 class EPMTShell(unittest.TestCase):
 
     def test_run_auto(self):
         from epmt_cmds import epmt_run
-        remove_stale_files()
+        do_cleanup()
         with capture() as (out,err):
             results = epmt_run(['sleep 1'],wrapit=True,dry_run=False,debug=False)
             self.assertEqual(0, results)
