@@ -28,15 +28,19 @@ teardown() {
   assert_success
   
   # the order of keys in the dict might change based on underlying db
-  assert_output "{'a': 100, 'b': 200, 'inbetween_1': 1, 'inbetween_2': 1, 'c': 200, 'd': 400, 'e': 300, 'f': 600}"
-
+  assert_output --partial "'a': 100, 'b': 200"
+  assert_output --partial "'inbetween_1': 1, 'inbetween_2': 1"
+  assert_output --partial "'c': 200, 'd': 400, 'e': 300, 'f': 600"
   epmt annotate 3456 g=400 h=800  # annotate job in database as well
   run epmt dump -k annotations 3456
-  assert_output "{'a': 100, 'b': 200, 'inbetween_1': 1, 'inbetween_2': 1, 'c': 200, 'd': 400, 'e': 300, 'f': 600, 'g': 400, 'h': 800}"
+  assert_output --partial "'c': 200, 'd': 400, 'e': 300, 'f': 600"
+  assert_output --partial "'g': 400, 'h': 800"
   # special annotation, check we set the tags field
   epmt annotate 3456 EPMT_JOB_TAGS='exp_name:abc;exp_component:def;exp_time:18540101'
   run epmt dump -k tags 3456
-  assert_output "{'exp_name': 'abc', 'exp_component': 'def', 'exp_time': '18540101'}"
+  assert_output --partial "'exp_name': 'abc'"
+  assert_output --partial "'exp_component': 'def'"
+  assert_output --partial "'exp_time': '18540101'"
 }
 
 # Replace is used on setting state on all tests
@@ -64,7 +68,8 @@ teardown() {
   assert_success
   run epmt dump -k tags 3456
   assert_success
-  assert_output "{'jobid': '3456', 'ocn_res': '0.5l75'}"
+  assert_output --partial "'jobid': '3456'"
+  assert_output --partial "'ocn_res': '0.5l75'"
   # Tags with backslash
   run epmt annotate --replace 3456 'EPMT_JOB_TAGS'='jobid:123'
   assert_success
@@ -88,13 +93,16 @@ teardown() {
   assert_success
   run epmt dump -k annotations 3456
   assert_success
-  assert_output "{'a': 100, 'EPMT_JOB_TAGS': 'jobid:3456'}"
+  assert_output --partial "'a': 100"
+  assert_output --partial "'EPMT_JOB_TAGS': 'jobid:3456'"
+  
   # Incomplete annotation
   run epmt annotate --replace 3456 'test'=
   assert_failure
   run epmt dump -k annotations 3456
   assert_success
-  assert_output "{'a': 100, 'EPMT_JOB_TAGS': 'jobid:3456'}"
+  assert_output --partial "'a': 100"
+  assert_output --partial "'EPMT_JOB_TAGS': 'jobid:3456'"
 }
 
 @test "epmt annotate tag incomplete" {
