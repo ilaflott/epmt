@@ -2718,3 +2718,51 @@ def is_job_post_processed(job):
     info_dict = job.info_dict or {}
     # we retain the j.proc_sums check to retain backward compatibility
     return ((info_dict.get('post_processed', 0) > 0) or (job.proc_sums != None))
+
+@db_session
+def get_job_staging_ids(j):
+    '''
+    Get the range of rows a job's processes span in the staging table
+
+    Parameters
+    ----------
+       j : ORM job object or string
+           Job or jobid
+
+    Returns
+    -------
+    tuple of integers, possibly empty
+
+    If the job is the staging table, the tuple consists of two integers:
+      (first_proc_id, last_proc_id)
+    If job is not in the staging table returns an empty tuple: ()
+
+    Notes
+    -----
+    It is safe to call this function on jobs both in staging table and not.
+    '''
+    if type(j) == str:
+        j = Job[j]
+    return j.info_dict.get('procs_staging_ids', ())
+
+@db_session
+def is_job_in_staging(j):
+    '''
+    Return True if job processes are in staging table, False otherwise
+
+    Parameters
+    ----------
+       j : ORM job object or string
+           Job or jobid
+
+    Returns
+    -------
+    True if job is in staging, False otherwise
+
+    Notes
+    -----
+    The job must exist in the database, otherwise an exception will be raised
+    '''
+    if type(j) == str:
+        j = Job[j]
+    return (j.info_dict.get('procs_in_process_table', 1) == 0)
