@@ -5,10 +5,15 @@ from . import *
 
 JOBS_LIST = ['685016', '685003', '685000']
 
+
+def do_cleanup():
+    eq.delete_jobs(JOBS_LIST, force=True, remove_models = True)
+
 @timing
 def setUpModule():
     print('\n' + str(settings.db_params))
-    setup_db(settings, drop = True)
+    setup_db(settings)
+    do_cleanup()
     datafiles='test/data/query/*.tgz'
     print('setUpModdule: importing {0}'.format(datafiles))
     epmt_submit(sorted(glob(datafiles)), dry_run=False)
@@ -17,7 +22,7 @@ def setUpModule():
     
 
 def tearDownModule():
-    pass
+    do_cleanup()
 
 class QueryAPI(unittest.TestCase):
 #     # called ONCE before before first test in this class starts

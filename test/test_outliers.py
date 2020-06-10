@@ -6,10 +6,15 @@ from json import loads
 import epmt_outliers as eod
 
 
+def do_cleanup():
+    eq.delete_jobs(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], force=True, remove_models = True)
+
+
 @timing
 def setUpModule():
     print('\n' + str(settings.db_params))
-    setup_db(settings, drop=True)
+    setup_db(settings)
+    do_cleanup()
     datafiles='test/data/outliers/*.tgz'
     print('setUpModule: importing {0}'.format(datafiles))
     environ['EPMT_TZ'] = 'Asia/Kolkata'
@@ -21,7 +26,7 @@ def setUpModule():
     settings.outlier_thresholds['z_score'] = 1.5 
 
 def tearDownModule():
-    pass
+    do_cleanup()
 
 class OutliersAPI(unittest.TestCase):
 ##    # called ONCE before before first test in this class starts

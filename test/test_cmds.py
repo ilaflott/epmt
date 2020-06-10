@@ -8,15 +8,20 @@ from epmt_cmd_delete import epmt_delete_jobs
 from epmt_cmd_list import  epmt_list_jobs, epmt_list_procs, epmt_list_job_proc_tags, epmt_list_refmodels, epmt_list_op_metrics, epmt_list_thread_metrics
 
 
+def do_cleanup():
+    eq.delete_jobs(['685000', '627919'], force=True, remove_models = True)
+
 @timing
 def setUpModule():
     print('\n' + str(settings.db_params))
-    setup_db(settings, drop=True)
+    setup_db(settings)
+    do_cleanup()
     datafiles='test/data/misc/685000.tgz'
     print('setUpModule: importing {0}'.format(datafiles))
     epmt_submit(glob(datafiles), dry_run=False)
     
-#def tearDownModule():
+def tearDownModule():
+    do_cleanup()
 
 class EPMTCmds(unittest.TestCase):
 
@@ -208,6 +213,7 @@ class EPMTCmds(unittest.TestCase):
         jobs = eq.get_jobs(fmt='terse')
         self.assertFalse('627919' in jobs)
 
+    @unittest.skipUnless(orm_in_memory(), 'skip on persistent database')
     def test_zz_drop_db(self):
         jobs = eq.get_jobs(fmt='terse')
         self.assertTrue(len(jobs) > 0)

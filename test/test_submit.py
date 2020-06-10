@@ -3,18 +3,21 @@
 # the import below is crucial to get a sane test environment
 from . import *
 
+def do_cleanup():
+    eq.delete_jobs(['685000', '685003', '685016', '2220', 'corrupted-csv', '804268', '692500'], force=True, remove_models=True)
 
 @timing
 def setUpModule():
     print('\n' + str(settings.db_params))
-    setup_db(settings, drop=True)
+    setup_db(settings)
+    do_cleanup()
     datafiles='test/data/misc/685000.tgz'
     print('setUpModule: importing {0}'.format(datafiles))
     settings.post_process_job_on_ingest = True
     epmt_submit(glob(datafiles), dry_run=False)
     
 def tearDownModule():
-    pass
+    do_cleanup()
 
 class EPMTSubmit(unittest.TestCase):
     @db_session
