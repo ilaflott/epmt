@@ -115,8 +115,8 @@ class EPMTSubmit(unittest.TestCase):
         with capture() as (out,err):
             epmt_submit([datafile], dry_run=False, remove_file = False)
         j = Job['2220']
-        if orm_db_provider() == 'postgres':
-            # in postgres the processes are put in a staging table 
+        if orm_db_provider() == 'postgres' and settings.orm == 'sqlalchemy':
+            # in postgres+SQLA the processes are put in a staging table 
             self.assertTrue(eq.is_job_in_staging(j))
             self.assertFalse(eq.is_job_post_processed(j))
             self.assertFalse(j.processes)
@@ -124,8 +124,11 @@ class EPMTSubmit(unittest.TestCase):
             # to processes table and post-processing it in case it's
             # not post_processes
             j_dict = orm_to_dict(j)
+        # at this point the processes will be in the process table
+        # and would have been post-processed
         self.assertFalse(eq.is_job_in_staging(j))
         self.assertTrue(eq.is_job_post_processed(j))
+        # confirm that the processing went right
         self.assertEqual(len(j.processes), 2)
         self.assertEqual(j.proc_sums['rssmax'], 9952)
 
