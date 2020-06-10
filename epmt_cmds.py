@@ -660,7 +660,6 @@ def get_papiex_options(s):
     option_hl = option_h.split(',')
     option_cl = option_c.split(',')
     option_dl = option_d.split(',')
-    print(option_hl,option_cl,option_dl)
     options = list(set(option_hl+option_cl+option_dl))
     return ','.join(filter(None, options))
 
