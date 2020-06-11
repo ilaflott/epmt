@@ -1183,11 +1183,67 @@ def epmt_entrypoint(args):
     if args.command == 'integration':
         import subprocess
         from epmtlib import get_install_root
+        from glob import glob
+        req_tests = None
+        tests_to_run = []
+        logger.debug("exclude {}".format(args.exclude))
+        if args.epmt_cmd_args:
+            req_tests = args.epmt_cmd_args
         install_root = get_install_root()
-        logger.info('changing directory to ' + install_root)
-        chdir(install_root)
-        retval = subprocess.run('test/integration/run_integration')
-        return retval.returncode
+        bats_tester = install_root+'/test/integration/libs/bats/bin/bats'
+        #sample_test = install_root+'/test/integration/001-basic.bats'
+        test_folder = install_root+'/test/integration'
+        from glob import glob
+        from os.path import basename
+        # Get test names in test directory
+        tests = [basename(x) for x in glob(test_folder+'/*.bats')]
+        # Search the requested test names without path for a match
+        if req_tests:
+            for r in req_tests:
+                added = False
+                for t in tests:
+                    # if test is requested
+                    if r in t:
+                        tests_to_run.append(t)
+                        added = True
+                if not added:
+                    # Stop if exit on error requested
+                    if args.error:
+                        from sys import stderr
+                        print('Could not find test {}'.format(r), file=stderr)
+                        return -1
+                    else:
+                        logger.warning("Could not find a test containing '{}' in testdir: {}".format(r,test_folder))
+            if len(tests_to_run) < 1:
+                from sys import stderr
+                print('No test found', file=stderr)
+                return -1
+        else:
+            tests_to_run = tests
+        # Now remove any excluded items
+        tests_to_run = list(filter(None,[n if a not in n else None for n in tests_to_run for a in args.exclude]))
+
+        status = 0
+        for test in tests_to_run:
+            test_path = test_folder + '/' + test
+            print(test_path)
+            retval = subprocess.run(bats_tester+" "+test_path,shell=True)
+            logger.debug("exitcode is {}".format(retval.returncode))
+            if retval.returncode is not 0:
+                # Stop if exit on error requested
+                if args.error:
+                    from sys import stderr
+                    print('{} unit tests FAILED'.format(test), file=stderr)
+                    return retval.returncode
+                # Assign a bad test marker
+                else:
+                    status = retval.returncode
+        if status is not 0:
+            from sys import stderr
+            print('\n\nOne (or more) unit tests FAILED', file=stderr)
+            return status
+        print('All {} test(s) successfully PASSED'.format(len(tests_to_run)))
+        return status
 
     if args.command == 'unittest':
         import unittest
