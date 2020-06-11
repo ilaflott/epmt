@@ -1193,6 +1193,8 @@ def epmt_entrypoint(args):
         bats_tester = install_root+'/test/integration/libs/bats/bin/bats'
         #sample_test = install_root+'/test/integration/001-basic.bats'
         test_folder = install_root+'/test/integration'
+        logger.debug("Bats: {}".format(bats_tester))
+        logger.debug("test directory: {}".format(test_folder))
         from glob import glob
         from os.path import basename
         # Get test names in test directory
@@ -1214,15 +1216,17 @@ def epmt_entrypoint(args):
                         return -1
                     else:
                         logger.warning("Could not find a test containing '{}' in testdir: {}".format(r,test_folder))
-            if len(tests_to_run) < 1:
+        else:
+            tests_to_run = tests
+        logger.debug("Tests: {}".format(tests_to_run))
+        if len(args.exclude):
+            logger.debug("Excluding: {}".format(args.exclude))
+            # Now remove any excluded items
+            tests_to_run = list(filter(None,[n if a not in n else None for n in tests_to_run for a in args.exclude]))
+        if len(tests_to_run) < 1:
                 from sys import stderr
                 print('No test found', file=stderr)
                 return -1
-        else:
-            tests_to_run = tests
-        # Now remove any excluded items
-        tests_to_run = list(filter(None,[n if a not in n else None for n in tests_to_run for a in args.exclude]))
-
         status = 0
         for test in tests_to_run:
             test_path = test_folder + '/' + test
