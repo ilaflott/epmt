@@ -2,12 +2,16 @@ load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 
 
-# this test only works with sqla+postgres
 @test "epmt with COLLATED_TSV" {
-  orm=$(epmt -h | grep orm:| cut -f2 -d:)
-  [[ $orm == "sqlalchemy" ]] || skip
-  db_params=$(epmt -h | grep db_params:| cut -f2- -d:)
-  [[ "$db_params" =~ "postgres" ]] || skip
+ # the test only works with a persistent db
+  if  epmt help| grep db_params| grep -w memory > /dev/null; then
+      skip
+  fi
+
+  # orm=$(epmt -h | grep orm:| cut -f2 -d:)
+  # [[ $orm == "sqlalchemy" ]] || skip
+  # db_params=$(epmt -h | grep db_params:| cut -f2- -d:)
+  # [[ "$db_params" =~ "postgres" ]] || skip
 
   jobid=$RANDOM
   export SLURM_JOB_ID=$jobid
