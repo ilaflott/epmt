@@ -1,15 +1,18 @@
 load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 
+setup(){
+  stage_dest=$(epmt -h | sed -n 's/stage_command_dest://p')
+  test -n "${stage_dest}" || fail
+  test -d ${stage_dest} || fail
+  rm -f ${stage_dest}/989.tgz
+  epmt delete 989
+}
 
 # this test only works with sqla+postgres
 @test "epmt with COLLATED_TSV" {
-  orm=$(epmt -h | grep orm:| cut -f2 -d:)
-  [[ $orm == "sqlalchemy" ]] || skip
-  db_params=$(epmt -h | grep db_params:| cut -f2- -d:)
-  [[ "$db_params" =~ "postgres" ]] || skip
 
-  jobid=$RANDOM
+  jobid=989
   export SLURM_JOB_ID=$jobid
   export EPMT_JOB_TAGS='op:check-tsv'
   epmt start           # Generate prolog
@@ -23,4 +26,7 @@ load 'libs/bats-assert/load'
   epmt list | grep -w $jobid > /dev/null
   run epmt dump -k tags $jobid 
   assert_output "{'op': 'check-tsv'}"
+  run test -f ${stage_dest}/989.tgz || fail
+  assert_success
+  rm -f ${stage_dest}/989.tgz
 }

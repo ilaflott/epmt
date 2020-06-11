@@ -2,6 +2,19 @@ load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 
 
+setup_file(){
+  stage_dest=$(epmt -h | sed -n 's/stage_command_dest://p')
+  test -n "${stage_dest}" || fail
+  test -d ${stage_dest} || fail
+  rm -f ${stage_dest}/988.tgz
+  jobs_in_module = "988 kernel_build CSV_v1 kernel_build COLLATED_TSV"
+  epmt delete ${jobs_in_module} || true
+}
+teardown_file() {
+  jobs_in_module = "988 kernel_build CSV_v1 kernel_build COLLATED_TSV"
+  epmt delete ${jobs_in_module} || true
+}
+
 # the actual compile step
 # you will need the following deps installed:
 #   sudo apt-get install build-essential libncurses-dev bison flex libssl-dev libelf-dev coreutils
@@ -28,7 +41,7 @@ function _compile() {
 
 function kernel_build() {
   opt=$1
-  jobid=$RANDOM
+  jobid=988
   export SLURM_JOB_ID=$jobid
   export EPMT_JOB_TAGS="exp_name:kernel_build;papiex_options:$opt"
   epmt start           # Generate prolog
