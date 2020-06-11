@@ -18,6 +18,11 @@ if orm_db_provider() == 'postgres':
     from sqlalchemy.dialects.postgresql import ARRAY
     postgres = True
 else:
+    # SQLite doesn't support ARRAY, so we compile arrays as JSON
+    # Note, you must have the custom_types import done AFTER the
+    # ARRAY import from sqlalchemy.types
+    from sqlalchemy.types import ARRAY
+    import orm.sqlalchemy.custom_types
     postgres = False
 
 
@@ -33,7 +38,7 @@ def upgrade():
     sa.Column('created_at', sa.DateTime(), server_default=sa.func.now()),
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('jobid', sa.String(), nullable=True),
-    sa.Column('threads_df', ARRAY(sa.Float) if postgres else sa.Text(), nullable=True),
+    sa.Column('threads_df', ARRAY(sa.Float), nullable=True),
     sa.Column('hostname', sa.String(), nullable=True),
     sa.Column('tags', sa.String(), nullable=True),
     sa.Column('exename', sa.String(), nullable=True),

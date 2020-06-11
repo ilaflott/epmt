@@ -820,7 +820,9 @@ def populate_process_table_from_staging(j):
     # these fields are meaningless after procs have been moved to the processes table
     # so we remove them from the job info_dict
     del job_info_dict['procs_staging_ids']
-    del job_info_dict['metric_names']
+    # We want to retain the metric_names in the job info_dict, so don't remove
+    # it below, anymore
+    # del job_info_dict['metric_names']
     update_job_sql = "UPDATE jobs SET info_dict = '{}' WHERE jobid = '{}'".format(dumps(job_info_dict), jobid)
     # now do a transaction
     try:
@@ -1020,6 +1022,9 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             metric_names = csv_headers[OUTPUT_CSV_FIELDS.index('threads_df')]
             metric_names = metric_names.replace('{','').replace('}','')
             logger.debug('per-thread metric names: {}'.format(metric_names))
+            # save the metric_names in job info_dict for future use (such as when creating
+            # threads_df from a flattened array
+            info_dict['metric_names'] = metric_names
 
         for f in files:
             fileno += 1
@@ -1085,9 +1090,6 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 # save the staging table row id range for the job
                 info_dict['procs_staging_ids'] = (lastid - num_procs_copied + 1, lastid)
                 logger.debug('job process_staging ID range: {}'.format(lastid if num_procs_copied == 1 else info_dict['procs_staging_ids']))
-                # save the metric_names in job info_dict for future use (such as when creating
-                # threads_df from a flattened array
-                info_dict['metric_names'] = metric_names
                 continue
 
             csv_file = StringIO(flo.read().decode('utf8'))
@@ -1119,6 +1121,12 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 if not p:
                     logger.error("Failed loading process, file %s!",f);
                     continue
+
+                if not 'metric_names' in info_dict:
+                    # save the metric names in the info_dict
+                    # only need to do this once
+                    info_dict['metric_names'] = ",".join(sorted(p.threads_sums.keys()))
+
 # If using old version of papiex, process tags are in the comment field
                 _proc_tag_start_ts = time.time()
                 if not p.tags:
