@@ -99,26 +99,27 @@ distclean: clean
 
 # We should get rid of this in favor of a sequence of epmt commands.
 
-check: check-python-shells check-unittests check-integration-tests
+check: check-unittests check-integration-tests
 
-EPMT_TEST_ENV=PATH=${PWD}:${PATH} SLURM_JOB_USER=`whoami`
+EPMT_TEST_ENV=PATH=${PWD}:${PATH}
 
-check-python-shells:
-	@rm -rf /tmp/epmt
-	@echo "epmt-example.tcsh (tcsh)" ; env -i SLURM_JOB_ID=111 ${EPMT_TEST_ENV} /bin/tcsh -e epmt-example.tcsh
-	@rm -rf /tmp/epmt
-	@echo "epmt-example.csh (csh)" ; env -i SLURM_JOB_ID=111 ${EPMT_TEST_ENV} /bin/csh -e epmt-example.csh
-	@rm -rf /tmp/epmt
-	@echo "epmt-example.bash (bash)" ; env -i SLURM_JOB_ID=222 ${EPMT_TEST_ENV} /bin/bash -Eeu epmt-example.bash
-	@rm -rf /tmp/epmt
-	@echo "epmt-example.sh (sh)" ; env -i SLURM_JOB_ID=111 ${EPMT_TEST_ENV} /bin/sh -e epmt-example.sh
-	@rm -rf /tmp/epmt
 check-unittests: # Why not test all of them?
 	@env -i TERM=ansi PATH=${PWD}:${PATH} python3 -m unittest -v -f test.test_lib test.test_stat test.test_settings test.test_anysh test.test_submit test.test_run test.test_cmds test.test_query test.test_explore test.test_outliers test.test_db_schema test.test_db_migration
 
 #
 # Not used
 #
+
+check-python-shells:
+	@rm -rf /tmp/epmt
+	@echo "epmt-example.tcsh (tcsh)" ; env -i SLURM_JOB_ID=111 ${EPMT_TEST_ENV} /bin/tcsh -e epmt-example.tcsh
+	@rm -rf /tmp/epmt
+	@echo "epmt-example.csh (csh)" ; env -i SLURM_JOB_ID=222 ${EPMT_TEST_ENV} /bin/csh -e epmt-example.csh
+	@rm -rf /tmp/epmt
+	@echo "epmt-example.bash (bash)" ; env -i SLURM_JOB_ID=333 ${EPMT_TEST_ENV} /bin/bash -Eeu epmt-example.bash
+	@rm -rf /tmp/epmt
+	@echo "epmt-example.sh (sh)" ; env -i SLURM_JOB_ID=444 ${EPMT_TEST_ENV} /bin/sh -e epmt-example.sh
+	@rm -rf /tmp/epmt
 
 docker-test-dist: release/$(EPMT_RELEASE) release/test-$(EPMT_RELEASE)
 	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test -t $(OS_TARGET)-epmt-test --build-arg release=release/$(EPMT_RELEASE) --build-arg release_test=release/$(EPMT_RELEASE) .
