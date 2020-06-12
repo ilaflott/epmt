@@ -60,8 +60,12 @@ class EPMTSubmit(unittest.TestCase):
         with self.assertRaises(Exception):
             Job['685003']
         Job['685000']
+        # quell the error message
+        epmt_logging_init(-2)
         with capture() as (out,err):
             epmt_submit(['test/data/query/685000.tgz', 'test/data/query/685003.tgz'], keep_going=False, dry_run=False)
+        # restore logging level
+        epmt_logging_init(-1)
         # because keep_going is disabled, when we find 685000 in the db,
         # we should not attempt to ingest 685003
         with self.assertRaises(Exception):
