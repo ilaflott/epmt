@@ -6,7 +6,7 @@ setup(){
   test -n "${stage_dest}" || fail
   test -d ${stage_dest} || fail
   rm -f ${stage_dest}/989.tgz
-  epmt delete 989
+  epmt delete 989 || true
 }
 
 # this test only works with sqla+postgres

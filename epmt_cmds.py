@@ -1244,7 +1244,7 @@ def epmt_entrypoint(args):
                     status = retval.returncode
         if status is not 0:
             from sys import stderr
-            print('\n\nOne (or more) unit tests FAILED', file=stderr)
+            print('\n\nOne (or more) integration tests FAILED', file=stderr)
             return status
         print('All {} test(s) successfully PASSED'.format(len(tests_to_run)))
         return status
