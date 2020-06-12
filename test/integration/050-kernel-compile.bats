@@ -78,13 +78,18 @@ function kernel_build() {
   rm -f $jobid.tgz
 }
 
-# this test only works with sqla+postgres
 @test "kernel compile with COLLATED_TSV" {
   skip
-  orm=$(epmt -h | grep orm:| cut -f2 -d:)
-  [[ $orm == "sqlalchemy" ]] || skip
-  db_params=$(epmt -h | grep db_params:| cut -f2- -d:)
-  [[ "$db_params" =~ "postgres" ]] || skip
+  # the test only works with a persistent db
+  if  epmt help| grep db_params| grep -w memory > /dev/null; then
+      skip
+  fi
+
+  # orm=$(epmt -h | grep orm:| cut -f2 -d:)
+  # [[ $orm == "sqlalchemy" ]] || skip
+  # db_params=$(epmt -h | grep db_params:| cut -f2- -d:)
+  # [[ "$db_params" =~ "postgres" ]] || skip
+
   jobid=`kernel_build COLLATED_TSV`
   run tar tzf ./$jobid.tgz
   assert_output --partial papiex.tsv

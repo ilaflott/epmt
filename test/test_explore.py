@@ -5,17 +5,22 @@ from . import *
 import epmt_exp_explore as exp
 
 
+
+def do_cleanup():
+    eq.delete_jobs(['685000', '685003'], force=True, remove_models = True)
+
 @timing
 def setUpModule():
     print('\n' + str(settings.db_params))
-    setup_db(settings, drop=True)
+    setup_db(settings)
+    do_cleanup()
     datafiles='test/data/query/68500[03].tgz'
     print('setUpModdule: importing {0}'.format(datafiles))
     epmt_submit(sorted(glob(datafiles)), dry_run=False)
     
 
 def tearDownModule():
-    pass
+    do_cleanup()
 
 class ExploreAPI(unittest.TestCase):
 #     # called ONCE before before first test in this class starts

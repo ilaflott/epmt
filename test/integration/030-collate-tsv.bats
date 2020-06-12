@@ -9,7 +9,6 @@ setup(){
   epmt delete 989 || true
 }
 
-# this test only works with sqla+postgres
 @test "epmt with COLLATED_TSV" {
 
   jobid=989

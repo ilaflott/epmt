@@ -1770,7 +1770,7 @@ op_duration_method: string, optional
     return all_procs
 
 @db_session
-def delete_jobs(jobs, force = False, before=None, after=None, warn = True):
+def delete_jobs(jobs, force = False, before=None, after=None, warn = True, remove_models = False):
     """
     Deletes one or more jobs and returns the number of jobs deleted::Jobs
 
@@ -1796,6 +1796,11 @@ def delete_jobs(jobs, force = False, before=None, after=None, warn = True):
             Default True. When disabled, no warnings will be given about attempting
             to delete jobs that have models associated with them. Instead
             those jobs will be skipped.
+
+remove_models : boolean, optional
+            By default False. If set to True, dependent reference models will
+            removed prior to removal of the job. If False, jobs with dependent
+            models will not be deleted.
             
     Notes
     -----
@@ -1843,14 +1848,23 @@ def delete_jobs(jobs, force = False, before=None, after=None, warn = True):
             jobs_with_models[j.jobid] = [r.id for r in j.ref_models]
         else:
             jobs_to_delete.append(j.jobid)
+
     if jobs_with_models:
-        if warn:
-            logger.warning('The following jobs have models (their IDs have been mentioned in square brackets) associated with them and these jobs will not be deleted:\n\t%s\n', str(jobs_with_models))
-        if not jobs_to_delete:
-            logger.info('No jobs match criteria to delete. Bailing..')
-            return 0
-        jobs = orm_jobs_col(jobs_to_delete)
-        num_jobs = len(jobs_to_delete)
+        if remove_models:
+            models_to_remove = set([])
+            for (jobid, models) in jobs_with_models.items():
+                jobs_to_delete.append(jobid)
+                models_to_remove |= set(models)
+            logger.info("Deleting dependent reference models: {}".format(models_to_remove))
+            delete_refmodels(*models_to_remove)
+        else:
+            if warn:
+                logger.warning('The following jobs have models (their IDs have been mentioned in square brackets) associated with them and these jobs will not be deleted:\n\t%s\n', str(jobs_with_models))
+    if not jobs_to_delete:
+        logger.info('No jobs match criteria to delete. Bailing..')
+        return 0
+    jobs = orm_jobs_col(jobs_to_delete)
+    num_jobs = len(jobs_to_delete)
     logger.info('deleting %d jobs (%s), in an atomic operation..', num_jobs, str(jobs_to_delete))
     orm_delete_jobs(jobs)
     return num_jobs
@@ -2718,3 +2732,51 @@ def is_job_post_processed(job):
     info_dict = job.info_dict or {}
     # we retain the j.proc_sums check to retain backward compatibility
     return ((info_dict.get('post_processed', 0) > 0) or (job.proc_sums != None))
+
+@db_session
+def get_job_staging_ids(j):
+    '''
+    Get the range of rows a job's processes span in the staging table
+
+    Parameters
+    ----------
+       j : ORM job object or string
+           Job or jobid
+
+    Returns
+    -------
+    tuple of integers, possibly empty
+
+    If the job is the staging table, the tuple consists of two integers:
+      (first_proc_id, last_proc_id)
+    If job is not in the staging table returns an empty tuple: ()
+
+    Notes
+    -----
+    It is safe to call this function on jobs both in staging table and not.
+    '''
+    if type(j) == str:
+        j = Job[j]
+    return j.info_dict.get('procs_staging_ids', ())
+
+@db_session
+def is_job_in_staging(j):
+    '''
+    Return True if job processes are in staging table, False otherwise
+
+    Parameters
+    ----------
+       j : ORM job object or string
+           Job or jobid
+
+    Returns
+    -------
+    True if job is in staging, False otherwise
+
+    Notes
+    -----
+    The job must exist in the database, otherwise an exception will be raised
+    '''
+    if type(j) == str:
+        j = Job[j]
+    return (j.info_dict.get('procs_in_process_table', 1) == 0)

@@ -170,17 +170,20 @@ def orm_jobs_col(jobs):
     from .models import Job
     if orm_is_query(jobs):
         return jobs
+    # empty jobs => select all jobs
     if ((type(jobs) != DataFrame) and not(jobs)):
         return Job.select()
+
     if type(jobs) == DataFrame:
         jobs = list(jobs['jobid'])
+
     if isString(jobs):
         if ',' in jobs:
             # jobs a string of comma-separated job ids
             jobs = [ j.strip() for j in jobs.split(",") ]
         else:
-            # job is a single jobid
-            jobs = Job[jobs]
+            # job is a single jobid, wrap it in a list
+            jobs = [jobs]
     if type(jobs) == Job:
         # is it a singular job?
         jobs = [jobs]
@@ -188,7 +191,17 @@ def orm_jobs_col(jobs):
         # jobs is a list of Job objects or a list of jobids or a list of dicts
         # so first convert the dict list to a jobid list
         jobs = [ j['jobid'] if type(j) == dict else j for j in jobs ]
-        jobs = [ Job[j] if isString(j) else j for j in jobs ]
+
+        # now process the list of jobids to make it a list of Job objects
+        # keeping in mind that you may already have a job object to begin with
+        # Also, remember some jobids may not exist, so don't barf, just skip
+        job_objects = []
+        for j in jobs:
+            if isString(j):
+                j = orm_get(Job, j)
+                if j is None: continue # job doesn't exist
+            job_objects.append(j)
+        jobs = job_objects
         # and now convert to a pony Query object so the user can chain
         jobs = Job.select(lambda j: j in jobs)
     return jobs
