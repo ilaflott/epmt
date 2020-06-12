@@ -880,8 +880,15 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1, remo
         for f in work_list:
             r = submit_to_db(f,settings.input_pattern,dry_run=dry_run, remove_file=remove_file)
             retval[f] = r
-            if not(r[0]) and not keep_going:
-                break
+            if not keep_going:
+                if not(r[0]): 
+                    break # there was an error
+                # even if r[0] is True, there is one condition
+                # where the job is in the database, when we don't
+                # have any submit details. In such a case with keep_going
+                # disabled, we need to error out
+                if not(r[-1]):
+                    break
         ret_dict[tid] = dumps(retval)
         return
     # we shouldn't use more processors than the number of discrete
@@ -933,8 +940,13 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1, remo
             elif not submit_details:
                 # we may have a True status, but if submit_details is empty
                 # that means the job was already in the database, and we
-                # couldn't submit it
-                logger.info('%s: %s', msg, f)
+                # couldn't submit it. Our behavior depends on whether keep_going
+                # is enabled or not. If it is, then 
+                if keep_going:
+                    logger.info('%s: %s', msg, f)
+                else:
+                    logger.error('%s: %s', msg, f)
+                    error_occurred = True
             else:
                 # status => True, and details contains the submit details
                 (jobid, process_count) = submit_details

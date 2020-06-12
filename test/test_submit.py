@@ -53,7 +53,19 @@ class EPMTSubmit(unittest.TestCase):
             epmt_submit(['test/data/query/685003.tgz'], dry_run=True)
         # the job should still not be in the database
         with self.assertRaises(Exception):
-            Job['685003'] 
+            Job['685003']
+
+    @db_session
+    def test_submit_minus_e(self):
+        with self.assertRaises(Exception):
+            Job['685003']
+        Job['685000']
+        with capture() as (out,err):
+            epmt_submit(['test/data/query/685000.tgz', 'test/data/query/685003.tgz'], keep_going=False, dry_run=False)
+        # because keep_going is disabled, when we find 685000 in the db,
+        # we should not attempt to ingest 685003
+        with self.assertRaises(Exception):
+            Job['685003']
        
 
     @db_session
