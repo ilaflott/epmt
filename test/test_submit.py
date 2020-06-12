@@ -46,6 +46,17 @@ class EPMTSubmit(unittest.TestCase):
         self.assertEqual(sum([p.duration for p in j.processes]), 24717624686.0, 'wrong proc duration aggregate')
 
     @db_session
+    def test_dry_run(self):
+        with self.assertRaises(Exception):
+            Job['685003'] 
+        with capture() as (out,err):
+            epmt_submit(['test/data/query/685003.tgz'], dry_run=True)
+        # the job should still not be in the database
+        with self.assertRaises(Exception):
+            Job['685003'] 
+       
+
+    @db_session
     def test_unprocessed_jobs(self):
         from orm import UnprocessedJob, orm_commit
         from epmt_job import post_process_pending_jobs, post_process_job

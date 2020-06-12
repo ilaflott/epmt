@@ -843,7 +843,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     # it will not waste time re-checking (since it marks the metadata as checked)
     metadata = check_fix_metadata(raw_metadata) 
     if metadata is False:
-        return (False, 'Error: Could not get valid metadata')
+        return (False, 'Error: Could not get valid metadata', ())
     job_status = {}
     if metadata.get('job_pl_scriptname'):
         job_status['script_name'] = metadata['job_pl_scriptname']
@@ -893,7 +893,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             if job_tags and job_tag_from_ann:
                 if (job_tags != job_tag_from_ann):
                     err_msg = 'Metadata and annotations contain different job tags:\n{} (metadata),\n{} (annotations)'.format(job_tags, job_tag_from_ann)
-                    return (False, err_msg)
+                    return (False, err_msg, ())
                 else:
                     logger.warning('Both metadata and annotations have the same job tags')
             job_tags = job_tag_from_ann or job_tags
@@ -937,7 +937,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         u = lookup_or_create_user(username)
     j = create_job(jobid,u)
     if not j: # FIX! We might have leaked a username to the database here
-        return (None, 'Job already in database')
+        return (True, 'Job already in database', ())
     j.jobname = jobname
     j.exitcode = exitcode
     j.annotations = annotations    
@@ -1004,7 +1004,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             except Exception as e:
                 msg = "could not extract CSV v2 header file: ", str(e)
                 logger.error(msg)
-                return (False, msg)
+                return (False, msg, ())
         logger.info('CSV v{} files detected in tar: {}'.format(fmt, ",".join(files)))
 
         # get the metric names from the CSV header file if we have csv v2
@@ -1200,7 +1200,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         if filedict:
             if not didsomething:
                 logger.warning("Something went wrong in parsing CSV files")
-                return (False, "Error parsing CSV")
+                return (False, "Error parsing CSV", ())
         else:
             logger.warning("job %s, user %s, jobname %s has no CSV data",jobid,username,jobname)
 

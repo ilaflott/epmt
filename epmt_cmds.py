@@ -880,7 +880,7 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1, remo
         for f in work_list:
             r = submit_to_db(f,settings.input_pattern,dry_run=dry_run, remove_file=remove_file)
             retval[f] = r
-            if r[0] is False and not keep_going:
+            if not(r[0]) and not keep_going:
                 break
         ret_dict[tid] = dumps(retval)
         return
@@ -918,6 +918,7 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1, remo
         for p in procs:
             p.join()
     fini_ts = time.time()
+    # return_dict contains stringified return values to de-stringify them
     r = { k: loads(return_dict[k]) for k, v in return_dict.items() }
     total_procs = 0
     jobs_imported = []
@@ -925,13 +926,18 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1, remo
     error_occurred = False
     for v in r.values():
         for (f, res) in v.items():
-            if res[0] is False:
+            (status, msg, submit_details) = res
+            if not status:
                 logger.error('Error in importing: %s: %s', f, res[1])
                 error_occurred = True
-            elif res[0] is None:
-                logger.info('%s: %s', res[1], f)
+            elif not submit_details:
+                # we may have a True status, but if submit_details is empty
+                # that means the job was already in the database, and we
+                # couldn't submit it
+                logger.info('%s: %s', msg, f)
             else:
-                (jobid, process_count) = res[-1]
+                # status => True, and details contains the submit details
+                (jobid, process_count) = submit_details
                 jobs_imported.append(jobid)
                 total_procs += process_count
     logger.info('Imported %d jobs (%d processes) in %2.2f sec at %2.2f procs/sec, %d workers', len(jobs_imported), total_procs, (fini_ts - start_ts), total_procs/(fini_ts - start_ts), nprocs)
@@ -1008,7 +1014,9 @@ def submit_to_db(input, pattern, dry_run=True, remove_file=False):
     if dry_run:
 #        check_workflowdb_dict(metadata,pfx="exp_")
         logger.info("Dry run finished, skipping DB work")
-        return (True, 'Dry run finished, skipping DB work')
+        # the third parameter below, represents the submit details
+        # It's empty because we didn't actually submit anything
+        return (True, 'Dry run finished, skipping DB work', ())
 
 # Now we touch the Database
     from orm import setup_db

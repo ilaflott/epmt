@@ -1,9 +1,19 @@
 load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 
+
 @test "epmt version" {
   run epmt -V
   assert_output --regexp '^EPMT [0-9]+\.[0-9]+\.[0-9]+$'
+}
+
+@test "epmt submit -n" {
+  if epmt list | grep 692500 > /dev/null; then
+      epmt delete 692500
+  fi
+  epmt submit -n test/data/submit/692500.tgz
+  run epmt list 692500
+  assert_failure
 }
 
 @test "epmt submit" {
