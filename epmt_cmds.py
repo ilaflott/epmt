@@ -987,7 +987,7 @@ def submit_to_db(input, pattern, dry_run=True, remove_file=False):
 
     err,tar = compressed_tar(input)
     if err:
-        return (False, 'Error processing compressed tar')
+        return (False, 'Error processing compressed tar', ())
 #    None
 #    if (input.endswith("tar.gz") or input.endswith("tgz")):
 #        import tarfile
@@ -1005,7 +1005,7 @@ def submit_to_db(input, pattern, dry_run=True, remove_file=False):
             info = tar.getmember("./job_metadata")
         except KeyError:
             logger.error('ERROR: Did not find %s in tar archive' % "job_metadata")
-            return (False, 'Did not find metadata in tar archive')
+            return (False, 'Did not find metadata in tar archive', ())
         else:
             logger.info('%s is %d bytes in archive' % (info.name, info.size))
             f = tar.extractfile(info)
@@ -1016,7 +1016,7 @@ def submit_to_db(input, pattern, dry_run=True, remove_file=False):
         filedict = get_filedict(input,settings.input_pattern)
 
     if not metadata:
-        return (False, 'Did not find valid metadata')
+        return (False, 'Did not find valid metadata', ())
 
     logger.info("%d hosts found: %s",len(filedict.keys()),filedict.keys())
     for h in filedict.keys():
@@ -1033,7 +1033,7 @@ def submit_to_db(input, pattern, dry_run=True, remove_file=False):
 # Now we touch the Database
     from orm import setup_db
     if setup_db(settings,False) == False:
-        return (False, 'Error in DB setup')
+        return (False, 'Error in DB setup', ())
     from epmt_job import ETL_job_dict
     r = ETL_job_dict(metadata,filedict,settings,tarfile=tar)
     if remove_file:
