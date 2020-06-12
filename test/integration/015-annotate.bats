@@ -20,17 +20,18 @@ setup() {
 teardown() {
   rm -rf ${epmt_output_prefix}/${USER}/3456
   rm -f ${stage_dest}/3456.tgz
-  run epmt delete 3456
+  epmt delete 3456 || true
 } 
 
-@test "epmt annotate" {
+@test "epmt annotate read tgz" {
   run epmt dump -k annotations ${stage_dest}/3456.tgz
   assert_success
-  
   # the order of keys in the dict might change based on underlying db
   assert_output --partial "'a': 100, 'b': 200"
   assert_output --partial "'inbetween_1': 1, 'inbetween_2': 1"
   assert_output --partial "'c': 200, 'd': 400, 'e': 300, 'f': 600"
+}
+@test "epmt annotate write db" {
   epmt annotate 3456 g=400 h=800  # annotate job in database as well
   run epmt dump -k annotations 3456
   assert_output --partial "'c': 200, 'd': 400, 'e': 300, 'f': 600"
