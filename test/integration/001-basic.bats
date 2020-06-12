@@ -25,10 +25,14 @@ load 'libs/bats-assert/load'
 }
 
 @test "epmt submit -e" {
+  # requires a persistent backend
+  if epmt -h | grep db_params | grep -w memory; then
+      skip
+  fi
   if epmt list | grep 685000 > /dev/null; then
       epmt delete 685000
   fi
-  run epmt submit -e test/data/submit/692500.tgz test/data/submit/685000.tgz
+  run epmt submit -e test/data/submit/692500.tgz test/data/query/685000.tgz
   assert_failure
   assert_output --partial "Job already in database: test/data/submit/692500.tgz"
   run epmt list 685000
