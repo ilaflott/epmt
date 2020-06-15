@@ -268,6 +268,19 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(r['computed']['{"op": "build"}'], {'pyod.models.mcd': {'cpu_time,duration,num_procs': [2.0, [[380807266.0, 2158730624.0, 9549.0], [381619141.0, 2203839312.0, 9549.0], [381227732.0, 2253935203.0, 9549.0]]]}, 'pyod.models.cof': {'cpu_time,duration,num_procs': [1.0355, [[380807266.0, 2158730624.0, 9549.0], [381619141.0, 2203839312.0, 9549.0], [381227732.0, 2253935203.0, 9549.0]]]}, 'pyod.models.hbos': {'cpu_time,duration,num_procs': [9.9657, [[380807266.0, 2158730624.0, 9549.0], [381619141.0, 2203839312.0, 9549.0], [381227732.0, 2253935203.0, 9549.0]]]}, 'pyod.models.ocsvm': {'cpu_time,duration,num_procs': [-0.0, [[380807266.0, 2158730624.0, 9549.0], [381619141.0, 2203839312.0, 9549.0], [381227732.0, 2253935203.0, 9549.0]]]}})
         self.assertEqual(r['computed']['{"op": "configure"}'], {'pyod.models.mcd': {'cpu_time,duration,num_procs': [2.0, [[20735346.0, 249388754.0, 1044.0], [20476970.0, 203959083.0, 1044.0], [20718776.0, 236011451.0, 1044.0]]]}, 'pyod.models.cof': {'cpu_time,duration,num_procs': [1.3176, [[20735346.0, 249388754.0, 1044.0], [20476970.0, 203959083.0, 1044.0], [20718776.0, 236011451.0, 1044.0]]]}, 'pyod.models.hbos': {'cpu_time,duration,num_procs': [9.9656, [[20735346.0, 249388754.0, 1044.0], [20476970.0, 203959083.0, 1044.0], [20718776.0, 236011451.0, 1044.0]]]}, 'pyod.models.ocsvm': {'cpu_time,duration,num_procs': [-0.0, [[20735346.0, 249388754.0, 1044.0], [20476970.0, 203959083.0, 1044.0], [20718776.0, 236011451.0, 1044.0]]]}})
 
+    @db_session
+    def test_outlier_processes(self):
+        import numpy as np
+        import pandas as pd
+        import epmt_stat as es
+        rand = np.random.RandomState(0)
+        data = rand.randn(10,2)
+        data[5] = [ 2 * data[:,0].max(), 2 * data[:,1].max() ]
+        features = ['duration', 'cpu_time']
+        df = pd.DataFrame(data, columns=features)
+        outliers = eod.detect_outlier_processes(df, features=features, methods=[es.iqr, es.modified_z_score])
+        self.assertEqual(list(outliers.iloc[5].values), [2, 2])
+
 
     @db_session
     def test_partition_jobs(self):

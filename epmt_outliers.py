@@ -1014,33 +1014,43 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
 # TODO: This function needs to be fixed to handle changed return formats
 #       of outliers_iqr and outliers_modified_z_score
 #    
-# def detect_outlier_processes(processes, trained_model=None, 
-#                              features=['duration','exclusive_cpu_time'],
-#                              methods=[outliers_iqr,outliers_modified_z_score]):
-#     """
-#     This function detects outlier processes using either a trained model
-#     or from within the input set.
-#     """
-#     eq._empty_collection_check(processes)
-#     retval = pd.DataFrame(0, columns=features, index=processes.index)
-#     for c in features:
-#         for m in methods:
-#             m_name = get_classifier_name(m)
-#             outlier_rows = m(processes[c])
-#             print(m_name,c,len(outlier_rows),"outliers")
-#             retval.loc[outlier_rows,c] += 1
-#
-#
-#   Here we can demand that more than one detector signal an outlier, currently only 1 is required.
-#
-#     # print(retval.describe())
-#     print(retval.head())
-#     retval = retval.gt(.99)
-#     retval['id'] = processes['id']
-#     retval['exename'] = processes['exename']
-#     retval['tags'] = processes['tags']
-#     retval = retval[['id','exename','tags']+features]
-#     return retval
+def detect_outlier_processes(processes, features=['duration','cpu_time'], methods=[]):
+    """
+    This function detects outlier processes from within the input set.
+
+    Parameters
+    ----------
+        processes : dataframe
+                    Dataframe of processes
+         features : list, optional
+                    List of features to use for outlier detection.
+                    Defaults to ['duration', 'cpu_time']
+          methods : list, optional
+                    List of functions to use for outlier detection
+                    Defaults to all available univariate classifiers
+ 
+
+    Notes
+    -----
+    This function currently supports only univariate classifiers. Trained models 
+    are not presently supported, either.
+    """
+    eq._empty_collection_check(processes)
+    retval = pd.DataFrame(0, columns=features, index=processes.index)
+    methods = methods or uvod_classifiers()
+    logger.debug("Doing outlier detection using: {}".format(features))
+    logger.debug("Using the following classifiers: {}".format([f.__name__ for f in methods]))
+    for c in features:
+        for m in methods:
+            m_name = get_classifier_name(m)
+            scores = m(processes[c])[0]
+            logger.debug('{},{} scores: {}'.format(c, m_name, scores))
+            threshold = thresholds.get(m_name, 0)
+            logger.debug('threshold: {}'.format(threshold))
+            outlier_rows = np.where(np.abs(scores) > threshold)[0]
+            logger.debug('outliers for [{}][{}] -> {}'.format(m_name,c,outlier_rows))
+            retval.loc[outlier_rows,c] += 1
+    return retval
 
 
 
