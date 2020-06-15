@@ -313,7 +313,7 @@ def csvjoiner(indir,
                 return False, None, badfiles
     if(len(fileList) == 0):
         msg = "{} has no CSV files to concatenate".format(indir)
-        logger.info(msg)
+        logger.warning(msg)
         return True, None, badfiles
     if any(("collated" in FL for FL in fileList)):
         logger.error("Collated output file in input")

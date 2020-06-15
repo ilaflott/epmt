@@ -1513,8 +1513,12 @@ def feature_scatter_plot(jobs, features = [], outfile='', annotate = False):
                   features is set to [], so PCA analysis will be performed
                   to reduce the final feature set to 2.
 
+        outfile : string, optional
+                  If this is set, the output is saved in a file. Otherwise
+                  matplotlib's standard renderer is used.
+
        annotate : boolean, optional
-                  If set, annotate each datapoint with jobid (plot can become cluttered if enabled)
+                  If set, annotate each datapoint (plot can become cluttered if enabled)
 
     Example
     -------
@@ -1525,6 +1529,7 @@ def feature_scatter_plot(jobs, features = [], outfile='', annotate = False):
     '''
     jobs_df = eq.get_jobs(jobs, fmt='pandas')
     features = sanitize_features(features, jobs_df)
+    title_ex = ''  # extention to append to the title on the plot
     pca_variances = None
     if len(features) > 2:
         logger.info('Performing 2-component PCA as input features({}) more than 2'.format(features))
@@ -1536,21 +1541,43 @@ def feature_scatter_plot(jobs, features = [], outfile='', annotate = False):
     if len(features) != 2:
         logger.error('Cannot generate scatter plot as requested features ({}) < 2'.format(features))
         return False
-
-    import plotly.express as px
+    import matplotlib as mpl
+    if outfile:
+        mpl.use('agg')
+    import matplotlib.pyplot as plt
+    import matplotlib.colors as pltc
+    from random import sample
+    all_colors = [k for k,v in pltc.cnames.items()]
     x_label_ext = ''
     if pca_variances is not None:
         pca_01_weight = round(pca_variances[0]/pca_variances[1], 1)
+        fig = plt.figure(figsize = (max(pca_01_weight*4, 12),4))
         x_label_ext = ' (weight: {})'.format(pca_01_weight)
-    plt = px.scatter(jobs_df, x=features[0], y=features[1], text='jobid' if annotate else None, color='jobid', title='2-feature plot')
-    plt.update_traces(textposition='top center')
-    plt.update_layout(
-        xaxis=dict(title_text=features[0]+x_label_ext),)
-    if outfile:
-        print('Plotly Cannot export static images, Feature coming soon')
     else:
-        return plt
-
+        fig = plt.figure(8, 8)
+    ax = fig.add_subplot(1,1,1) 
+    ax.set_xlabel(features[0] + x_label_ext, fontsize = 10)
+    ax.set_ylabel(features[1], fontsize = 10)
+    ax.set_title('2-feature plot', fontsize = 15)
+    jobids = list(jobs_df['jobid'].values)
+    colors = sample(all_colors, len(jobids))
+    idx = 0
+    for jobid in jobids:
+        indexToKeep = jobs_df['jobid'] == jobid
+        x = jobs_df.loc[indexToKeep, features[0]]
+        y = jobs_df.loc[indexToKeep, features[1]]
+        ax.scatter(x, y, c = colors[idx], s = 50)
+        if annotate:
+            ax.text(x+0.1, y+0.1, jobid, fontsize=8)
+        idx += 1
+    ax.legend(jobids, loc='upper center', bbox_to_anchor=(0.5, 1.05),
+          ncol=3, fancybox=True, shadow=True)
+    ax.grid()
+    if outfile:
+        print('plot saved to {}'.format(outfile))
+        plt.savefig(outfile)
+    else:
+        plt.show()
 
     
 # Sanitize feature list by removing blacklisted features

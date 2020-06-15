@@ -36,6 +36,7 @@ llvmlite==0.31.0
 lockfile==0.12.2
 Mako==1.1.0
 MarkupSafe==1.1.1
+matplotlib==3.1.2
 mccabe==0.6.1
 memory-profiler==0.57.0
 mistune==0.8.4
@@ -54,7 +55,6 @@ parso==0.5.1
 patsy==0.5.1
 pexpect==4.7.0
 pickleshare==0.7.5
-plotly==4.5.4
 pony==0.7.10
 prometheus-client==0.7.1
 prompt-toolkit==2.0.10

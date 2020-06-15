@@ -14,6 +14,8 @@ hidden = list(uniq)
 hidden.append('notebook.tree')
 # Whats a notebook without pandas
 hidden.append('pandas')
+# Add default plotting engine
+hidden.append('matplotlib')
 # Required for IPython kernel
 hidden.append('ipykernel.datapub')
 # Required for EPMT

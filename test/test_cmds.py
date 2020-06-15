@@ -9,7 +9,7 @@ from epmt_cmd_list import  epmt_list_jobs, epmt_list_procs, epmt_list_job_proc_t
 
 
 def do_cleanup():
-    eq.delete_jobs(['691201', '692544', '685000', '627919'], force=True, remove_models = True)
+    eq.delete_jobs(['685000', '627919'], force=True, remove_models = True)
 
 @timing
 def setUpModule():

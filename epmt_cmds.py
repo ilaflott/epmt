@@ -657,11 +657,7 @@ def get_papiex_options(s):
     option_h = _papiex_opt_byhost(s)
     option_c = _papiex_opt_bycpu(s)
     option_d = s.papiex_options # The non-arch specific options
-    option_hl = option_h.split(',')
-    option_cl = option_c.split(',')
-    option_dl = option_d.split(',')
-    options = list(set(option_hl+option_cl+option_dl))
-    return ','.join(filter(None, options))
+    return ','.join([option_d,option_c,option_h])
 
 def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run_cmd=False):
     """

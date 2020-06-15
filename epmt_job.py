@@ -595,7 +595,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     proc_sums = {}
 
     if not j.processes:
-        logger.info('Job {} contains no processes! Perhaps an error in collation or populating the staging data?'.format(jobid))
+        logger.warning('Job {} contains no processes! Perhaps an error in collation or populating the staging data?'.format(jobid))
 
     _t0 = time.time()
 
