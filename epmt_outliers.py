@@ -1011,20 +1011,20 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
         return(mvod_df, classfiers_od_dict)
 
 
-# TODO: This function needs to be fixed to handle changed return formats
-#       of outliers_iqr and outliers_modified_z_score
-#    
-def detect_outlier_processes(processes, features=['duration','cpu_time'], methods=[]):
+def detect_outliers(df, features=[], methods=[]):
     """
-    This function detects outlier processes from within the input set.
+    Generic function to detect outlier rows in a dataframe::Outlier Detection
+
+    This is a generic outlier detection function. You should probably be using
+    specialized ones such as detect_outlier_{jobs,ops,processes,threads}
 
     Parameters
     ----------
-        processes : dataframe
-                    Dataframe of processes
+               df : dataframe
+                    Input dataframe
          features : list, optional
                     List of features to use for outlier detection.
-                    Defaults to ['duration', 'cpu_time']
+                    Defaults to all the columns in the dataframe.
           methods : list, optional
                     List of functions to use for outlier detection
                     Defaults to all available univariate classifiers
@@ -1035,16 +1035,17 @@ def detect_outlier_processes(processes, features=['duration','cpu_time'], method
     This function currently supports only univariate classifiers. Trained models 
     are not presently supported, either.
     """
-    eq._empty_collection_check(processes)
-    retval = pd.DataFrame(0, columns=features, index=processes.index)
+    eq._empty_collection_check(df)
+    features = features or list(df.columns.values)
+    retval = pd.DataFrame(0, columns=features, index=df.index)
     methods = methods or uvod_classifiers()
     logger.debug("Doing outlier detection using: {}".format(features))
     logger.debug("Using the following classifiers: {}".format([f.__name__ for f in methods]))
     for c in features:
         for m in methods:
             m_name = get_classifier_name(m)
-            scores = m(processes[c])[0]
-            logger.debug('{},{} scores: {}'.format(c, m_name, scores))
+            scores = m(df[c])[0]
+            logger.debug('classifier[{}], feature[{}], scores: {}'.format(m_name, c, scores))
             threshold = thresholds.get(m_name, 0)
             logger.debug('threshold: {}'.format(threshold))
             outlier_rows = np.where(np.abs(scores) > threshold)[0]
@@ -1052,6 +1053,47 @@ def detect_outlier_processes(processes, features=['duration','cpu_time'], method
             retval.loc[outlier_rows,c] += 1
     return retval
 
+def detect_outlier_processes(processes, features=['duration','cpu_time'], methods=[]):
+    """
+    This function detects outlier processes from within the input set::Outlier Detection
+
+    Parameters
+    ----------
+        processes : dataframe
+                    Input dataframe of processes
+         features : list, optional
+                    List of features to use for outlier detection.
+          methods : list, optional
+                    List of functions to use for outlier detection
+                    Defaults to all available univariate classifiers
+
+    Notes
+    -----
+    This function currently supports only univariate classifiers. Trained models 
+    are not presently supported, either.
+    """
+    return detect_outliers(processes, features=features, methods=methods)
+
+def detect_outlier_threads(threads, features=['usertime','systemtime', 'rssmax'], methods=[]):
+    """
+    This function detects outlier threads from within the input set::Outlier Detection
+
+    Parameters
+    ----------
+        processes : dataframe
+                    Input dataframe of threads
+         features : list, optional
+                    List of features to use for outlier detection.
+          methods : list, optional
+                    List of functions to use for outlier detection
+                    Defaults to all available univariate classifiers
+
+    Notes
+    -----
+    This function currently supports only univariate classifiers. Trained models 
+    are not presently supported, either.
+    """
+    return detect_outliers(threads, features=features, methods=methods)
 
 
 @db_session
@@ -1723,17 +1765,3 @@ def _err_col_len(c, min_length = 1, msg = None):
         logger.warning(msg)
         raise RuntimeError(msg)
 
-
-# if (__name__ == "__main__"):
-#     np.random.seed(101)
-#     random_data = np.random.randn(100,2)
-#     random_proc_df = pd.DataFrame(random_data, columns=['duration','exclusive_cpu_time'])
-#     random_proc_df['id'] = ""
-#     random_proc_df['exename'] = ""
-#     random_proc_df['tags'] = ""
-#     retval = detect_outlier_processes(random_proc_df)
-#     print(retval.head())
-# #
-# # Here we print a boolean if any metric barfed at us
-# #
-#     print ((retval[['duration','exclusive_cpu_time']] == True).any(axis=1).head())

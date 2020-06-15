@@ -269,18 +269,45 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(r['computed']['{"op": "configure"}'], {'pyod.models.mcd': {'cpu_time,duration,num_procs': [2.0, [[20735346.0, 249388754.0, 1044.0], [20476970.0, 203959083.0, 1044.0], [20718776.0, 236011451.0, 1044.0]]]}, 'pyod.models.cof': {'cpu_time,duration,num_procs': [1.3176, [[20735346.0, 249388754.0, 1044.0], [20476970.0, 203959083.0, 1044.0], [20718776.0, 236011451.0, 1044.0]]]}, 'pyod.models.hbos': {'cpu_time,duration,num_procs': [9.9656, [[20735346.0, 249388754.0, 1044.0], [20476970.0, 203959083.0, 1044.0], [20718776.0, 236011451.0, 1044.0]]]}, 'pyod.models.ocsvm': {'cpu_time,duration,num_procs': [-0.0, [[20735346.0, 249388754.0, 1044.0], [20476970.0, 203959083.0, 1044.0], [20718776.0, 236011451.0, 1044.0]]]}})
 
     @db_session
-    def test_outlier_processes(self):
+    def test_detect_outliers(self):
         import numpy as np
         import pandas as pd
         import epmt_stat as es
-        rand = np.random.RandomState(0)
-        data = rand.randn(10,2)
+        np.random.seed(0)
+        data = np.random.randn(10,2)
         data[5] = [ 2 * data[:,0].max(), 2 * data[:,1].max() ]
-        features = ['duration', 'cpu_time']
-        df = pd.DataFrame(data, columns=features)
-        outliers = eod.detect_outlier_processes(df, features=features, methods=[es.iqr, es.modified_z_score])
+        df = pd.DataFrame(data)
+        outliers = eod.detect_outliers(df, methods=[es.iqr, es.modified_z_score])
         self.assertEqual(list(outliers.iloc[5].values), [2, 2])
 
+    @db_session
+    def test_outlier_processes(self):
+        import epmt_stat as es
+        p = eq.get_procs('kern-6656-20190614-190245', fmt='pandas', limit=1)
+        # clone and make 10 rows of the 1 process row
+        procs = p.append([p]*9, ignore_index=True)
+        # now double the value of cpu_time/duration of the 6th row
+        # thus making it an outlier
+        procs.loc[[5], 'duration'] *= 2 
+        procs.loc[[5], 'cpu_time'] *= 2
+        # make sure the modified row is detected as an outlier
+        outliers = eod.detect_outlier_processes(procs, ['duration', 'cpu_time'], methods=[es.iqr, es.modified_z_score])
+        self.assertEqual(list(outliers.loc[5].values), [2, 2])
+
+    @db_session
+    def test_outlier_threads(self):
+        import epmt_stat as es
+        p = eq.get_procs('kern-6656-20190614-190245', fmt='orm', limit=1)[0]
+        t = eq.get_thread_metrics(p) 
+        # clone and make 10 rows of the 1 thread row
+        threads = t.append([t]*9, ignore_index=True)
+        # now double the value of usertime/systemtime of the 6th row
+        # thus making it an outlier
+        threads.loc[[5], 'usertime'] *= 2 
+        threads.loc[[5], 'systemtime'] *= 2
+        # make sure the modified row is detected as an outlier
+        outliers = eod.detect_outlier_threads(threads, ['usertime', 'systemtime'], methods=[es.iqr, es.modified_z_score])
+        self.assertEqual(list(outliers.loc[5].values), [2, 2])
 
     @db_session
     def test_partition_jobs(self):
