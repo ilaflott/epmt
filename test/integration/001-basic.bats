@@ -40,10 +40,6 @@ teardown() {
 }
 
 @test "epmt submit -e" {
-  # requires a persistent backend
-  if epmt -h | grep db_params | grep -w memory; then
-      skip
-  fi
   if epmt list | grep 685000 > /dev/null; then
       epmt delete 685000
   fi

@@ -80,11 +80,6 @@ function kernel_build() {
 
 @test "kernel compile with COLLATED_TSV" {
   skip
-  # the test only works with a persistent db
-  if  epmt help| grep db_params| grep -w memory > /dev/null; then
-      skip
-  fi
-
   # orm=$(epmt -h | grep orm:| cut -f2 -d:)
   # [[ $orm == "sqlalchemy" ]] || skip
   # db_params=$(epmt -h | grep db_params:| cut -f2- -d:)

@@ -2,10 +2,6 @@ load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 
 setup() {
-  # need a persistent db
-  if  epmt help| grep db_params| grep -w memory > /dev/null; then
-      return 0
-  fi
   jobs_in_module='625151 627907 629322 633114 675992 680163 685000 685001 685003 685016 691209 692500 693129'
   epmt delete ${jobs_in_module} || true
   resource_path=$(dirname `command -v epmt`)/..
@@ -16,10 +12,6 @@ teardown() {
 }
 
 @test "epmt explore (can take a couple of minutes)" {
-  # need a persistent db
-  if  epmt help| grep db_params| grep -w memory > /dev/null; then
-      skip
-  fi
   run epmt explore ESM4_historical_D151
   # assert_output --partial "Experiment ESM4_historical_D151 contains 13 jobs: 625151,627907,629322,633114,675992,680163,685000..685001,685003,685016,691209,692500,693129"
   assert_output --partial "ocean_annual_z_1     18540101       625151      10425623185   ****"
