@@ -12,7 +12,7 @@ PWD=$(shell pwd)
 .PHONY: default \\
 	epmt-build epmt-test \\
 	clean distclean \\
-	check check-python-native check-python-driver check-python-2.6 check-python-2.7 check-python-3 \\
+	check check-python-native check-python-driver check-python-2.6 check-python-2.7 check-python-3 check-integration-tests\\
 	dist build release release6 release7 release-all
 
 build:
@@ -116,7 +116,8 @@ check-python-shells:
 check-unittests: # Why not test all of them?
 	@env -i TERM=ansi PATH=${PWD}:${PATH} python3 -m unittest -v -f test.test_lib test.test_stat test.test_settings test.test_anysh test.test_submit test.test_run test.test_cmds test.test_query test.test_explore test.test_outliers test.test_db_schema test.test_db_migration
 check-integration-tests:
-	@env -i TERM=ansi PATH=${PWD}:${PATH} epmt integration -e
+	# Slurm & Annotate excluded
+	@env -i TERM=ansi PATH=${PWD}:${PATH} epmt integration -e -x slurm annotate
 
 #
 # Not used

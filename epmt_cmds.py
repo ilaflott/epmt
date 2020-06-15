@@ -1273,7 +1273,11 @@ def epmt_entrypoint(args):
         if len(args.exclude):
             logger.debug("Excluding: {}".format(args.exclude))
             # Now remove any excluded items
-            tests_to_run = list(filter(None,[n if a not in n else None for n in tests_to_run for a in args.exclude]))
+            for ex in args.exclude:
+                for test in tests_to_run:
+                    if ex in test:
+                        del tests_to_run[tests_to_run.index(test)]
+            logger.info("Running {}".format(tests_to_run))
         if len(tests_to_run) < 1:
                 from sys import stderr
                 print('No test found', file=stderr)
