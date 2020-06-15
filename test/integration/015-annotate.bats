@@ -32,6 +32,11 @@ teardown() {
   assert_output --partial "'c': 200, 'd': 400, 'e': 300, 'f': 600"
 }
 @test "epmt annotate write db" {
+    # requires a persistant backend
+  if epmt -h | grep db_params | grep -w memory; then
+      skip
+  fi
+
   epmt annotate 3456 g=400 h=800  # annotate job in database as well
   run epmt dump -k annotations 3456
   assert_output --partial "'c': 200, 'd': 400, 'e': 300, 'f': 600"
@@ -47,6 +52,11 @@ teardown() {
 # Replace is used on setting state on all tests
 # Be sure it works well
 @test "epmt annotate replace" {
+    # requires a persistant backend
+  if epmt -h | grep db_params | grep -w memory; then
+      skip
+  fi
+
   # first set and verify known tags state
   run epmt annotate --replace 3456 a=100 EPMT_JOB_TAGS="jobid:3456"
   assert_success
@@ -64,6 +74,11 @@ teardown() {
 }
 
 @test "epmt annotate replace jobtags" {
+    # requires a persistant backend
+  if epmt -h | grep db_params | grep -w memory; then
+      skip
+  fi
+
   # first set and verify known tags state
   run epmt annotate --replace 3456 a=100 EPMT_JOB_TAGS="jobid:3456;ocn_res:0.5l75"
   assert_success
@@ -80,6 +95,11 @@ teardown() {
 }
 
 @test "epmt bad annotate" {
+    # requires a persistant backend
+  if epmt -h | grep db_params | grep -w memory; then
+      skip
+  fi
+
   run epmt annotate abc
   assert_failure
   assert_output --partial "epmt_annotate: form must be"
@@ -89,6 +109,11 @@ teardown() {
 }
 
 @test "epmt annotate incomplete" {
+    # requires a persistant backend
+  if epmt -h | grep db_params | grep -w memory; then
+      skip
+  fi
+
   # first set and verify known annotation state
   run epmt annotate --replace 3456 a=100 EPMT_JOB_TAGS="jobid:3456"
   assert_success
@@ -107,6 +132,11 @@ teardown() {
 }
 
 @test "epmt annotate tag incomplete" {
+  # requires a persistant backend
+  if epmt -h | grep db_params | grep -w memory; then
+      skip
+  fi
+
   # first set and verify known tag state
   run epmt annotate --replace 3456 a=100 EPMT_JOB_TAGS="jobid:3456"
   assert_success
@@ -122,6 +152,11 @@ teardown() {
 }
 
 @test "epmt annotate backslash" {
+  # requires a persistant backend
+  if epmt -h | grep db_params | grep -w memory; then
+      skip
+  fi
+
   # first set and verify known tags state
   run epmt annotate --replace 3456 a=100 EPMT_JOB_TAGS="jobid:3456"
   assert_success
