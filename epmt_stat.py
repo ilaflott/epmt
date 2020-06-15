@@ -830,7 +830,7 @@ def check_dist(data = [], dist='norm', alpha = 0.05):
 
 def get_modes(X, max_modes = 10):
     '''
-    Get the modes for a distribution
+    Get the modes for a distribution::Statistics
 
     Parameters
     ----------
