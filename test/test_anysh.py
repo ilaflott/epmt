@@ -10,7 +10,7 @@ jobid = '1011'
 tuser = 'testuser'
 
 def do_cleanup():
-   for f in ['1', '1.tgz']:
+   for f in ['1', '1.tgz', '1011.tgz']:
        try:
            os.remove(f)
        except OSError:
