@@ -33,12 +33,12 @@ teardown() {
   assert_output --partial "Imported successfully - job: 692500 processes: 6486"
 }
 
-<<<<<<< HEAD
 @test "epmt submit dir" {
   run epmt submit ${tmp_job_dir}/
   assert_success
   assert_output --partial "Imported successfully - job: 804280 processes: 6039"
-=======
+}
+
 @test "epmt submit -e" {
   # requires a persistent backend
   if epmt -h | grep db_params | grep -w memory; then
@@ -47,10 +47,12 @@ teardown() {
   if epmt list | grep 685000 > /dev/null; then
       epmt delete 685000
   fi
-  run epmt submit -e test/data/submit/692500.tgz test/data/query/685000.tgz
+  run epmt submit -e ${resource_path}/epmt/test/data/submit/692500.tgz
+  run epmt submit -e ${resource_path}/epmt/test/data/submit/692500.tgz ${resource_path}/epmt/test/data/query/685000.tgz
   assert_failure
-  assert_output --partial "Job already in database: test/data/submit/692500.tgz"
+  assert_output --partial "Job already in database:"
+  # Path may not be exact
+  assert_output --partial "test/data/submit/692500.tgz"
   run epmt list 685000
   assert_failure
->>>>>>> sow3-phase3-tushar
 }
