@@ -5,8 +5,14 @@ setup(){
   stage_dest=$(epmt -h | sed -n 's/stage_command_dest://p')
   test -n "${stage_dest}" || fail
   test -d ${stage_dest} || fail
+  jobs_in_module='989'
   rm -f ${stage_dest}/989.tgz
-  epmt delete 989 || true
+  epmt delete ${jobs_in_module} || true
+  
+}
+teardown() {
+  epmt delete ${jobs_in_module} || true
+  rm -f ${stage_dest}/989.tgz
 }
 
 @test "epmt with COLLATED_TSV" {

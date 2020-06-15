@@ -2,11 +2,11 @@ load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 
 setup() {
-  rm -f pp053-collated-papiex-csv-0.csv
+  rm -f pp053-collated-papiex-csv-0.csv corrupted_csv.tgz
 }
 
 teardown() {
-  rm -f pp053-collated-papiex-csv-0.csv
+  rm -f pp053-collated-papiex-csv-0.csv corrupted_csv.tgz
 }
 
 @test "epmt_concat -h" {

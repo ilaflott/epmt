@@ -1,18 +1,18 @@
 load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 
-
+# Run once to 
 setup_file(){
   stage_dest=$(epmt -h | sed -n 's/stage_command_dest://p')
   test -n "${stage_dest}" || fail
   test -d ${stage_dest} || fail
   rm -f ${stage_dest}/988.tgz
-  jobs_in_module = "988 kernel_build CSV_v1 kernel_build COLLATED_TSV"
+  jobs_in_module = "988 kernel_build CSV_v1 COLLATED_TSV"
   epmt delete ${jobs_in_module} || true
 }
-teardown_file() {
-  jobs_in_module = "988 kernel_build CSV_v1 kernel_build COLLATED_TSV"
+teardown() {
   epmt delete ${jobs_in_module} || true
+  rm -f ${stage_dest}/988.tgz
 }
 
 # the actual compile step
