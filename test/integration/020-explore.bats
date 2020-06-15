@@ -6,7 +6,13 @@ setup() {
   if  epmt help| grep db_params| grep -w memory > /dev/null; then
       return 0
   fi
-  epmt submit test/data/submit/692500.tgz test/data/query/*.tgz test/data/outliers_nb/{625151,627907,629322,633114,675992,680163,685001,691209,693129}.tgz
+  jobs_in_module='625151 627907 629322 633114 675992 680163 685000 685001 685003 685016 691209 692500 693129'
+  epmt delete ${jobs_in_module} || true
+  resource_path=$(dirname `command -v epmt`)/..
+  epmt submit ${resource_path}/epmt/test/data/submit/692500.tgz ${resource_path}/epmt/test/data/query/*.tgz ${resource_path}/epmt/test/data/outliers_nb/{625151,627907,629322,633114,675992,680163,685001,691209,693129}.tgz
+}
+teardown() {
+  epmt delete ${jobs_in_module} || true
 }
 
 @test "epmt explore (can take a couple of minutes)" {
