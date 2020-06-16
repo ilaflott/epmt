@@ -79,9 +79,6 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
     for handler in rootLogger.handlers:
         handler.setLevel(level)
 
-    # matplotlib generates a ton of debug messages
-    mpl_logger = logging.getLogger('matplotlib') 
-    mpl_logger.setLevel(logging.WARNING) 
 
     # numba.byteflow generates a ton of debug messages
     numba_logger = logging.getLogger('numba') 
