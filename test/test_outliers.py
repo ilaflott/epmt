@@ -441,19 +441,25 @@ class OutliersAPI(unittest.TestCase):
         tags = [ frozen_dict(t) for t in tags ]
         self.assertEqual(set(tags), {frozenset({('op', 'configure'), ('op_sequence', '3'), ('op_instance', '3')}), frozenset({('op', 'download'), ('op_sequence', '1'), ('op_instance', '1')}), frozenset({('op_sequence', '4'), ('op_instance', '4'), ('op', 'build')}), frozenset({('op_sequence', '5'), ('op_instance', '5'), ('op', 'clean')}), frozenset({('op', 'extract'), ('op_sequence', '2'), ('op_instance', '2')})})
 
-    def test_feature_scatter_plot(self):
+    def test_feature_scatter_plot_no_static(self):
         from tempfile import NamedTemporaryFile,gettempdir
         plotfile = NamedTemporaryFile(prefix='output_', suffix='.png', dir=gettempdir())
         plotfile = plotfile.name
+        jobs = ['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024']
         with capture() as (out, err):
-            eod.feature_scatter_plot(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], outfile = plotfile)
+            figure = eod.feature_scatter_plot(jobs, outfile = plotfile)
         s = out.getvalue()
-        from os import path, remove, stat
-        self.assertTrue(path.isfile(plotfile))
-        statinfo = stat(plotfile)
-        self.assertTrue(statinfo.st_size > 0)
-        remove(plotfile)
-        self.assertIn('plot saved to {}'.format(plotfile), s)
+        self.assertIn('Plotly Cannot export static images, Feature coming soon', s)
+    
+    def test_feature_scatter_plot_names(self):
+        from tempfile import NamedTemporaryFile,gettempdir
+        plotfile = NamedTemporaryFile(prefix='output_', suffix='.png', dir=gettempdir())
+        plotfile = plotfile.name
+        jobs = ['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024']
+        figure = eod.feature_scatter_plot(jobs)
+        jobs_in_figure = [point['name'] for point in figure.data]
+        self.assertEqual(set(jobs), set(jobs_in_figure))
+
 
     @db_session
     def test_rca_jobs(self):
