@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
 # the import below is crucial to get a sane test environment
-# from . import *
+#from . import *
 import unittest
-
-# def setUpModule():
-#     print('\n' + str(settings.db_params))
-#     setup_db(settings)
-
+from epmtlib import get_install_root
 from os import path    
+
+def setUpModule():
+    global install_root
+    install_root = get_install_root()
 
 class EPMTSettings(unittest.TestCase):
 
@@ -29,7 +29,7 @@ class EPMTSettings(unittest.TestCase):
         self.assertEqual(defaults.db_params, { 'url': 'sqlite:///:memory:', 'echo': False })
 
     def test_epmt_settings(self):
-        self.assertTrue(path.exists('settings.py') and (path.getsize('settings.py') > 0))
+        self.assertTrue(path.exists(install_root+'/settings.py') and (path.getsize(install_root+'/settings.py') > 0))
         try:
             import epmt_settings as settings
         except:
