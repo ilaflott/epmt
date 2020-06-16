@@ -1271,7 +1271,7 @@ def epmt_entrypoint(args):
         from glob import glob
         from os.path import basename
         # Get test names in test directory
-        tests = [basename(x) for x in glob(test_folder+'/*.bats')]
+        tests = sorted([basename(x) for x in glob(test_folder+'/*.bats')])
         # Search the requested test names without path for a match
         if req_tests:
             for r in req_tests:
@@ -1282,49 +1282,17 @@ def epmt_entrypoint(args):
                         tests_to_run.append(t)
                         added = True
                 if not added:
-                    # Stop if exit on error requested
-                    if args.error:
-                        from sys import stderr
-                        print('Could not find test {}'.format(r), file=stderr)
-                        return -1
-                    else:
-                        logger.warning("Could not find a test containing '{}' in testdir: {}".format(r,test_folder))
+                    logger.warning("Could not find a test containing '{}' in testdir: {}".format(r,test_folder))
         else:
             tests_to_run = tests
+        tests_to_run = ' '.join([test_folder+'/'+t if x not in t else '' for x in args.exclude for t in tests_to_run])
         logger.debug("Tests: {}".format(tests_to_run))
-        if len(args.exclude):
-            logger.debug("Excluding: {}".format(args.exclude))
-            # Now remove any excluded items
-            for ex in args.exclude:
-                for test in tests_to_run:
-                    if ex in test:
-                        del tests_to_run[tests_to_run.index(test)]
-            logger.info("Running {}".format(tests_to_run))
         if len(tests_to_run) < 1:
                 from sys import stderr
                 print('No test found', file=stderr)
                 return -1
-        status = 0
-        for test in tests_to_run:
-            test_path = test_folder + '/' + test
-            print(test_path)
-            retval = subprocess.run(bats_tester+" "+test_path,shell=True)
-            logger.debug("exitcode is {}".format(retval.returncode))
-            if retval.returncode is not 0:
-                # Stop if exit on error requested
-                if args.error:
-                    from sys import stderr
-                    print('{} unit tests FAILED'.format(test), file=stderr)
-                    return retval.returncode
-                # Assign a bad test marker
-                else:
-                    status = retval.returncode
-        if status is not 0:
-            from sys import stderr
-            print('\n\nOne (or more) integration tests FAILED', file=stderr)
-            return status
-        print('All {} test(s) successfully PASSED'.format(len(tests_to_run)))
-        return status
+        retval = subprocess.run(bats_tester+" "+tests_to_run,shell=True)
+        return retval.returncode
 
     if args.command == 'unittest':
         import unittest
