@@ -1114,8 +1114,7 @@ methods: list of callables, optonal
          method will return a vector of scores. This
          vector of scores will be saved (or some processed
          form of it). If methods is not specified then it
-         will be determined using the univariate classifers
-         defined in settings.
+         will use the univariate classifiers defined in settings.
     
 features: list of strings or '*', optional
           List of fields of each job that should be used

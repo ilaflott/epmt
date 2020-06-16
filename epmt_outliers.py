@@ -543,7 +543,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
 # This function can be very expensive. So, we only use a single outlier
 # scoring method by default. Using 2 more really takes too long.
 @db_session
-def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, methods=[modified_z_score], thresholds=thresholds, sanity_check=True, pca = False):
+def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, methods=[], thresholds=thresholds, sanity_check=True, pca = False):
     """
     Detects outlier operations::Outlier Detection
 
@@ -575,8 +575,8 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
 
        methods : list of callables, optional 
                  This is an advanced option to specify the function(s) to use
-                 for outlier detection. If unspecified it will default to
-                 all the available univariate classifiers
+                 for outlier detection. If unspecified it will default to 
+                 all available univariate classifiers.
                  If multivariate classifiers are specified, a trained model 
                  *must* be specified. We only support pyod classifiers at present 
                  for multivariate classifiers. Do not mix univariate and 
