@@ -1,6 +1,9 @@
 load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 
+setup() {
+  resource_path=$(dirname `command -v epmt`)
+}
 
 @test "epmt version" {
   run epmt -V
@@ -8,7 +11,7 @@ load 'libs/bats-assert/load'
 }
 
 setup() {
-  jobs_in_module='692500 804280'
+  jobs_in_module='692500 804280 685000'
   resource_path=$(dirname `command -v epmt`)/..
   # echo "resource_path:${resource_path}"
   test -n "${resource_path}" || fail
@@ -40,9 +43,6 @@ teardown() {
 }
 
 @test "epmt submit -e" {
-  if epmt list | grep 685000 > /dev/null; then
-      epmt delete 685000
-  fi
   run epmt submit -e ${resource_path}/epmt/test/data/submit/692500.tgz
   run epmt submit -e ${resource_path}/epmt/test/data/submit/692500.tgz ${resource_path}/epmt/test/data/query/685000.tgz
   assert_failure

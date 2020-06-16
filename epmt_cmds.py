@@ -880,15 +880,17 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1, remo
         for f in work_list:
             r = submit_to_db(f,settings.input_pattern,dry_run=dry_run, remove_file=remove_file)
             retval[f] = r
+            (status, _, submit_details) = r
             if not keep_going:
-                if not(r[0]): 
+                if not(status): 
                     break # there was an error
-                # even if r[0] is True, there is one condition
+                # even if status is True, there is one condition
                 # where the job is in the database, when we don't
-                # have any submit details. In such a case with keep_going
+                # have any submit_details. In such a case with keep_going
                 # disabled, we need to error out
-                if not(r[-1]):
+                if not(submit_details):
                     break
+        # stringify the return values
         ret_dict[tid] = dumps(retval)
         return
     # we shouldn't use more processors than the number of discrete

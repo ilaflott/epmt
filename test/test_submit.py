@@ -11,7 +11,7 @@ def setUpModule():
     print('\n' + str(settings.db_params))
     setup_db(settings)
     do_cleanup()
-    datafiles='test/data/misc/685000.tgz'
+    datafiles='{}/test/data/misc/685000.tgz'.format(install_root)
     print('setUpModule: importing {0}'.format(datafiles))
     settings.post_process_job_on_ingest = True
     epmt_submit(glob(datafiles), dry_run=False)
@@ -50,7 +50,7 @@ class EPMTSubmit(unittest.TestCase):
         with self.assertRaises(Exception):
             Job['685003'] 
         with capture() as (out,err):
-            epmt_submit(['test/data/query/685003.tgz'], dry_run=True)
+            epmt_submit(['{}/test/data/query/685003.tgz'.format(get_install_root())], dry_run=True)
         # the job should still not be in the database
         with self.assertRaises(Exception):
             Job['685003']
@@ -63,7 +63,7 @@ class EPMTSubmit(unittest.TestCase):
         # quell the error message
         epmt_logging_init(-2)
         with capture() as (out,err):
-            epmt_submit(['test/data/query/685000.tgz', 'test/data/query/685003.tgz'], keep_going=False, dry_run=False)
+            epmt_submit(['{}/test/data/query/685000.tgz'.format(install_root), '{}/test/data/query/685003.tgz'.format(install_root)], keep_going=False, dry_run=False)
         # restore logging level
         epmt_logging_init(-1)
         # because keep_going is disabled, when we find 685000 in the db,
@@ -82,7 +82,7 @@ class EPMTSubmit(unittest.TestCase):
             # only sqlalchemy allows this option
             settings.post_process_job_on_ingest = False
         with capture() as (out,err):
-            epmt_submit(glob('test/data/query/685003.tgz'), dry_run=False)
+            epmt_submit(glob('{}/test/data/query/685003.tgz'.format(install_root)), dry_run=False)
         settings.post_process_job_on_ingest = True
         j = Job['685003']
         if settings.orm == 'sqlalchemy':
@@ -110,7 +110,7 @@ class EPMTSubmit(unittest.TestCase):
             # only sqla supports this setting
             settings.post_process_job_on_ingest = False
         with capture() as (out,err):
-            epmt_submit(['test/data/query/685016.tgz'], dry_run=False)
+            epmt_submit(['{}/test/data/query/685016.tgz'.format(install_root)], dry_run=False)
         # restore the old setting
         settings.post_process_job_on_ingest = saved_val
         # make sure we can do a conv_jobs on the job without
@@ -127,7 +127,7 @@ class EPMTSubmit(unittest.TestCase):
         job_dict_csv = eq.get_jobs('685000', fmt='dict', limit=1)[0]
         eq.delete_jobs('685000')
         (_, new_tar) = tempfile.mkstemp(prefix='epmt_', suffix='_collated_tsv.tgz')
-        self.assertTrue(convert_csv_in_tar('test/data/query/685000.tgz', new_tar))
+        self.assertTrue(convert_csv_in_tar('{}/test/data/query/685000.tgz'.format(install_root), new_tar))
         with capture() as (out,err):
             epmt_submit([new_tar], dry_run=False, remove_file = True)
         job_dict_tsv = eq.get_jobs('685000', fmt='dict', limit=1)[0]
@@ -141,7 +141,7 @@ class EPMTSubmit(unittest.TestCase):
 
     @db_session
     def test_collated_tsv(self):
-        datafile='test/data/tsv/collated-tsv-2220.tgz'
+        datafile='{}/test/data/tsv/collated-tsv-2220.tgz'.format(install_root)
         with capture() as (out,err):
             epmt_submit([datafile], dry_run=False, remove_file = False)
         j = Job['2220']
@@ -164,7 +164,7 @@ class EPMTSubmit(unittest.TestCase):
 
     @db_session
     def test_corrupted_csv(self):
-        datafile='test/data/misc/corrupted-csv.tgz'
+        datafile='{}/test/data/misc/corrupted-csv.tgz'.format(install_root)
         # quell the error message
         epmt_logging_init(-2)
         with self.assertRaises(ValueError):
@@ -200,7 +200,7 @@ class EPMTSubmit(unittest.TestCase):
     def test_lazy_compute_process_tree(self):
         orig_lazy_eval = settings.lazy_compute_process_tree
         self.check_lazy_compute(Job['685000'], orig_lazy_eval)
-        datafiles='test/data/submit/804268.tgz'
+        datafiles='{}/test/data/submit/804268.tgz'.format(install_root)
         settings.lazy_compute_process_tree = not(orig_lazy_eval) # toggle setting
         with capture() as (out,err):
             epmt_submit(glob(datafiles), dry_run=False)
@@ -211,7 +211,7 @@ class EPMTSubmit(unittest.TestCase):
         from shutil import copyfile
         from os import path
         target = '/tmp/692500.tgz'
-        copyfile('test/data/submit/692500.tgz', target)
+        copyfile('{}/test/data/submit/692500.tgz'.format(install_root), target)
         self.assertTrue(path.isfile(target))
         self.assertFalse('692500' in eq.get_jobs(fmt='terse'))
         with capture() as (out,err):

@@ -16,7 +16,7 @@ def setUpModule():
     print('\n' + str(settings.db_params))
     setup_db(settings)
     do_cleanup()
-    datafiles='test/data/misc/685000.tgz'
+    datafiles='{}/test/data/misc/685000.tgz'.format(install_root)
     print('setUpModule: importing {0}'.format(datafiles))
     epmt_submit(glob(datafiles), dry_run=False)
     
@@ -60,11 +60,11 @@ class EPMTCmds(unittest.TestCase):
         self.assertFalse(eq.orm_get(eq.Job, '691201') or eq.orm_get(eq.Job, '692544'))
         # now start the daemon and make it watch the directory containing the .tgz
         with capture() as (out,err):
-            daemon_loop(1, ingest='./test/data/daemon/ingest', post_process=False, keep=True, recursive=False)
+            daemon_loop(1, ingest='{}/test/data/daemon/ingest'.format(install_root), post_process=False, keep=True, recursive=False)
         # by now the files should be in the DB
         self.assertEqual(set(eq.get_jobs(['691201', '692544'], fmt='terse')), {'691201', '692544'})
         # make sure the files aren't removed (since we used the "keep" option)
-        self.assertTrue(path.exists('test/data/daemon/ingest/691201.tgz') and path.exists('test/data/daemon/ingest/692544.tgz'))
+        self.assertTrue(path.exists('{}/test/data/daemon/ingest/691201.tgz'.format(install_root)) and path.exists('{}/test/data/daemon/ingest/692544.tgz'.format(install_root)))
 
 
     @db_session
@@ -80,7 +80,7 @@ class EPMTCmds(unittest.TestCase):
             # only sqlalchemy allows this option
             settings.post_process_job_on_ingest = False
         with capture() as (out,err):
-            epmt_submit(glob('test/data/daemon/627919.tgz'), dry_run=False)
+            epmt_submit(glob('{}/test/data/daemon/627919.tgz'.format(install_root)), dry_run=False)
         settings.post_process_job_on_ingest = True
         up_jobs = eq.get_unprocessed_jobs()
         if settings.orm == 'sqlalchemy':
@@ -176,7 +176,7 @@ class EPMTCmds(unittest.TestCase):
         if path.exists(errorfile):
             remove(errorfile)
         tempdir = mkdtemp(prefix='epmt_',dir=gettempdir())
-        copytree("test/data/corrupted_csv",tempdir+"/corrupted_csv")
+        copytree("{}/test/data/corrupted_csv".format(install_root),tempdir+"/corrupted_csv")
         with capture() as (out, err):
             retval = epmt_stage([tempdir+"/corrupted_csv"],keep_going=False)
         self.assertTrue(retval == False, "corrupted CSV files, should have returned False")
@@ -186,7 +186,7 @@ class EPMTCmds(unittest.TestCase):
         if path.exists(errorfile):
             remove(errorfile)
         tempdir = mkdtemp(prefix='epmt_',dir=gettempdir())
-        copytree("test/data/corrupted_csv",tempdir+"/corrupted_csv")
+        copytree("{}/test/data/corrupted_csv".format(install_root),tempdir+"/corrupted_csv")
         with capture() as (out, err):
             retval = epmt_stage([tempdir+"/corrupted_csv"],keep_going=True)
         self.assertTrue(retval == True, "corrupted CSV files but keep_going, should have returned True")
