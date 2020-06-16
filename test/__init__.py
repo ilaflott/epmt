@@ -20,3 +20,7 @@ import epmt_query as eq
 from epmt_cmds import epmt_submit
 from epmtlib import *
 from orm import *
+
+# this will be used repeatedly in the tests, so  let's store it 
+# in a variable instead of repeatedly calling the function
+install_root = get_install_root()

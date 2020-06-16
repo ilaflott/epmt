@@ -15,7 +15,7 @@ def setUpModule():
     print('\n' + str(settings.db_params))
     setup_db(settings)
     do_cleanup()
-    datafiles='test/data/outliers/*.tgz'
+    datafiles='{}/test/data/outliers/*.tgz'.format(install_root)
     print('setUpModule: importing {0}'.format(datafiles))
     environ['EPMT_TZ'] = 'Asia/Kolkata'
     epmt_submit(glob(datafiles), dry_run=False)

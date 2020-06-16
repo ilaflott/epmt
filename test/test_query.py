@@ -14,7 +14,7 @@ def setUpModule():
     print('\n' + str(settings.db_params))
     setup_db(settings)
     do_cleanup()
-    datafiles='test/data/query/*.tgz'
+    datafiles='{}/test/data/query/*.tgz'.format(install_root)
     print('setUpModdule: importing {0}'.format(datafiles))
     epmt_submit(sorted(glob(datafiles)), dry_run=False)
     # only use madz as the tests are written that way
