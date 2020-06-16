@@ -175,8 +175,8 @@ def verify_papiex_options():
     if return_code != 0:
         logger.error("%s failed",cmd)
         retval = False
-# Now check events
-    eventlist = s.split(',')
+# Now check events, deduplicate extra commas and remove empty list elements
+    eventlist = list(filter(None,set(s.split(','))))
     for e in eventlist:
         cmd = settings.install_prefix+"bin/papi_command_line 2>&1 "+e+"| sed -n -e '/PERF_COUNT_SW_CPU_CLOCK\ :/,$p' | grep PERF_COUNT_SW_CPU_CLOCK > /dev/null 2>&1"
         logger.info("\t"+cmd)
