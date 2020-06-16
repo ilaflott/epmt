@@ -175,7 +175,7 @@ def verify_papiex_options():
     if return_code != 0:
         logger.error("%s failed",cmd)
         retval = False
-# Now check events
+# Now check events, deduplicate extra commas and remove empty list elements
     eventlist = s.split(',')
     for e in eventlist:
         cmd = settings.install_prefix+"bin/papi_command_line 2>&1 "+e+"| sed -n -e '/PERF_COUNT_SW_CPU_CLOCK\ :/,$p' | grep PERF_COUNT_SW_CPU_CLOCK > /dev/null 2>&1"
@@ -657,7 +657,11 @@ def get_papiex_options(s):
     option_h = _papiex_opt_byhost(s)
     option_c = _papiex_opt_bycpu(s)
     option_d = s.papiex_options # The non-arch specific options
-    return ','.join([option_d,option_c,option_h])
+    option_hl = option_h.split(',')
+    option_cl = option_c.split(',')
+    option_dl = option_d.split(',')
+    options = list(set(option_hl+option_cl+option_dl))
+    return ','.join(filter(None, options))
 
 def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run_cmd=False):
     """

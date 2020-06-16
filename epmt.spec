@@ -16,6 +16,8 @@ hidden.append('notebook.tree')
 hidden.append('pandas')
 # Required for IPython kernel
 hidden.append('ipykernel.datapub')
+# Required for migration migrations/versions/e703296695bf_create_processes_staging_table.py
+hidden.append('orm.sqlalchemy.custom_types')
 # Required for EPMT
 hidden.append('sqlalchemy.ext.baked')
 # pyod, pca
@@ -26,7 +28,7 @@ hidden.append('ui')
 
 print("Hidden modules: ",hidden)
 
-exclude = ['settings']
+exclude = ['settings','matplotlib']
 print("Excluded modules: ",exclude)
 
 ipe_extra_datas = []
