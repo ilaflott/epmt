@@ -3,7 +3,7 @@ from os.path import basename
 from os import environ
 from logging import getLogger
 from json import dumps, loads
-from epmtlib import tag_from_string, sum_dicts, timing, dotdict, get_first_key_match, check_fix_metadata
+from epmtlib import tag_from_string, sum_dicts, timing, dotdict, get_first_key_match, check_fix_metadata, logfn
 from datetime import datetime, timedelta
 from functools import reduce
 import time
@@ -32,15 +32,14 @@ def sortKeyFunc(s):
     t2 = t.split("-")
     return int(t2[0]+t2[1])
 
+@logfn
 def create_job(jobid,user):
-    logger = getLogger(__name__)  # you can use other name
+# This code sucks, it should not get before create. It should properly handle the exception, rollback and restart
     job = orm_get(Job, jobid)
-    if job is None:
-        logger.info("Creating job %s",jobid)
-        job = orm_create(Job, jobid=jobid,user=user)
-    else:
-        logger.info("Job %s (at %s) is already in the database",job.jobid,job.start)
+    if job:
+        logger.warning("Job %s (at %s) is already in the database",job.jobid,job.start)
         return None
+    job = orm_create(Job,jobid=jobid,user=user) 
     return job
 
 ##	metadata['job_pl_id'] = global_job_id
@@ -930,14 +929,17 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     from sqlalchemy import exc
     try:
         u = lookup_or_create_user(username)
-    except exc.IntegrityError:
+    except exc.IntegrityError as e:
         # The insert failed due to a concurrent transaction  
         Session.rollback()
         # the user must exist now
         u = lookup_or_create_user(username)
+
     j = create_job(jobid,u)
-    if not j: # FIX! We might have leaked a username to the database here
+    if j is None:
+# Why do we not print the error here instead of passing?
         return (True, 'Job already in database', ())
+
     j.jobname = jobname
     j.exitcode = exitcode
     j.annotations = annotations    
