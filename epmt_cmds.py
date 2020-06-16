@@ -1289,13 +1289,24 @@ def epmt_entrypoint(args):
                     logger.warning("Could not find a test containing '{}' in testdir: {}".format(r,test_folder))
         else:
             tests_to_run = tests
-        tests_to_run = ' '.join([test_folder+'/'+t if x not in t else '' for x in args.exclude for t in tests_to_run])
-        logger.debug("Tests: {}".format(tests_to_run))
-        if len(tests_to_run) < 1:
+        
+        #tests_to_run = ' '.join([test_folder + '/' + t if x not in t else '' for x in args.exclude for t in tests_to_run])
+        good_tests = []
+        if len(args.exclude)>0:
+            for t in tests_to_run:
+                    for x in args.exclude:
+                        if x not in t:
+                            good_tests.append(test_folder + '/' + t)
+        else:
+            for t in tests_to_run:
+                good_tests.append(test_folder + '/' + t)
+        good_tests = ' '.join(good_tests)
+        logger.debug("Tests to run {}".format(good_tests))
+        if len(good_tests) < 1:
                 from sys import stderr
                 print('No test found', file=stderr)
                 return -1
-        retval = subprocess.run(bats_tester+" "+tests_to_run,shell=True)
+        retval = subprocess.run(bats_tester+" "+good_tests,shell=True)
         return retval.returncode
 
     if args.command == 'unittest':
