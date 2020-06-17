@@ -479,13 +479,47 @@ def epmt_dump_metadata(filelist, key = None):
                 print("%-24s%-56s" % (d,str(metadata[d])))
     return rc_final
 
-def merge_and_write_annotations(metadatafile,metadata,d,replace = False):
-    # merge existing annotations if any
-    annotations = metadata.get('annotations', {}) if (not replace) else {}
-    annotations.update(d)
-    metadata['annotations'] = annotations
-    retval = write_job_metadata(metadatafile,metadata)
-    return retval
+def annotate_metadata(metadatafile, annotations, replace = False):
+    '''
+    Annotate a metadata file
+
+    Parameters
+    ----------
+         metadatafile: string
+                       The path to the metadata file
+          annotations: dict
+                       Dictionary representing new annotations
+              replace: boolean, optional
+                       If set, the existing annotations will be completely
+                       overwritten. Otherwise, the new annotations will be
+                       merged in. Defaults to False.
+
+    Returns
+    -------
+    True on success, False on error
+
+    Notes
+    -----
+    This is a low-level function. You should use epmt_annotate instead
+    where possible.
+    '''
+    if not path.isfile(metadatafile):
+        logger.error('{} does not exist'.format(metadatafile))
+        return False
+
+    metadata = read_job_metadata(metadatafile)
+    if not metadata:
+        logger.error('Error reading metadata from {}'.format(metadatafile))
+        return False
+
+    # get existing annotations unless replace is set
+    ann = metadata.get('annotations', {}) if (not replace) else {}
+    # now merge in the new annotations, where the new annotations
+    # will override existing annotations if keys are common
+    ann.update(annotations)
+    logger.debug('Updated annotations: {}'.format(ann))
+    metadata['annotations'] = ann
+    return write_job_metadata(metadatafile,metadata)
 
 # args list is one of the following forms:
 #   ['key1=value1', 'key2=value2', ...]  - annotate stopped job within a batch env
@@ -498,110 +532,110 @@ def merge_and_write_annotations(metadatafile,metadata,d,replace = False):
 # case existing annotations are wiped clean first.
  
 def epmt_annotate(argslist, replace = False):
-    if not argslist: return False
+    if not argslist: return False # nothing to do
+
     from epmtlib import kwargify
-    mode = 0
-    
-    # First case: if equals is in first argument, then we have no filename, we are annotating a job
-    # specified in the environment, it could be not started, not stopped, or stopped.
-    
-    if '=' in argslist[0]:
-        result = all("=" in elem for elem in argslist)
+    staged_file = job_dir = jobid = running_job = False  # initialize
+
+    # this function returns the annotation dictionary from kwargs
+    # with some error checking
+    def get_annotations_from_kwargs(args):
+        result = all("=" in elem for elem in args)
         if not result:
-            logger.error("epmt_annotate: form for annotations must be <key=value>")
+            logger.error("epmt_annotate: Annotations must be of the form <key>=<value>")
             return False
-        d = kwargify(argslist,strict=True)
-        if not d:
-            logger.error("kwargs empty")
+        ann = kwargify(args,strict=True)
+        if not ann:
+            logger.error("epmt_annotate: No annotations found. Annotations must be of the form <key>=<value>")
+        return ann
+        
+   
+    if '=' in argslist[0]:
+        # if equals is in first argument, then we have no filename, we are annotating
+        # a job specified in the batch environment. It must be already started.
+        # The job may be stopped or not.
+        annotations = get_annotations_from_kwargs(argslist)
+        if not annotations:
             return False
-        logger.info('annotating stopped job: {}'.format(d))
+        logger.info('annotating a job in the batch environment: {}'.format(annotations))
         jobid,datadir,metadatafile = setup_vars()
         if not (jobid and datadir and metadatafile):
+            logger.error("jobid, datadir and metadatafile MUST be set in the environment")
             return False
         if not path.exists(metadatafile):
             # this means we haven't even run epmt_start_job as otherwise
             # we would have a metadata file
-            logger.warning("annotate: job is not started, starting...")
-            if not epmt_start_job():
-                return False
-        metadata = read_job_metadata(metadatafile)
+            logger.error('annotate cannot be called before start')
+            return False
     else:
-        # annotating either a staged job file
-        # or a job in the database
-        if (len(argslist) <= 1):
-            logger.error("epmt_annotate: form must be <jobfile> <key=value> ...  or <key=value> ...")
+        # No '=' in the first argument, that means the first
+        # argument refers to either a staged job file, a directory or a job in db
+        # the general format here is:
+        #   <job/staged_file/dir> <key=value> [<key=value>]...
+        annotations = get_annotations_from_kwargs(argslist[1:])
+        if not annotations:
             return False
-        infile = argslist[0]
-        result = all("=" in elem for elem in argslist[1:])
-        if not result:
-            logger.error("epmt_annotate: form must be <jobfile> <key=value> ...  or <key=value> ...")
-            return False
-        infile = argslist[0]
-        if infile.endswith(".tgz"):
-            mode = 1
-        d = kwargify(argslist[1:],strict=True)
-        if not d:
-            logger.error("kwargs empty")
-            return False
-        if mode == 1:
-            if not path.exists(infile):
-                logger.error("%s does not exist!",infile)
+
+        arg0 = argslist[0]
+
+        # Now based on arg0 we determine if we are dealing with which
+        # of the following options:
+        # a) staged file
+        # b) job directory
+        # c) job in database
+        if arg0.endswith('.tgz'):
+            # staged file form
+            staged_file = arg0
+            logger.info('annotating staged job file {0}: {1}'.format(staged_file, annotations))
+            tempdir = extract_tar(staged_file, check_metadata = True)
+            if not tempdir:
+                logger.error('Error extracting {}'.format(staged_file))
                 return False
-            logger.info('annotating staged job file {0}: {1}'.format(infile, d))
-            err,tar = compressed_tar(infile)
-            try:
-                info = tar.getmember("./job_metadata")
-            except KeyError:
-                logger.error('ERROR: Did not find %s in tar archive' % "job_metadata")
-                return False
-            else:
-                logger.info('%s is %d bytes in archive' % (info.name, info.size))
-                f = tar.extractfile(info)
-                metadata = read_job_metadata_direct(f)
-                if not metadata:
-                    return False
-                jobid = metadata['job_pl_id']
-                username = metadata['job_pl_username']
-# Wrong, this should go a mkdtemp!
-                datadir = settings.epmt_output_prefix + username + "/" + jobid + "/"
-                metadatafile = datadir + "job_metadata"
-                logger.debug('extracting {0} to {1}'.format(infile, datadir))
-                tar.extractall(path=datadir)
-           
+            metadatafile = tempdir + "/job_metadata"
+
+        elif path.isdir(arg0):
+            # job directory form
+            job_dir = arg0
+            logger.info('annotating dir {}: {}'.format(job_dir, annotations))
+            metadatafile = job_dir + "/job_metadata"
+
         else:
-# HERE WE SHOULD CHECK BOTH THE DATABASE AND THE FILESYSTEM
-# BECAUSE WE MAY WANT TO ANNOTATE A DIRECTORY!
+            # database jobid form
             jobid = argslist[0]
-            logger.info('annotating job {0} in db: {1}'.format(jobid, d))
-            mode = 2  # annotating job in database
+            logger.info('annotating job {0} in db: {1}'.format(jobid, annotations))
             from epmt_query import annotate_job
-            updated_ann = annotate_job(jobid, d, replace)
+            updated_ann = annotate_job(jobid, annotations, replace)
             logger.debug('updated annotations: {}'.format(updated_ann))
-            if settings.job_tags_env in d:
+            if settings.job_tags_env in annotations:
                 # we need to set <job>.tags to the value of EPMT_JOB_TAGS
                 from epmt_query import tag_job
                 # we have to overwrite the existing tags (not merge it in)
-                r = tag_job(jobid, d[settings.job_tags_env], True)
+                r = tag_job(jobid, annotations[settings.job_tags_env], True)
                 logger.debug('Updated tags for job {} to {}'.format(jobid, r))
-            return d.items() <= updated_ann.items()
+            return annotations.items() <= updated_ann.items()
 
     # below we handle annotation update in the metadata file
-    # if its a stopped job, we simply write out the metadata and we
-    # are done.
+    # if its a job in the batch environment, we simply write out 
+    # the metadata and we are done. If it's a staged file then
+    # we also need to recreate the tar.
     
-    retval = merge_and_write_annotations(metadatafile,metadata,d,replace=replace)
-    # No error handling or messages?
+    retval = annotate_metadata(metadatafile,annotations,replace=replace)
+    if not retval:
+        logger.error('Could not annotate metadatafile: ' + metadatafile)
 
-    # for .tgz file (has been staged), we need to recreate the .tgz file but not call stage!
-    if retval and mode == 1:
-        # we should be using a temporary dir and tar file
-        cmd = "tar -C "+datadir+" -cz -f "+infile+" ."
-        logger.debug(cmd)
-        return_code = forkexecwait(cmd, shell=True)
+    # for staged file case we need to recreate the .tgz file
+    # but do not call stage!
+    if staged_file:
+        if retval:
+            # we should be using a temporary dir and tar file
+            cmd = "tar -C "+tempdir+" -cz -f "+staged_file+" ."
+            logger.debug(cmd)
+            return_code = forkexecwait(cmd, shell=True)
+        # now cleanup
         try:
-            rmtree(datadir)
+            rmtree(tempdir)
         except OSError as e:
-            logger.warning("rmtree(%s) failed: %s",datadir,str(e))
+            logger.warning("rmtree(%s) failed: %s",tempdir,str(e))
         if return_code != 0:
             logger.error("%s failed",cmd)
             return False
@@ -961,6 +995,60 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1, remo
     logger.info('Imported %d jobs (%d processes) in %2.2f sec at %2.2f procs/sec, %d workers', len(jobs_imported), total_procs, (fini_ts - start_ts), total_procs/(fini_ts - start_ts), nprocs)
     return(False if error_occurred else r)
 
+
+def extract_tar(tarfile, outdir = '', check_metadata = False):
+    '''
+    Extract staged .tgz file
+
+    Parameters
+    ----------
+        tarfile : string
+                  Path to tarfile
+         outdir : string, optional
+                  Directory to extract to. If unset, a temporary
+                  directory will be created using mkdtemp
+ check_metadata : boolean, optional
+                  If set, the tar will be searched for a job
+                  metadata file, and if not found an error will
+                  be returned. Default is False, which means
+                  no check for metadata file will be performed.
+
+    Returns
+    -------
+    Output directory where tar was extracted on success,
+    False on error
+
+    '''
+    if not path.isfile(tarfile):
+        logger.error("%s does not exist!", tarfile)
+        return False
+    err,tar = compressed_tar(tarfile)
+
+    # only check for metadata file if required to do so
+    if check_metadata:
+        try:
+            info = tar.getmember("./job_metadata")
+        except KeyError:
+            logger.error('ERROR: Did not find %s in tar archive' % "job_metadata")
+            return False
+        logger.info('%s is %d bytes in archive' % (info.name, info.size))
+
+    from tempfile import mkdtemp, gettempdir
+    outdir = outdir or mkdtemp(prefix='epmt_stage_',dir=gettempdir())
+    logger.debug('extracting {0} to {1}'.format(tarfile, outdir))
+    try:
+        tar.extractall(path=outdir)
+    except Exception as e:
+        logger.error('Error extracting {} into {}: {}'.format(tarfile, outdir, str(e)))
+        # cleanup since we had an error
+        try:
+            rmtree(outdir)
+        except:
+            pass
+        return False
+    return outdir
+
+
 def compressed_tar(input):
     tar = None
     flags = None
@@ -1106,7 +1194,7 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True):
                     logger.error("Failed to get %s for annotation of erroneous stage",metadatafile)
                     rmtree(tempdir)
                     return False
-                if not merge_and_write_annotations(metadatafile,metadata,d,replace=False):
+                if not annotate_metadata(metadatafile,d,replace=False):
                     logger.error("Failed to write to %s annotations of erroneous stage",metadatafile)
                     rmtree(tempdir)
                     return False

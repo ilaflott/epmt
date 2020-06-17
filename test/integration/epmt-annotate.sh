@@ -1,6 +1,5 @@
 #!/bin/bash -e
 export SLURM_JOBID=3456
-epmt annotate a=100 b=200
 epmt start               # Collect job data
 epmt annotate inbetween_1=1
 epmt -v run sleep 1      # Run command, if no papiex just run command silently

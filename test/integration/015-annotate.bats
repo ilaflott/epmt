@@ -27,7 +27,6 @@ teardown() {
   run epmt dump -k annotations ${stage_dest}/3456.tgz
   assert_success
   # the order of keys in the dict might change based on underlying db
-  assert_output --partial "'a': 100, 'b': 200"
   assert_output --partial "'inbetween_1': 1, 'inbetween_2': 1"
   assert_output --partial "'c': 200, 'd': 400, 'e': 300, 'f': 600"
 }
@@ -82,10 +81,10 @@ teardown() {
 @test "epmt bad annotate" {
   run epmt annotate abc
   assert_failure
-  assert_output --partial "epmt_annotate: form must be"
+  assert_output --partial "No annotations found"
   run epmt annotate 3456 abc
   assert_failure
-  assert_output --partial "epmt_annotate: form must be"
+  assert_output --partial "Annotations must be of the form <key>=<value>"
 }
 
 @test "epmt annotate incomplete" {
