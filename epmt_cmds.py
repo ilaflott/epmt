@@ -627,18 +627,13 @@ def epmt_annotate(argslist, replace = False):
     # but do not call stage!
     if staged_file:
         if retval:
-            # we should be using a temporary dir and tar file
-            cmd = "tar -C "+tempdir+" -cz -f "+staged_file+" ."
-            logger.debug(cmd)
-            return_code = forkexecwait(cmd, shell=True)
+            # create_tar will log an error if it failed
+            retval = create_tar(staged_file, tempdir)
         # now cleanup
         try:
             rmtree(tempdir)
         except OSError as e:
             logger.warning("rmtree(%s) failed: %s",tempdir,str(e))
-        if return_code != 0:
-            logger.error("%s failed",cmd)
-            return False
 
     return retval
 
@@ -994,6 +989,30 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1, remo
                 total_procs += process_count
     logger.info('Imported %d jobs (%d processes) in %2.2f sec at %2.2f procs/sec, %d workers', len(jobs_imported), total_procs, (fini_ts - start_ts), total_procs/(fini_ts - start_ts), nprocs)
     return(False if error_occurred else r)
+
+def create_tar(tarfile, indir):
+    '''
+    Create a tar file
+
+        Parmeters
+        ---------
+          tarfile : string
+                    Path to output tar file. If it exists it will
+                    be silently overwritten
+            indir : The directory whose contents will be tarred
+
+    Returns
+    -------
+    True on success, False on error
+    '''
+    if not path.isdir(indir):
+        logger.error('{} does not exist'.format(indir))
+    cmd = "tar -C "+indir+" -cz -f "+tarfile+" ."
+    logger.debug(cmd)
+    retval = forkexecwait(cmd, shell=True)
+    if retval != 0:
+        logger.error('Error creating tarfile ({}) from {}'.format(tarfile, indir))
+    return (retval == 0)
 
 
 def extract_tar(tarfile, outdir = '', check_metadata = False):
