@@ -5,13 +5,13 @@ verify_staged_file() {
   local wait_seconds=10
   oldpwd=`pwd`
   cd ${stage_dest}
-  until test $wait_seconds -eq 0 || ls -t *.tgz 2>&1 >/dev/null ; do sleep 1; (( wait_seconds-- )); done
+  until test $wait_seconds -eq 0 || ls -t *.tgz >/dev/null 2>&1 ; do sleep 1; (( wait_seconds-- )); done
   tgz=$(ls -t *.tgz | head -n 1)
   test -s $tgz
   tar xf $tgz
   test -s job_metadata
-  test -s *-collated-papiex-*-*.csv
-  rm -f $tgz job_metadata *-collated-papiex-*-*.csv
+  test -s *-collated-papiex-*-*.csv || ( test -s *-papiex.tsv && test -s *-papiex-header.tsv )
+  rm -f $tgz job_metadata *-collated-papiex-*-*.csv *-papiex*.tsv
   cd $oldpwd;
   echo "$cmd PASSED"
 }
