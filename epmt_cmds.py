@@ -276,7 +276,7 @@ def verify_papiex():
 
     if retval == True:
         logger.info("rmtree %s",global_datadir) 
-        rmtree(global_datadir)
+        rmtree(global_datadir, ignore_errors=True)
         PrintPass()
     else:
         PrintFail()
@@ -628,12 +628,7 @@ def epmt_annotate(argslist, replace = False):
     if staged_file:
         if retval:
             # create_tar will log an error if it failed
-            retval = create_tar(staged_file, tempdir)
-        # now cleanup
-        try:
-            rmtree(tempdir)
-        except OSError as e:
-            logger.warning("rmtree(%s) failed: %s",tempdir,str(e))
+            retval = create_tar(staged_file, tempdir, remove_dir = True)
 
     return retval
 
@@ -990,7 +985,85 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1, remo
     logger.info('Imported %d jobs (%d processes) in %2.2f sec at %2.2f procs/sec, %d workers', len(jobs_imported), total_procs, (fini_ts - start_ts), total_procs/(fini_ts - start_ts), nprocs)
     return(False if error_occurred else r)
 
-def create_tar(tarfile, indir):
+
+def copy_files(src_dir, dest_dir = '', patterns = ['*'], prefix = ''):
+    '''
+    Copy some or all files from one directory to another
+
+    Parameters
+    ----------
+       src_dir : string
+                 The directory to copy from
+      dest_dir : string, optional
+                 The destination directory. If unset,
+                 one will be created using mkdtemp. If specified,
+                 a directory will be created if it does not exist.
+        prefix : This option is only meaningful if `dest_dir` is
+                 not spcified, and mkdtemp is used to create a 
+                 temporary directory. In that case, the prefix if
+                 set will be honored while creating `dest_dir` name.
+      patterns : list, optional
+                 List of patterns to glob (relative to the `src_dir`)
+                 If unset, all files in from_dir will be copied
+    Returns
+    -------
+    Dest. directory on success, False on error
+
+    Notes
+    -----
+    This function does not support recursive copying at present.
+    If `dest_dir` is not specified, and the copy operation fails,
+    then the temporary directory created by this function will be
+    removed before it returns.
+    '''
+    if not path.isdir(src_dir):
+        logger.error('%s does not exist', src_dir)
+        return False
+
+    created_tempdir = False # set true if we create a temp dir
+    if dest_dir:
+        try:
+            mkdir(dest_dir)
+        except FileExistsError:
+            # directory exists. Good, that's what we need.
+            pass
+        except OSError as e:
+            logger.error('mkdir(%s) failed: %s', dest_dir, str(e))
+    else:
+        # make a temp dir
+        from tempfile import mkdtemp, gettempdir
+        dest_dir = mkdtemp(prefix= prefix or 'epmt_stage_',dir=gettempdir())
+        created_tempdir = True # so we can remember to remove it if needed
+
+    # get all the matching paths
+    matching_paths = []
+    for p in patterns:
+        matching_paths.extend(glob(src_dir + '/' + p))
+
+    files = [ f for f in matching_paths if path.isfile(f) ] 
+
+    if not files:
+        logger.error('No files to copy!')
+        return False
+    logger.debug('Copying {} to {}'.format(files, dest_dir))
+    for f in files:
+        filename = path.basename(f)
+        target = dest_dir + "/" + filename
+        try:
+            copyfile(f, target)
+        except Exception as e:
+            logger.error("copyfile(%s,%s): %s",f,target,str(e))
+            # if we created a tempdir, then we better cleanup
+            if created_tempdir:
+                rmtree(dest_dir, ignore_errors=True)
+            return False
+
+    # If we reached here, we were successful in copying the
+    # requested files
+    return dest_dir
+
+
+def create_tar(tarfile, indir, remove_dir = False):
     '''
     Create a tar file
 
@@ -1000,6 +1073,9 @@ def create_tar(tarfile, indir):
                     Path to output tar file. If it exists it will
                     be silently overwritten
             indir : The directory whose contents will be tarred
+       remove_dir : If enabled, `indir` will be removed after
+                    completion of the tar operation regardless
+                    of the status of the tar operation itself
 
     Returns
     -------
@@ -1011,7 +1087,12 @@ def create_tar(tarfile, indir):
     logger.debug(cmd)
     retval = forkexecwait(cmd, shell=True)
     if retval != 0:
-        logger.error('Error creating tarfile ({}) from {}'.format(tarfile, indir))
+        logger.error('%s failed', cmd)
+    if remove_dir:
+        try:
+            rmtree(indir)
+        except OSError as e:
+            logger.warning('rmtree(%s) failed: %s', indir, str(e))
     return (retval == 0)
 
 
@@ -1060,10 +1141,7 @@ def extract_tar(tarfile, outdir = '', check_metadata = False):
     except Exception as e:
         logger.error('Error extracting {} into {}: {}'.format(tarfile, outdir, str(e)))
         # cleanup since we had an error
-        try:
-            rmtree(outdir)
-        except:
-            pass
+        rmtree(outdir, ignore_errors=True)
         return False
     return outdir
 
@@ -1173,34 +1251,26 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True):
     _start_staging_time = time.time()
     # Always collate into local temp dir
     if collate:
-        from tempfile import mkdtemp, gettempdir
-        tempdir = mkdtemp(prefix='epmt_stage_',dir=gettempdir())
-        try:
-            copyfile(indir+"job_metadata",tempdir+"/job_metadata")
-        except Exception as e:
-            logger.error("copyfile(%s,%s): %s",indir+"job_metadata",tempdir+"/job_metadata",str(e))
-            rmtree(tempdir)
+        tempdir = copy_files(indir, patterns = ['job_metadata'], prefix = 'epmt_stage_')
+        if not tempdir:
+            logger.error("Could not copy job_metadata from " + indir)
+            # no need to cleanup as copy_files will clean 
+            # up temp dir if it created one using mkdtemp
             return False
         tsv_files = glob(indir + '/*.tsv')
         if (tsv_files):
-            for tsv in tsv_files:
-                _fn = path.basename(tsv)
-                try:
-                    copyfile(tsv,tempdir+"/" + _fn)
-                except Exception as e:
-                    logger.error("copyfile(%s,%s): %s",tsv,tempdir+"/" + _fn,str(e))
-                    rmtree(tempdir)
-                    return False
-            status = True
-            badfiles = []
-            collated_file = None
+            copied_to = copy_files(indir, dest_dir = tempdir, patterns = ['*.tsv'])
+            if not copied_to:
+                logger.error('Could not copy *.tsv from {} to {}'.format(indir, tempdir))
+                rmtree(tempdir, ignore_errors=True)
+                return False
         else:
             # the old csv 1.0 concatenation using csvjoiner
             from epmt_concat import csvjoiner
-            status, collated_file, badfiles = csvjoiner(indir, outpath=tempdir+"/", keep_going=keep_going, errdir=settings.error_dest)
+            status, _, badfiles = csvjoiner(indir, outpath=tempdir+"/", keep_going=keep_going, errdir=settings.error_dest)
             if status == False:
                 logger.debug("csv concatenation returned status = %s",status)
-                rmtree(tempdir)
+                rmtree(tempdir, ignore_errors=True)
                 return False
             if badfiles:
                 d={}
@@ -1211,20 +1281,18 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True):
                 metadata = read_job_metadata(metadatafile)
                 if not metadata:
                     logger.error("Failed to get %s for annotation of erroneous stage",metadatafile)
-                    rmtree(tempdir)
+                    rmtree(tempdir, ignore_errors=True)
                     return False
                 if not annotate_metadata(metadatafile,d,replace=False):
                     logger.error("Failed to write to %s annotations of erroneous stage",metadatafile)
-                    rmtree(tempdir)
+                    rmtree(tempdir, ignore_errors=True)
                     return False
                 
+        from tempfile import gettempdir
         if compress_and_tar:
             filetostage = gettempdir()+"/"+path.basename(path.dirname(indir))+".tgz"
-            cmd = "tar -C "+tempdir+" -cz -f "+filetostage+" ."
-            logger.debug(cmd)
-            return_code = forkexecwait(cmd, shell=True)
-            rmtree(tempdir)
-            if return_code != 0:
+            # create tar, and bail on error
+            if not create_tar(filetostage, tempdir, remove_dir = True):
                 return False
         else:
             filetostage = gettempdir()+"/"+path.basename(path.dirname(indir))
