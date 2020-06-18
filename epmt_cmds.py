@@ -267,8 +267,13 @@ def verify_papiex():
         retval = True
         global_jobid,global_datadir,global_metadatafile = setup_vars()
         files = glob(global_datadir+settings.input_pattern)
-        if len(files) != 1:
-            logger.error("%s matched %d papiex CSV output files instead of 1",global_datadir+settings.input_pattern,len(files))
+        if 'COLLATED_TSV' in get_papiex_options(settings):
+            num_to_find = 2 # We have a header file that matches the pattern in this case, sadly
+        else:
+            num_to_find = 1
+        if len(files) != num_to_find:
+            logger.error("%s matched %d papiex output files instead of %d",
+                         global_datadir+settings.input_pattern,len(files),num_to_find)
             retval = False
     if retval == True:
         files = glob(global_datadir+"job_metadata")
