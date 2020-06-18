@@ -178,6 +178,8 @@ def verify_papiex_options():
 # Now check events, deduplicate extra commas and remove empty list elements
     eventlist = s.split(',')
     for e in eventlist:
+        if e in [ 'COLLATED_TSV', 'DEBUG' ]:
+            continue
         cmd = settings.install_prefix+"bin/papi_command_line 2>&1 "+e+"| sed -n -e '/PERF_COUNT_SW_CPU_CLOCK\ :/,$p' | grep PERF_COUNT_SW_CPU_CLOCK > /dev/null 2>&1"
         logger.info("\t"+cmd)
         return_code = forkexecwait(cmd, shell=True)
