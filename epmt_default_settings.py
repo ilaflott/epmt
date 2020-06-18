@@ -15,7 +15,7 @@ from getpass import getuser
 jobid_env_list = [ "SLURM_JOB_ID", "SLURM_JOBID", "PBS_JOB_ID" ]
 papiex_options_bycpu={}
 papiex_options_byhost={}
-papiex_options = "PERF_COUNT_SW_CPU_CLOCK"
+papiex_options = "PERF_COUNT_SW_CPU_CLOCK,COLLATED_TSV"
 epmt_output_prefix = "/tmp/epmt/"
 stage_command = "mv"
 stage_command_dest = "./"

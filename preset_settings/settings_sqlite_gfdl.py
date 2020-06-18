@@ -12,7 +12,7 @@ bulk_insert = True
 # You can alter the settings below to override defaults
 #
 # jobid_env_list = [ "SLURM_JOB_ID", "SLURM_JOBID", "PBS_JOB_ID" ]
-# papiex_options = "PERF_COUNT_SW_CPU_CLOCK"
+# papiex_options = "PERF_COUNT_SW_CPU_CLOCK,COLLATED_TSV"
 # epmt_output_prefix = "/tmp/epmt/"
 epmt_output_prefix = path.expandvars("$TMPDIR/epmt")
 # stage_command = "mv"

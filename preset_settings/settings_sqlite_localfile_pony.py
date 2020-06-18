@@ -11,7 +11,7 @@ db_params = db_params = { 'url': 'sqlite:///{HOME}/EPMT_DB.sqlite'.format(HOME=s
 # You can alter the settings below to override defaults
 #
 # jobid_env_list = [ "SLURM_JOB_ID", "SLURM_JOBID", "PBS_JOB_ID" ]
-# papiex_options = "PERF_COUNT_SW_CPU_CLOCK"
+# papiex_options = "PERF_COUNT_SW_CPU_CLOCK,COLLATED_TSV"
 # epmt_output_prefix = "/tmp/epmt/"
 # stage_command = "mv"
 # stage_command_dest = "./"
