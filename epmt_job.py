@@ -780,11 +780,18 @@ def populate_process_table_from_staging(j):
     logger = getLogger(__name__)  # you can use other name
     jobid = j.jobid
     job_info_dict = j.info_dict
-    logger.info('  moving job {} processes from staging -> process table. This can take upto a minute..'.format(jobid))
+    logger.info('  moving job {} processes from staging -> process table..'.format(jobid))
     metric_names = j.info_dict['metric_names'].split(',')
     # get the row IDs of the starting and ending row for the job
     # in the staging table
     (first_proc_id, last_proc_id) = j.info_dict['procs_staging_ids']
+    num_procs = last_proc_id - first_proc_id + 1
+
+    # we process around 3K procs/sec, so if this operation will
+    # take longer than 5sec, let's warn the user
+    if num_procs > 15000:
+        logger.warning('Moving staged processes for job ' + jobid + ' will take approx. %2.0f sec. Please do not interrupt the operation.', num_procs/3000)
+
     staged_procs = orm_raw_sql("SELECT id, threads_df, start, finish, tags, hostname, numtids, exename, path, args, pid, ppid, pgid, sid, generation, exitcode, exitsignal FROM processes_staging WHERE id BETWEEN {} AND {}".format(first_proc_id, last_proc_id))
     proc_ids = []
     nprocs = 0
