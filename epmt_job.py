@@ -582,6 +582,22 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     if j.proc_sums:
         logger.warning('skipped processing jobid {0} as it is not unprocessed'.format(j.jobid))
         return False
+
+    # we need to set up signal handlers so the user doesn't
+    # abort the post-processing midway.
+    def sig_handler(signo, frame):
+        print("post-processing job " + jobid + ", please wait..")
+
+    import atexit
+    from epmtlib import set_signal_handlers
+    set_signal_handlers([], sig_handler)
+
+    # restore the signal handler to defaults before we exit
+    # set_signal_handlers called without arguments will restore
+    # the signal handler to SIG_DFL
+    atexit.register(set_signal_handlers)
+
+    logger.info("Starting post-process of job %s", jobid)
     if not j.info_dict.get('procs_in_process_table', 1):
         stage_copy_result = populate_process_table_from_staging(j)
         if not stage_copy_result:
@@ -590,7 +606,6 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
         # we need to expire the job object and make SQLAlchemy reload
         # it as the processes table has changed
         Session.expire(j)
-    logger.info("Starting post-process of job..")
     proc_sums = {}
 
     if not j.processes:
@@ -675,7 +690,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     j.info_dict = info_dict
     _t5 = time.time()
     logger.debug('  proc_sums calculation took: %2.5f sec', _t5 - _t4)
-    logger.info('marked job as post-processed')
+    logger.info('job %s has been post-processed', jobid)
 
     if not settings.lazy_compute_process_tree:
         mk_process_tree(j, all_procs)
@@ -709,7 +724,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
             u = orm_get(UnprocessedJob, pk=j.jobid)
             if u:
                 orm_delete(u)
-                logger.info('  marking job as processed in database')
+                logger.info('  marking job %s as processed in database', jobid)
                 orm_commit()
             logger.debug('  checking/updating unprocessed jobs table (includes implicit commit) took: %2.5f sec', time.time() - _t6)
     return True
@@ -762,9 +777,10 @@ def populate_process_table_from_staging(j):
     '''
     import datetime as dt
     import psycopg2
+    logger = getLogger(__name__)  # you can use other name
     jobid = j.jobid
     job_info_dict = j.info_dict
-    logger.info('populating process table from staging for job {}'.format(jobid))
+    logger.info('  moving job {} processes from staging -> process table. This can take upto a minute..'.format(jobid))
     metric_names = j.info_dict['metric_names'].split(',')
     # get the row IDs of the starting and ending row for the job
     # in the staging table
@@ -830,7 +846,7 @@ def populate_process_table_from_staging(j):
         logger.error('Error copying from staging to process table for job %s: %s', jobid, str(e))
         return False
     table_copy_time = time.time() - _start_time
-    logger.info("Copied %d processes from staging in %2.5f sec at %2.5f procs/sec", nprocs, table_copy_time, nprocs/table_copy_time)
+    logger.debug("  copied %d processes from staging in %2.5f sec at %2.5f procs/sec", nprocs, table_copy_time, nprocs/table_copy_time)
     return True
 
 @db_session

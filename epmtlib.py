@@ -26,7 +26,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (4,5,0)
+_version = (4,5,1)
 
 def version():
     return _version
@@ -203,7 +203,7 @@ def timing(f):
         ts = time()
         result = f(*args, **kw)
         te = time()
-        logger.info('%r took: %2.5f sec' % (f.__name__, te-ts))
+        logger.debug('%r took: %2.5f sec' % (f.__name__, te-ts))
         return result
     return wrap
 
@@ -1050,6 +1050,25 @@ def csv_probe_format(f):
         return ('1', s.split('\n')[0].split(','))
     # if we reached here, then we don't understand the CSV format
     raise ValueError("CSV file -- {} -- has an unknown file format. Is it corrupted?".format(f.name))
+
+# Set up signal handlers. If no signals are specified, sensible
+# defaults are used. If no handler is specified, the default
+# handler is assumed (this means the signal handler will be restored
+# to the default)
+def set_signal_handlers(signals = [], handler = None):
+    from signal import SIGHUP, SIGTERM, SIGQUIT, SIGINT, signal, SIG_DFL
+    logger = getLogger(__name__)
+
+    # set defaults
+    signals = signals or [SIGHUP, SIGTERM, SIGQUIT, SIGINT]
+    handler = handler or SIG_DFL
+
+    for sig in signals:
+        signal(sig, handler)
+    if handler == SIG_DFL:
+        logger.debug('Finished restoring signal handlers to defaults')
+    else:
+        logger.debug('Finished setting up signal handlers')
 
 
 if __name__ == "__main__":
