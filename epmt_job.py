@@ -978,7 +978,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     j.start = start_ts.replace(tzinfo=None)
     j.end = stop_ts.replace(tzinfo=None)
     j.submit = submit_ts.replace(tzinfo=None) # Wait time is start - submit and should probably be stored
-    info_dict = {'tz': start_ts.tzinfo.tzname(None), 'status': job_status, 'procs_in_process_table': 0}
+    info_dict = {'tz': start_ts.tzinfo.tzname(None), 'status': job_status, 'procs_in_process_table': 0, 'post_processed': 0}
     j.duration = int((j.end - j.start).total_seconds()*1000000)
     logger.info("Computed duration of job: %f us, %.2f m",j.duration,j.duration/60000000)
 

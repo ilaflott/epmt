@@ -336,7 +336,7 @@ def op_roots(jobs, tag, fmt='dict'):
 
 
 @db_session
-def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offset = 0, when=None, before=None, after=None, hosts=[], fmt='dict', annotations=None, analyses=None, merge_proc_sums=True, exact_tag_only = False):
+def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offset = 0, when=None, before=None, after=None, hosts=[], fmt='dict', annotations=None, analyses=None, merge_proc_sums=True, exact_tag_only = False, processed = None):
     """
     Returns a collection of jobs based on some filtering and ordering criteria::Jobs
 
@@ -470,9 +470,19 @@ exact_tag_only: boolean, optional
              means if the tag in the database are a superset of the passed
              tag a match will considered.
 
+  processed : boolean, optional
+              If set to True, `get_jobs` will filter out unprocessed jobs.
+              If set to False, `get_jobs` will filter out processed jobs.
+              Default is None, which means do not care whether the job
+              is processed or not. This flag is only useful with SQLAlchemy
+              ORM. For Pony, all jobs are processed at submission time, so
+              there never will be any unprocessed jobs.
+
+
     Returns
     -------
-    A collection of jobs in the selected format
+    A collection of jobs, possibly empty, in the selected format.
+    On error returns None.
 
 
     Examples
@@ -498,7 +508,7 @@ exact_tag_only: boolean, optional
     #         logger.warning('No limit set, defaults to {0}. Set limit=0 to avoid limits'.format(limit))
 
     if order is None: order = Job.start
-      
+
     qs = orm_jobs_col(jobs)
 
     if when:
@@ -520,7 +530,7 @@ exact_tag_only: boolean, optional
             # user probably forgot to wrap in a list
             hosts = hosts.split(",")
 
-    qs = orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, hosts, annotations, analyses, exact_tag_only)
+    qs = orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, hosts, annotations, analyses, exact_tag_only, processed)
 
     if fmt == 'orm':
         return qs

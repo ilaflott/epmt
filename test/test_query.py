@@ -140,6 +140,12 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(jobs, sorted([u'685003', u'685000']))
         jobs = eq.get_jobs(JOBS_LIST, when='06/16/2019 08:00', hosts=['pp208', 'pp212'], fmt='terse')
         self.assertEqual(jobs, [])
+        # processed/unprocessed jobs
+        processed_jobs = eq.get_jobs(JOBS_LIST, fmt='terse', processed=True)
+        self.assertEqual(set(processed_jobs), set(JOBS_LIST))
+        unprocessed_jobs = eq.get_jobs(JOBS_LIST, fmt='terse', processed=False)
+        self.assertFalse(unprocessed_jobs)
+
 
     @db_session
     def test_procs(self):

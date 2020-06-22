@@ -425,7 +425,7 @@ def orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only, c
 
     return qs
 
-def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, hosts, annotations, analyses, exact_tag_only):
+def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, hosts, annotations, analyses, exact_tag_only, processed = None):
     from .models import Job, Host
     from epmtlib import tags_list, isString, tag_from_string
     from datetime import datetime
@@ -479,6 +479,9 @@ def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, host
 
     if hosts:
         qs = qs.join(Host, Job.hosts).filter(Host.name.in_(hosts))
+
+    if processed is not None:
+        qs = _attribute_filter(qs, 'info_dict', {'post_processed': 1 if processed else 0}, model = Job, conv_to_str = True)
 
     if not(order is None):
         qs = qs.order_by(order)

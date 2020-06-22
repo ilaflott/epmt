@@ -89,7 +89,7 @@ class EPMTSubmit(unittest.TestCase):
             # proc_sums for job is calculated during post-process
             self.assertFalse(j.proc_sums)
             self.assertTrue(UnprocessedJob['685003'])
-            self.assertIn('685003', eq.get_unprocessed_jobs())
+            self.assertIn('685003', eq.get_jobs(['685003'], fmt='terse', processed=False))
             # now let's post-process all pending jobs
             u_jobs = post_process_pending_jobs()
             self.assertIn('685003', u_jobs)
