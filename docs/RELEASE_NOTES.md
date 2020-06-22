@@ -1,4 +1,24 @@
 
+Version 4.5.2
+=============
+
+  Release date: 06/19/2020
+
+  The list includes features and fixes since version 3.7.22.
+
+  - Significant speed up in job submission rates for SQLAlchemy
+    under PostgreSQL (20x and higher depending on hw/sw)
+    - Direct-copy ingestion of CSV using PostgreSQL COPY
+    - Staging of process data into a separate table for faster ingestion
+    - Seamless post-processing of staged data on first-use
+    - Speed-up in job collation by using `O_APPEND` in papiex
+  - EPMT supports unit and integration tests from the CLI
+  - EPMT CLI supports conversion of old CSV to faster TSV format
+  - Multi-method scoring for outlier detection is now the default
+  - Fixes and enhancements to the Query, Outlier detection and Statistics API
+  - Outlier detection for processes and threads
+
+
 Version 3.7.22
 ==============
 
