@@ -19,6 +19,9 @@ build:
 	python -O -bb -m py_compile *.py orm/*.py orm/*/*.py test/*.py
 
 dist: 
+# final location of tarfile
+	if [ ! -d release ]; then mkdir release; fi
+# binary
 	rm -rf epmt-install build
 	pyinstaller --clean --distpath=epmt-install epmt.spec
 # resources
@@ -32,19 +35,19 @@ dist:
 # slurm
 	mkdir epmt-install/slurm
 	cp SLURM/slurm_task_*log_epmt.sh epmt-install/slurm
-# docs (allowed to fail)
+# docs
 	mkdir -p epmt-install/epmt/epmtdocs
-	-mkdocs build -f epmtdocs/mkdocs.yml && cp -Rp epmtdocs/site epmt-install/epmt/epmtdocs
+	mkdocs build -f epmtdocs/mkdocs.yml
+	cp -Rp epmtdocs/site epmt-install/epmt/epmtdocs
 # release
-	-@mkdir release 2>/dev/null
 	tar -czf release/$(EPMT_RELEASE) epmt-install
 	rm -rf epmt-install build
 
 dist-test:
-	rm -rf epmt-install-tests
-	mkdir epmt-install-tests
+# final location of tarfile
+	if [ ! -d release ]; then mkdir release; fi
+	rm -rf epmt-install-tests && mkdir epmt-install-tests
 	cp -Rp test epmt-install-tests
-	-@mkdir release 2>/dev/null
 	tar -czf release/test-$(EPMT_RELEASE) epmt-install-tests
 	rm -rf epmt-install-tests
 
