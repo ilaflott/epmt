@@ -399,20 +399,14 @@ def epmt_start_job(other=[]):
     global_jobid,global_datadir,global_metadatafile = setup_vars()
     if not (global_jobid and global_datadir and global_metadatafile):
         return False
-  
-    # there is a rare possibility that epmt annotate was called before
-    # epmt start. In which case a metadata file will already exists 
-    if not path.exists(global_metadatafile): 
-        metadata = create_start_job_metadata(global_jobid,False,other)
-    else:
-        # it seems epmt annotate must have run and already called epmt_start_job
-        # in such a case we return with a no-op
+    if path.exists(global_metadatafile):
+        # this means we are calling epmt start again
+        # let's be tolerant and issue a warning, but not flag this as an error
+        logger.warning("'epmt start' has been called earlier (%s already exists). Doing a no-op.",global_metadatafile)
         return True
     if create_job_dir(global_datadir) is False:
         return False
-    if path.exists(global_metadatafile):
-        logger.error("%s already exists!",global_metadatafile)
-        return False
+    metadata = create_start_job_metadata(global_jobid,False,other)
     retval = write_job_metadata(global_metadatafile,metadata)
     return retval
 

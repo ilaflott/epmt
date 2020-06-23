@@ -179,7 +179,8 @@ class EPMTSubmit(unittest.TestCase):
 
     def check_lazy_compute(self, j, lazy_eval):
         from epmt_job import is_process_tree_computed, mk_process_tree
-        p = eq.get_procs(j, limit=1, fmt='orm')[0]
+        from orm import Process
+        p = eq.get_procs(j, limit=1, order=Process.start, fmt='orm')[0]
         is_pt_computed = is_process_tree_computed(j)
         if lazy_eval:
             self.assertFalse(is_pt_computed)
