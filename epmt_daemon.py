@@ -178,7 +178,7 @@ def daemon_loop(niters = 0, post_process = True, retire = False, ingest = False,
         logger.info('post-process mode enabled for daemon')
 
     # max delay in seconds; we will subtract from this processing time
-    MAX_DELAY = 30 
+    MAX_DELAY = 10
     logger.debug('starting daemon loop..')
     while (True):
         if (sig_count > 0):

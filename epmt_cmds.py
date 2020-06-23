@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 from datetime import datetime
-from os import environ, makedirs, mkdir, path, getpid, chdir, remove,  uname
+from os import environ, makedirs, mkdir, path, getpid, chdir, remove,  uname, kill
 from socket import gethostname
 from subprocess import call as forkexecwait
 from glob import glob
@@ -1482,7 +1482,25 @@ def epmt_entrypoint(args):
                 from sys import stderr
                 print('No test found', file=stderr)
                 return -1
-        retval = subprocess.run(bats_tester+" "+good_tests,shell=True)
+        cmd = bats_tester+" "+good_tests
+        logger.debug(cmd)
+        # set up a signal handler so we can make sure we trap common
+        # interrupts and also send the SIGTERM to spanwed child processes
+        from epmtlib import set_signal_handlers
+        from signal import SIGTERM
+        import psutil
+        from sys import stderr
+        def sig_handler(signo, frame):
+            print("Sending TERM to child processes..", file=stderr)
+            # use psutil to determine all the child processes
+            current_process = psutil.Process()
+            children = current_process.children(recursive=True)
+            for child in children:
+                kill(child.pid, SIGTERM)
+        set_signal_handlers([], sig_handler)
+        retval = subprocess.run(cmd, shell=True)
+        # restore signal handlers to the defaults
+        set_signal_handlers([])
         return retval.returncode
 
     if args.command == 'unittest':

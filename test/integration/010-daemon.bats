@@ -1,12 +1,25 @@
 load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 
+function sig_handler() {
+  echo "Cleaning up daemons.."
+  # we run in a loop for a few seconds, as sometimes
+  # epmt daemon --start takes a couple of seconds before
+  # it has the lockfile in place
+  for i in 1 2 3 4 5; do
+    epmt daemon --stop > /dev/null 2>&1 && return
+    sleep 1
+  done
+}
+
+
 @test "no daemon running" {
   run epmt daemon
   assert_output --partial "EPMT daemon is not running"
 }
 
 @test "start epmt daemon" {
+  trap sig_handler SIGINT SIGTERM SIGQUIT SIGHUP
   run epmt daemon --start
   run epmt daemon
   assert_output --partial "EPMT daemon running OK"
