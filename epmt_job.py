@@ -586,7 +586,10 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     # we need to set up signal handlers so the user doesn't
     # abort the post-processing midway.
     def sig_handler(signo, frame):
-        print("post-processing job " + jobid + ", please wait..")
+        if hasattr(sig_handler, 'interrupted'):
+            exit(signo)
+        sig_handler.interrupted = True
+        print("post-processing job " + jobid + ". Hit Ctrl-C again to safely abort!")
 
     import atexit
     from epmtlib import set_signal_handlers
@@ -790,7 +793,7 @@ def populate_process_table_from_staging(j):
     # we process around 3K procs/sec, so if this operation will
     # take longer than 5sec, let's warn the user
     if num_procs > 15000:
-        logger.warning('Moving staged processes for job ' + jobid + ' will take approx. %2.0f sec. Please do not interrupt the operation.', num_procs/3000)
+        logger.warning('Moving staged processes for job ' + jobid + ' will take approx. %2.0f sec..', num_procs/3000)
 
     staged_procs = orm_raw_sql("SELECT id, threads_df, start, finish, tags, hostname, numtids, exename, path, args, pid, ppid, pgid, sid, generation, exitcode, exitsignal FROM processes_staging WHERE id BETWEEN {} AND {}".format(first_proc_id, last_proc_id))
     proc_ids = []

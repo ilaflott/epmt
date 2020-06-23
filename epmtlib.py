@@ -26,7 +26,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (4,5,3)
+_version = (4,5,4)
 
 def version():
     return _version
@@ -1056,11 +1056,11 @@ def csv_probe_format(f):
 # handler is assumed (this means the signal handler will be restored
 # to the default)
 def set_signal_handlers(signals = [], handler = None):
-    from signal import SIGHUP, SIGTERM, SIGQUIT, SIGINT, signal, SIG_DFL
+    from signal import SIGHUP, SIGTERM, SIGINT, signal, SIG_DFL
     logger = getLogger(__name__)
 
     # set defaults
-    signals = signals or [SIGHUP, SIGTERM, SIGQUIT, SIGINT]
+    signals = signals or [SIGHUP, SIGTERM, SIGINT]
     handler = handler or SIG_DFL
 
     for sig in signals:
