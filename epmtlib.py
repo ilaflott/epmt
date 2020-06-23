@@ -593,8 +593,7 @@ def check_fix_metadata(raw_metadata):
     if not('job_pl_username' in metadata):
         username = get_batch_envvar("JOB_USER",raw_metadata['job_pl_env']) or get_batch_envvar("USER",raw_metadata['job_pl_env'])
         if username is False or len(username) < 1:
-            print(raw_metadata['job_pl_env'])
-            logger.error("No job username found in metadata or environment")
+            logger.error("No job username found in environment")
             return False
         metadata['job_pl_username'] = username
 
@@ -602,7 +601,7 @@ def check_fix_metadata(raw_metadata):
         jobname = get_batch_envvar("JOB_NAME",raw_metadata['job_pl_env'])
         if jobname is False or len(jobname) < 1:
             jobname = "unknown"
-            logger.warning("No job name found, defaulting to %s",jobname)
+            logger.warning("No job name found found in environment, defaulting to %s",jobname)
         metadata['job_jobname'] = jobname
 
     if not ('job_tags' in metadata):

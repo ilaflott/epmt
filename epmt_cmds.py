@@ -383,7 +383,7 @@ def setup_vars():
             jid = environ.get(e)
             if jid and len(jid) > 0:
                 return jid
-        logger.error("No key of %s was found in environment",settings.jobid_env_list)
+        logger.error("No job id (%s) was found in environment",str(settings.jobid_env_list))
         return False
 
     jobid = get_jobid()

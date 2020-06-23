@@ -612,7 +612,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     proc_sums = {}
 
     if not j.processes:
-        logger.warning('Job {} contains no processes! Perhaps an error in collation or populating the staging data?'.format(jobid))
+        logger.info('Job {} contains no processes, perhaps an error in collation or populating the staging data?'.format(jobid))
 
     _t0 = time.time()
 
@@ -1227,10 +1227,10 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 
         if filedict:
             if not didsomething:
-                logger.warning("Something went wrong in parsing CSV files")
+                logger.warning("Something went wrong in parsing process data files")
                 return (False, "Error parsing CSV", ())
         else:
-            logger.warning("job %s, user %s, jobname %s has no CSV data",jobid,username,jobname)
+            logger.warning("job %s, user %s, jobname %s has no process data",jobid,username,jobname)
 
         # procs are not in staging table they will be in the processes table
         info_dict['procs_in_process_table'] = 1
