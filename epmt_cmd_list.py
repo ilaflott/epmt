@@ -38,9 +38,9 @@ def epmt_list_jobs(arglist):
         kwargs['fmt'] = 'terse'
     jobs = get_jobs(**kwargs)
 #    if type(jobs) == pandas.core.frame.DataFrame:
-    if len(jobs) == 0:
-        logger.info("get_jobs %s returned no jobs",str(kwargs))
-        return False
+    # if len(jobs) == 0:
+    #     logger.info("get_jobs %s returned no jobs",str(kwargs))
+    #     return False
     print(jobs)
     return True
 

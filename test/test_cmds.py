@@ -60,13 +60,14 @@ class EPMTCmds(unittest.TestCase):
         self.assertFalse(eq.orm_get(eq.Job, '691201') or eq.orm_get(eq.Job, '692544'))
         # now start the daemon and make it watch the directory containing the .tgz
         with capture() as (out,err):
-            daemon_loop(1, ingest='{}/test/data/daemon/ingest'.format(install_root), post_process=False, keep=True, recursive=False)
+            # use daemon solely for ingest
+            daemon_loop(1, ingest='{}/test/data/daemon/ingest'.format(install_root), post_process=False, retire=False, keep=True, recursive=False)
         # by now the files should be in the DB
         self.assertEqual(set(eq.get_jobs(['691201', '692544'], fmt='terse')), {'691201', '692544'})
         # make sure the files aren't removed (since we used the "keep" option)
         self.assertTrue(path.exists('{}/test/data/daemon/ingest/691201.tgz'.format(install_root)) and path.exists('{}/test/data/daemon/ingest/692544.tgz'.format(install_root)))
 
-
+    @unittest.skipIf(eq.get_unprocessed_jobs(), 'unprocessed jobs in database')
     @db_session
     def test_daemon_post_process(self):
         # We first make sure the DB has one more unanalyzed and
@@ -199,6 +200,8 @@ class EPMTCmds(unittest.TestCase):
         
     def test_yy_retire(self):
         from datetime import datetime, timedelta
+        with capture() as (out,err):
+            epmt_submit(glob('{}/test/data/daemon/627919.tgz'.format(install_root)), dry_run=False)
         org_jobs = eq.get_jobs(fmt='terse')
         self.assertTrue('627919' in org_jobs)
         # ndays = (datetime.now() - datetime(2019,6,15,7,52)).days # days since start of 685000 
