@@ -51,6 +51,7 @@ def dump_config(outf, sep = ":"):
         if v in environ:
             print("%s%s%s" % (v,sep,environ[v]), file=outf)
 
+@logfn
 def read_job_metadata_direct(file):
     try:
         data = pickle.load(file)
@@ -64,13 +65,14 @@ def read_job_metadata_direct(file):
     logger.debug("Unpickled ")
     return data
 
+@logfn
 def read_job_metadata(jobdatafile):
     logger.info("Unpickling from "+jobdatafile)
     try:
         with open(jobdatafile,'rb') as file:
             return read_job_metadata_direct(file)
     except IOError as i:
-        logger.error("Job metadata missing, possibly didn't start? %s", str(i))
+        logger.info("%s", str(i))
     return False
 
 def write_job_epilog(jobdatafile,metadata):
@@ -338,7 +340,7 @@ def create_start_job_metadata(jobid, submit_ts, from_batch=[]):
         pass
     return metadata
 
-def merge_stop_job_metadata(metadata, exitcode, reason, from_batch=[]):
+def merge_stop_job_metadata(metadata, exitcode=0, reason="none", from_batch=[]):
     # from tzlocal import get_localzone
     # use timezone info if available, otherwise use naive datetime objects
     try:
@@ -395,81 +397,101 @@ def setup_vars():
     logger.info("jobid = %s, dir = %s, file = %s",jobid,dir,file)
     return jobid,dir,file
 
-def epmt_start_job(other=[]):
+# Append .tmp to filename
+def started_metadata_file(filename):
+    return filename + ".tmp"
+def stopped_metadata_file(filename):
+    return filename
+
+@logfn
+def epmt_start_job(keep_going=True,other=[]):
     global_jobid,global_datadir,global_metadatafile = setup_vars()
     if not (global_jobid and global_datadir and global_metadatafile):
         return False
-    if path.exists(global_metadatafile):
+    if path.exists(started_metadata_file(global_metadatafile)):
         # this means we are calling epmt start again
         # let's be tolerant and issue a warning, but not flag this as an error
-        logger.warning("'epmt start' has been called earlier (%s already exists). Doing a no-op.",global_metadatafile)
-        return True
+        if keep_going:
+            logger.warning("'epmt start' has already been performed. Ignoring")
+            return True
+        else:
+            logger.error("'epmt start' has already been performed")
+            return False
+    if path.exists(stopped_metadata_file(global_metadatafile)):
+        # this means we are calling epmt start after a stop, this is not supported
+        logger.error("'epmt stop' has already been performed")
+        return False
     if create_job_dir(global_datadir) is False:
         return False
     metadata = create_start_job_metadata(global_jobid,False,other)
-    retval = write_job_metadata(global_metadatafile,metadata)
-    return retval
+    return write_job_metadata(started_metadata_file(global_metadatafile),metadata)
 
+@logfn
 def epmt_stop_job(other=[]):
     global_jobid,global_datadir,global_metadatafile = setup_vars()
     if not (global_jobid and global_datadir and global_metadatafile):
         return False
 
-    start_metadata = read_job_metadata(global_metadatafile)
+    start_metadata = read_job_metadata(started_metadata_file(global_metadatafile))
     if not start_metadata:
         return False
-    logger.info("read job start metadata from %s",global_metadatafile);
-    if "job_el_stop_ts" in start_metadata:
-        logger.error("%s is already complete!",global_metadatafile)
-        return False
-    metadata = merge_stop_job_metadata(start_metadata,0,"none",other)
+    metadata = merge_stop_job_metadata(start_metadata)
     checked_metadata = check_fix_metadata(metadata)
     if not checked_metadata:
-        logger.error('Metadata check failed. Writing raw metadata for post-mortem analysis.')
-        checked_metadata = metadata
-    retval = write_job_metadata(global_metadatafile,checked_metadata)
-    return retval
+        return False
+    logger.debug("Removing %s, job stop complete",started_metadata_file(global_metadatafile))
+    remove(started_metadata_file(global_metadatafile))
+    return write_job_metadata(stopped_metadata_file(global_metadatafile),checked_metadata)
 
+@logfn
 def epmt_dump_metadata(filelist, key = None):
     rc_final = True
     if not filelist:
         global_jobid,global_datadir,global_metadatafile = setup_vars()
         if not (global_jobid and global_datadir and global_metadatafile):
             return False
-        filelist = [global_metadatafile]
-
+        if path.exists(stopped_metadata_file(global_metadatafile)):
+            logger.debug("this job has been stopped")
+            filelist = [stopped_metadata_file(global_metadatafile)]
+        elif path.exists(started_metadata_file(global_metadatafile)):
+            logger.debug("this job has been started, not stopped")
+            filelist = [started_metadata_file(global_metadatafile)]
+        else:
+            logger.error('dump cannot be called before start without an explicit directory')
+            return False
+        
     if len(filelist) < 1:
         logger.error("Could not identify your job id")
         return False
 
-    for file in filelist:
-        logger.info('Processing {}'.format(file))
-        if not path.exists(file):
-            if ('/' in file) or ('.tgz' in file):
-                logger.error("%s does not exist!",file)
+    for f in filelist:
+        logger.info('Processing {}'.format(f))
+
+        if not path.exists(f):
+            if ('/' in f) or ('.tgz' in f):
+                logger.error("%s does not exist!",f)
                 return False
-            logger.debug('{} was not found in the file-system. Checking database..'.format(file))
+            logger.debug('{} was not found in the file-system. Checking database..'.format(f))
             from epmt_cmd_show import epmt_show_job
-            # if the file does not exist then we 
-            rc = epmt_show_job(file, key = key)
+            # if the file does not exist then we check the DB
+            rc = epmt_show_job(f, key = key)
             if not(rc):
                 rc_final = False
             continue
 
-        err,tar = compressed_tar(file)
+        err,tar = compressed_tar(f)
         if tar:
             try:
                 info = tar.getmember("./job_metadata")
             except KeyError:
-                logger.error('ERROR: Did not find %s in tar archive' % "job_metadata")
+                logger.error('Did not find %s in tar archive' % "job_metadata")
                 return False
             else:
                 logger.info('%s is %d bytes in archive' % (info.name, info.size))
                 f = tar.extractfile(info)
                 metadata = read_job_metadata_direct(f)
         else:
-            metadata = read_job_metadata(file)
-            print(metadata)
+            metadata = read_job_metadata(f)
 
         if not metadata:
             return False
@@ -563,9 +585,13 @@ def epmt_annotate(argslist, replace = False):
         if not (jobid and datadir and metadatafile):
             logger.error("jobid, datadir and metadatafile MUST be set in the environment")
             return False
-        if not path.exists(metadatafile):
-            # this means we haven't even run epmt_start_job as otherwise
-            # we would have a metadata file
+        if path.exists(stopped_metadata_file(metadatafile)):
+            metadatafile = stopped_metadata_file(metadatafile)
+            logger.debug("this job has been stopped")
+        elif path.exists(started_metadata_file(metadatafile)):
+            metadatafile = started_metadata_file(metadatafile)
+            logger.debug("this job has been started, not stopped")
+        else:
             logger.error('annotate cannot be called before start')
             return False
     else:
@@ -598,8 +624,16 @@ def epmt_annotate(argslist, replace = False):
             # job directory form
             job_dir = arg0
             logger.info('annotating dir {}: {}'.format(job_dir, annotations))
-            metadatafile = job_dir + "/job_metadata"
-
+            if path.exists(stopped_metadata_file(job_dir + "/job_metadata")):
+                metadatafile = stopped_metadata_file(job_dir + "/job_metadata")
+                logger.debug("job %s has been stopped",job_dir)
+            elif path.exists(started_metadata_file(job_dir + "/job_metadata")):
+                metadatafile = started_metadata_file(job_dir + "/job_metadata")
+                logger.debug("job %s has been started, not stopped",job_dir)
+            else:
+                logger.error('annotate cannot be called before start')
+                return False
+            
         else:
             # database jobid form
             jobid = argslist[0]
@@ -966,7 +1000,7 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1, remo
         for (f, res) in v.items():
             (status, msg, submit_details) = res
             if not status:
-                logger.error('Error in importing: %s: %s', f, res[1])
+                logger.error('Error during import of %s: %s', f, res[1])
                 error_occurred = True
             elif not submit_details:
                 # we may have a True status, but if submit_details is empty
@@ -987,6 +1021,7 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1, remo
     return(False if error_occurred else r)
 
 
+@logfn
 def copy_files(src_dir, dest_dir = '', patterns = ['*'], prefix = ''):
     '''
     Copy some or all files from one directory to another
@@ -1044,7 +1079,7 @@ def copy_files(src_dir, dest_dir = '', patterns = ['*'], prefix = ''):
     files = [ f for f in matching_paths if path.isfile(f) ] 
 
     if not files:
-        logger.error('No files to copy!')
+        logger.debug('No files to copy!')
         return False
     logger.debug('Copying {} to {}'.format(files, dest_dir))
     for f in files:
@@ -1196,7 +1231,7 @@ def submit_to_db(input, pattern, dry_run=True, remove_file=False):
         try:
             info = tar.getmember("./job_metadata")
         except KeyError:
-            logger.error('ERROR: Did not find %s in tar archive' % "job_metadata")
+            logger.error('Did not find %s in tar archive' % "job_metadata")
             return (False, 'Did not find metadata in tar archive', ())
         else:
             logger.info('%s is %d bytes in archive' % (info.name, info.size))
@@ -1208,7 +1243,7 @@ def submit_to_db(input, pattern, dry_run=True, remove_file=False):
         filedict = get_filedict(input,settings.input_pattern)
 
     if not metadata:
-        return (False, 'Did not find valid metadata', ())
+        return (False, 'missing job metadata', ())
 
     logger.info("%d hosts found: %s",len(filedict.keys()),filedict.keys())
     for h in filedict.keys():
@@ -1254,7 +1289,7 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True):
     if collate:
         tempdir = copy_files(indir, patterns = ['job_metadata'], prefix = 'epmt_stage_')
         if not tempdir:
-            logger.error("Could not copy job_metadata from " + indir)
+            logger.error("No job metadata found in " + indir)
             # no need to cleanup as copy_files will clean 
             # up temp dir if it created one using mkdtemp
             return False
@@ -1262,7 +1297,7 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True):
         if (tsv_files):
             copied_to = copy_files(indir, dest_dir = tempdir, patterns = ['*.tsv'])
             if not copied_to:
-                logger.error('Could not copy *.tsv from {} to {}'.format(indir, tempdir))
+                logger.error('No job performance data found in {}'.format(indir))
                 rmtree(tempdir, ignore_errors=True)
                 return False
         else:
@@ -1320,15 +1355,15 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True):
         return True
     return False
 
+@logfn
 def epmt_stage(dirs, keep_going=True, collate=True, compress_and_tar=True):
-    logger.debug("epmt_stage(%s,collate=%s,compress_and_tar=%s,keep_going=%s)",dirs,str(collate),str(compress_and_tar),str(keep_going))
     if not dirs:
         global_jobid,global_datadir,global_metadatafile = setup_vars()
         if not (global_jobid and global_datadir and global_metadatafile):
             return False
         dirs  = [global_datadir]
 
-    logger.debug("epmt_stage(%s)",dirs)
+    logger.debug("staging %s",dirs)
     r = True
     for d in dirs:
         if not d.endswith("/"):
