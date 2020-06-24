@@ -1,27 +1,26 @@
 load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 
-setup() {
-  resource_path=$(dirname `command -v epmt`)
-}
-
 @test "epmt version" {
   run epmt -V
   assert_output --regexp '^EPMT [0-9]+\.[0-9]+\.[0-9]+$'
 }
 
 setup() {
-  jobs_in_module='692500 804280 685000'
-  resource_path=$(dirname `command -v epmt`)/..
-  # echo "resource_path:${resource_path}"
+  command -v epmt
+  # if we are running from the source tree
+  if [ -f epmt_cmds.py ]; then
+     resource_path=$(dirname `command -v epmt`)
+  else # in production/binary release
+     resource_path=$(dirname `command -v epmt`)/..
+  fi	
   test -n "${resource_path}" || fail
   test -d ${resource_path} || fail
-  # Cleanup
-  rm -rf  ${resource_path}/epmt/test/data/submit/804280/
   # Create
   tmp_job_dir=$(mktemp -d)
   # Extract
-  tar zxvf  ${resource_path}/epmt/test/data/submit/804280.tgz -C ${tmp_job_dir}
+  tar zxvf ${resource_path}/test/data/submit/804280.tgz -C ${tmp_job_dir}
+  jobs_in_module='692500 804280 685000'
 }
 
 teardown() {
@@ -31,7 +30,7 @@ teardown() {
 }
 
 @test "epmt submit" {
-  run epmt submit ${resource_path}/epmt/test/data/submit/692500.tgz
+  run epmt submit ${resource_path}/test/data/submit/692500.tgz
   assert_success
   assert_output --partial "Imported successfully - job: 692500 processes: 6486"
 }
@@ -43,8 +42,8 @@ teardown() {
 }
 
 @test "epmt submit -e" {
-  run epmt submit -e ${resource_path}/epmt/test/data/submit/692500.tgz
-  run epmt submit -e ${resource_path}/epmt/test/data/submit/692500.tgz ${resource_path}/epmt/test/data/query/685000.tgz
+  run epmt submit -e ${resource_path}/test/data/submit/692500.tgz
+  run epmt submit -e ${resource_path}/test/data/submit/692500.tgz ${resource_path}/test/data/query/685000.tgz
   assert_failure
   assert_output --partial "Job already in database:"
   # Path may not be exact

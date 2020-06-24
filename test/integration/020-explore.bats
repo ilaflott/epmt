@@ -2,10 +2,18 @@ load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 
 setup() {
+  command -v epmt
+  if [ -f epmt_cmds.py ]; then
+     resource_path=$(dirname `command -v epmt`)
+  else # in production/binary release
+     resource_path=$(dirname `command -v epmt`)/..
+  fi	
+  test -n "${resource_path}" || fail
+  test -d ${resource_path} || fail
+
   jobs_in_module='625151 627907 629322 633114 675992 680163 685000 685001 685003 685016 691209 692500 693129'
   epmt delete ${jobs_in_module} || true
-  resource_path=$(dirname `command -v epmt`)/..
-  epmt submit ${resource_path}/epmt/test/data/submit/692500.tgz ${resource_path}/epmt/test/data/query/*.tgz ${resource_path}/epmt/test/data/outliers_nb/{625151,627907,629322,633114,675992,680163,685001,691209,693129}.tgz
+  epmt submit ${resource_path}/test/data/submit/692500.tgz ${resource_path}/test/data/query/*.tgz ${resource_path}/test/data/outliers_nb/{625151,627907,629322,633114,675992,680163,685001,691209,693129}.tgz
 }
 teardown() {
   epmt delete ${jobs_in_module} || true
