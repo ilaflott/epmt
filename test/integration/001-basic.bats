@@ -50,5 +50,5 @@ teardown() {
   # Path may not be exact
   assert_output --partial "test/data/submit/692500.tgz"
   run epmt list 685000
-  assert_failure
+  assert_output "[]"
 }
