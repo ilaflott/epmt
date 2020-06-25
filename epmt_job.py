@@ -1,5 +1,5 @@
 from __future__ import print_function
-from os.path import basename
+from os.path import basename, dirname
 from os import environ
 from logging import getLogger
 from json import dumps, loads
@@ -1019,8 +1019,8 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         fileno = 0
         csv = datetime.now()
         fmt = '1' # default csv format
+        header_filename = "{}-papiex-header.tsv".format(hostname)
         if tarfile:
-            header_filename = "{}-papiex-header.tsv".format(hostname)
             logger.debug('checking if tarfile contains CSV v2 files')
             try:
                 csv_hdr_info = tarfile.getmember('./' + header_filename)
@@ -1033,6 +1033,21 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 msg = "could not extract CSV v2 header file: ", str(e)
                 logger.error(msg)
                 return (False, msg, ())
+        else:
+            # we are ingesting from a directory. Check if file has a .tsv suffix
+            if files[0].endswith('.tsv'):
+                fmt = '2'
+                # get the directory containing the .tsv so we can
+                # open the papiex header in the same file
+                submit_dir = dirname(files[0])
+                full_hdr_path = submit_dir + '/' + header_filename
+                try:
+                    csv_hdr_flo = open(full_hdr_path, 'r')
+                except Exception as e:
+                    msg = 'Could not open {} for reading: {}'.format(full_hdr_path, str(e))
+                    logger.error(msg)
+                    return (False, msg, ())
+            
         logger.info('CSV v{} files detected in tar: {}'.format(fmt, ",".join(files)))
 
         # get the metric names from the CSV header file if we have csv v2
@@ -1045,8 +1060,15 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             # read the header file and get metric names
             csv_headers = csv_hdr_flo.read()
             csv_hdr_flo.close()
-            logger.debug(csv_headers)
-            csv_headers = "".join(map(chr,csv_headers)).split(OUTPUT_CSV_SEP)
+            # csv headers might be a regular string or a byte stream
+            # if it's the latter, then use map to convert it to a list
+            # of strings, join and then split to get an array of headers.
+            # If it's already a string, then just split to get the header array
+            if type(csv_headers) == str:
+                csv_headers = csv_headers.split(OUTPUT_CSV_SEP)
+            else:
+                csv_headers = "".join(map(chr,csv_headers)).split(OUTPUT_CSV_SEP)
+            logger.debug('papiex headers: {}'.format(csv_headers))
             metric_names = csv_headers[OUTPUT_CSV_FIELDS.index('threads_df')]
             metric_names = metric_names.replace('{','').replace('}','')
             logger.debug('per-thread metric names: {}'.format(metric_names))
