@@ -4,7 +4,7 @@
 from . import *
 
 def do_cleanup():
-    eq.delete_jobs(['685000', '685003', '685016', '2220', 'corrupted-csv', '804268', '692500'], force=True, remove_models=True)
+    eq.delete_jobs(['685000', '685003', '685016', '2220', 'corrupted-csv', '804268', '692500', '3455'], force=True, remove_models=True)
 
 @timing
 def setUpModule():
@@ -54,6 +54,16 @@ class EPMTSubmit(unittest.TestCase):
         # the job should still not be in the database
         with self.assertRaises(Exception):
             Job['685003']
+
+    @db_session
+    def test_submit_dir(self):
+        with self.assertRaises(Exception):
+            Job['3455']
+        with capture() as (out,err):
+            epmt_submit(['{}/test/data/submit/3455/'.format(get_install_root())], dry_run=False)
+        j = Job['3455']
+        self.assertEqual(j.duration, 28111.0)
+        
 
     @db_session
     def test_submit_minus_e(self):
