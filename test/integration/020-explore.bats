@@ -2,12 +2,7 @@ load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 
 setup() {
-  command -v epmt
-  if [ -f epmt_cmds.py ]; then
-     resource_path=$(dirname `command -v epmt`)
-  else # in production/binary release
-     resource_path=$(dirname `command -v epmt`)/..
-  fi	
+  resource_path=$(dirname `command -v epmt`)
   test -n "${resource_path}" || fail
   test -d ${resource_path} || fail
 

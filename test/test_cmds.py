@@ -183,6 +183,7 @@ class EPMTCmds(unittest.TestCase):
         self.assertTrue(retval == False, "corrupted CSV files, should have returned False")
         self.assertFalse(path.exists(errorfile))
         rmtree(tempdir+"/corrupted_csv")
+        rmtree(tempdir)
         
         if path.exists(errorfile):
             remove(errorfile)
@@ -195,6 +196,7 @@ class EPMTCmds(unittest.TestCase):
         self.assertFalse(path.exists(tempdir+"/corrupted_csv"))
         remove(errorfile) # cleanup after ourselves
         remove('corrupted_csv.tgz')
+        rmtree(tempdir)
         # restore logging level
         epmt_logging_init(-1)
         

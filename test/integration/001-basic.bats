@@ -7,24 +7,13 @@ load 'libs/bats-assert/load'
 }
 
 setup() {
-  command -v epmt
-  # if we are running from the source tree
-  if [ -f epmt_cmds.py ]; then
-     resource_path=$(dirname `command -v epmt`)
-  else # in production/binary release
-     resource_path=$(dirname `command -v epmt`)/..
-  fi	
+  resource_path=$(dirname `command -v epmt`)
   test -n "${resource_path}" || fail
   test -d ${resource_path} || fail
-  # Create
-  tmp_job_dir=$(mktemp -d)
-  # Extract
-  tar zxvf ${resource_path}/test/data/submit/804280.tgz -C ${tmp_job_dir}
   jobs_in_module='692500 804280 685000'
 }
 
 teardown() {
-  rm -rf ${tmp_job_dir}
   # Remove any jobs before starting a test & ignore error code
   epmt delete ${jobs_in_module} || true
 }
@@ -36,9 +25,13 @@ teardown() {
 }
 
 @test "epmt submit dir" {
+  tmp_job_dir=$(mktemp -d)
+  # Extract
+  tar zxvf ${resource_path}/test/data/submit/804280.tgz -C ${tmp_job_dir}
   run epmt submit ${tmp_job_dir}/
   assert_success
   assert_output --partial "Imported successfully - job: 804280 processes: 6039"
+  rm -rf ${tmp_job_dir}
 }
 
 @test "epmt submit -e" {
