@@ -144,6 +144,19 @@ def daemon_loop(niters = 0, post_process = True, retire = False, ingest = False,
     '''
     global sig_count
     sig_count = 0
+
+    # are we a daemon? Daemons have a PPID of 1
+    # Note, this function may also have been invoked in foreground
+    # mode, where are not a daemon..
+    from os import getppid
+    if getppid() == 1:
+        # We reinitialize logging as our earlier logging choices
+        # were made before we became a daemon. In particular we
+        # might not have been using the file handler for logging.
+        from epmtlib import epmt_logging_init
+        import epmt_settings as settings
+        epmt_logging_init(settings.verbose if hasattr(settings, 'verbose') else 0, check=False)
+        
     logger = getLogger(__name__)  # you can use other name
     logger.debug('daemon_loop(niters=%d,post_process=%s,retire=%s,ingest=%s,recursive=%s,keep=%s)', niters, post_process, retire, ingest, recursive, keep)
     from time import sleep, time
@@ -219,7 +232,7 @@ def daemon_loop(niters = 0, post_process = True, retire = False, ingest = False,
         _loop_time = (time() - _t1)
         delay = MAX_DELAY - _loop_time
         if delay > 0:
-            logger.info('sleeping for {0:.3f} sec'.format(delay))
+            logger.debug('sleeping for {0:.3f} sec'.format(delay))
             sleep(delay)
         else:
             logger.warning("daemon loop took {0} seconds. No sleep for me!".format(_loop_time))
