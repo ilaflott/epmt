@@ -14,7 +14,9 @@ function sig_handler() {
 
 setup() {
   jobs=$(epmt list processed=0)
+  logfile=$(epmt -h | grep logfile|cut -f2 -d:)
 }
+
 
 @test "no daemon running" {
   # skip test if we have any unprocessed jobs
@@ -27,9 +29,12 @@ setup() {
   # skip test if we have any unprocessed jobs
   [[ "$jobs" == "[]" ]] || skip
   trap sig_handler SIGINT SIGTERM SIGQUIT SIGHUP
-  run epmt daemon --start
+  run epmt -v -v daemon --start
   run epmt daemon
   assert_output --partial "EPMT daemon running OK"
+  sleep 1
+  run grep "starting daemon loop" $logfile
+  assert_success
 }
 
 
@@ -40,4 +45,6 @@ setup() {
   assert_output --partial "EPMT daemon running OK"
   run epmt daemon --stop
   assert_output --partial "Sending signal to EPMT daemon with PID"
+  # cleanup up as we did verbose logging to log file
+  rm -f $logfile
 }

@@ -123,7 +123,7 @@ def print_daemon_status(pidfile = PID_FILE):
 
 # if niters is set, then the daemon loop will end after 'niters' iterations
 # otherwise loop forever or until we get interrupted by a signal
-def daemon_loop(niters = 0, post_process = True, retire = False, ingest = False, recursive = False, keep = False):
+def daemon_loop(niters = 0, post_process = True, retire = False, ingest = False, recursive = False, keep = False, verbose = 0):
     '''
     Runs a daemon loop niters times, performing enabled actions
     such as post-processing, ingestion, etc.
@@ -141,6 +141,8 @@ def daemon_loop(niters = 0, post_process = True, retire = False, ingest = False,
                   on successful ingest the file should be retained or not.
                   By default, False; meaning the files will be removed on
                   successful submission to the database.
+         verbose: As the daemon reinitializes logging, the verbose argument
+                  facilitates setting the verbosity from the CLI. Defaults to 0
     '''
     global sig_count
     sig_count = 0
@@ -153,9 +155,10 @@ def daemon_loop(niters = 0, post_process = True, retire = False, ingest = False,
         # We reinitialize logging as our earlier logging choices
         # were made before we became a daemon. In particular we
         # might not have been using the file handler for logging.
-        from epmtlib import epmt_logging_init
         import epmt_settings as settings
-        epmt_logging_init(settings.verbose if hasattr(settings, 'verbose') else 0, check=False)
+        from epmtlib import epmt_logging_init
+        verbose = verbose or (settings.verbose if hasattr(settings, 'verbose') else 0)
+        epmt_logging_init(verbose, check=False)
         
     logger = getLogger(__name__)  # you can use other name
     logger.debug('daemon_loop(niters=%d,post_process=%s,retire=%s,ingest=%s,recursive=%s,keep=%s)', niters, post_process, retire, ingest, recursive, keep)
