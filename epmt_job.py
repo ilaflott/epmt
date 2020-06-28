@@ -1108,7 +1108,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 cur = conn.cursor()
                 _copy_start_ts = time.time()
                 logger.debug('establishing connection to DB took: %2.5f sec', _copy_start_ts - _conn_start_ts)
-                copy_sql = "COPY processes_staging({}) FROM STDIN DELIMITER '{}' CSV".format(",".join(OUTPUT_CSV_FIELDS), OUTPUT_CSV_SEP)
+                copy_sql = "COPY processes_staging({}) FROM STDIN DELIMITER '{}'".format(",".join(OUTPUT_CSV_FIELDS), OUTPUT_CSV_SEP)
                 logger.debug('Issuing direct-copy SQL: ' +copy_sql)
                 try:
                     # copy_from is deprecated and copy_expert is recommended
