@@ -67,7 +67,7 @@ class Process(db.Entity):
 # These should probably be abstracted/reduced
     exename = Required(str)
     path = Required(str)
-    args = Optional(str)
+    args = Optional(str, autostrip=False)
 #   env_dict = Optional(Json)
 # End above
     pid = Required(int)

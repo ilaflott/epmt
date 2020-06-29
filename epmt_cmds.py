@@ -1266,7 +1266,10 @@ def submit_to_db(input, pattern, dry_run=True, remove_file=False):
     if remove_file:
         if r[0]:
             logger.info('Removing {} on successful ingest into db'.format(input))
-            remove(input)
+            if path.isfile(input):
+                remove(input)
+            elif path.isdir(input):
+                rmtree(input, ignore_errors=True)
         else:
             logger.debug('Not removing {} as ingest failed'.format(input))
     # if not r[0]:

@@ -209,7 +209,7 @@ def orm_jobs_col(jobs):
 def orm_to_dict(obj, **kwargs):
     return obj.to_dict(**kwargs)
 
-def orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only):
+def orm_get_procs(jobs, tags, fltr, order, limit, offset, when, hosts, exact_tag_only):
     from .models import Process, Host
     from epmtlib import tags_list, isString
     from datetime import datetime
@@ -278,7 +278,10 @@ def orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only):
 
     # finally set limits on the number of processes returned
     if limit:
-        qs = qs.limit(int(limit))
+        qs = qs.limit(int(limit), offset=offset)
+    else:
+        if offset:
+            qs = qs.limit(offset=offset)
 
     return qs
 

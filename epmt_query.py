@@ -540,7 +540,7 @@ exact_tag_only: boolean, optional
 
 #
 @db_session
-def get_procs(jobs = [], tags = None, fltr = None, order = None, limit = None, when=None, hosts=[], fmt='dict', merge_threads_sums=True, exact_tag_only = False):
+def get_procs(jobs = [], tags = None, fltr = None, order = None, offset=0, limit = None, when=None, hosts=[], fmt='dict', merge_threads_sums=True, exact_tag_only = False):
     """
     Returns a collection of processes for a set of jobs based on filter criteria::Processes
 
@@ -604,6 +604,10 @@ def get_procs(jobs = [], tags = None, fltr = None, order = None, limit = None, w
     limit:   int, optional
              If set, limits the total number of results. A value of
              zero is the same as not specifying any limits.
+    
+    offset : int, optional
+             When returning query results, skip offset rows. 
+             Defaults to 0.
     
     when   : datetime or string or Process object, optional
              Restrict the output to processes running at 'when' time. 'when'
@@ -682,6 +686,7 @@ def get_procs(jobs = [], tags = None, fltr = None, order = None, limit = None, w
     # if (limit is None) and (fmt != 'orm'):
     #     limit = 10000
     #     logger.warning('No limit set, defaults to {0}. Set limit=0 to avoid limits'.format(limit))
+    if order is None: order = Process.start
 
     if jobs in (None, [], ''):
         logger.warning('It is strongly recommended that you specify "jobs" to restrict the query')
@@ -699,7 +704,12 @@ def get_procs(jobs = [], tags = None, fltr = None, order = None, limit = None, w
             # user probably forgot to wrap in a list
             hosts = hosts.split(",")
 
-    qs = orm_get_procs(jobs, tags, fltr, order, limit, when, hosts, exact_tag_only)
+    # epmt_list_procs can pass us a singular jobid as an int
+    # so handle that corner-case, by wrapping it in a list
+    if type(jobs) in (str, int):
+        jobs = [ str(jobs) ]
+
+    qs = orm_get_procs(jobs, tags, fltr, order, limit, offset, when, hosts, exact_tag_only)
 
     if fmt == 'orm':
         return qs
