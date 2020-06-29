@@ -709,6 +709,15 @@ def get_procs(jobs = [], tags = None, fltr = None, order = None, offset=0, limit
     if type(jobs) in (str, int):
         jobs = [ str(jobs) ]
 
+    # if we are specified a collection of jobs, make sure they
+    # have been post-processed
+    if jobs:
+        from epmt_job import post_process_job
+        for j in jobs:
+            if not(is_job_post_processed(j)):
+                post_process_job(j)
+    
+
     qs = orm_get_procs(jobs, tags, fltr, order, limit, offset, when, hosts, exact_tag_only)
 
     if fmt == 'orm':
