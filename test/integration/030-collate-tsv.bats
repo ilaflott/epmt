@@ -33,6 +33,11 @@ teardown() {
   f=`epmt stage`       # Move to medium term storage ($PWD)
   epmt -v submit $f       # Submit to DB
   epmt list | grep -w $jobid > /dev/null
+  # lets see if we have fixed the bug wherein calling
+  # get_procs prior to post-processing a job would return no
+  # processes
+  run epmt list procs jobs=$jobid limit=1
+  assert_success
   run epmt dump -k tags $jobid 
   assert_output "{'op': 'check-tsv'}"
   run test -f ${stage_dest}/989.tgz || fail
