@@ -1068,6 +1068,8 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 csv_headers = csv_headers.split(OUTPUT_CSV_SEP)
             else:
                 csv_headers = "".join(map(chr,csv_headers)).split(OUTPUT_CSV_SEP)
+            # remove leading/trailing whitespace in column names
+            csv_headers = [ h.strip() for h in csv_headers ]
             logger.debug('papiex headers: {}'.format(csv_headers))
             metric_names = csv_headers[OUTPUT_CSV_FIELDS.index('threads_df')]
             metric_names = metric_names.replace('{','').replace('}','')
