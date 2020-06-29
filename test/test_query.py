@@ -480,13 +480,13 @@ class QueryAPI(unittest.TestCase):
     def test_op_roots(self):
         with self.assertRaises(ValueError): eq.op_roots([], 'op_sequence:4', fmt='orm')
         op_root_procs = eq.op_roots(['685000', '685003'], 'op_sequence:4', fmt='orm')
-        self.assertEqual([p.pid for p in op_root_procs], [11023, 11185, 11187, 32160, 32328, 32330])
+        self.assertEqual(set([p.pid for p in op_root_procs]), set([11023, 11185, 11187, 32160, 32328, 32330]))
         #op_root_procs = eq.op_roots(['685000', '685003', '685016'], 'op_sequence:1', fmt='orm')
         #l = eq.select((p.job.jobid, p.pid) for p in op_root_procs)[:]
         #self.assertEqual(l, [(u'685000', 6226), (u'685000', 10042), (u'685000', 10046), (u'685000', 10058), (u'685000', 10065), (u'685000', 10066), (u'685003', 29079), (u'685003', 31184), (u'685003', 31185), (u'685003', 31191), (u'685003', 31198), (u'685003', 31199), (u'685016', 122259), (u'685016', 128848), (u'685016', 128849), (u'685016', 128855), (u'685016', 128862), (u'685016', 128863)])
         df = eq.op_roots(['685000', '685003', '685016'], 'op_sequence:1', fmt='pandas')
         self.assertIn(df.shape, ((18,50), (18,49)))
-        self.assertEqual(list(df['pid'].values), [6226, 10042, 10046, 10058, 10065, 10066, 29079, 31184, 31185, 31191, 31198, 31199, 122259, 128848, 128849, 128855, 128862, 128863])
+        self.assertEqual(set(df['pid'].values), set([6226, 10042, 10046, 10058, 10065, 10066, 29079, 31184, 31185, 31191, 31198, 31199, 122259, 128848, 128849, 128855, 128862, 128863]))
 
     @db_session
     def test_timeline(self):
