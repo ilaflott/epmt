@@ -705,9 +705,12 @@ def get_procs(jobs = [], tags = None, fltr = None, order = None, offset=0, limit
             hosts = hosts.split(",")
 
     # epmt_list_procs can pass us a singular jobid as an int
-    # so handle that corner-case, by wrapping it in a list
+    # so handle that corner-case, by wrapping singular jobs into a collection.
+    # Making it into an iterable will make subsequent processing non-modal
     if type(jobs) in (str, int):
         jobs = [ str(jobs) ]
+    elif type(jobs) == Job:
+        jobs = [ jobs ]
 
     # if we are specified a collection of jobs, make sure they
     # have been post-processed
