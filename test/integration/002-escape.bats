@@ -19,33 +19,7 @@ cleanup() {
 }
 
 @test "epmt submit with escape char" {
-  export SLURM_JOB_ID=12340
-  epmt start           # Generate prolog
-  eval `epmt source`   # Setup environment
-  # begin workload
-  cut -d\" -f2 < /dev/null
-  /bin/echo '\\\'
-  /bin/echo \ b
-  /bin/echo \\
-  /bin/echo ,
-  /bin/echo \'
-  /bin/echo -e "\tHello"
-  /bin/echo -e "\tThereU\nR"
-  /bin/echo -e \\\a
-  /bin/echo -e "\a"
-  /bin/echo -e \\
-  /bin/echo -e 'some test \b and more text'
-  /bin/echo \b
-  /bin/echo \\b
-  /bin/echo '\b'
-  /bin/echo -e '\. some text'
-  /bin/echo -e 'try\.some more text'
-  sed 's/^\.//' < /dev/null
-  # end workload
-  epmt_uninstrument      # disable instrumentation
-  epmt stop              # Wrap up job stats
-  # f=`epmt stage`       # Move to medium term storage ($PWD)
-  run epmt submit --remove  # Submit to DB
+  run epmt submit "${resource_path}"/test/data/tsv/12340
   assert_success
   assert_output --partial "Imported successfully - job: 12340 processes: 18"
   run epmt list 12340
