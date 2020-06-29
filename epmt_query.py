@@ -1752,7 +1752,10 @@ op_duration_method: string, optional
             procs_grp_by_job = orm_get_procs(jobs, t, None, None, 0, 0, None, [], exact_tags_only, [Process.jobid, func.count(Process.id), func.min(Process.start), func.max(Process.end), func.sum(Process.duration), func.sum(Process.cpu_time), func.sum(Process.numtids), concat_threads_sums]).group_by(Process.jobid).order_by(Process.jobid)
         else:
             # Pony ORM
-            procs = get_procs(jobs, tags = t, exact_tag_only = exact_tags_only, fmt='orm')
+            # we use order=0 as a hack to avoid going to the default order of p.start
+            # That does not work with the GROUP BY clause. By having order=0, we use the
+            # implicit order and works with GROUP BY
+            procs = get_procs(jobs, order=0, tags = t, exact_tag_only = exact_tags_only, fmt='orm')
             procs_grp_by_job = select((p.job, count(p.id), min(p.start), max(p.end), sum(p.duration), sum(p.cpu_time), sum(p.numtids), group_concat(p.threads_sums, sep='@@@')) for p in procs)
 
         for row in procs_grp_by_job:
