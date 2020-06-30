@@ -1,7 +1,6 @@
 FROM opensuse/leap:15
 
 RUN zypper --non-interactive update
-# Remove ssl from yum, broken in Centos 6 + python 3.7.4.
 RUN zypper --non-interactive install make tcsh tar gzip
 RUN zypper --non-interactive clean -a
 
