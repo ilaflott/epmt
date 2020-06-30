@@ -3,6 +3,7 @@
 
 FROM centos:7
 
+RUN yum update -y
 RUN yum install -y unzip bash tcsh nc curl make git gcc postgresql-devel zlib-devel bzip2 bzip2-devel readline-devel sqlite-devel openssl-devel xz xz-devel libffi-devel
 
 # we set SQLITE_MAX_VARIABLE_NUMBER to a limit higher than 999
