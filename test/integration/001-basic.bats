@@ -10,12 +10,38 @@ setup() {
   resource_path=$(dirname `command -v epmt`)
   test -n "${resource_path}" || fail
   test -d ${resource_path} || fail
+  epmt_output_prefix=$(epmt -h | sed -n 's/epmt_output_prefix://p')
+  test -n "${epmt_output_prefix}" || fail
+  epmt_output_prefix=${epmt_output_prefix}/`whoami`
+  test -n "${epmt_output_prefix}" || fail
   jobs_in_module='692500 804280 685000'
+  rm -rf ${epmt_output_prefix}/[12]
 }
 
 teardown() {
   # Remove any jobs before starting a test & ignore error code
   epmt delete ${jobs_in_module} || true
+  rm -rf ${epmt_output_prefix}/[12]
+}
+
+@test "epmt start" {
+ SLURM_JOB_ID=1 run epmt start -e
+ assert_success
+ SLURM_JOB_ID=1 run epmt start -e
+ assert_failure
+ SLURM_JOB_ID=1 run epmt start
+ assert_success
+}
+
+@test "epmt stop" {
+ SLURM_JOB_ID=2 run epmt start -e
+ assert_success
+ SLURM_JOB_ID=2 run epmt stop -e
+ assert_success
+ SLURM_JOB_ID=2 run epmt stop -e
+ assert_failure
+ SLURM_JOB_ID=2 run epmt stop
+ assert_success
 }
 
 @test "epmt submit" {

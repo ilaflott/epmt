@@ -412,29 +412,44 @@ def epmt_start_job(keep_going=True,other=[]):
         # this means we are calling epmt start again
         # let's be tolerant and issue a warning, but not flag this as an error
         if keep_going:
-            logger.warning("'epmt start' has already been performed. Ignoring")
+            logger.warning("job is already started, ignoring")
             return True
         else:
-            logger.error("'epmt start' has already been performed")
+            logger.error("job is already started")
             return False
     if path.exists(stopped_metadata_file(global_metadatafile)):
         # this means we are calling epmt start after a stop, this is not supported
-        logger.error("'epmt stop' has already been performed")
-        return False
+        if keep_going:
+            logger.warning("job is already complete, ignoring")
+            return True
+        else:
+            logger.error("job is already complete")
+            return False
     if create_job_dir(global_datadir) is False:
         return False
     metadata = create_start_job_metadata(global_jobid,False,other)
     return write_job_metadata(started_metadata_file(global_metadatafile),metadata)
 
 @logfn
-def epmt_stop_job(other=[]):
+def epmt_stop_job(keep_going=True, other=[]):
     global_jobid,global_datadir,global_metadatafile = setup_vars()
     if not (global_jobid and global_datadir and global_metadatafile):
         return False
 
+    if path.exists(stopped_metadata_file(global_metadatafile)):
+        # this means we are calling epmt start after a stop, this is not supported
+        if keep_going:
+            logger.warning("job is already complete, ignoring")
+            return True
+        else:
+            logger.error("job is already complete")
+            return False
+
     start_metadata = read_job_metadata(started_metadata_file(global_metadatafile))
     if not start_metadata:
+        logger.error("job is not started")
         return False
+
     metadata = merge_stop_job_metadata(start_metadata)
     checked_metadata = check_fix_metadata(metadata)
     if not checked_metadata:
@@ -722,6 +737,7 @@ def get_papiex_options(s):
     options = list(set(option_hl+option_cl+option_dl))
     return ','.join(filter(None, options))
 
+@logfn
 def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run_cmd=False):
     """
 
@@ -814,6 +830,7 @@ def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run
         cmd +="epmt_instrument;\n"
     return cmd
 
+@logfn
 def epmt_run(cmdline, wrapit=False, dry_run=False, debug=False):
     # logger.debug("epmt_run(%s, %s, %s, %s, %s)", cmdline, str(wrapit), str(dry_run), str(debug))
 
@@ -827,11 +844,10 @@ def epmt_run(cmdline, wrapit=False, dry_run=False, debug=False):
     cmd += " "+" ".join(cmdline)
 
     if wrapit:
-        logger.info("Forcing epmt_start")
         if dry_run:
             print("epmt start")
         else:
-            if not epmt_start_job():
+            if not epmt_start_job(keep_going=False):
                 return 1
 
     logger.info("Executing(%s)",cmd)
@@ -843,11 +859,11 @@ def epmt_run(cmdline, wrapit=False, dry_run=False, debug=False):
         return_code = 0
 
     if wrapit:
-        logger.info("Forcing epmt_stop")
         if dry_run:
             print("epmt stop")
         else:
-            epmt_stop_job()
+            if (epmt_stop_job(keep_going=False) == False):
+                logger.warning("stop failed, but execution completed - data is likely corrupt")
     return return_code
 
 def get_filedict(dirname,pattern,tar=False):
@@ -1596,9 +1612,9 @@ def epmt_entrypoint(args):
     if args.command == 'dbsize':
         return(epmt_dbsize(args.epmt_cmd_args) == False)
     if args.command == 'start':
-        return(epmt_start_job(other=args.epmt_cmd_args) == False)
+        return(epmt_start_job(keep_going=not args.error, other=args.epmt_cmd_args) == False)
     if args.command == 'stop':
-        return(epmt_stop_job(other=args.epmt_cmd_args) == False)
+        return(epmt_stop_job(keep_going=not args.error, other=args.epmt_cmd_args) == False)
     if args.command == "stage":
         return(epmt_stage(args.epmt_cmd_args,keep_going=not args.error,collate=not args.no_collate,compress_and_tar=not args.no_compress_and_tar) == False)
     if args.command == 'run':

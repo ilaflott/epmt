@@ -56,6 +56,7 @@ if (__name__ == "__main__"):
     # Start
     start_parser = subparser.add_parser('start', help="Begin EPMT job data collection",
         description="Start creates directory and metadata file for data collection of a job.")
+    start_parser.add_argument('-e', '--error', action='store_true',help="Exit at the first sign of trouble")
     start_parser.set_defaults(epmt_cmd_args=None)
     #    start_parser.add_argument('epmt_cmd_args', nargs='*', help="List of directories from batch", metavar="job_dirs")
     # Stage
@@ -110,6 +111,7 @@ if (__name__ == "__main__"):
     # Stop
     stop_parser = subparser.add_parser('stop', help="Stop EPMT job data collection",
                                        description = "Stop appends additional metadata created during start at job finish time.")
+    stop_parser.add_argument('-e', '--error', action='store_true',help="Exit at the first sign of trouble")
     stop_parser.set_defaults(epmt_cmd_args=None)
     # Daemon
     daemon_parser = subparser.add_parser('daemon', help="Run the EPMT daemon",
