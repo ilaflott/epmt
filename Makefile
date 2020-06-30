@@ -118,6 +118,9 @@ check-python-shells:
 	@rm -rf /tmp/epmt
 check-unittests: # Why not test all of them?
 	@env -i TERM=ansi PATH=${PWD}:${PATH} python3 -m unittest -v -f test.test_lib test.test_stat test.test_settings test.test_anysh test.test_submit test.test_run test.test_cmds test.test_query test.test_explore test.test_outliers test.test_db_schema test.test_db_migration
+coverage-unittests:
+	@env -i TERM=ansi PATH=${PWD}:${PATH} python3 -m pytest --cov=./ -v test/test_lib.py test/test_stat.py test/test_settings.py test/test_anysh.py test/test_submit.py test/test_run.py test/test_cmds.py test/test_query.py test/test_explore.py test/test_outliers.py test/test_db_schema.py test/test_db_migration.py
+
 check-integration-tests:
 	@env -i TERM=ansi PATH=${PWD}:${PATH} epmt integration
 
