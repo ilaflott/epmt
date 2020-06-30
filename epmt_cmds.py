@@ -12,6 +12,7 @@ import errno
 import fnmatch
 import pickle
 from logging import getLogger
+from orm import db_session
 
 logger = getLogger(__name__)  # you can use other name
 import epmt_settings as settings
@@ -1461,7 +1462,15 @@ def epmt_entrypoint(args):
                     return(-1)
                 else:
                     f = open(script_file)
-            exec(f.read())
+            # Pony needs the session with a db_session context manager
+            # SQLA doesn't care. We also don't have the SQLA db_session
+            # honoring the context manager contract yet. So, we have
+            # to have some conditional code unfortunately
+            if settings.orm == 'pony':
+                with db_session:
+                    exec(f.read())
+            else:
+                exec(f.read())
         else:
             epmt_shell(ipython = False)
         return 0
