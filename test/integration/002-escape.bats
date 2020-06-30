@@ -3,6 +3,7 @@ load 'libs/bats-assert/load'
 
 setup() {
   resource_path=$(dirname `command -v epmt`)
+  papiex_path=$(epmt -h | grep install_prefix|cut -f2 -d:)
   test -n "${resource_path}" || fail
   test -d ${resource_path} || fail
   jobs_in_module='12340'
@@ -42,8 +43,10 @@ workload() {
 }
 
 @test "epmt submit with escape char" {
-  if [ "$CI_SERVER" == "" ]; then
-    # not running in CI environment, so we have papiex available
+  # depending on whether we have papiex or not, we will run the workload
+  # or load the test output from a saved job
+  if test -f "${papiex_path}/lib/libpapiex.so"; then
+    # we have papiex available
     export SLURM_JOB_ID=12340
     epmt start           # Generate prolog
     eval `epmt source`   # Setup environment
