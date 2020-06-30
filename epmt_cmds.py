@@ -1390,7 +1390,6 @@ def epmt_dbsize(findwhat=['database','table','index','tablespace'], usejson=True
 
 # Start a shell. if ipython is True (default) start a powerful
 # ipython shell, otherwise a vanilla python shell
-@db_session
 def epmt_shell(ipython = True):
     # we import builtins so pyinstaller will use the full builtins module
     # instead of a sketchy replacement. Also we need help from pydoc
