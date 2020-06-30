@@ -1,0 +1,19 @@
+FROM mstormo/suse:latest
+
+# RUN zypper --non-interactive --no-gpg-checks update
+RUN zypper --non-interactive --no-gpg-checks install tcsh environment-modules tar gzip
+RUN zypper --non-interactive clean -a
+
+WORKDIR /tmp
+ARG install_path=/opt/minimalmetrics
+ARG epmt_version
+ARG epmt_full_release
+
+WORKDIR ${install_path}
+COPY ${epmt_full_release} .
+COPY utils/epmt-installer .
+RUN echo -ne "\n\n" | ./epmt-installer `basename ${epmt_full_release}`
+ENV PATH="${install_path}/epmt-${epmt_version}/epmt-install/epmt:${PATH}"
+RUN rm -f *.tgz epmt-installer
+
+CMD ["/bin/bash", "-c", "epmt check; epmt unittest; epmt integration"]

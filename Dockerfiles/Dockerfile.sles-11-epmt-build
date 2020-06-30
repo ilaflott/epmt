@@ -1,0 +1,32 @@
+FROM mstormo/suse:latest
+
+#RUN zypper --non-interactive --no-gpg-checks update
+# Remove ssl from yum, broken in Centos 6 + python 3.7.4.
+# No idea if this is relevant in SUSE 15, but we do the same thing to be sure
+RUN zypper --non-interactive --no-gpg-checks install unzip gzip bzip2 tar bash tcsh curl make git gcc postgresql-devel
+RUN zypper --non-interactive install libbz2-devel readline-devel sqlite3-devel xz
+#RUN zypper --non-interactive install --force zlib-devel
+#RUN zypper --non-interactive install --force xz-devel
+#RUN zypper --non-interactive install --force libffi
+RUN zypper --non-interactive clean -a
+
+# we set SQLITE_MAX_VARIABLE_NUMBER to a limit higher than 999
+# to avoid the sqlite OperationalError: Too many variables
+# https://stackoverflow.com/questions/7106016/too-many-sql-variables-error-in-django-witih-sqlite3
+RUN cd /usr/src && echo "downloading sqlite3" && curl -k -o sqlite-amalgamation-3300100.zip http://www.sqlite.org/2019/sqlite-amalgamation-3300100.zip && unzip sqlite-amalgamation-3300100.zip && echo "building libsqlite3 with json1 and other useful extensions" && cd sqlite-amalgamation-3300100 && gcc -shared -fPIC -O2  -DSQLITE_ENABLE_JSON1 -DSQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_MAX_VARIABLE_NUMBER=9999 sqlite3.c -o /usr/lib64/libsqlite3.so
+
+# Install new OpenSSL
+ADD http://artfiles.org/openssl.org/source/openssl-1.1.1g.tar.gz /usr/src
+RUN cd /usr/src && tar xzf openssl-1.1.1g.tar.gz && cd /usr/src/openssl-1.1.1g && ./config --prefix=/usr && make install > /dev/null
+
+RUN cd /usr/src && echo "downloading python" && curl -k -o Python-3.7.4.tgz https://www.python.org/ftp/python/3.7.4/Python-3.7.4.tgz && tar xzf Python-3.7.4.tgz && cd Python-3.7.4 && echo "building python3" && ./configure --prefix=/usr --enable-shared --enable-optimizations --enable-loadable-sqlite-extensions && make --silent install > /dev/null
+
+RUN ldconfig
+COPY ui/requirements-ui.txt.py3 requirements.txt.py3 /tmp/
+RUN python3 -V && pip3 install --upgrade pip && pip3 install -r /tmp/requirements-ui.txt.py3 -r /tmp/requirements.txt.py3
+RUN pip3 install pyinstaller mkdocs mkdocs-material
+
+RUN rm -rf /usr/src /usr/share/man
+
+
+
