@@ -606,7 +606,10 @@ def get_mapper(tbl):
 # the orm API will define a higher-level function to use this
 # function after guarding against injection and dangerous sql commands
 def orm_raw_sql(sql, commit = False):
-    logger.debug('Executing: {0}'.format(sql))
+    # As we may get really long queries when moving processes from staging,
+    # only log the first 1k of long queries
+    logger.debug('Executing: {0}'.format((sql[:1024] + '.. (query too long to show)') if len(sql) > 1024 else sql))
+
     connection = engine.connect()
     trans = connection.begin()
     if type(sql) != list:

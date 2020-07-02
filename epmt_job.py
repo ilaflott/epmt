@@ -600,12 +600,13 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     # the signal handler to SIG_DFL
     atexit.register(set_signal_handlers)
 
-    logger.info("Starting post-process of job %s", jobid)
+    logger.info("Starting post-processing of job %s", jobid)
     if not j.info_dict.get('procs_in_process_table', 1):
         stage_copy_result = populate_process_table_from_staging(j)
         if not stage_copy_result:
             logger.error('Aborting post-process of job %s as process copy from staging failed', j.jobid)
             return False
+        logger.info('  moving processes from staging complete')
         # we need to expire the job object and make SQLAlchemy reload
         # it as the processes table has changed
         Session.expire(j)
@@ -649,22 +650,34 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     if all_procs:
         logger.info("  computing thread sums across job processes..")
         _t2 = time.time()
+
+        # We no longer do bulk inserts of hosts into the host_associations table
+        # Why? The bulk insert doesn't save any time as it bypasses the ORM
+        # transaction mechanism. This means we have a race condition, wherein
+        # if the transaction is aborted before orm_commit (later in this
+        # function), then we have the host_job associations need to be removed
+        # So, now we just use the ORM for the host-job associations
         hosts = set()
         for proc in all_procs:
-            if settings.bulk_insert:
-                hosts.add(proc.host_id)
-            else:
-                hosts.add(proc.host)
+            # see comment above about why we don't use bulk insert for
+            # host-job associations
+            # if settings.bulk_insert:
+            #     hosts.add(proc.host_id)
+            # else:
+            hosts.add(proc.host)
             nthreads += proc.numtids
             threads_sums_across_procs = sum_dicts(threads_sums_across_procs, proc.threads_sums)
         logger.info("  job contains %d processes (%d threads)",len(all_procs), nthreads)
         _t3 = time.time()
         logger.debug('  thread sums calculation took: %2.5f sec', _t3 - _t2)
-        if settings.bulk_insert:
-            t = Base.metadata.tables['host_job_associations']
-            thr_data.engine.execute(t.insert(), [ { 'jobid': j.jobid, 'hostname': h } for h in hosts])
-        else:
-            j.hosts = list(hosts)
+        # see comment above about why we don't use bulk insert for
+        # host-job associations
+        # if settings.bulk_insert:
+        #     logger.debug('  doing a bulk insert of host job associations')
+        #     t = Base.metadata.tables['host_job_associations']
+        #     thr_data.engine.execute(t.insert(), [ { 'jobid': j.jobid, 'hostname': h } for h in hosts])
+        # else:
+        j.hosts = list(hosts)
         _t4 = time.time()
         logger.debug('  adding %d host(s) to job took: %2.5f sec', len(hosts), _t4 - _t3)
 
@@ -693,7 +706,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     j.info_dict = info_dict
     _t5 = time.time()
     logger.debug('  proc_sums calculation took: %2.5f sec', _t5 - _t4)
-    logger.info('job %s has been post-processed', jobid)
+    logger.info('  job %s has been post-processed', jobid)
 
     if not settings.lazy_compute_process_tree:
         mk_process_tree(j, all_procs)
