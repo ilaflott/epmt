@@ -1413,6 +1413,6 @@ def post_process_pending_jobs():
         jobid = u.jobid
         j = u.job
         logger.info('post-processing {0}'.format(jobid))
-        if post_process_job(j):
+        if post_process_job(jobid):
             did_process.append(jobid)
     return did_process

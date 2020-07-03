@@ -67,28 +67,22 @@ def conv_jobs(jobs, fmt='dict', merge_sums = True):
     jobs = orm_jobs_col(jobs)
     if fmt == 'orm':
         return jobs
+    jobids = [ j.jobid for j in jobs ]
     if fmt=='terse':
-        return [ j.jobid for j in jobs ]
+        return jobids
 
     # at this point the user wants a dict or dataframe output, so
     # we need to make sure that the jobs have been post-processed
-    # I've commented the section below out, and instead we do this
-    # in orm_to_dict (that way, whenever the user passes in jobids
-    # to convert to dict/pandas, we will make sure proc_sums is 
-    # populated). The code below is only for reference as what we
-    # could alternatively do:
-    # from epmt_job import post_process_job
-    # for j in jobs:
-    #     if not(is_job_post_processed(j.jobid)):
-    #         post_process_job(j)
+    # Take care not to pass in the ORM job object to the post_process_job
+    # function as it results in memory references remaining, and a possible
+    # memory leak in the ORM layer. So here we use jobids..
+    from epmt_job import post_process_job
+    for jobid in jobids:
+        if not(is_job_post_processed(jobid)):
+            post_process_job(jobid)
 
     # convert the ORM into a list of dictionaries, excluding blacklisted fields
-    # and then filter None/empty dicts.
-    # It seems in complex error cases we end up with a list containing
-    # None items in the list. It's safest to filter them
-    # See bug:
-    # https://trello.com/c/HfEoCxYU/100-bug-testdaemon-gave-an-exception
-    out_list = list(filter(None, [ orm_to_dict(j, exclude = 'processes') for j in jobs ]))
+    out_list = [ orm_to_dict(j, exclude = 'processes') for j in jobs ]
 
     # do we need to merge process' sum fields into the job?
     if merge_sums:
