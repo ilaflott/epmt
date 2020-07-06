@@ -9,6 +9,7 @@ from functools import reduce
 import time
 import pytz
 import csv
+import sys
 from io import StringIO
 
 logger = getLogger(__name__)  # you can use other name
@@ -587,7 +588,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     # abort the post-processing midway.
     def sig_handler(signo, frame):
         if hasattr(sig_handler, 'interrupted'):
-            exit(signo)
+            sys.exit(signo)
         sig_handler.interrupted = True
         print("post-processing job " + jobid + ". Hit Ctrl-C again to safely abort!")
 
