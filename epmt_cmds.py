@@ -713,7 +713,7 @@ def _papiex_opt_bycpu(o):
     if hasattr(o,'papiex_options_bycpu'):
         if type(o.papiex_options_bycpu) == dict:
             cpu_info = get_cpu_info()
-            cpu_fms = str(cpu_info['family']) + "/" + str(cpu_info['model']) + "/" + str(cpu_info['stepping'])
+            cpu_fms = str(cpu_info.get('family','no_family_found')) + "/" + str(cpu_info.get('model','no_model_found')) + "/" + str(cpu_info.get('stepping','no_stepping_found'))
             logger.info("cpu F/M/S to match papiex_options_bycpu is %s",cpu_fms)
             for key, value in o.papiex_options_bycpu.items():
                 try:
