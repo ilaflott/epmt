@@ -73,13 +73,7 @@ def conv_jobs(jobs, fmt='dict', merge_sums = True):
 
     # at this point the user wants a dict or dataframe output, so
     # we need to make sure that the jobs have been post-processed
-    # Take care not to pass in the ORM job object to the post_process_job
-    # function as it results in memory references remaining, and a possible
-    # memory leak in the ORM layer. So here we use jobids..
-    from epmt_job import post_process_job
-    for jobid in jobids:
-        if not(is_job_post_processed(jobid)):
-            post_process_job(jobid)
+    post_process_jobs(jobids)
 
     # convert the ORM into a list of dictionaries, excluding blacklisted fields
     out_list = [ orm_to_dict(j, exclude = 'processes') for j in jobs ]
@@ -709,11 +703,7 @@ def get_procs(jobs = [], tags = None, fltr = None, order = None, offset=0, limit
     # if we are specified a collection of jobs, make sure they
     # have been post-processed
     if jobs:
-        from epmt_job import post_process_job
-        for j in jobs:
-            if not(is_job_post_processed(j)):
-                post_process_job(j)
-    
+        post_process_jobs(jobs)
 
     qs = orm_get_procs(jobs, tags, fltr, order, limit, offset, when, hosts, exact_tag_only)
 
@@ -807,6 +797,7 @@ def job_proc_tags(jobs, exclude=[], tag_filter = '', fold=False):
     jobs = orm_jobs_col(jobs)
     tags = []
     tag_filter = tag_from_string(tag_filter) if tag_filter else {}
+    post_process_jobs(jobs)
     for j in jobs:
         unique_tags_for_job = __unique_proc_tags_for_job(j, exclude, fold = False)
         if tag_filter:
@@ -2761,6 +2752,7 @@ def is_job_post_processed(job):
     # we retain the j.proc_sums check to retain backward compatibility
     return ((info_dict.get('post_processed', 0) > 0) or (job.proc_sums != None))
 
+
 @db_session
 def get_job_staging_ids(j):
     '''
@@ -2786,6 +2778,39 @@ def get_job_staging_ids(j):
     if type(j) == str:
         j = Job[j]
     return j.info_dict.get('procs_staging_ids', ())
+
+
+@db_session
+def post_process_jobs(jobs):
+    '''
+    Post-process a collection of jobs
+
+    Parameters
+    ----------
+      jobs : list of strings, list of Job objects or an ORM job query
+
+    Returns
+    -------
+    int representing the number of jobs post-processed by the function
+
+    Notes
+    -----
+    It is safe to call this on a collection where some or
+    all jobs have already been processed. Those jobs will be
+    skipped for post-processing.
+    '''
+    from epmt_job import post_process_job
+    if type(jobs) in (Job, str, int):
+        jobs = [ jobs ]
+
+    num_processed = 0
+    for j in jobs:
+        jobid = j.jobid if type(j) == Job else str(j)
+        if not is_job_post_processed(jobid):
+            post_process_job(jobid)
+            num_processed += 1
+    return num_processed
+
 
 @db_session
 def is_job_in_staging(j):
