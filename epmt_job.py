@@ -573,14 +573,14 @@ def mk_process_tree(j, all_procs = None, pid_map = None):
 # build them by using the data in the database/ORM.
 # 
 @timing
-def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, update_unprocessed_jobs_table = True):
+def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, update_unprocessed_jobs_table = True, force = False):
     logger = getLogger(__name__)  # you can use other name
     if type(j) == str:
         jobid = j
         j = Job[jobid]
     else:
         jobid = j.jobid
-    if j.proc_sums:
+    if j.proc_sums and (not force):
         logger.warning('skipped processing jobid {0} as it is not unprocessed'.format(j.jobid))
         return False
 
