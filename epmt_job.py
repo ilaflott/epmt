@@ -648,8 +648,9 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     # job.proc_sums field
     nthreads = 0
     threads_sums_across_procs = {}
-    papiex_err_ids = set([]) # set iff rdtsc_duration <= 0
-    papiex_err = ''           # set iff rdtsc_duration <= 0
+    papiex_err_pids = set([]) # set iff rdtsc_duration <= 0
+    papiex_err = ''          # set iff rdtsc_duration <= 0
+    num_errs = 0             # total error count
     if all_procs:
         logger.info("  computing thread sums across job processes..")
         _t2 = time.time()
@@ -674,10 +675,17 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
             # non-positive value for rdtsc_duration means either an error
             # in PAPI, a misbehaved process closing a descriptor it doesn't own
             # or, simply an error loading the papiex shared library.
-            # We detect the error and keep track of the erroneous processes
+            # We detect the error and keep track of the erroneous processes.
+            # Ideally, we would have liked to keep the database IDs of the
+            # processes. The problem is that in some cases such as Pony,
+            # the database ID of the process is None, until we commit.
+            # So, for want of a better option we keep the pids, noting
+            # that a PID may be common to more than one process in a job
             rdtsc = proc.threads_sums.get('rdtsc_duration')
             if rdtsc is not None and (rdtsc <= 0):
-                papiex_err_ids.add(proc.id)
+                num_errs += 1
+                # logger.debug('process {} (PID {}) has non-positive rdstc'.format(proc.id, proc.pid))
+                papiex_err_pids.add(proc.pid)
                 papiex_err = 'papiex / PAPI library could not be preloaded (rdtsc_duration = 0).' if (rdtsc == 0) else 'PAPI failed or misbehaved process closed a descriptor it did not own (rdtsc_duration < 0).'
 
         logger.info("  job contains %d processes (%d threads)",len(all_procs), nthreads)
@@ -708,15 +716,15 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     for (k, v) in threads_sums_across_procs.items():
         proc_sums[k] = v
 
-    # If we have a papiex error, we need to annotate the job
-    if papiex_err:
-        papiex_err += ' {} processes have potentially erroneous PAPI metric counts'.format(len(papiex_err_ids))
+    # If we have a errors, we need to annotate the job
+    if num_errs:
+        papiex_err += ' {} processes have potentially erroneous PAPI metric counts'.format(num_errs)
         logger.warning('papiex error: %s. Setting rdtsc_duration to -1 for job %s', papiex_err, jobid)
         proc_sums['rdtsc_duration'] = -1 # the current sum is wrong, so use -1
         # use a dict copy so we force an ORM update of this field
         annotations = dict.copy(j.annotations or {})
         annotations['papiex-error'] = papiex_err
-        annotations['papiex-error-process-ids'] = sorted(papiex_err_ids)
+        annotations['papiex-error-process-ids'] = sorted(papiex_err_pids)
         j.annotations = annotations
         
     j.proc_sums = proc_sums
