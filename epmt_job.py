@@ -648,6 +648,8 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     # job.proc_sums field
     nthreads = 0
     threads_sums_across_procs = {}
+    papiex_err_ids = set([]) # set iff rdtsc_duration <= 0
+    papiex_err = ''           # set iff rdtsc_duration <= 0
     if all_procs:
         logger.info("  computing thread sums across job processes..")
         _t2 = time.time()
@@ -668,6 +670,16 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
             hosts.add(proc.host)
             nthreads += proc.numtids
             threads_sums_across_procs = sum_dicts(threads_sums_across_procs, proc.threads_sums)
+
+            # non-positive value for rdtsc_duration means either an error
+            # in PAPI, a misbehaved process closing a descriptor it doesn't own
+            # or, simply an error loading the papiex shared library.
+            # We detect the error and keep track of the erroneous processes
+            rdtsc = proc.threads_sums.get('rdtsc_duration')
+            if rdtsc is not None and (rdtsc <= 0):
+                papiex_err_ids.add(proc.id)
+                papiex_err = 'papiex / PAPI library could not be preloaded (rdtsc_duration = 0).' if (rdtsc == 0) else 'PAPI failed or misbehaved process closed a descriptor it did not own (rdtsc_duration < 0).'
+
         logger.info("  job contains %d processes (%d threads)",len(all_procs), nthreads)
         _t3 = time.time()
         logger.debug('  thread sums calculation took: %2.5f sec', _t3 - _t2)
@@ -695,6 +707,18 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     # merge the threads sums across all processes in the job.proc_sums dict
     for (k, v) in threads_sums_across_procs.items():
         proc_sums[k] = v
+
+    # If we have a papiex error, we need to annotate the job
+    if papiex_err:
+        papiex_err += ' {} processes have potentially erroneous PAPI metric counts'.format(len(papiex_err_ids))
+        logger.warning('papiex error: %s. Setting rdtsc_duration to -1 for job %s', papiex_err, jobid)
+        proc_sums['rdtsc_duration'] = -1 # the current sum is wrong, so use -1
+        # use a dict copy so we force an ORM update of this field
+        annotations = dict.copy(j.annotations or {})
+        annotations['papiex-error'] = papiex_err
+        annotations['papiex-error-process-ids'] = sorted(papiex_err_ids)
+        j.annotations = annotations
+        
     j.proc_sums = proc_sums
 
     # the keys below would be missing if the job has no processes
