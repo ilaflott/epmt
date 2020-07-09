@@ -2756,7 +2756,7 @@ def is_job_post_processed(job):
 @db_session
 def get_job_staging_ids(j):
     '''
-    Get the range of rows a job's processes span in the staging table
+    Get the range of rows a job's processes span in the staging table::Jobs
 
     Parameters
     ----------
@@ -2783,7 +2783,7 @@ def get_job_staging_ids(j):
 @db_session
 def post_process_jobs(jobs):
     '''
-    Post-process a collection of jobs
+    Post-process a collection of jobs::Jobs
 
     Parameters
     ----------
@@ -2815,7 +2815,7 @@ def post_process_jobs(jobs):
 @db_session
 def is_job_in_staging(j):
     '''
-    Return True if job processes are in staging table, False otherwise
+    Return True if job processes are in staging table, False otherwise::Jobs
 
     Parameters
     ----------
@@ -2833,3 +2833,94 @@ def is_job_in_staging(j):
     if type(j) == str:
         j = Job[j]
     return (j.info_dict.get('procs_in_process_table', 1) == 0)
+
+@db_session
+def verify_jobs(jobs):
+    '''
+    Verify the data in a collection of jobs::Jobs
+
+    Parameters
+    ----------
+
+        jobs : list or dataframe or ORM query or string
+               Non-empty collection of jobs
+
+    Returns
+    -------
+     (rc, list)
+
+       rc : bool
+            True on all the data being valid, False otherwise
+   errors : dict
+            Dict, possibly empty, of errors
+            The dictionary key is the jobid, and it's value
+            is a list of errors for the job.
+
+    Example
+    -------
+
+    >>> (ret, err) = eq.verify_jobs('685000')                                                                          
+    >>> ret
+    >>> False
+    >>> err['685000']                                                                                                  
+    >>> ['proc_sums >> rdtsc_duration is negative',
+    >>>  'Process[191430] >> threads_df >> 0 >> rdtsc_duration is negative',
+    >>>  'Process[191430] >> threads_sums >> rdtsc_duration is negative',
+    >>>  'Process[191586] >> threads_df >> 0 >> rdtsc_duration is negative',
+    >>>  'Process[191586] >> threads_sums >> rdtsc_duration is negative',
+    >>>  'Process[191742] >> threads_df >> 0 >> rdtsc_duration is negative',
+    >>>  'Process[191742] >> threads_sums >> rdtsc_duration is negative',
+    >>>  'Process[191898] >> threads_df >> 0 >> rdtsc_duration is negative',
+    >>>  'Process[191898] >> threads_sums >> rdtsc_duration is negative']
+    '''
+    from math import isnan, isinf
+    def verify_num(n):
+        if isnan(n): return 'is Nan'
+        elif isinf(n): return 'is inf.'
+        elif (n< 0): return 'is negative'
+        return ''
+
+    def verify_collection(c, prefix = '', ignore_empty=True):
+        '''
+        Verifies a list or dict
+        '''
+        err = []
+
+        # we try to iterate over a list or dict identically to keep code DRY
+        keys = c.keys() if type(c) == dict else range(len(c))
+        for k in keys:
+            val = c[k]
+            k = str(k)
+
+            # Are we dealing with a Process dict?
+            # If so we can have a more meaningful label
+            if type(c) == list and type(val) == dict and 'id' in val:
+                k = 'Process[{}]'.format(val['id'])
+
+            # skip hidden fields
+            if k.startswith('_'): continue
+
+            if not(ignore_empty) and (val is None): err.append('{}{} is empty'.format(prefix, k))
+
+            elif type(val) in (int, float):
+                ret = verify_num(val)
+                if ret:
+                    err.append('{}{} {}'.format(prefix, k, ret))
+            elif type(val) in (dict, list):
+                # recurse underneath
+                err += verify_collection(val, prefix = "{}{} >> ".format(prefix, k))
+        return err
+
+    jobs = orm_jobs_col(jobs)
+    errors = {}
+    for j in jobs:
+        jobid = j.jobid
+        logger.debug('Verifying {}..'.format(jobid))
+        # first get the errors in the job dict
+        job_errors = verify_collection(j.__dict__, ignore_empty=False)
+        # now get the errors in the processes of this job
+        proc_errors = verify_collection([p.__dict__ for p in j.processes])
+        if job_errors or proc_errors:
+            # concatenate the errors into a flat list
+            errors[jobid] = job_errors + proc_errors
+    return (not(errors), errors)
