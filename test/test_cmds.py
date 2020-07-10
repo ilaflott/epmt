@@ -28,9 +28,9 @@ class EPMTCmds(unittest.TestCase):
     def test_get_papiex_options(self):
         from epmt_cmds import get_papiex_options
         from socket import gethostname
-        from cpuinfo import get_cpu_info
+        from ls_cpu_info import get_cpu_info
         cpu_info = get_cpu_info()
-        cpu_fms = str(cpu_info.get('family','no_family_found')) + "/" + str(cpu_info.get('model','no_model_found')) + "/" + str(cpu_info.get('stepping','no_stepping_found'))
+        cpu_fms = str(cpu_info['family']) + "/" + str(cpu_info['model']) + "/" + str(cpu_info['stepping'])
         class S:
             def __init__(self):
                 self.papiex_options_byhost = dict({gethostname(): "MATCH1"})
@@ -39,7 +39,7 @@ class EPMTCmds(unittest.TestCase):
         s = S()
         opts = get_papiex_options(s)
         self.assertTrue("MATCH1" in opts and "MATCH2" in opts and "DEFAULT" in opts)
-        cpu_fms = str(cpu_info.get('family','no_family_found')) + "/" + ".*" + "/" + str(cpu_info.get('stepping','no_stepping_found'))
+        cpu_fms = str(cpu_info['family']) + "/" + ".*" + "/" + str(cpu_info['stepping'])
         s.papiex_options_bycpu = dict({cpu_fms: "MATCH3"})
         opts = get_papiex_options(s)
         self.assertTrue("MATCH1" in opts and "MATCH3" in opts and "DEFAULT" in opts)
