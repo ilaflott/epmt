@@ -23,6 +23,7 @@ build:python3:
   #   - test/run --no-compose
   image: centos:7
   script:
+    - cat /proc/cpuinfo
     - yum install -y unzip bash tcsh nc curl make git gcc postgresql-devel zlib-devel bzip2 bzip2-devel readline-devel sqlite-devel openssl-devel xz xz-devel libffi-devel
     # additional deps needed to compile linux 
     # - yum install -y ncurses-devel bc bison flex elfutils-libelf-devel grub2
