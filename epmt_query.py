@@ -2874,6 +2874,7 @@ def verify_jobs(jobs):
     >>>  'Process[191898] >> threads_sums >> rdtsc_duration is negative']
     '''
     from math import isnan, isinf
+    from pony.orm.ormtypes import TrackedList, TrackedDict
     def verify_num(n):
         if isnan(n): return 'is Nan'
         elif isinf(n): return 'is inf.'
@@ -2884,18 +2885,19 @@ def verify_jobs(jobs):
         '''
         Verifies a list or dict
         '''
+        # logger.debug('Verifying {}'.format(c))
         err = []
 
         # we try to iterate over a list or dict identically to keep code DRY
-        keys = c.keys() if type(c) == dict else range(len(c))
+        keys = range(len(c)) if type(c) in (list, TrackedList) else c.keys()
+        # Are we dealing with a Process dict?
+        # If so we can have a more meaningful label
+        if 'id' in keys:
+            prefix += 'Process[{}] >> '.format(c['id'])
+
         for k in keys:
             val = c[k]
             k = str(k)
-
-            # Are we dealing with a Process dict?
-            # If so we can have a more meaningful label
-            if type(c) == list and type(val) == dict and 'id' in val:
-                k = 'Process[{}]'.format(val['id'])
 
             # skip hidden fields
             if k.startswith('_'): continue
@@ -2906,20 +2908,24 @@ def verify_jobs(jobs):
                 ret = verify_num(val)
                 if ret:
                     err.append('{}{} {}'.format(prefix, k, ret))
-            elif type(val) in (dict, list):
+            elif type(val) in (dict, list, TrackedList, TrackedDict):
                 # recurse underneath
                 err += verify_collection(val, prefix = "{}{} >> ".format(prefix, k))
         return err
 
-    jobs = orm_jobs_col(jobs)
+    jobs = get_jobs(jobs, fmt='dict')
+    _empty_collection_check(jobs)
     errors = {}
     for j in jobs:
-        jobid = j.jobid
-        logger.debug('Verifying {}..'.format(jobid))
+        jobid = j['jobid']
+        logger.debug('Verifying job {}..'.format(jobid))
         # first get the errors in the job dict
-        job_errors = verify_collection(j.__dict__, ignore_empty=False)
+        job_errors = verify_collection(j, ignore_empty=False)
         # now get the errors in the processes of this job
-        proc_errors = verify_collection([p.__dict__ for p in j.processes])
+        proc_errors = []
+        for p in Job[jobid].processes:
+            d = orm_to_dict(p)
+            proc_errors += verify_collection(d)
         if job_errors or proc_errors:
             # concatenate the errors into a flat list
             errors[jobid] = job_errors + proc_errors
