@@ -686,7 +686,20 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
                 num_errs += 1
                 # logger.debug('process {} (PID {}) has non-positive rdstc'.format(proc.id, proc.pid))
                 papiex_err_pids.add(proc.pid)
+                logger.debug('  rdtsc_duration for PID (%d) < 0 (database ID %s)', proc.pid, str(proc.id if proc.id != None else "not set yet"))
                 papiex_err = 'papiex / PAPI library could not be preloaded (rdtsc_duration = 0).' if (rdtsc == 0) else 'PAPI failed or misbehaved process closed a descriptor it did not own (rdtsc_duration < 0).'
+                # Set rdtsc_duration to -1 in errant process and threads
+                # we need to clone the ORM object as the ORM skips update
+                # at times if you just do an in-place field change
+                tsums = dict.copy(proc.threads_sums)
+                tsums['rdtsc_duration'] = -1
+                proc.threads_sums = tsums
+                thr_df = proc.threads_df[:]
+                for t in thr_df:
+                    if t.get('rdtsc_duration', 0) < 0:
+                        t['rdtsc_duration'] = -1
+                proc.threads_df = thr_df
+                
 
         logger.info("  job contains %d processes (%d threads)",len(all_procs), nthreads)
         _t3 = time.time()
