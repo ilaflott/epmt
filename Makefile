@@ -71,7 +71,13 @@ release epmt-full-release release/$(EPMT_FULL_RELEASE): release/$(EPMT_RELEASE) 
 
 check-release release-test-docker: release/$(EPMT_FULL_RELEASE)
 	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test-release -t $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) --build-arg epmt_version=$(EPMT_VERSION) --build-arg install_path=/opt/minimalmetrics --build-arg epmt_full_release=release/$(EPMT_FULL_RELEASE) .
-	docker run --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --privileged -it --rm -h ernie $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c "epmt check; epmt unittest; epmt integration"
+	if docker ps | grep postgres-test > /dev/null; then docker stop postgres-test; fi
+	if docker network ls | grep epmt-test-net > /dev/null; then docker network rm epmt-test-net; fi
+	docker network create epmt-test-net
+	docker run -d --rm --name postgres-test --network epmt-test-net -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -e POSTGRES_DB=EPMT-TEST postgres:latest
+	docker run --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged -it --rm -h ernie $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c 'epmt check && epmt unittest && epmt integration; install_prefix=`epmt -h| grep install_prefix|cut -f2 -d:`; cp -v $$install_prefix/../epmt-install/preset_settings/settings_test_pg_container.py $$install_prefix/../epmt-install/epmt/settings.py && epmt check && epmt unittest && epmt integration'
+	docker stop postgres-test
+	docker network rm epmt-test-net
 
 release6:
 # Force rebuild
