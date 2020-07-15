@@ -2875,6 +2875,7 @@ def verify_jobs(jobs):
     '''
     from math import isnan, isinf
     from pony.orm.ormtypes import TrackedList, TrackedDict
+    import datetime
     def verify_num(n):
         if isnan(n): return 'is Nan'
         elif isinf(n): return 'is inf.'
@@ -2887,6 +2888,7 @@ def verify_jobs(jobs):
         '''
         # logger.debug('Verifying {}'.format(c))
         err = []
+        now = datetime.datetime.now()
 
         # we try to iterate over a list or dict identically to keep code DRY
         keys = range(len(c)) if type(c) in (list, TrackedList) else c.keys()
@@ -2908,6 +2910,11 @@ def verify_jobs(jobs):
                 ret = verify_num(val)
                 if ret:
                     err.append('{}{} {}'.format(prefix, k, ret))
+            elif type(val) == datetime.datetime:
+                if (val < datetime.datetime(2019,1,1)):
+                    err.append('{}{} {}'.format(prefix, k, 'contains an invalid timestamp (too old)'))
+                elif (val > now):
+                    err.append('{}{} {}'.format(prefix, k, 'contains an invalid timestamp (in the future)'))
             elif type(val) in (dict, list, TrackedList, TrackedDict):
                 # recurse underneath
                 err += verify_collection(val, prefix = "{}{} >> ".format(prefix, k))

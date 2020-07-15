@@ -586,12 +586,25 @@ class QueryAPI(unittest.TestCase):
         status = eq.get_job_status('685000')
         self.assertEqual(status, {'exit_code': 0, 'exit_reason': 'none', 'script_path': '/home/Jeffrey.Durachta/ESM4/DECK/ESM4_historical_D151/gfdl.ncrc4-intel16-prod-openmp/scripts/postProcess/ESM4_historical_D151_ocean_annual_rho2_1x1deg_18840101.tags', 'script_name': 'ESM4_historical_D151_ocean_annual_rho2_1x1deg_18840101'})
 
+    @db_session
     def test_verify_jobs(self):
+        import datetime
+        j = Job['685000']
+        p = eq.get_procs('685000', limit=1, fmt='orm')[0]
+        proc_id = p.id
+        j.start = datetime.datetime(1970,1,1)
+        tomorrow = datetime.datetime.now() + datetime.timedelta(days = 1) 
+        j.end = tomorrow
+        p.start = datetime.datetime(1970,1,1)
+        orm_commit()
         (ret, errs) = eq.verify_jobs(['685000'])
         self.assertFalse(ret)
         self.assertEqual(len(errs), 1)
-        self.assertEqual(len(errs['685000']), 9)
+        self.assertEqual(len(errs['685000']), 12)
         self.assertEqual(len([e for e in errs['685000'] if 'rdtsc_duration' in e]), 9)
+        self.assertEqual(len([e for e in errs['685000'] if 'invalid timestamp' in e]), 3)
+        self.assertEqual(len([e for e in errs['685000'] if 'in the future' in e]), 1)
+        self.assertEqual(len([e for e in errs['685000'] if 'Process[{}]'.format(proc_id) in e]), 1)
 
     def test_version(self):
         self.assertTrue(eq.version() > (1,0,0))
