@@ -1,5 +1,5 @@
 OS_TARGET=centos-6
-PAPIEX_VERSION?=2.3.8
+PAPIEX_VERSION?=3.3.8
 PAPIEX_SRC?=../papiex-oss
 EPMT_VERSION=$(shell sed -n '/_version = /p' epmtlib.py | sed 's/,/./g' | sed 's/.*(\(.*\))/\1/')
 EPMT_RELEASE=epmt-$(EPMT_VERSION)-$(OS_TARGET).tgz
@@ -18,30 +18,64 @@ PWD=$(shell pwd)
 build:
 	python -O -bb -m py_compile *.py orm/*.py orm/*/*.py test/*.py
 
-dist: 
-# final location of tarfile
+# install python3.7.4 if it's not already installed
+# Also, if needed install a virtual environment in .venv374
+install-py3:
+	@if [ "`which python3`" == "" -o "`python3 -V`" != "Python 3.7.4" ]; then \
+		echo "Installing Python 3.7.4 using pyenv" ; \
+		which pyenv > /dev/null || curl https://pyenv.run | bash ; \
+		PATH="$$HOME/.pyenv/bin:$$PATH" ; \
+		eval "$$(pyenv init -)" ; \
+		eval "$$(pyenv virtualenv-init -)" ; \
+		pyenv versions ; \
+		pyenv install -s 3.7.4 ; \
+		pyenv shell 3.7.4 ; \
+		python3 -V ; \
+		rm -rf .venv374 ; \
+		echo -n "checking if venv is needed.. " ; \
+		if ! python3 -m epmt_query > /dev/null 2>&1; then \
+			echo yes ; \
+			python3 -m venv .venv374 ; \
+			source .venv374/bin/activate; \
+			pip3 install --upgrade pip && pip3 install -r ui/requirements-ui.txt.py3 -r requirements.txt.py3 ; \
+			pip3 install pyinstaller mkdocs mkdocs-material ; \
+		else \
+			echo no ; \
+		fi ; \
+	fi
+
+
+# This target runs pyinstaller to produce an epmt tarball that
+# has all the dpeendencies included.
+# If a virtual environment is found in .venv374 then use it
+# Otherwise, assume the environment is already ready to run
+# pyinstaller.
+dist: install-py3
 	if [ ! -d release ]; then mkdir release; fi
-# binary
 	rm -rf epmt-install build
-	pyinstaller --clean --distpath=epmt-install epmt.spec
-# resources
+	# activate venv if it exists, run pyinstaller in the
+	# same shell pipeline so it uses the venv (if activated)
+	[ ! -d .venv374 ] || source .venv374/bin/activate ; \
+		[ "`python3 -V`" == "Python 3.7.4" ] || exit 1 ; \
+		pyinstaller --clean --distpath=epmt-install epmt.spec 
+	# resources
 	cp -Rp preset_settings epmt-install
 	cp -Rp notebooks epmt-install
 	cp -Rp migrations epmt-install
 	cp -p alembic.ini epmt-install
-# examples
-	mkdir epmt-install/examples
+	# examples
+	mkdir epmt-install/examples 
 	cp epmt-example.*sh epmt-install/examples
-# slurm
-	mkdir epmt-install/slurm
-	cp SLURM/slurm_task_*log_epmt.sh epmt-install/slurm
-# docs
+	# slurm
+	mkdir epmt-install/slurm 
+	cp SLURM/slurm_task_*log_epmt.sh epmt-install/slurm 
+	# docs
 	mkdir -p epmt-install/epmt/epmtdocs
 	mkdocs build -f epmtdocs/mkdocs.yml
 	cp -Rp epmtdocs/site epmt-install/epmt/epmtdocs
-# release
-	tar -czf release/$(EPMT_RELEASE) epmt-install
-	rm -rf epmt-install build
+	# release
+	tar -czf release/$(EPMT_RELEASE) epmt-install 
+	rm -rf epmt-install build .venv374
 
 dist-test:
 # final location of tarfile
