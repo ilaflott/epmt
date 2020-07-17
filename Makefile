@@ -1,5 +1,5 @@
 OS_TARGET=centos-6
-PAPIEX_VERSION?=3.3.8
+PAPIEX_VERSION?=2.3.8
 PAPIEX_SRC?=../papiex-oss
 EPMT_VERSION=$(shell sed -n '/_version = /p' epmtlib.py | sed 's/,/./g' | sed 's/.*(\(.*\))/\1/')
 EPMT_RELEASE=epmt-$(EPMT_VERSION)-$(OS_TARGET).tgz
