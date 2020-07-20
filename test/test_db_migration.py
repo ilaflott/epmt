@@ -9,7 +9,7 @@ def setUpModule():
     setup_db(settings)
 
 
-MIGRATION_HEAD = 'e703296695bf'
+MIGRATION_HEAD = '4ae9a1cac540'
 
 class EPMTDBMigration(unittest.TestCase):
     @unittest.skipUnless((settings.orm == 'sqlalchemy') and not(orm_in_memory()), 'requires sqlalchemy with persistent backend')

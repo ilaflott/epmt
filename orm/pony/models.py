@@ -44,6 +44,10 @@ class Job(db.Entity):
 
 
 class Process(db.Entity):
+    # Try to use a bigint for the integer type..
+    # Unfortunately Pony ORM has a bug, and only uses
+    # 32-bit integer for id, ignoring the size=64
+    id = PrimaryKey(int, auto=True, size=64)
 # Rollup entries, computed at insert time
     start = Required(datetime, default=datetime.utcnow)
     end = Required(datetime, default=datetime.utcnow)
