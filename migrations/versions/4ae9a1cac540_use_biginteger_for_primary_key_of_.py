@@ -15,12 +15,17 @@ down_revision = 'e703296695bf'
 branch_labels = None
 depends_on = None
 
+from orm import orm_db_provider
+
 
 def upgrade():
-    op.alter_column('processes_staging', 'id', existing_type=sa.Integer(), type_=sa.BigInteger())
-    op.alter_column('processes', 'id', existing_type=sa.Integer(), type_=sa.BigInteger())
+    # sqlite does not support ALTER
+    if orm_db_provider() == 'postgres':
+        op.alter_column('processes_staging', 'id', existing_type=sa.Integer(), type_=sa.BigInteger())
+        op.alter_column('processes', 'id', existing_type=sa.Integer(), type_=sa.BigInteger())
 
 def downgrade():
-    op.alter_column('processes_staging', 'id', existing_type=sa.BigInteger(), type_=sa.Integer())
-    op.alter_column('processes', 'id', existing_type=sa.BigInteger(), type_=sa.Integer())
-
+    # sqlite does not support ALTER
+    if orm_db_provider() == 'postgres':
+        op.alter_column('processes_staging', 'id', existing_type=sa.BigInteger(), type_=sa.Integer())
+        op.alter_column('processes', 'id', existing_type=sa.BigInteger(), type_=sa.Integer())
