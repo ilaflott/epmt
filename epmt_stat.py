@@ -977,6 +977,61 @@ def dframe_append_weighted_row(df, weights, ignore_index = True, use_abs = False
         new_row.append(((abs(df[c].values) if use_abs else df[c].values) * np.asarray(weights_array)).sum())
     return df.append(pd.DataFrame([new_row], columns = df.columns), ignore_index = ignore_index)
 
+def dict_outliers(dlist, labels = [], threshold = 2.0):
+    '''
+    Get outliers from a collection of dictionaries::Statistics
+
+    Parameters
+    ----------
+        dlist : list of dicts
+       labels : list of strings, optional
+                List of labels. If provided this must be the same
+                length as dlist and each item in the labels must 
+                be the label for the corresponding dict in dlist.
+                If not provided, the index of the dict in dlist will
+                be assumed to be its label
+    threshold : float, optional
+                Number of standard deviations to determine if a value
+                is an outlier or not. Defaults to 2.0, which means a
+                key/value is an outlier if it the value is out of the
+                range (mean - 2 * sigma, mean + 2*sigma)
+
+    Returns
+    -------
+     (outliers, outl_by_key)
+
+        outliers: set of outlier labels (or indices)
+     outl_by_key: dict of outliers
+    '''
+    data = {}
+    for d in dlist:
+        for k in d:
+            if k in data:
+                data[k].append(d[k])
+            else:
+                data[k] = [d[k]]
+    mean = {}
+    std = {}
+    labels = labels or range(len(dlist))
+    outliers = set([])
+    outl_by_key = {}
+    for k in data:
+        mean[k] = np.mean(data[k])
+        std[k] = np.std(data[k])
+        outl_by_key[k] = []
+
+    i = 0
+    for d in dlist:
+        label = labels[i]
+        for k in d:
+            if (d[k] < (mean[k] - threshold * std[k])) or (d[k] > (mean[k] + threshold * std[k])):
+                outl_by_key[k].append(label)
+                outliers.add(label)
+        i += 1
+
+    # get the dict with non-empty keys
+    pop_dict = { k: v for k, v in outl_by_key.items() if v }
+    return (outliers, pop_dict)
 
 # https://datascience.stackexchange.com/questions/57122/in-elbow-curve-how-to-find-the-point-from-where-the-curve-starts-to-rise
 # def __find_elbow(data):

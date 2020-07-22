@@ -2517,7 +2517,7 @@ def compute_process_trees(jobs):
 
 
 @db_session
-def procs_histogram(jobs, attr = 'exename'):
+def procs_histogram(jobs, attr = 'exename', metric = ''):
     '''
     Gets a histogram for an attribute across the processes in a jobs collection::Processes
 
@@ -2528,13 +2528,19 @@ def procs_histogram(jobs, attr = 'exename'):
     attr : string, optional
            The attribute from the Process model that is the basis of
            the histogram. Defaults to 'exename'
+   metric: string, optional
+           If metric is not specified, then the histogram contains the counts
+           for `attr`. If metric is specified, then the histogram contains
+           the aggregate for the metric across the jobs keyed by `attr`
 
     Returns
     -------
     A dictionary of the form:
        { 'bash': 1256, 'cmp': 10, ... }
        where the key is the process attribute's instance and the value
-       is the number of times the attribute took that instance value
+       is the number of times the attribute took that instance value if
+       metric is unspecified. If metric is specified, then `value` is the
+       aggregate of the metric for processes that have the particular `attr`.
 
     Notes
     -----
@@ -2563,7 +2569,18 @@ def procs_histogram(jobs, attr = 'exename'):
      '/usr/bin/tr': 28,
      ...
     }
-
+    # Below we get the aggregate cpu_time keyed by exe
+    >>> aggr_cpu_time = eq.procs_histogram(['685000', '685003'], metric='cpu_time')
+    >>> aggr_cpu_time
+    {'tcsh': 10895503.0,
+     'mkdir': 228932.0,
+     'modulecmd': 802856.0,
+     'test': 179937.0,
+     'perl': 50358159.0,
+     'python': 63976.0,
+     'cat': 151946.0,
+     ...
+    }
     '''
     logger = getLogger(__name__)  # you can use other name
     procs_hist = {}
@@ -2571,7 +2588,10 @@ def procs_histogram(jobs, attr = 'exename'):
     logger.debug('{} processes found'.format(procs.count()))
     for p in procs:
         attr_val = getattr(p, attr)
-        procs_hist[attr_val] = procs_hist.get(attr_val, 0) + 1
+        if metric:
+            procs_hist[attr_val] = procs_hist.get(attr_val, 0) + getattr(p, metric)
+        else:
+            procs_hist[attr_val] = procs_hist.get(attr_val, 0) + 1
     return procs_hist
 
 def procs_set(jobs, attr = 'exename'):
