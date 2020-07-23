@@ -330,8 +330,10 @@ def orm_to_dict(obj, **kwargs):
         from epmt_query import is_job_post_processed
         if not(is_job_post_processed(obj.jobid)):
             from epmt_job import post_process_job
-            post_process_job(obj.jobid) # as a side-effect obj.proc_sums will be populated
-            assert(obj.proc_sums)
+            trigger_pp = kwargs.get('trigger_post_process', True)
+            if trigger_pp:
+                post_process_job(obj.jobid) # as a side-effect obj.proc_sums will be populated
+                assert(obj.proc_sums)
 
     d = obj.__dict__.copy()
     excludes = kwargs['exclude'] if 'exclude' in kwargs else []

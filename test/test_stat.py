@@ -100,5 +100,12 @@ class EPMTStat(unittest.TestCase):
         self.assertEqual(len(modes), 3)
         self.assertEqual(sorted(list(modes.round(0))), [0, 5, 10]) 
 
+    def test_dict_outliers(self):
+        from epmt_stat import dict_outliers
+        dlist = [{'a': 100, 'b': 200}, {'a': 101, 'b': 201}, {'a': 100, 'b': 200}, {'a': 200, 'b': 300}]
+        outl, outl_by_key = dict_outliers(dlist, threshold = 1.0)
+        self.assertEqual(outl, {3})
+        self.assertEqual(outl_by_key, {'a': [3], 'b': [3]})
+
 if __name__ == '__main__':
     unittest.main()

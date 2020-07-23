@@ -1601,6 +1601,7 @@ def epmt_entrypoint(args):
         if args.start or args.foreground:
             if ((not(args.post_process)) and (not(args.ingest))):
                 # if no command is set, default to post-process
+                logger.info('Neither ingest nor post-process mode set for daemon, defaulting to post-process..')
                 args.post_process = True
             daemon_args = { 'post_process': args.post_process, 'ingest': args.ingest, 'recursive': args.recursive, 'keep': args.keep, 'retire': args.retire, 'verbose': args.verbose }
             return (daemon_loop(**daemon_args) == False) if args.foreground else start_daemon(**daemon_args)

@@ -37,7 +37,7 @@ PROC_SUMS_FIELD_IN_JOB='proc_sums'
 THREAD_SUMS_FIELD_IN_PROC='threads_sums'
 
 
-def conv_jobs(jobs, fmt='dict', merge_sums = True):
+def conv_jobs(jobs, fmt='dict', merge_sums = True, trigger_post_process = True):
     """
     Convert jobs from one format to another::Jobs
 
@@ -58,6 +58,13 @@ def conv_jobs(jobs, fmt='dict', merge_sums = True):
           as first-class columns rather than a nested dictionary.
           This option is silently ignored for 'orm' and 'terse' formats.
 
+    trigger_post_process: boolean, optional
+          This is an advanced option. Generally you want this set to True,
+          as otherwise the output jobs collection may have empty fields.
+          If set to False, no post-processing will be performed for unprocessed
+          jobs. By default this is True, and output jobs will always have
+          been post-processed (if they were unprocessed initially).
+
     Returns
     -------
     Job collection in the format specified by `fmt`
@@ -73,19 +80,19 @@ def conv_jobs(jobs, fmt='dict', merge_sums = True):
 
     # at this point the user wants a dict or dataframe output, so
     # we need to make sure that the jobs have been post-processed
-    post_process_jobs(jobids)
+    if trigger_post_process:
+        post_process_jobs(jobids)
 
     # convert the ORM into a list of dictionaries, excluding blacklisted fields
-    out_list = [ orm_to_dict(j, exclude = 'processes') for j in jobs ]
+    out_list = [ orm_to_dict(j, exclude = 'processes', trigger_post_process = trigger_post_process) for j in jobs ]
 
     # do we need to merge process' sum fields into the job?
     if merge_sums:
         for j in out_list:
             # check if dicts have any common fields, if so,
             # warn the user as some fields will get clobbered
-            # Note if job hasn't been post-processed it will have an empty (None)
-            # PROC_SUMS_FIELD_IN_JOB field. However, orm_to_dict above guarantees
-            # all jobs are already post-processed
+            # If PP hasn't been done, then the proc_sums will be empty.
+            if not j[PROC_SUMS_FIELD_IN_JOB]: continue
             common_fields = list(set(j) & set(j[PROC_SUMS_FIELD_IN_JOB]))
             if common_fields:
                 logger.warning('while hoisting proc_sums to job-level, found {0} common fields: {1}'.format(len(common_fields), common_fields))
@@ -324,7 +331,7 @@ def op_roots(jobs, tag, fmt='dict'):
 
 
 @db_session
-def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offset = 0, when=None, before=None, after=None, hosts=[], fmt='dict', annotations=None, analyses=None, merge_proc_sums=True, exact_tag_only = False, processed = None):
+def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offset = 0, when=None, before=None, after=None, hosts=[], fmt='dict', annotations=None, analyses=None, merge_proc_sums=True, exact_tag_only = False, trigger_post_process=True):
     """
     Returns a collection of jobs based on some filtering and ordering criteria::Jobs
 
@@ -458,13 +465,13 @@ exact_tag_only: boolean, optional
              means if the tag in the database are a superset of the passed
              tag a match will considered.
 
-  processed : boolean, optional
-              If set to True, `get_jobs` will filter out unprocessed jobs.
-              If set to False, `get_jobs` will filter out processed jobs.
-              Default is None, which means do not care whether the job
-              is processed or not. This flag is only useful with SQLAlchemy
-              ORM. For Pony, all jobs are processed at submission time, so
-              there never will be any unprocessed jobs.
+trigger_post_process : boolean, optional
+              This is an advanced flag. Normally this should be set to True,
+              as we want jobs to be post-processed if they aren't so.
+              In rare cases you may want to set this to False to avoid
+              triggering expensive post-process operations. Be warned that
+              certain fields of unprocessed jobs, such as proc_sums will be
+              empty if this is set to False.
 
 
     Returns
@@ -518,12 +525,12 @@ exact_tag_only: boolean, optional
             # user probably forgot to wrap in a list
             hosts = hosts.split(",")
 
-    qs = orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, hosts, annotations, analyses, exact_tag_only, processed)
+    qs = orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, hosts, annotations, analyses, exact_tag_only)
 
     if fmt == 'orm':
         return qs
 
-    return conv_jobs(qs, fmt, merge_proc_sums)
+    return conv_jobs(qs, fmt, merge_proc_sums, trigger_post_process)
 
 
 #

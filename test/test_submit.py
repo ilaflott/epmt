@@ -103,14 +103,18 @@ class EPMTSubmit(unittest.TestCase):
             # proc_sums for job is calculated during post-process
             self.assertFalse(j.proc_sums)
             self.assertTrue(UnprocessedJob['685003'])
-            self.assertIn('685003', eq.get_jobs(['685003'], fmt='terse', processed=False))
-            # now let's post-process all pending jobs
-            u_jobs = post_process_pending_jobs()
-            self.assertIn('685003', u_jobs)
+            self.assertIn('685003', eq.get_unprocessed_jobs())
+            # now we call get_jobs with a flag to prevent triggering PP
+            jobs_dict = eq.get_jobs('685003', fmt='dict', trigger_post_process = False)[0]
+            self.assertFalse(jobs_dict['proc_sums'])
+            self.assertFalse(jobs_dict.get('time_waiting', None))
+            # now trigger PP for 685003
+            jobs_dict = eq.get_jobs('685003', fmt='dict')[0]
+            self.assertTrue(jobs_dict['time_waiting'])
         else:
             self.assertEqual(post_process_pending_jobs(), [])
+        self.assertFalse('685003' in eq.get_unprocessed_jobs())
         self.assertFalse(post_process_job(j.jobid))
-        self.assertEqual(eq.get_unprocessed_jobs(), [])
         self.assertFalse(orm_get(UnprocessedJob, '685003'))
         with self.assertRaises(Exception):
              u = UnprocessedJob['685003']
