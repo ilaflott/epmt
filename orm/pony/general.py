@@ -207,6 +207,10 @@ def orm_jobs_col(jobs):
     return jobs
 
 def orm_to_dict(obj, **kwargs):
+    # remove the trigger_post_process key which has no meaning
+    # for Pony and is only relevant for SQLA
+    if 'trigger_post_process' in kwargs:
+        del kwargs['trigger_post_process']
     return obj.to_dict(**kwargs)
 
 def orm_get_procs(jobs, tags, fltr, order, limit, offset, when, hosts, exact_tag_only):
