@@ -20,13 +20,14 @@ try:
 except ImportError:
     from io import StringIO
 
+
 # semantic version
 # first element is the major version number
 # second element is the minor version number
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (4,6,28)
+_version = (4,7,0)
 
 def version():
     return _version
@@ -58,6 +59,7 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
         level = INFO
     elif intlvl >= 2:
         level = DEBUG
+
 
     rootLogger = getLogger()
     rootLogger.setLevel(level)
@@ -95,7 +97,7 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
     alembic_logger.setLevel(level)
 
 def init_settings(settings):
-    logger = getLogger(__name__)
+    logger = getLogger('init_settings')
     err_msg = ""
 
     if environ.get("PAPIEX_OUTPUT"):
@@ -103,11 +105,11 @@ def init_settings(settings):
     if environ.get("PAPIEX_OPTIONS"):
         logger.warning("PAPIEX_OPTIONS variable should not be defined, it will be ignored")
 
-    for k in [ "provider", "user", "password", "host", "dbname", "filename" ]:
+    for k in [ "provider", "user", "password", "host", "dbname", "filename", "url" ]:
         name = "EPMT_DB_"+ k.upper()
         t = environ.get(name)
         if t:
-            logger.info("%s found, setting %s:%s now %s:%s",name,k,settings.db_params[k],k,t)
+            logger.info("%s found, overriding setting from %s:%s to %s:%s",name,k,settings.db_params.get(k, ''),k,t)
             settings.db_params[k] = t
 
     if not hasattr(settings,"epmt_output_prefix"):

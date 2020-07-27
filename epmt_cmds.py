@@ -1439,9 +1439,9 @@ def epmt_entrypoint(args):
 
     if args.verbose == None:
         args.verbose = 0
-    logger = getLogger(__name__)  # you can use other name
     # we only need to log the PID to the console for parallel runs
     epmt_logging_init(args.verbose or settings.verbose, check=True, log_pid = (hasattr(args, 'num_cpus') and (args.num_cpus > 1)))
+    logger = getLogger(__name__)  # you can use other name
     init_settings(settings)
 
     # Here it's up to each command to validate what it is looking for
