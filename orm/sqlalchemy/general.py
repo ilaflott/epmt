@@ -42,7 +42,7 @@ def db_session(func):
             retval = func(*args, **kwargs) # No need to pass session explicitly
             completed = True
         except Exception as e:
-            logger.warning('\nAn exception occurred; rolling back session..')
+            logger.warning('Rolling back session due to the following exception.. ')
             # logger.warning(e, exc_info=True)
             # import traceback, sys
             # print('-'*60)
@@ -199,8 +199,12 @@ def orm_delete_jobs(jobs, use_orm = False):
             stmts.append('DELETE FROM jobs WHERE jobs.jobid = \'{0}\''.format(jobid))
         try:
             orm_raw_sql(stmts, commit = True)
-            return
+            return True
         except Exception as e:
+            # postgres permission denied for R/O accounts
+            if 'permission denied' in str(e):
+                logger.error('You do not have sufficient privileges to delete jobs')
+                return False
             logger.warning("Could not execute delete SQL: {0}".format(str(e)))
 
     # do a slow delete using ORM
@@ -208,7 +212,7 @@ def orm_delete_jobs(jobs, use_orm = False):
     for j in jobs:
         Session.delete(j)
     Session.commit()
-    return
+    return True
 
 def orm_delete_refmodels(ref_ids):
     from .models import ReferenceModel
@@ -333,7 +337,6 @@ def orm_to_dict(obj, **kwargs):
             trigger_pp = kwargs.get('trigger_post_process', True)
             if trigger_pp:
                 post_process_job(obj.jobid) # as a side-effect obj.proc_sums will be populated
-                assert(obj.proc_sums)
 
     d = obj.__dict__.copy()
     excludes = kwargs['exclude'] if 'exclude' in kwargs else []
@@ -610,7 +613,7 @@ def get_mapper(tbl):
 def orm_raw_sql(sql, commit = False):
     # As we may get really long queries when moving processes from staging,
     # only log the first 1k of long queries
-    logger.debug('Executing: {0}'.format((sql[:1024] + '.. (query too long to show)') if len(sql) > 1024 else sql))
+    logger.debug('Executing: {0}'.format((sql[:1024] + '.. (SQL too long to show)') if len(sql) > 1024 else sql))
 
     connection = engine.connect()
     trans = connection.begin()
@@ -710,9 +713,10 @@ def migrate_db():
     try:
         config.main(argv=['--raiseerr', 'upgrade', 'head',])
     except Exception as e:
-        logger.warning(e)
-        logger.warning('Could not upgrade the database. This very likely means that your database schema predates our migration support. A solution would be to start with a fresh database.')
-        return False
+        logger.error('Could not upgrade the database')
+        if 'permission denied' in str(e):
+            logger.error('Looks like you do not have sufficient privileges to migrate the database')
+        raise
     updated_version = get_db_schema_version()
     if updated_version != epmt_schema_head:
         logger.warning('Database migration failed. Current schema version is {}, while head is {}'.format(updated_version, epmt_schema_head))

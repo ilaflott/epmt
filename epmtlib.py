@@ -27,7 +27,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (4,7,0)
+_version = (4,7,1)
 
 def version():
     return _version
@@ -97,6 +97,9 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
     alembic_logger.setLevel(level)
 
 def init_settings(settings):
+    if hasattr(init_settings, 'initialized'): return
+    init_settings.initialized = True
+
     logger = getLogger('init_settings')
     err_msg = ""
 
@@ -208,7 +211,8 @@ def timing(f):
         ts = time()
         result = f(*args, **kw)
         te = time()
-        logger.debug('%r took: %2.5f sec' % (f.__name__, te-ts))
+        if result:
+            logger.debug('%r took: %2.5f sec' % (f.__name__, te-ts))
         return result
     return wrap
 

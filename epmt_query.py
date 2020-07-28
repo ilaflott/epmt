@@ -80,8 +80,8 @@ def conv_jobs(jobs, fmt='dict', merge_sums = True, trigger_post_process = True):
 
     # at this point the user wants a dict or dataframe output, so
     # we need to make sure that the jobs have been post-processed
-    if trigger_post_process:
-        post_process_jobs(jobids)
+    # if trigger_post_process:
+    #     post_process_jobs(jobids)
 
     # convert the ORM into a list of dictionaries, excluding blacklisted fields
     out_list = [ orm_to_dict(j, exclude = 'processes', trigger_post_process = trigger_post_process) for j in jobs ]
@@ -1892,8 +1892,9 @@ remove_models : boolean, optional
     jobs = orm_jobs_col(jobs_to_delete)
     num_jobs = len(jobs_to_delete)
     logger.info('deleting %d jobs (%s), in an atomic operation..', num_jobs, str(jobs_to_delete))
-    orm_delete_jobs(jobs)
-    return num_jobs
+    # if orm_delete_jobs fails then it was one atomic transaction that failed
+    # so no jobs will be deleted
+    return num_jobs if orm_delete_jobs(jobs) else 0
 
 
 def retire_jobs(ndays = settings.retire_jobs_ndays):

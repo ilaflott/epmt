@@ -95,6 +95,10 @@ if (__name__ == "__main__"):
     db_schema_parser = subparser.add_parser('schema', help="Dump the database schema",
         description="schema will dump the database schema")
 
+    # db migrate
+    db_migrate_parser = subparser.add_parser('migrate', help="Migrate the database schema",
+        description="Migrate the database schema (if needed). It is safe to use this option on an already migrated database")
+
     # csv convert
     csv_convert_parser = subparser.add_parser('convert', help="Convert csv from v1 to v2 format",
         description="Convert will convert the CSV files inside a .tgz staged file from v1 to v2 format")

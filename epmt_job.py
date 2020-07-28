@@ -613,10 +613,10 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
         Session.expire(j)
     proc_sums = {}
 
+    _t0 = time.time()
     if not j.processes:
         logger.info('Job {} contains no processes, perhaps an error in collation or populating the staging data?'.format(jobid))
 
-    _t0 = time.time()
 
     if all_tags == None:
         logger.info("  recreating all_tags..")
@@ -912,7 +912,13 @@ def populate_process_table_from_staging(j):
     try:
         orm_raw_sql(insert_sql+delete_sql+update_job_sql, commit=True)
     except Exception as e:
-        logger.error('Error copying from staging to process table for job %s: %s', jobid, str(e))
+        err_str = str(e)
+        msg = 'Error copying from staging to process table for job ' + jobid
+        logger.error(msg)
+        if 'permission denied' in err_str:
+            logger.error('You do not have sufficient privileges for this operation')
+        else:
+            logger.error(err_str[:1024] + '.. (error too long to show)' if len(err_str) > 1024 else err_str)
         return False
     table_copy_time = time.time() - _start_time
     logger.debug("  copied %d processes from staging in %2.5f sec at %2.5f procs/sec", nprocs, table_copy_time, nprocs/table_copy_time)

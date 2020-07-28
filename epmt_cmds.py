@@ -1636,6 +1636,10 @@ def epmt_entrypoint(args):
         from orm import orm_dump_schema
         return (orm_dump_schema() == False)
 
+    if args.command == 'migrate':
+        from orm import setup_db
+        return (setup_db(settings) == False)
+
     # show functionality is now handled in the 'dump' command
     # if args.command == 'show':
     #     from epmt_cmd_show import epmt_show_job

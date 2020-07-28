@@ -85,6 +85,7 @@ def orm_delete_jobs(jobs):
         for p in j.processes:
             p.delete()
     jobs.delete()
+    return True
 
 def orm_delete_refmodels(ref_ids):
     from .models import ReferenceModel
