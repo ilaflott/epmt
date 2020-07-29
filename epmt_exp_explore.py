@@ -34,7 +34,8 @@ def exp_component_outliers(exp_name, metric = 'duration', op = np.sum, limit = 1
     other jobs within the same component, it might bear investigation.
 
     exp_name: Experiment name
-      metric: A metric from the job model (duration, cpu_time, etc)
+      metric: A metric from the job model (duration, cpu_time, etc) or
+             from its proc_sums field (such as num_threads)
           op: A callable that performs a reduction on a numpy vector or list
               For e.g., np.sum, or np.mean, etc
        limit: Restrict the output to the top N components
@@ -128,7 +129,9 @@ def exp_component_outliers(exp_name, metric = 'duration', op = np.sum, limit = 1
     for j in exp_jobs:
         c = j.tags['exp_component']
         c_entry = comp_dict.get(c, {'data': []})
-        c_entry['data'].append((j.tags.get('exp_time', ''), j.jobid, getattr(j, metric)))
+        # the metric value is either in the job model or in the proc_sums field
+        m = getattr(j, metric) if hasattr(j, metric) else j.proc_sums[metric]
+        c_entry['data'].append((j.tags.get('exp_time', ''), j.jobid, m))
         comp_dict[c] = c_entry
 
     # Now add some more fields to comp_dict entries, and also prepare a list
@@ -217,7 +220,9 @@ OrderedDict([('18540101', {'jobids': ['625151'], 'metrics': [10425623185.0]}),
             # append the jobid and it's metric to the list of jobids 
             # for the corresponding time-segment
             od[exp_time]['jobids'].append(j.jobid)
-            od[exp_time]['metrics'].append(getattr(j, metric))
+            # the metric value is either in the job model or in the proc_sums field
+            m = getattr(j, metric) if hasattr(j, metric) else j.proc_sums[metric]
+            od[exp_time]['metrics'].append(m)
     return od
 
 
