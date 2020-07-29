@@ -21,7 +21,7 @@ build:
 # install python3.7.4 if it's not already installed
 # Also, if needed install a virtual environment in .venv374
 install-py3:
-	@if [ "`which python3`" == "" -o "`python3 -V`" != "Python 3.7.4" ]; then \
+	@if [ "`python3 -V`" != "Python 3.7.4" ]; then \
 		echo "Installing Python 3.7.4 using pyenv" ; \
 		which pyenv > /dev/null || curl https://pyenv.run | bash ; \
 		PATH="$$HOME/.pyenv/bin:$$PATH" ; \
