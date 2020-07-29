@@ -26,6 +26,7 @@ nav:
   - EPMT Explore Command: epmt-explore-cli.md
   - EPMT Commands: epmt_cmds.md
   - migrations.md
+  - db-multiple-users.md
   - Notebooks: 
     - Outliers: http://localhost:8888/notebooks/Outliers.ipynb" target="_blank
     - Query API: http://localhost:8888/notebooks/Query-API.ipynb" target="_blank
