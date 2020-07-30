@@ -1,3 +1,20 @@
+Version 4.7.3
+=============
+
+  Release date: 07/29/2020
+
+  The list includes features and fixes since version 4.5.2.
+
+  - DB schema migration to use bigint for primary keys instead of 4-byte int
+  - epmt migrate CLI support
+  - EPMT_DB_URL in the environment supersedes settings.py
+  - get_jobs supports a flag to avoid triggering post-processing
+  - Query API enhancements
+    - verify_jobs allows validating data in jobs in the database
+    - procs_histogram now supports arbitrary metrics' aggregation
+  - annotate jobs with papiex errors during submission
+  - bugs related to post-processing fixed
+  - improvements to unit and integration tests
 
 Version 4.5.2
 =============
