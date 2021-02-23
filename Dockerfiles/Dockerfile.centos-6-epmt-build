@@ -2,7 +2,7 @@
 # https://charlesleifer.com/blog/compiling-sqlite-for-use-with-python-applications/
 
 FROM centos:6
-
+COPY Dockerfiles/CentOS-Base.repo /etc/yum.repos.d
 RUN yum update -y
 # Remove ssl from yum, broken in Centos 6 + python 3.7.4.
 RUN yum install -y unzip bash tcsh nc curl make git gcc postgresql-devel zlib-devel bzip2 bzip2-devel readline-devel sqlite-devel xz xz-devel libffi-devel

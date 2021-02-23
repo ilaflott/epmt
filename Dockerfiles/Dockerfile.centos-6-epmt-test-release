@@ -1,5 +1,6 @@
 FROM giovtorres/docker-centos6-slurm:latest
 
+COPY Dockerfiles/CentOS-Base.repo /etc/yum.repos.d
 RUN yum update -y
 RUN yum install -y tcsh environment-modules
 RUN yum clean all
