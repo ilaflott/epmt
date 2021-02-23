@@ -135,7 +135,7 @@ if (__name__ == "__main__"):
     # python
     py_parser = subparser.add_parser('python', help = "Run a Python script under the python interpreter",
        description = "python runs an executable python script under the python interpreter. If no script is provided as an argument, an interactive python shell is executed. If you want an IPython shell, try 'epmt shell'")
-    py_parser.add_argument('epmt_cmd_args', nargs='?', help="python script to execute", metavar="script")
+    py_parser.add_argument('epmt_cmd_args', nargs='*', help="python script to execute and arguments", metavar="script")
     # ui
     gui_parser = subparser.add_parser('gui', help = "Run the EPMT dashboard GUI",
        description = "gui a web-based dashboard accessible at: http://localhost:8050")

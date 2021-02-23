@@ -1450,18 +1450,37 @@ def epmt_entrypoint(args):
         epmt_shell()
         return 0
     if args.command == 'python':
-        script_file = args.epmt_cmd_args
-        if script_file:
-            if script_file == '-':
-                # special handling for stdin
-                from sys import stdin
+        logger.debug("args:%s",str(args.epmt_cmd_args))
+        if not args.epmt_cmd_args:
+            epmt_shell(ipython = False)
+        elif (len(args.epmt_cmd_args) >= 1):
+            from sys import stdin
+            import sys
+            from os import getcwd
+            if (args.epmt_cmd_args[0] == '-'):
                 f = stdin
             else:
+                script_file = args.epmt_cmd_args[0]
                 if not path.exists(script_file):
                     logger.error('script {} does not exist'.format(script_file))
                     return(-1)
+                f = open(script_file)
+            # Now we have to add the CWD in case the users script imports modules.
+            # We should probably add everything in PYTHONPATH here
+            if getattr(sys, 'frozen', False):  # we are running in a pyinstaller bundle
+                logger.debug('we are frozen')
+                from sys import path as path2
+                p = environ.get("PYTHONPATH")
+                if p:
+                    for tp in p.split(":"):
+                        tp = tp.strip()
+                        if tp:
+                            logger.debug("Appending %s to sys.path",tp)
+                            path2.append(tp)
                 else:
-                    f = open(script_file)
+                    if getcwd() not in path2:
+                        logger.debug("Appending %s to sys.path",getcwd())
+                        path2.append(getcwd())
             # Pony needs the session with a db_session context manager
             # SQLA doesn't care. We also don't have the SQLA db_session
             # honoring the context manager contract yet. So, we have
@@ -1471,8 +1490,8 @@ def epmt_entrypoint(args):
                     exec(f.read())
             else:
                 exec(f.read())
-        else:
-            epmt_shell(ipython = False)
+            if f != stdin:
+                f.close()
         return 0
     if args.command == 'convert':
         from epmt_convert_csv import convert_csv_in_tar
