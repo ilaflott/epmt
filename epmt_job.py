@@ -5,7 +5,7 @@ from logging import getLogger
 from json import dumps, loads
 from epmtlib import tag_from_string, sum_dicts, timing, dotdict, get_first_key_match, check_fix_metadata, logfn
 from datetime import datetime, timedelta
-from functools import reduce
+# from functools import reduce
 import time
 import pytz
 import csv
@@ -842,13 +842,14 @@ def populate_process_table_from_staging(j):
     logger = getLogger(__name__)  # you can use other name
     jobid = j.jobid
     job_info_dict = j.info_dict
-    logger.info('  moving job {} processes from staging -> process table..'.format(jobid))
+    logger.info('  moving job {} processes from staging to process table'.format(jobid))
     metric_names = j.info_dict['metric_names'].split(',')
     # get the row IDs of the starting and ending row for the job
     # in the staging table
     (first_proc_id, last_proc_id) = j.info_dict['procs_staging_ids']
     num_procs = last_proc_id - first_proc_id + 1
 
+    logger.debug('  %d process are proc_staging_ids %d to %d', num_procs, first_proc_id, last_proc_id)
     # we process around 3K procs/sec, so if this operation will
     # take longer than 5sec, let's warn the user
     if num_procs > 15000:
