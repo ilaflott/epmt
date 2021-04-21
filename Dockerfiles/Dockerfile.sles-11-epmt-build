@@ -16,8 +16,8 @@ RUN zypper --non-interactive clean -a
 RUN cd /usr/src && echo "downloading sqlite3" && curl -k -o sqlite-amalgamation-3300100.zip http://www.sqlite.org/2019/sqlite-amalgamation-3300100.zip && unzip sqlite-amalgamation-3300100.zip && echo "building libsqlite3 with json1 and other useful extensions" && cd sqlite-amalgamation-3300100 && gcc -shared -fPIC -O2  -DSQLITE_ENABLE_JSON1 -DSQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_MAX_VARIABLE_NUMBER=9999 sqlite3.c -o /usr/lib64/libsqlite3.so
 
 # Install new OpenSSL
-ADD http://artfiles.org/openssl.org/source/openssl-1.1.1g.tar.gz /usr/src
-RUN cd /usr/src && tar xzf openssl-1.1.1g.tar.gz && cd /usr/src/openssl-1.1.1g && ./config --prefix=/usr && make install > /dev/null
+ADD http://artfiles.org/openssl.org/source/openssl-1.1.1k.tar.gz /usr/src
+RUN cd /usr/src && tar xzf openssl-1.1.1k.tar.gz && cd /usr/src/openssl-1.1.1k && ./config --prefix=/usr && make install > /dev/null
 
 RUN cd /usr/src && echo "downloading python" && curl -k -o Python-3.7.4.tgz https://www.python.org/ftp/python/3.7.4/Python-3.7.4.tgz && tar xzf Python-3.7.4.tgz && cd Python-3.7.4 && echo "building python3" && ./configure --prefix=/usr --enable-shared --enable-optimizations --enable-loadable-sqlite-extensions && make --silent install > /dev/null
 
