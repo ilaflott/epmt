@@ -11,9 +11,9 @@ ARG release_tests
 ARG settings=settings_sqlite_inmem_sqlalchemy.py
 ARG destdir=/opt/epmt
 
-ADD ${release}.tgz ${destdir}
+ADD ${release} ${destdir}
 WORKDIR /home/epmt-install-tests
-ADD ${release_tests}.tgz .
+ADD ${release_tests} .
 COPY preset_settings/${settings} ${destdir}/epmt-install/epmt/settings.py
 ENV PATH="${destdir}/epmt-install/epmt:${PATH}"
 
