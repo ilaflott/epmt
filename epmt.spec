@@ -25,6 +25,7 @@ hidden.extend(['sklearn.neighbors._typedefs','sklearn.neighbors._quad_tree','skl
 
 hidden.append('ui.components')
 hidden.append('ui')
+hidden.append('ui.graphing')
 
 print("Hidden modules: ",hidden)
 
