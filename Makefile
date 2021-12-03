@@ -1,5 +1,5 @@
-OS_TARGET=centos-6
-PAPIEX_VERSION?=2.3.10
+OS_TARGET=centos-7
+PAPIEX_VERSION?=2.3.12
 PAPIEX_SRC?=../papiex-oss
 EPMT_RELEASE_DIR=./RELEASE
 EPMT_VERSION=$(shell sed -n '/_version = /p' epmtlib.py | sed 's/ //g; s/,/./g; s/.*(\(.*\))/\1/')
@@ -173,7 +173,7 @@ check-integration-tests:
 #
 
 docker-test-dist: $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE)
-	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test -t $(OS_TARGET)-epmt-test --build-arg release=$(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) --build-arg release_test=$(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) .
+	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test -t $(OS_TARGET)-epmt-test --build-arg release=$(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) --build-arg release_tests=$(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE) .
 	docker run --rm -it $(OS_TARGET)-epmt-test
 
 docker-dist-slurm: $(EPMT_RELEASE)
