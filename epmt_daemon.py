@@ -163,8 +163,6 @@ def daemon_loop(niters = 0, post_process = True, retire = False, ingest = False,
     logger = getLogger(__name__)  # you can use other name
     logger.debug('daemon_loop(niters=%d,post_process=%s,retire=%s,ingest=%s,recursive=%s,keep=%s)', niters, post_process, retire, ingest, recursive, keep)
     from time import sleep, time
-    from epmt_query import analyze_pending_jobs
-    from epmt_job import post_process_pending_jobs
     tot_pp_runs = 0
     tot_ua_runs = 0
     iters = 0
@@ -215,6 +213,7 @@ def daemon_loop(niters = 0, post_process = True, retire = False, ingest = False,
                 epmt_submit(tgz_files, dry_run = False, remove_file=not(keep))
 
         if post_process:
+            from epmt_job import post_process_pending_jobs
             # unprocessed jobs (these are jobs on whom post-processing
             # pipeline hasn't run; these are different from jobs on whom
             # the analysis pipeline hasn't run)
@@ -222,8 +221,11 @@ def daemon_loop(niters = 0, post_process = True, retire = False, ingest = False,
             num_pp_run = len(post_process_pending_jobs())
             tot_pp_runs += num_pp_run
             # now run the analyses pipelines (outlier detection, etc)
-            num_analyses_run = analyze_pending_jobs()
-            tot_ua_runs += num_analyses_run
+	    # from epmt_query import analyze_pending_jobs
+            # num_analyses_run = analyze_pending_jobs()
+            # tot_ua_runs += num_analyses_run
+            num_analyses_run = 0
+            tot_ua_runs = 0
             logger.debug('{0} jobs post-processed; {1} analyses filters run'.format(num_pp_run, num_analyses_run))
         if retire:
             epmt_retire()
