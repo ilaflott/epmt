@@ -96,6 +96,15 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
     alembic_logger = logging.getLogger('alembic')
     alembic_logger.setLevel(level)
 
+    # sqlalchemy tends to be more verbose than we'd like it.
+    # at INFO level it shows a lot. So, when the user requests
+    # debug (-v -v), then we'd like to show at INFO level.
+    # And, when the user requests normal (-v), we'd not like
+    # to show the sqlalchemy's INFO level messages (but instead
+    # a level higher).
+    sqlalchemy_logger = logging.getLogger('sqlalchemy')
+    sqlalchemy_logger.setLevel(level+1)
+
 def init_settings(settings):
     if hasattr(init_settings, 'initialized'): return
     init_settings.initialized = True
