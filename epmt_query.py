@@ -2168,7 +2168,7 @@ def remove_job_annotations(jobid):
     '''
     return annotate_job(jobid, {}, True)
 
-def analyze_pending_jobs(jobs = [], analyses_filter = {}):
+def analyze_pending_jobs(jobs = [], analyses_filter = {}, max_comparable = 50):
     """
     Run the analysis pipeline on pending jobs::Jobs
 
@@ -2181,6 +2181,10 @@ def analyze_pending_jobs(jobs = [], analyses_filter = {}):
 
     analyses_filter : dict, optional
            This tag defines what constitutes an unanalyzed job
+
+    max_comparable: Limit the maximum number of jobs selected for an
+           outlier detection by *randomly* selecting jobs from a selection
+           of comparable jobs. Set this to 0, to avoid any limits.
 
     Returns 
     -------
@@ -2196,6 +2200,13 @@ def analyze_pending_jobs(jobs = [], analyses_filter = {}):
         # iterate over the comparable jobs' sets
         for j_part in comp_job_parts:
             (_, jobids) = j_part
+
+            # clip the comparable job partitions if max_comparable
+            if max_comparable and (len(jobids) > max_comparable):
+                logger.info('Limiting jobs to a random selection of {} from {}'.format(max_comparable, len(jobids)))
+                from random import choices
+                jobids = choices(jobids, k=max_comparable)
+                logger.debug('Randomly selected {} jobs for analysis pipeline: {}'.format(max_comparable, jobids))
             # we set check_comparable as False since we already know
             # that the jobs are comparable -- don't waste time!
             num_analyses_run += analyze_comparable_jobs(jobids, check_comparable = False)
@@ -2281,7 +2292,7 @@ def analyze_comparable_jobs(jobids, check_comparable = True, keys = ('exp_name',
 
     # finally mark the jobs as analyzed
     for j in jobids:
-        set_job_analyses(j, analyses)
+        set_job_analyses(j, analyses, replace=True)
     msg = 'analyzed {0}: '.format(jobids)
     for k in analyses:
         msg += '{0} runs of {1}; '.format(len(analyses[k]), k)
@@ -2289,7 +2300,7 @@ def analyze_comparable_jobs(jobids, check_comparable = True, keys = ('exp_name',
     return num_analyses_runs
 
 @db_session
-def set_job_analyses(jobid, analyses, replace=False):
+def set_job_analyses(jobid, analyses, replace=False, size_limit=128*1024):
     '''
     Saves analyses metadata for a job in the database::Jobs
 
@@ -2304,14 +2315,26 @@ def set_job_analyses(jobid, analyses, replace=False):
               will be overritten. Normally, this is set to False,
               in which case, the supplied analyses are merged into
               the existing analyses.
+ size_limit : Limit analyses field. If analyses is larger than
+              the specified size_limit, an error will be issued
+              and no database commits will take place. This option
+              guards against running into INDEX errors on large fields.
+              Defaults to 64KB, which should be adequate for most
+              analyses. Set to 0 to avoid any limit checks.
 
     Returns
     -------
-    The updated analyses for the job.
+    The updated analyses for the job on success, and False on error.
     '''
     j = orm_get(Job, jobid) if (type(jobid) == str) else jobid
     full_analyses = {} if replace else dict(j.analyses)
     full_analyses.update(analyses)
+    if size_limit:
+        from json import dumps
+        size = len(dumps(full_analyses))
+        if size > size_limit:
+            logger.error("Analyses length({}) > max. analyses limit({}). Aborting..".format(size, size_limit))
+            return False
     j.analyses = full_analyses
     orm_commit()
     return full_analyses
