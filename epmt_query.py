@@ -2300,7 +2300,7 @@ def analyze_comparable_jobs(jobids, check_comparable = True, keys = ('exp_name',
     return num_analyses_runs
 
 @db_session
-def set_job_analyses(jobid, analyses, replace=False, size_limit=128*1024):
+def set_job_analyses(jobid, analyses, replace=False, size_limit=64*1024):
     '''
     Saves analyses metadata for a job in the database::Jobs
 
