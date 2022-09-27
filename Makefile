@@ -1,5 +1,5 @@
-OS_TARGET=centos-6
-PAPIEX_VERSION?=2.3.12
+OS_TARGET=centos-7
+PAPIEX_VERSION?=2.3.13
 PAPIEX_SRC?=../papiex-oss
 EPMT_VERSION=$(shell sed -n '/_version = /p' epmtlib.py | sed 's/ //g; s/,/./g; s/.*(\(.*\))/\1/')
 EPMT_RELEASE=epmt-$(EPMT_VERSION)-$(OS_TARGET).tgz
@@ -13,10 +13,12 @@ PWD=$(shell pwd)
 	epmt-build epmt-test \\
 	clean distclean \\
 	check check-python-native check-python-driver check-python-2.6 check-python-2.7 check-python-3 check-integration-tests\\
-	dist build release release6 release7 release-all
+	dist build compile lint release release6 release7 release-all
 
-build:
-	python -O -bb -m py_compile *.py orm/*.py orm/*/*.py test/*.py
+compile build:
+	python3 -O -bb -m py_compile *.py orm/*.py orm/*/*.py test/*.py
+lint:
+	python3 -m pylint -E *.py orm/*.py orm/*/*.py test/*.py
 
 # install python3.7.4 if it's not already installed
 # Also, if needed install a virtual environment in .venv374
@@ -36,9 +38,9 @@ install-py3:
 	if python3 -m epmt_query 2>&1| grep ModuleNotFound > /dev/null; then \
 		echo "Setting up a virtual environment (in .venv374).." ; \
 		[ -d .venv374 ] || python3 -m venv .venv374 ; \
-		source .venv374/bin/activate; \
+		source .venv374/bin/activate; set -e ; \
 		pip3 install --upgrade pip && pip3 install -r ui/requirements-ui.txt.py3 -r requirements.txt.py3 ; \
-		pip3 install pyinstaller mkdocs mkdocs-material ; \
+		pip3 install 'pyinstaller==4.2.0' mkdocs mkdocs-material ; \
 	fi
 
 # This target runs pyinstaller to produce an epmt tarball that
@@ -53,7 +55,7 @@ dist: install-py3
 	# activate venv if it exists, run pyinstaller in the
 	# same shell pipeline so it uses the venv (if activated)
 	# mkdocs also needs the same virtualenv, so includde it in the pipeline
-	if [ -d .venv374 ]; then echo "activating virtualenv.."; source .venv374/bin/activate; fi; \
+	if [ -d .venv374 ]; then echo "activating virtualenv.."; source .venv374/bin/activate; fi; set -e; \
 		[ "`python3 -V`" == "Python 3.7.4" ] || exit 1 ; \
 		pyinstaller --clean --distpath=epmt-install epmt.spec ; \
 		mkdocs build -f epmtdocs/mkdocs.yml
