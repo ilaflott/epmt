@@ -113,7 +113,7 @@ check-release release-test-docker: $(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE)
 	if docker network ls | grep epmt-test-net > /dev/null; then docker network rm epmt-test-net; fi
 	docker network create epmt-test-net
 	docker run -d --rm --name postgres-test --network epmt-test-net -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -e POSTGRES_DB=EPMT-TEST postgres:latest
-	docker run --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged -it --rm -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c 'sysctl kernel.perf_sys_paranoid=1; epmt check && epmt unittest && epmt integration; install_prefix=`epmt -h| grep install_prefix|cut -f2 -d:`; cp -v $$install_prefix/../epmt-install/preset_settings/settings_test_pg_container.py $$install_prefix/../epmt-install/epmt/settings.py && epmt check && epmt unittest && epmt integration'
+	docker run --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged -it --rm -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c 'sysctl kernel.perf_event_paranoid=1; epmt check && epmt unittest && epmt integration; install_prefix=`epmt -h| grep install_prefix|cut -f2 -d:`; cp -v $$install_prefix/../epmt-install/preset_settings/settings_test_pg_container.py $$install_prefix/../epmt-install/epmt/settings.py && epmt check && epmt unittest && epmt integration'
 	docker stop postgres-test
 	docker network rm epmt-test-net
 

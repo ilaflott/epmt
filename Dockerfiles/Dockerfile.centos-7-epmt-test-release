@@ -5,7 +5,6 @@ RUN yum install -y tcsh environment-modules
 RUN yum clean all
 RUN rm -rf /var/cache/yum
 
-WORKDIR /tmp
 ARG install_path=/opt/minimalmetrics
 ARG epmt_version
 ARG epmt_full_release
@@ -17,4 +16,4 @@ RUN echo -ne "\n\n" | ./epmt-installer `basename ${epmt_full_release}`
 ENV PATH="${install_path}/epmt-${epmt_version}/epmt-install/epmt:${PATH}"
 RUN rm -f *.tgz epmt-installer
 
-CMD ["/bin/bash", "-c", "sysctl kernel.perf_sys_paranoid=1; epmt check; epmt unittest; epmt integration"]
+CMD ["/bin/bash", "-c", "sysctl kernel.perf_event_paranoid=1; epmt check; epmt unittest; epmt integration"]

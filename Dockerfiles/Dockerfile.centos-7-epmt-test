@@ -1,6 +1,5 @@
 FROM centos:7
 
-WORKDIR /home
 RUN yum update -y
 RUN yum install -y make tcsh
 RUN yum clean all
@@ -11,10 +10,12 @@ ARG release_tests
 ARG settings=settings_sqlite_inmem_sqlalchemy.py
 ARG destdir=/opt/epmt
 
+WORKDIR /home
 ADD ${release}.tgz ${destdir}
 WORKDIR /home/epmt-install-tests
 ADD ${release_tests}.tgz .
 COPY preset_settings/${settings} ${destdir}/epmt-install/epmt/settings.py
 ENV PATH="${destdir}/epmt-install/epmt:${PATH}"
 
-CMD ["make","check-python-shells"]
+CMD ["/bin/bash", "-c", "sysctl kernel.perf_event_paranoid=1; make check-python-shells"]
+
