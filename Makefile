@@ -50,7 +50,6 @@ install-py3:
 # Otherwise, assume the environment is already ready to run
 # pyinstaller.
 dist: install-py3
-	if [ ! -d $(EMPT_RELEASE_DIR) ]; then mkdir $(EPMT_RELEASE_DIR); fi
 	rm -rf epmt-install build
 	mkdir -p epmt-install/epmt/epmtdocs
 	# activate venv if it exists, run pyinstaller in the
@@ -58,7 +57,7 @@ dist: install-py3
 	# mkdocs also needs the same virtualenv, so includde it in the pipeline
 	if [ -d .venv374 ]; then echo "activating virtualenv.."; source .venv374/bin/activate; fi; set -e; \
 		[ "`python3 -V`" == "Python 3.7.4" ] || exit 1 ; \
-		pyinstaller --clean --distpath=epmt-install epmt.spec ; \
+		pyinstaller --clean --noconfirm --distpath=epmt-install epmt.spec ; \
 		mkdocs build -f epmtdocs/mkdocs.yml
 	# Rest of the commands below can be safely run outside the virtualenv
 	# resources
@@ -75,14 +74,15 @@ dist: install-py3
 	# docs
 	cp -Rp epmtdocs/site epmt-install/epmt/epmtdocs
 	# release
+	mkdir -p $(EPMT_RELEASE_DIR)
 	tar -czf $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) epmt-install 
 	rm -rf epmt-install build .venv374
 
 dist-test:
 # final location of tarfile
-	if [ ! -d $(EPMT_RELEASE_DIR) ]; then mkdir $(EPMT_RELEASE_DIR); fi
 	rm -rf epmt-install-tests && mkdir epmt-install-tests
 	cp -Rp test epmt-install-tests
+	mkdir -p $(EPMT_RELEASE_DIR)
 	tar -czf $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE) epmt-install-tests
 	rm -rf epmt-install-tests
 
@@ -97,12 +97,15 @@ docker-dist-test $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE):
 papiex-dist $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE):
 	@echo " - building papiex tarball"
 	if [ ! -f $(PAPIEX_SRC)/$(PAPIEX_RELEASE) ]; then make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) docker-dist > /dev/null; fi
-	cp $(PAPIEX_SRC)/$(PAPIEX_RELEASE) $(PWD)/release
+	cp $(PAPIEX_SRC)/$(PAPIEX_RELEASE) $(EPMT_RELEASE_DIR)
 
-release epmt-full-release $(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE): $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE)
+release epmt-full-release: $(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE)
+
+$(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE): $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE)
 	@echo "Making EPMT $(EPMT_VERSION) for $(OS_TARGET): $^"
-	cd release; tar -czf $(EPMT_FULL_RELEASE) $(notdir $^)
-	echo "$(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE)"
+	mkdir -p $(EPMT_RELEASE_DIR)
+	cd $(EPMT_RELEASE_DIR); tar -czf $(EPMT_FULL_RELEASE) $(notdir $^)
+	@echo "$(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE)"
 
 check-release release-test-docker: $(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE)
 	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test-release -t $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) --build-arg epmt_version=$(EPMT_VERSION) --build-arg install_path=/opt/minimalmetrics --build-arg epmt_full_release=$(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE) .
