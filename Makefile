@@ -2,6 +2,7 @@ OS_TARGET=centos-7
 PAPIEX_VERSION?=2.3.13
 PAPIEX_SRC?=../papiex-oss
 EPMT_VERSION=$(shell sed -n '/_version = /p' epmtlib.py | sed 's/ //g; s/,/./g; s/.*(\(.*\))/\1/')
+EPMT_RELEASE_DIR=release-$(shell date "+%d%m%Y")
 EPMT_RELEASE=epmt-$(EPMT_VERSION)-$(OS_TARGET).tgz
 EPMT_FULL_RELEASE=EPMT-release-$(EPMT_VERSION)-$(OS_TARGET).tgz
 PAPIEX_RELEASE=papiex-epmt-$(PAPIEX_VERSION)-$(OS_TARGET).tgz
@@ -49,7 +50,7 @@ install-py3:
 # Otherwise, assume the environment is already ready to run
 # pyinstaller.
 dist: install-py3
-	if [ ! -d release ]; then mkdir release; fi
+	if [ ! -d $(EMPT_RELEASE_DIR) ]; then mkdir $(EPMT_RELEASE_DIR); fi
 	rm -rf epmt-install build
 	mkdir -p epmt-install/epmt/epmtdocs
 	# activate venv if it exists, run pyinstaller in the
@@ -74,37 +75,37 @@ dist: install-py3
 	# docs
 	cp -Rp epmtdocs/site epmt-install/epmt/epmtdocs
 	# release
-	tar -czf release/$(EPMT_RELEASE) epmt-install 
+	tar -czf $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) epmt-install 
 	rm -rf epmt-install build .venv374
 
 dist-test:
 # final location of tarfile
-	if [ ! -d release ]; then mkdir release; fi
+	if [ ! -d $(EPMT_RELEASE_DIR) ]; then mkdir $(EPMT_RELEASE_DIR); fi
 	rm -rf epmt-install-tests && mkdir epmt-install-tests
 	cp -Rp test epmt-install-tests
-	tar -czf release/test-$(EPMT_RELEASE) epmt-install-tests
+	tar -czf $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE) epmt-install-tests
 	rm -rf epmt-install-tests
 
-docker-dist release/$(EPMT_RELEASE): 
+docker-dist $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE): 
 	@echo " - building epmt and epmt-test tarball"
 	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build -t $(OS_TARGET)-epmt-build .
 	docker run -it --rm --volume=$(PWD):$(PWD):z -w $(PWD) $(OS_TARGET)-epmt-build make OS_TARGET=$(OS_TARGET) distclean dist dist-test
 
-docker-dist-test release/test-$(EPMT_RELEASE):
+docker-dist-test $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE):
 	docker run -it --rm --volume=$(PWD):$(PWD):z -w $(PWD) $(OS_TARGET)-epmt-build make OS_TARGET=$(OS_TARGET) dist-test
 
-papiex-dist release/$(PAPIEX_RELEASE):
+papiex-dist $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE):
 	@echo " - building papiex tarball"
 	if [ ! -f $(PAPIEX_SRC)/$(PAPIEX_RELEASE) ]; then make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) docker-dist > /dev/null; fi
 	cp $(PAPIEX_SRC)/$(PAPIEX_RELEASE) $(PWD)/release
 
-release epmt-full-release release/$(EPMT_FULL_RELEASE): release/$(EPMT_RELEASE) release/test-$(EPMT_RELEASE) release/$(PAPIEX_RELEASE)
+release epmt-full-release $(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE): $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE)
 	@echo "Making EPMT $(EPMT_VERSION) for $(OS_TARGET): $^"
 	cd release; tar -czf $(EPMT_FULL_RELEASE) $(notdir $^)
-	echo "release/$(EPMT_FULL_RELEASE)"
+	echo "$(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE)"
 
-check-release release-test-docker: release/$(EPMT_FULL_RELEASE)
-	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test-release -t $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) --build-arg epmt_version=$(EPMT_VERSION) --build-arg install_path=/opt/minimalmetrics --build-arg epmt_full_release=release/$(EPMT_FULL_RELEASE) .
+check-release release-test-docker: $(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE)
+	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test-release -t $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) --build-arg epmt_version=$(EPMT_VERSION) --build-arg install_path=/opt/minimalmetrics --build-arg epmt_full_release=$(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE) .
 	if docker ps | grep postgres-test > /dev/null; then docker stop postgres-test; fi
 	if docker network ls | grep epmt-test-net > /dev/null; then docker network rm epmt-test-net; fi
 	docker network create epmt-test-net
@@ -115,12 +116,12 @@ check-release release-test-docker: release/$(EPMT_FULL_RELEASE)
 
 release6:
 # Force rebuild
-	rm -f release/$(EPMT_RELEASE) release/test-$(EPMT_RELEASE) release/$(PAPIEX_RELEASE) $(PAPIEX_SRC)/$(PAPIEX_RELEASE)
+	rm -f $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE) $(PAPIEX_SRC)/$(PAPIEX_RELEASE)
 	$(MAKE) OS_TARGET=centos-6 release check-release
 
 release7:
 # Force rebuild
-	rm -f release/$(EPMT_RELEASE) release/test-$(EPMT_RELEASE) release/$(PAPIEX_RELEASE) $(PAPIEX_SRC)/$(PAPIEX_RELEASE)
+	rm -f $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE) $(PAPIEX_SRC)/$(PAPIEX_RELEASE)
 	$(MAKE) OS_TARGET=centos-7 release check-release
 
 release-all: release6 release7
@@ -133,8 +134,9 @@ clean:
 	rm -rf __pycache__ build epmt-install epmt-install-tests
 
 distclean: clean
-	rm -f settings.py release/*$(OS_TARGET)*
+	rm -f settings.py $(EPMT_RELEASE_DIR)/*$(OS_TARGET)*
 	rm -rf epmtdocs/site
+	rm -rf release RELEASE # legacy cleanup
 
 # 
 # Simple python version testing with no database
@@ -168,8 +170,8 @@ check-integration-tests:
 # Not used
 #
 
-docker-test-dist: release/$(EPMT_RELEASE) release/test-$(EPMT_RELEASE)
-	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test -t $(OS_TARGET)-epmt-test --build-arg release=release/$(EPMT_RELEASE) --build-arg release_test=release/$(EPMT_RELEASE) .
+docker-test-dist: $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE)
+	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test -t $(OS_TARGET)-epmt-test --build-arg release=$(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) --build-arg release_test=$(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) .
 	docker run --rm -it $(OS_TARGET)-epmt-test
 
 docker-dist-slurm: $(EPMT_RELEASE)
