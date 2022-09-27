@@ -66,9 +66,8 @@ if [ -f settings.py ]; then
     mv -v settings.py $settings_backup
 fi
 
-echo "Checking code with pylint.."
-python3 -m pylint -E *.py orm/*.py orm/*/*.py test/*.py
-
+# echo "Checking code with pylint.."
+# python3 -m pylint -E *.py orm/*.py orm/*/*.py test/*.py
 
 if [ $no_compose -eq 0 ]; then
     echo "Starting postgres service.."
