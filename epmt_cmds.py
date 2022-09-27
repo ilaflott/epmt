@@ -685,8 +685,6 @@ def epmt_annotate(argslist, replace = False):
 
 # These two functions could be squashed into one.
 def _papiex_opt_byhost(o):
-    from cpuinfo import get_cpu_info
-    from socket import gethostname
     from re import match
     from re import error as reerror
     if hasattr(o,'papiex_options_byhost'):
@@ -706,23 +704,23 @@ def _papiex_opt_byhost(o):
     return ""
 
 def _papiex_opt_bycpu(o):
-    from cpuinfo import get_cpu_info
-    from socket import gethostname
     from re import match
     from re import error as reerror
     if hasattr(o,'papiex_options_bycpu'):
         if type(o.papiex_options_bycpu) == dict:
-            cpu_info = get_cpu_info()
-            cpu_fms = str(cpu_info.get('family','no_family_found')) + "/" + str(cpu_info.get('model','no_model_found')) + "/" + str(cpu_info.get('stepping','no_stepping_found'))
-            logger.info("cpu F/M/S to match papiex_options_bycpu is %s",cpu_fms)
-            for key, value in o.papiex_options_bycpu.items():
-                try:
-                    if match(key,cpu_fms):
-                        logger.debug("%s matched %s",key,cpu_fms)
-                        options = value
-                        return options
-                except reerror:
-                    logger.error("Invalid regular expression in papiex_options_bycpu: %s",key)
+            if o.papiex_options_bycpu:            
+                from cpuinfo import get_cpu_info
+                cpu_info = get_cpu_info()
+                cpu_fms = str(cpu_info.get('family','no_family_found')) + "/" + str(cpu_info.get('model','no_model_found')) + "/" + str(cpu_info.get('stepping','no_stepping_found'))
+                logger.info("cpu F/M/S to match papiex_options_bycpu is %s",cpu_fms)
+                for key, value in o.papiex_options_bycpu.items():
+                    try:
+                        if match(key,cpu_fms):
+                            logger.debug("%s matched %s",key,cpu_fms)
+                            options = value
+                            return options
+                    except reerror:
+                        logger.error("Invalid regular expression in papiex_options_bycpu: %s",key)
         else:
             logger.error("Unsupported type for papiex_options_bycpu; must be a dictionary")
     return ""
