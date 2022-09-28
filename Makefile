@@ -16,7 +16,7 @@ PWD=$(shell pwd)
 	check check-python-native check-python-driver check-python-2.6 check-python-2.7 check-python-3 check-integration-tests\\
 	dist build compile lint release release6 release7 release-all
 
-compile build:
+epmt-build compile build:
 	python3 -O -bb -m py_compile *.py orm/*.py orm/*/*.py test/*.py
 lint:
 	python3 -m pylint -E *.py orm/*.py orm/*/*.py test/*.py
@@ -170,8 +170,11 @@ check-integration-tests:
 	@env -i TERM=ansi PATH=${PWD}:${PATH} epmt integration
 
 #
-# Not used
+# Not used / Broken
 #
+
+epmt-test:
+	docker run -it --rm --volume=/Users/phil/Work/GFDL/epmt-gfdl:/Users/phil/Work/GFDL/epmt-gfdl:z -w /Users/phil/Work/GFDL/epmt-gfdl centos-7-epmt-build bash -c "PATH=$$PWD:$$PATH; echo; ./epmt check; echo; set -e; ./epmt unittest; ./epmt integration"
 
 docker-test-dist: $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE)
 	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test -t $(OS_TARGET)-epmt-test --build-arg release=$(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) --build-arg release_test=$(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) .
