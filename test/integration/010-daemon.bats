@@ -14,7 +14,10 @@ function sig_handler() {
 
 setup() {
   unprocessed_jobs=$(echo "import epmt_query as eq; print(eq.get_unprocessed_jobs())" | epmt python -)
-  logfile=$(epmt -h | grep logfile|cut -f2 -d:)
+# Assuming this from the settings provided with the tests!
+# logfile = path.expandvars("/tmp/epmt_{}_{}.log".format(getuser() or "unknown",getpid()))
+logfile=/tmp/epmt_${USER}_*[0-9].log
+# was this $(epmt -h | grep logfile|cut -f2 -d:)
 }
 
 
