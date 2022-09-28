@@ -42,17 +42,13 @@ def db_session(func):
             retval = func(*args, **kwargs) # No need to pass session explicitly
             completed = True
         except Exception as e:
-            logger.error('Following exception occurred: {}'.format(e), exc_info=True)
+            logger.warning('Rolling back session due to the following exception.. ')
             # logger.warning(e, exc_info=True)
             # import traceback, sys
             # print('-'*60)
             # traceback.print_exc(file=sys.stdout)
             # print('-'*60)
-            logger.info('Attempting rollback of db session..')
-            try:
-                session.rollback()
-            except:
-                pass
+            session.rollback()
             raise
         finally:
             thr_data.nestlevel -= 1
