@@ -2,7 +2,7 @@
 # cp preset_settings/settings_xxxxxxx.py settings.py
 # Then feel free to edit the file to suit you.
 from pathlib import Path
-from os import path
+from os import path,getpid
 from getpass import getuser
 
 orm = 'sqlalchemy'
@@ -24,7 +24,7 @@ stage_command_dest = "/nbhome/" + getuser()
 install_prefix = "/home/Jeffrey.Durachta/workflowDB/EPMT/epmt-2.1.0-centos-6/papiex-epmt-install/"
 
 # when we are not attached to a terminal we log to the file below
-# logfile = path.expandvars("/tmp/epmt_{}.log".format(getuser() or "unknown"))
+# logfile = path.expandvars("/tmp/epmt_{}_{}.log".format(getuser() or "unknown",getpid()))
 
 #
 # blacklist for environment filter (in addition to all keys with

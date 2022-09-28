@@ -1,7 +1,7 @@
 # Copy this file and edit it as follows:
 # cp preset_settings/settings_xxxxxxx.py settings.py
 # Then feel free to edit the file to suit you.
-from os import path
+from os import path,getpid
 from getpass import getuser
 
 orm = 'pony'
@@ -20,7 +20,7 @@ db_params = { 'url': 'sqlite:///:memory:' }
 # install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-epmt-install/"
 
 # when we are not attached to a terminal we log to the file below
-# logfile = path.expandvars("/tmp/epmt_{}.log".format(getuser() or "unknown"))
+# logfile = path.expandvars("/tmp/epmt_{}_{}.log".format(getuser() or "unknown",getpid()))
 
 # blacklist for environment filter (in addition to all keys with
 # leading underscores)
