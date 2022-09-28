@@ -123,12 +123,13 @@ if (__name__ == "__main__"):
     daemon_parser.add_argument('-s', '--start',action='store_true',help="Start the EPMT daemon")
     daemon_parser.add_argument('-S', '--stop',action='store_true',help="Stop the EPMT daemon")
     daemon_parser.add_argument('-D', '--foreground',action='store_true',help="Start the daemon in foreground")
-    daemon_parser.add_argument('--post-process',action='store_true',help="Perform post-processing and run the analysis pipeline on unprocessed jobs in the database")
+    daemon_parser.add_argument('--post-process',action='store_true',help="Perform post-processing and analysis on unprocessed jobs")
+    daemon_parser.add_argument('--no-analyze',action='store_true',help="Do not perform analyses on unprocessed jobs, requires --post-process")
     daemon_parser.add_argument('--retire',action='store_true',help="Perform data retirement based on the retention policy in settings")
     daemon_parser.add_argument('-i', '--ingest',nargs='?', default=False, const=settings.stage_command_dest, help="Perform ingestion into the database from the specified directory. If no path is specified the staging destination directory ({}), specified in settings, will be used. See also, --keep and --recursive".format(settings.stage_command_dest), metavar='ingest_path')
     daemon_parser.add_argument('-k', '--keep', default = False, action='store_true', help='Do not remove file on successful ingest. Only meaningful with --ingest')
     daemon_parser.add_argument('-r', '--recursive', default = False, action='store_true', help='Recurse into sub-directories to find staged files. Only meaningful if --ingest is set')
-    daemon_parser.set_defaults(start_daemon=False, stop_daemon=False, foreground=False, post_process=False, retire=False)
+    daemon_parser.set_defaults(start_daemon=False, stop_daemon=False, foreground=False, post_process=False, no_analyze=False,retire=False)
     # shell
     shell_parser = subparser.add_parser('shell', help = "Start an interactive IPython shell, see 'epmt python'",
        description = "shell runs an interactive IPython shell")

@@ -1594,14 +1594,20 @@ def epmt_entrypoint(args):
         # fake a job id so that epmt_check doesn't fail because of a missing job id
         environ['SLURM_JOB_ID'] = '1'
         return(0 if epmt_check() else 1)
+
     if args.command == 'daemon':
         from epmt_daemon import start_daemon, stop_daemon, daemon_loop, print_daemon_status
+        if args.no_analyze and not args.post_process:
+            logger.error("Skipping analysis requires post processing to be enabled")
+            return 0
+                         
         if args.start or args.foreground:
-            if ((not(args.post_process)) and (not(args.ingest))):
-                # if no command is set, default to post-process
-                logger.info('Neither ingest nor post-process mode set for daemon, defaulting to post-process..')
+            if not args.ingest and not args.post_process and not args.retire:
+                # if no command is set, default to post-process and analyze
+                logger.warning('No mode set for daemon, defaulting to post-process and analysis')
                 args.post_process = True
-            daemon_args = { 'post_process': args.post_process, 'ingest': args.ingest, 'recursive': args.recursive, 'keep': args.keep, 'retire': args.retire, 'verbose': args.verbose }
+                args.no_analyze = False
+            daemon_args = { 'post_process': args.post_process, 'analyze': not args.no_analyze, 'ingest': args.ingest, 'recursive': args.recursive, 'keep': args.keep, 'retire': args.retire, 'verbose': args.verbose }
             return (daemon_loop(**daemon_args) == False) if args.foreground else start_daemon(**daemon_args)
         elif args.stop:
             return stop_daemon()

@@ -123,14 +123,15 @@ def print_daemon_status(pidfile = PID_FILE):
 
 # if niters is set, then the daemon loop will end after 'niters' iterations
 # otherwise loop forever or until we get interrupted by a signal
-def daemon_loop(niters = 0, post_process = True, retire = False, ingest = False, recursive = False, keep = False, verbose = 0):
+def daemon_loop(niters = 0, post_process = True, analyze = True, retire = False, ingest = False, recursive = False, keep = False, verbose = 0):
     '''
     Runs a daemon loop niters times, performing enabled actions
     such as post-processing, ingestion, etc.
 
           niters: Number of times to run the daemon loop
     post_process: Perform post-process and analysis of unprocessed
-                  jobs in the database. Default True.
+                  jobs. Default True.
+         analyze: Perform analysis on post-processed jobs. Default True.
           retire: Perform data retirement based on data retention policy
           ingest: Perform ingestion from the "ingest" directory into
                   the database. Default is disabled.
@@ -161,10 +162,8 @@ def daemon_loop(niters = 0, post_process = True, retire = False, ingest = False,
         epmt_logging_init(verbose, check=False)
         
     logger = getLogger(__name__)  # you can use other name
-    logger.debug('daemon_loop(niters=%d,post_process=%s,retire=%s,ingest=%s,recursive=%s,keep=%s)', niters, post_process, retire, ingest, recursive, keep)
+    logger.debug('daemon_loop(niters=%d,post_process=%s,analyze=%s,retire=%s,ingest=%s,recursive=%s,keep=%s)', niters, post_process, analyze, retire, ingest, recursive, keep)
     from time import sleep, time
-    from epmt_query import analyze_pending_jobs
-    from epmt_job import post_process_pending_jobs
     tot_pp_runs = 0
     tot_ua_runs = 0
     iters = 0
@@ -191,7 +190,11 @@ def daemon_loop(niters = 0, post_process = True, retire = False, ingest = False,
         from epmt_cmds import epmt_submit
 
     if post_process:
+        from epmt_job import post_process_pending_jobs
+        from epmt_query import analyze_pending_jobs
         logger.info('post-process mode enabled for daemon')
+        if analyze:
+            logger.info('analysis mode enabled for daemon')
 
     # max delay in seconds; we will subtract from this processing time
     MAX_DELAY = 10
@@ -221,10 +224,14 @@ def daemon_loop(niters = 0, post_process = True, retire = False, ingest = False,
             # The post-processing pipeline computes the process tree
             num_pp_run = len(post_process_pending_jobs())
             tot_pp_runs += num_pp_run
-            # now run the analyses pipelines (outlier detection, etc)
-            num_analyses_run = analyze_pending_jobs()
-            tot_ua_runs += num_analyses_run
-            logger.debug('{0} jobs post-processed; {1} analyses filters run'.format(num_pp_run, num_analyses_run))
+            logger.info('{0} jobs post-processed'.format(num_pp_run))
+
+            if analyze:
+                # now run the analyses pipelines (outlier detection, etc)
+                num_analyses_run = analyze_pending_jobs()
+                tot_ua_runs += num_analyses_run
+                logger.info('{0} analyses performed'.format(num_analyses_run))
+
         if retire:
             epmt_retire()
 
