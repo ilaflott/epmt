@@ -14,10 +14,8 @@ function sig_handler() {
 
 setup() {
   unprocessed_jobs=$(echo "import epmt_query as eq; print(eq.get_unprocessed_jobs())" | epmt python -)
-# Assuming this from the settings provided with the tests!
-# logfile = path.expandvars("/tmp/epmt_{}_{}.log".format(getuser() or "unknown",getpid()))
-logfile=/tmp/epmt_${USER}_*[0-9].log
-# was this $(epmt -h | grep logfile|cut -f2 -d:)
+# Assuming this from the settings provided with the tests, this sucks
+  logfile=$(epmt -h | grep logfile|cut -f2 -d:)
 }
 
 
@@ -32,11 +30,15 @@ logfile=/tmp/epmt_${USER}_*[0-9].log
   # skip test if we have any unprocessed jobs
   [[ "$unprocessed_jobs" == "[]" ]] || skip
   trap sig_handler SIGINT SIGTERM SIGQUIT SIGHUP
-  run epmt -v -v daemon --start
+  run epmt -v daemon --start
   run epmt daemon
   assert_output --partial "EPMT daemon running OK"
   sleep 1
   run grep "starting daemon loop" $logfile
+#  echo $logfile
+#  ls -al $logfile
+#  cat $logfile
+#  ls -Art /tmp/epmt_*[0-9].log | tail -n 1)
   assert_success
 }
 
