@@ -198,7 +198,7 @@ def daemon_loop(niters = 0, post_process = True, analyze = True, retire = False,
 
     # max delay in seconds; we will subtract from this processing time
     MAX_DELAY = 10
-    logger.debug('starting daemon loop..')
+    logger.info('starting daemon loop..')
     while (True):
         if (sig_count > 0):
             logger.warning('Terminating EPMT daemon gracefully..')
