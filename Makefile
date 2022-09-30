@@ -117,17 +117,17 @@ check-release release-test-docker: $(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE)
 	docker stop postgres-test
 	docker network rm epmt-test-net
 
-release6:
+# release6:
 # Force rebuild
-	rm -f $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE) $(PAPIEX_SRC)/$(PAPIEX_RELEASE)
-	$(MAKE) OS_TARGET=centos-6 release check-release
+#	rm -f $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE) $(PAPIEX_SRC)/$(PAPIEX_RELEASE)
+#	$(MAKE) OS_TARGET=centos-6 release check-release
 
 release7:
 # Force rebuild
 	rm -f $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE) $(PAPIEX_SRC)/$(PAPIEX_RELEASE)
 	$(MAKE) OS_TARGET=centos-7 release check-release
 
-release-all: release6 release7
+release-all: release7
 
 #
 #
@@ -174,7 +174,7 @@ check-integration-tests:
 #
 
 epmt-test:
-	docker run -it --rm --volume=/Users/phil/Work/GFDL/epmt-gfdl:/Users/phil/Work/GFDL/epmt-gfdl:z -w /Users/phil/Work/GFDL/epmt-gfdl centos-7-epmt-build bash -c "PATH=$$PWD:$$PATH; echo; ./epmt check; echo; set -e; ./epmt unittest; ./epmt integration"
+	docker run -it --rm --volume=$$PWD:$$PWD:z -w $$PWD centos-7-epmt-build bash -c "PATH=$$PWD:$$PATH; echo; ./epmt check; echo; set -e; ./epmt unittest; ./epmt integration"
 
 docker-test-dist: $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE)
 	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test -t $(OS_TARGET)-epmt-test --build-arg release=$(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) --build-arg release_test=$(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) .
