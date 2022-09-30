@@ -2,7 +2,7 @@
 # cp preset_settings/settings_xxxxxxx.py settings.py
 # Then feel free to edit the file to suit you.
 from pathlib import Path
-from os import path,getpid
+from os import path
 from getpass import getuser
 
 orm = 'sqlalchemy'
@@ -22,7 +22,7 @@ bulk_insert = True
 # install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-epmt-install/"
 
 # when we are not attached to a terminal we log to the file below
-# logfile = path.expandvars("/tmp/epmt_{}_{}.log".format(getuser() or "unknown",getpid()))
+# logfile = path.expandvars("/tmp/epmt_{}.log".format(getuser() or "unknown"))
 
 # blacklist for environment filter (in addition to all keys with
 # leading underscores)
