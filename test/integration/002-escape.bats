@@ -45,9 +45,9 @@ workload() {
 @test "epmt submit with escape char" {
   # depending on whether we have papiex or not, we will run the workload
   # or load the test output from a saved job
+  export SLURM_JOB_ID=12340
   if test -f "${papiex_path}/lib/libpapiex.so"; then
     # we have papiex available
-    export SLURM_JOB_ID=12340
     epmt start           # Generate prolog
     eval `epmt source`   # Setup environment
     workload
@@ -58,6 +58,7 @@ workload() {
     # in CI env we don't have papiex so use our stored output
     run epmt submit "${resource_path}"/test/data/tsv/12340
   fi
+  unset SLURM_JOB_ID
   assert_success
   assert_output --partial "Imported successfully - job: 12340 processes: 18"
   run epmt list 12340
