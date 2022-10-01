@@ -42,33 +42,47 @@ workload() {
   # end workload
 }
 
-@test "epmt submit with escape char" {
-  # depending on whether we have papiex or not, we will run the workload
-  # or load the test output from a saved job
-  export SLURM_JOB_ID=12340
-  if test -f "${papiex_path}/lib/libpapiex.so"; then
-    # we have papiex available
+exp_output=('-d" -f2' '\\\' ' b' '\' ',' "'" '-e \tHello' '-e \tThereU\nR' '-e \a' '-e \a' '-e \' '-e some test \b and more text' 'b' '\b' '\b' '-e \. some text' '-e try\.some more text' 's/^\.//')
+
+@test "epmt start/run/stop/submit with escape char" {
+    export SLURM_JOB_ID=12340
     epmt start           # Generate prolog
     eval `epmt source`   # Setup environment
     workload
     epmt_uninstrument    # End Workload, disable instrumentation
     epmt stop            # Wrap up job stats
     run epmt submit --remove
-  else
-    # in CI env we don't have papiex so use our stored output
-    run epmt submit "${resource_path}"/test/data/tsv/12340
+    unset SLURM_JOB_ID
+    if [[ $(uname -s) == "Linux" ]] && [[ $(test -f "${papiex_path}/lib/libpapiex.so") ]]; then
+      assert_output --partial "Imported successfully - job: 12340 processes: 18"
+    else # papiex not there or not supported
+      assert_output --partial "Imported successfully - job: 12340 processes: 0"
+    fi
+
+    run epmt list 12340
+    assert_output "['12340']"
+
+  # Below we have the expected output in sequence, don't use run as it doesn't play with a pipe
+  if [[ $(uname -s) == "Linux" ]] && [[ $(test -f "${papiex_path}/lib/libpapiex.so") ]]; then
+  for i in ${!exp_output[*]}; do
+      out=$(echo 'import epmt_query as eq; procs=eq.get_procs(fmt="orm", jobs=["12340"])[:]; p = procs['$i']; print(p.args);'  | epmt python -)
+      [[ "$out" == "${exp_output[$i]}" ]]
+  done
   fi
-  unset SLURM_JOB_ID
-  assert_success
+  epmt delete 12340
+}
+
+@test "epmt canned data/submit with escape char" {
+# Canned job test
+  export SLURM_JOB_ID=12340
+  run epmt submit "${resource_path}"/test/data/tsv/12340
   assert_output --partial "Imported successfully - job: 12340 processes: 18"
+  unset SLURM_JOB_ID
+
   run epmt list 12340
-  assert_success
   assert_output "['12340']"
 
-  # Below we have the expected output in sequence
-  exp_output=('-d" -f2' '\\\' ' b' '\' ',' "'" '-e \tHello' '-e \tThereU\nR' '-e \a' '-e \a' '-e \' '-e some test \b and more text' 'b' '\b' '\b' '-e \. some text' '-e try\.some more text' 's/^\.//')
-
-  # don't use run as it doesn't play with a pipe
+  # Below we have the expected output in sequence, don't use run as it doesn't play with a pipe
   for i in ${!exp_output[*]}; do
       out=$(echo 'import epmt_query as eq; procs=eq.get_procs(fmt="orm", jobs=["12340"])[:]; p = procs['$i']; print(p.args);'  | epmt python -)
       [[ "$out" == "${exp_output[$i]}" ]]
