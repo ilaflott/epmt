@@ -6,6 +6,7 @@ setup() {
   papiex_path=$(epmt -h | grep install_prefix|cut -f2 -d:)
   test -n "${resource_path}" || fail
   test -d ${resource_path} || fail
+  # test -f "${papiex_path}/lib/libpapiex.so" || fail
   jobs_in_module='12340'
   cleanup
 }
@@ -16,7 +17,7 @@ teardown() {
 
 cleanup() {
   # Remove any jobs before starting a test & ignore error code
-  epmt delete ${jobs_in_module} || true
+  epmt delete ${jobs_in_module} >/dev/null 2>&1 || true
 }
 
 workload() {
@@ -46,14 +47,16 @@ exp_output=('-d" -f2' '\\\' ' b' '\' ',' "'" '-e \tHello' '-e \tThereU\nR' '-e \
 
 @test "epmt start/run/stop/submit with escape char" {
     export SLURM_JOB_ID=12340
+    export SLURM_JOB_NAME=12340_name
     epmt start           # Generate prolog
     eval `epmt source`   # Setup environment
     workload
     epmt_uninstrument    # End Workload, disable instrumentation
     epmt stop            # Wrap up job stats
+    
     run epmt submit --remove
-    unset SLURM_JOB_ID
-    if [[ $(uname -s) == "Linux" ]] && [[ $(test -f "${papiex_path}/lib/libpapiex.so") ]]; then
+    unset SLURM_JOB_ID SLURM_JOB_NAME
+    if [ $(uname -s) == "Linux" ] && $(test -f "${papiex_path}/lib/libpapiex.so") ; then 
       assert_output --partial "Imported successfully - job: 12340 processes: 18"
     else # papiex not there or not supported
       assert_output --partial "Imported successfully - job: 12340 processes: 0"
@@ -63,13 +66,21 @@ exp_output=('-d" -f2' '\\\' ' b' '\' ',' "'" '-e \tHello' '-e \tThereU\nR' '-e \
     assert_output "['12340']"
 
   # Below we have the expected output in sequence, don't use run as it doesn't play with a pipe
-  if [[ $(uname -s) == "Linux" ]] && [[ $(test -f "${papiex_path}/lib/libpapiex.so") ]]; then
-  for i in ${!exp_output[*]}; do
-      out=$(echo 'import epmt_query as eq; procs=eq.get_procs(fmt="orm", jobs=["12340"])[:]; p = procs['$i']; print(p.args);'  | epmt python -)
-      [[ "$out" == "${exp_output[$i]}" ]]
-  done
-  fi
-  epmt delete 12340
+    if [ $(uname -s) == "Linux" ] && $(test -f "${papiex_path}/lib/libpapiex.so") ; then 
+      #echo > /dev/tty; echo > /dev/tty 
+      for i in ${!exp_output[*]}; do
+        out=$(echo 'import epmt_query as eq; procs=eq.get_procs(fmt="orm", jobs=["12340"])[:]; p = procs['$i']; print(p.args);' | epmt python -)
+        a=${out}
+        b=${exp_output[$i]}
+        #echo x${a}x > /dev/tty
+        #echo y${b}y > /dev/tty
+        if [ ! "$a" = "$b" ]; then
+            #echo "Nope" > /dev/tty
+            fail
+        fi
+#        [[ "$out" == "${exp_output[$i]}" ]]
+      done
+    fi
 }
 
 @test "epmt canned data/submit with escape char" {
