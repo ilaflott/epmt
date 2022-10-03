@@ -97,6 +97,7 @@ docker-dist-test $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE):
 papiex-dist $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE):
 	@echo " - building papiex tarball"
 	if [ ! -f $(PAPIEX_SRC)/$(PAPIEX_RELEASE) ]; then make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) docker-dist > /dev/null; fi
+	mkdir -p $(EPMT_RELEASE_DIR)
 	cp $(PAPIEX_SRC)/$(PAPIEX_RELEASE) $(EPMT_RELEASE_DIR)
 
 release epmt-full-release: $(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE)
