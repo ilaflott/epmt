@@ -1,3 +1,17 @@
+Version 4.9.1
+=============
+
+  Release date: 09/28/2002
+
+  The list includes features and fixes since version 4.7.3.
+
+  - Fixed logging of SQLA exceptions
+  - Fixed INDEX field size overruns when inserting into analyses table (get_comparable_jobs may be huge)
+  - Fixed numerous versioning issues in requirements
+  - Added --no-analysis argument to daemon
+  - PAPIEX 2.3.13
+  - Removed bitrot throughout the dependencies
+  
 Version 4.7.3
 =============
 
