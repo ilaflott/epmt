@@ -35,13 +35,14 @@ install-py3:
 		pyenv shell 3.7.4 ; \
 		python3 -V ; \
 	fi ; \
-	rm -rf .venv374 ; \
+	rm -rf .venv374 ; \  # I don't understand how/why this works at all
 	if python3 -m epmt_query 2>&1| grep ModuleNotFound > /dev/null; then \
 		echo "Setting up a virtual environment (in .venv374).." ; \
 		[ -d .venv374 ] || python3 -m venv .venv374 ; \
 		source .venv374/bin/activate; set -e ; \
-		pip3 install --upgrade pip && pip3 install -r ui/requirements-ui.txt.py3 -r requirements.txt.py3 ; \
-		pip3 install 'pyinstaller==4.2.0' mkdocs mkdocs-material ; \
+		pip3 install --upgrade pip ; \
+		pip3 install -r requirements.txt.py3 ; \
+		pip3 install -r ui/requirements-ui.txt.py3 ; \
 	fi
 
 # This target runs pyinstaller to produce an epmt tarball that

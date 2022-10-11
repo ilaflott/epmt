@@ -63,6 +63,7 @@ psycopg2-binary==2.7.5
 ptyprocess==0.6.0
 pycparser==2.19
 Pygments==2.4.2
+pyinstaller==4.2.0
 pylint==2.4.4
 pyod==0.7.7.1
 pyparsing==2.4.5
@@ -93,3 +94,4 @@ webencodings==0.5.1
 widgetsnbextension==3.5.1
 wrapt==1.11.2
 zipp==0.6.0
+

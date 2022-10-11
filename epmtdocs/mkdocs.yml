@@ -1,6 +1,6 @@
 site_name: Experiment Performance Management Tool (EPMT)
 theme:
-  name: material
+  name: bootstrap4
   favicon: favicon.ico
   logo: logo.png
   palette:
