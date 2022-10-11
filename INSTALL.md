@@ -93,3 +93,28 @@ For detailed hardware and software performance metrics to collected by non-privi
 ```
 
 This isn't necessary unless one would like to collect metrics exposed by [PAPI](http://icl.utk.edu/papi/), [libpfm](http://perfmon2.sourceforge.net/) and the [perfevent](http://web.eece.maine.edu/~vweaver/projects/perf_events/) subsystems. Collecting subsystem data is the premise of EPMT. See [Stack Overflow](https://stackoverflow.com/questions/51911368/what-restriction-is-perf-event-paranoid-1-actually-putting-on-x86-perf) for a discussion of the setting. A setting of 1 is perfectly safe for production systems.
+
+## Generation (compilation) of release
+
+This is done using Docker images.
+
+```
+# You'll want to remove all the old images, bitrot!
+# Extreme case: docker rmi $(docker images -a)
+docker system prune -a
+
+# Clone up the repos
+git clone -b papiex-epmt git@gitlab.com:minimal-metrics-llc/papiex.git papiex-oss
+git clone -b sow3phs3-bugfix-build git@gitlab.com:minimal-metrics-llc/epmt/epmt.git epmt.git
+cd epmt.git
+# Update the submodules
+git submodule init; git submodule update --recursive
+
+# Build everything, including papiex, and run the tests
+make release-all
+
+# Look in release dir
+ls release-`date "+%d%m%Y"` # (it will be todays date stamp)
+EPMT-release-4.9.1-centos-7.tgz papiex-epmt-2.3.14-centos-7.tgz
+epmt-4.9.1-centos-7.tgz     test-epmt-4.9.1-centos-7.tgz
+```
