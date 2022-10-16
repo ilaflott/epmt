@@ -615,7 +615,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
 
     _t0 = time.time()
     if not j.processes:
-        logger.info('Job {} contains no processes, perhaps an error in collation or populating the staging data?'.format(jobid))
+        logger.warning('Job {} contains no processes, perhaps an error in collation or populating the staging data?'.format(jobid))
 
 
     if all_tags == None:
@@ -632,7 +632,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
         # convert each of the pickled tags back into a dict
         proc_sums['all_proc_tags'] = [ loads(t) for t in sorted(all_tags) ]
     else:
-        logger.debug('  no process tags found in th entire job')
+        logger.debug('  no process tags found in the entire job')
         proc_sums['all_proc_tags'] = []
 
     logger.debug('  tag processing took: %2.5f sec', time.time() - _t0)
@@ -1369,15 +1369,15 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     else:
         # mark job as unprocessed. It will need post-processing later
         orm_create(UnprocessedJob, jobid=j.jobid)
-        logger.info('Skipped post-processing and marked job as **UNPROCESSED**')
+        logger.debug('Skipped post-processing and marked job %d as **UNPROCESSED**',j.jobid)
 
-    logger.info("Committing job to database..")
+    logger.debug("Committing job %d to database",j.jobid)
     _c0 = time.time()
     orm_commit()
-    logger.debug("commit time: %2.5f sec", time.time() - _c0)
+    logger.debug("Commit time: %2.5f sec", time.time() - _c0)
     now = datetime.now()
-    logger.info("Staged import of %d processes took %s, %f processes/sec",
-                total_procs, now - then,total_procs/float((now-then).total_seconds()))
+    logger.info("Staged import of job %d with %d processes took %s, %f processes/sec",
+                j.jobid,total_procs, now - then,total_procs/float((now-then).total_seconds()))
     print("Imported successfully - job:",jobid,"processes:",total_procs,"rate:",total_procs/float((now-then).total_seconds()))
     return (True, 'Import successful', (j.jobid, total_procs))
 
@@ -1457,6 +1457,7 @@ def post_process_pending_jobs():
     '''
     # we only support post-processing for SQLA at the moment
     if settings.orm != 'sqlalchemy':
+        logger.error("post-processing is not supported for Pony")
         return []
 
     unproc_jobs = orm_findall(UnprocessedJob)
@@ -1464,7 +1465,7 @@ def post_process_pending_jobs():
     for u in unproc_jobs:
         jobid = u.jobid
         j = u.job
-        logger.info('post-processing {0}'.format(jobid))
+        logger.debug('post-processing {0}'.format(jobid))
         if post_process_job(jobid):
             did_process.append(jobid)
     return did_process

@@ -2168,51 +2168,62 @@ def remove_job_annotations(jobid):
     '''
     return annotate_job(jobid, {}, True)
 
-def analyze_pending_jobs(jobs = [], analyses_filter = {}, max_comparable = 50):
+def analyze_jobs(jobs = [], analyses_filter = {}, max_comparable = 50, check = True):
     """
-    Run the analysis pipeline on pending jobs::Jobs
+    Run the analysis pipeline on jobs::Jobs
 
     Parameters
     ----------
     
     jobs : list of strings or list of Job objects or ORM query, optional
            Restricts applying the analyses to a subset specified by jobs.
-           In the most common usage, you will leave jobs unset
+           This field cannot be empty, you must give it a list to avoid
+           a full scan of the job table.
 
-    analyses_filter : dict, optional
+    analyses_filter : dict, optional, 
            This tag defines what constitutes an unanalyzed job
 
-    max_comparable: Limit the maximum number of jobs selected for an
+    max_comparable : int, optional, default=50
+           Limit the maximum number of jobs selected for an
            outlier detection by *randomly* selecting jobs from a selection
            of comparable jobs. Set this to 0, to avoid any limits.
+
+    check : boolean, optional, default=True
+	   Verify indeed that the jobs have been unanalyzed, default=True
 
     Returns 
     -------
     The total number of analyses algorithms executed
     """
-    ua_jobs = get_unanalyzed_jobs(jobs = jobs, analyses_filter = analyses_filter)
+    if check:
+        ua_jobs = get_unanalyzed_jobs(jobs = jobs, analyses_filter = analyses_filter)
+        if (len(ua_jobs) != len(jobs)):
+            logger.warning("Analyzed jobs passed in, they will be ignored")
+    else:
+        ua_jobs = jobs;
+    
+    ana_jobs = []
     num_analyses_run = 0
-    if ua_jobs:
-        logger.debug('{0} unanalyzed jobs: {1}'.format(len(ua_jobs), ua_jobs))
-        # partition the jobs into sets of comparable jobs based on their tags
-        comp_job_parts = comparable_job_partitions(ua_jobs)
-        logger.debug('{0} sets of comparable jobs: {1}'.format(len(comp_job_parts), comp_job_parts))
-        # iterate over the comparable jobs' sets
-        for j_part in comp_job_parts:
-            (_, jobids) = j_part
+    logger.info('{0} unanalyzed jobs'.format(len(ua_jobs)))
+    # partition the jobs into sets of comparable jobs based on their tags
+    comp_job_parts = comparable_job_partitions(ua_jobs)
+    logger.debug('{0} sets of comparable jobs'.format(len(comp_job_parts)))
+    # iterate over the comparable jobs' sets
+    for j_part in comp_job_parts:
+        (_, jobids) = j_part
 
-            # clip the comparable job partitions if max_comparable
-            if max_comparable and (len(jobids) > max_comparable):
-                logger.info('Limiting jobs to a random selection of {} from {}'.format(max_comparable, len(jobids)))
-                from random import choices
-                jobids = choices(jobids, k=max_comparable)
-                logger.debug('Randomly selected {} jobs for analysis pipeline: {}'.format(max_comparable, jobids))
+        # clip the comparable job partitions if max_comparable
+        if max_comparable and (len(jobids) > max_comparable):
+            logger.info('Limiting jobs to a random selection of {} from {}'.format(max_comparable, len(jobids)))
+            from random import choices
+            jobids = choices(jobids, k=max_comparable)
+            logger.debug('Randomly selected {} jobs for analysis pipeline: {}'.format(max_comparable, jobids))
             # we set check_comparable as False since we already know
             # that the jobs are comparable -- don't waste time!
-            num_analyses_run += analyze_comparable_jobs(jobids, check_comparable = False)
-    return num_analyses_run
-
-
+        num_analyses_run += analyze_comparable_jobs(jobids, check_comparable = False)
+        logger.debug("%d comparable jobs analyzed",num_analyses_run);
+        ana_jobs.append(jobids)
+    return ana_jobs
 
 @db_session
 def analyze_comparable_jobs(jobids, check_comparable = True, keys = ('exp_name', 'exp_component')):
@@ -2254,7 +2265,7 @@ def analyze_comparable_jobs(jobids, check_comparable = True, keys = ('exp_name',
     from epmt_outliers import detect_outlier_jobs
     if check_comparable:
         _warn_incomparable_jobs(jobids)
-    logger.debug('analyzing jobs: {0}'.format(jobids))
+    logger.info('analyzing {0} jobs'.format(len(jobids)))
     model_tag = {}
     for k in keys:
         model_tag[k] = Job[jobids[0]].tags.get(k, '')
@@ -2293,7 +2304,7 @@ def analyze_comparable_jobs(jobids, check_comparable = True, keys = ('exp_name',
     # finally mark the jobs as analyzed
     for j in jobids:
         set_job_analyses(j, analyses, replace=True)
-    msg = 'analyzed {0}: '.format(jobids)
+    msg = 'analyzed {0} jobs'.format(len(jobids))
     for k in analyses:
         msg += '{0} runs of {1}; '.format(len(analyses[k]), k)
     logger.info(msg)
@@ -2832,13 +2843,16 @@ def get_job_staging_ids(j):
 
 
 @db_session
-def post_process_jobs(jobs):
+def post_process_jobs(jobs, check = True):
     '''
     Post-process a collection of jobs::Jobs
 
     Parameters
     ----------
       jobs : list of strings, list of Job objects or an ORM job query
+
+      check : boolean, optional, default = True
+              Check if the job has infact been processed before doing it again
 
     Returns
     -------
@@ -2855,12 +2869,15 @@ def post_process_jobs(jobs):
         jobs = [ jobs ]
 
     num_processed = 0
+    out = []
     for j in jobs:
         jobid = j.jobid if type(j) == Job else str(j)
-        if not is_job_post_processed(jobid):
-            post_process_job(jobid)
-            num_processed += 1
-    return num_processed
+        if not check or is_job_post_processed(jobid):
+            if post_process_job(jobid):
+                out.append(jobid)
+                num_processed += 1
+    logger.debug("%d of %d jobs post-processed",num_processed,len(jobs))
+    return out
 
 
 @db_session
