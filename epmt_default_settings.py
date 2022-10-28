@@ -63,7 +63,7 @@ bulk_insert = True
 # otherwise we will need to run a separate cron-job
 # post_process_job_on_ingest = False is only supported for sqlalchemy.
 # DO NOT disable the option below unless you know what you're doing
-post_process_job_on_ingest = True
+post_process_job_on_ingest = False
 
 # to save post-processing compute cycles we only compute
 # the process tree (parent/child, ancestor/descendant relations)

@@ -495,12 +495,12 @@ def epmt_dump_metadata(filelist, key = None):
                 rc_final = False
             continue
 
-        err,tar = compressed_tar(f)
+        err,tar = open_compressed_tar(f)
         if tar:
             try:
                 info = tar.getmember("./job_metadata")
             except KeyError:
-                logger.error('Did not find %s in tar archive' % "job_metadata")
+                logger.error('Did not find %s in tar file ' % "job_metadata")
                 return False
             else:
                 logger.info('%s is %d bytes in archive' % (info.name, info.size))
@@ -918,6 +918,9 @@ def get_filedict(dirname,pattern,tar=False):
 # if remove_file is set, then on successful ingest the .tgz file will be removed
 def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1, remove_file=False):
     logger.debug("epmt_submit(%s,dry_run=%s,drop=%s,keep_going=%s,ncpus=%d,remove_file=%s)",dirs,dry_run,drop,keep_going,ncpus,remove_file)
+
+    # ARG checking
+    
     if dry_run and drop:
         logger.error("You can't drop tables and do a dry run")
         return(False)
@@ -928,10 +931,12 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1, remo
     if not dirs:
         global_jobid,global_datadir,global_metadatafile = setup_vars()
         if not (global_jobid and global_datadir and global_metadatafile):
+            logger.error("none should be null: global_job_id %s, global_data_dir %s, global_metdadatafile %s",
+                         global_jobid,global_datadir,global_metadatafile);
             return False
         dirs  = [global_datadir]
     if not dirs or len(dirs) < 1:
-        logger.error("Could not identify your job id")
+        logger.error("directory for ingest is empty")
         return False
     if drop and (ncpus > 1):
         # FIX:
@@ -942,7 +947,7 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1, remo
         # with the newly created tables in any of the processes except the
         # master. In short we are unable to support the --drop option
         # when using multiple processes. This should be fixable.
-        logger.error('At present we do not support dropping tables in a parallel submit mode. Please use either --drop or --num-cpus')
+        logger.error('Dropping tables in a parallel submit mode, not supported')
         return(False)
 
     if drop:
@@ -996,7 +1001,7 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1, remo
         manager = multiprocessing.Manager()
         return_dict = manager.dict()
         for work in array_split(dirs, nprocs):
-            logger.debug('Worker %d will work on %s', worker_id, str(work))
+            logger.debug('Worker %d will work on directory %s', worker_id, str(work))
             process = multiprocessing.Process(target = submit_fn, args=(worker_id, work, return_dict))
             procs.append(process)
             worker_id += 1
@@ -1022,10 +1027,8 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1, remo
                 # that means the job was already in the database, and we
                 # couldn't submit it. Our behavior depends on whether keep_going
                 # is enabled or not. If it is, then 
-                if keep_going:
-                    logger.info('%s: %s', msg, f)
-                else:
-                    logger.error('%s: %s', msg, f)
+                logger.info('%s: %s', msg, f)
+                if not keep_going:
                     error_occurred = True
             else:
                 # status => True, and details contains the submit details
@@ -1173,14 +1176,14 @@ def extract_tar(tarfile, outdir = '', check_metadata = False):
     if not path.isfile(tarfile):
         logger.error("%s does not exist!", tarfile)
         return False
-    err,tar = compressed_tar(tarfile)
+    err,tar = open_compressed_tar(tarfile)
 
     # only check for metadata file if required to do so
     if check_metadata:
         try:
             info = tar.getmember("./job_metadata")
         except KeyError:
-            logger.error('ERROR: Did not find %s in tar archive' % "job_metadata")
+            logger.error('ERROR: Did not find %s in tar file' % "job_metadata")
             return False
         logger.info('%s is %d bytes in archive' % (info.name, info.size))
 
@@ -1197,21 +1200,21 @@ def extract_tar(tarfile, outdir = '', check_metadata = False):
     return outdir
 
 
-def compressed_tar(input):
+def open_compressed_tar(inputf):
     tar = None
     flags = None
-    if (input.endswith("tar.gz") or input.endswith("tgz")):
+    if (inputf.endswith("tar.gz") or inputf.endswith("tgz")):
         flags = "r:gz"
-    elif (input.endswith("tar")):
+    elif (inputf.endswith("tar")):
         flags = "r:"
     else:
         return False,None
     
     import tarfile
     try:
-        tar = tarfile.open(input, flags)
+        tar = tarfile.open(inputf, flags)
     except Exception as e:
-        logger.error('error in processing compressed tar: ' + str(e))
+        logger.error('error opening compressed tar ' + inputf + ":" + str(e))
         return True,None
     
     return False,tar
@@ -1224,12 +1227,12 @@ def compressed_tar(input):
 #    metadata = check_and_add_workflowdb_envvars(metadata,total_env)
 
 # remove_file is set, then we will delete the file on success
-def submit_to_db(input, pattern, dry_run=True, remove_file=False):
-    logger.info("submit_to_db(%s,%s,dry_run=%s,remove_file=%s)",input,pattern,str(dry_run),str(remove_file))
+def submit_to_db(inputf, pattern, dry_run=True, remove_file=False):
+    logger.info("submit_to_db(%s,%s,dry_run=%s,remove_file=%s)",inputf,pattern,str(dry_run),str(remove_file))
 
-    err,tar = compressed_tar(input)
+    err,tar = open_compressed_tar(inputf)
     if err:
-        return (False, 'Error processing compressed tar', ())
+        return (False, 'Error processing compressed tar file '+inputf, ())
 #    None
 #    if (input.endswith("tar.gz") or input.endswith("tgz")):
 #        import tarfile
@@ -1237,25 +1240,25 @@ def submit_to_db(input, pattern, dry_run=True, remove_file=False):
 #    elif (input.endswith("tar")):
 #        import tarfile
 #        tar = tarfile.open(input, "r:")
-    if not tar and not input.endswith("/"):
-        logger.warning("missing trailing / on submit dirname %s",input);
-        input += "/"
+    if not tar and not inputf.endswith("/"):
+        logger.warning("missing trailing / on submit dirname %s",inputf);
+        inputf += "/"
 
     if tar:
 #        for member in tar.getmembers():
         try:
             info = tar.getmember("./job_metadata")
         except KeyError:
-            logger.error('Did not find %s in tar archive' % "job_metadata")
-            return (False, 'Did not find metadata in tar archive', ())
+            logger.error('Did not find %s in tar file %s' % ("job_metadata",inputf))
+            return (False, 'Did not find metadata in tar file '+inputf, ())
         else:
-            logger.info('%s is %d bytes in archive' % (info.name, info.size))
+            logger.info('%s is %d bytes in tar file %s' % (info.name, info.size, inputf))
             f = tar.extractfile(info)
             metadata = read_job_metadata_direct(f)
             filedict = get_filedict(None,settings.input_pattern,tar)
     else:
-        metadata = read_job_metadata(input+"job_metadata")
-        filedict = get_filedict(input,settings.input_pattern)
+        metadata = read_job_metadata(inputf+"job_metadata")
+        filedict = get_filedict(inputf,settings.input_pattern)
 
     if not metadata:
         return (False, 'missing job metadata', ())
@@ -1280,13 +1283,13 @@ def submit_to_db(input, pattern, dry_run=True, remove_file=False):
     r = ETL_job_dict(metadata,filedict,settings,tarfile=tar)
     if remove_file:
         if r[0]:
-            logger.info('Removing {} on successful ingest into db'.format(input))
-            if path.isfile(input):
-                remove(input)
-            elif path.isdir(input):
-                rmtree(input, ignore_errors=True)
+            logger.info('Removing {} on successful ingest into db'.format(inputf))
+            if path.isfile(inputf):
+                remove(inputf)
+            elif path.isdir(inputf):
+                rmtree(inputf, ignore_errors=True)
         else:
-            logger.debug('Not removing {} as ingest failed'.format(input))
+            logger.debug('Not removing {} as ingest failed'.format(inputf))
     # if not r[0]:
     return r
     # (j, process_count) = r[-1]

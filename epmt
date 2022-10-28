@@ -155,7 +155,7 @@ if (__name__ == "__main__"):
     # retire
     retire_parser = subparser.add_parser('retire', help="Delete jobs/models, retention policy in settings.py")
     # Submit
-    submit_parser = subparser.add_parser('submit', help="Commit completed job to database",
+    submit_parser = subparser.add_parser('submit', help="Submit/ingest job into database",
         description="Submit accepts job directories and updates the database configured with \
             directories given.  When run with -n submit will not touch the database and displays the commands leading \
                 up to submission.")
@@ -163,7 +163,7 @@ if (__name__ == "__main__"):
     submit_parser.add_argument('-e', '--error', action='store_true',help="Exit at the first sign of trouble")
     submit_parser.add_argument('--remove', action='store_true',help="Remove the job .tgz on successful submission")
     submit_parser.add_argument('-n', '--dry-run', action='store_true',help="Don't touch the database")
-    submit_parser.add_argument('--drop',action='store_true',help="Drop all tables/data and recreate before importing")
+    submit_parser.add_argument('--drop',action='store_true',help="Drop all tables/data and recreate before submission")
     from epmtlib import suggested_cpu_count_for_submit
     optimal_cpus = suggested_cpu_count_for_submit()
     submit_parser.add_argument('-p', '--num-cpus', type=int, nargs='?', default=1, const=optimal_cpus, help='Number of parallel processes to use for submission. If this option is selected, but no value is specified, then the optimal value ({0}) will be used, based on your hardware resources. Note: This option is only supported for SQLAlchemy ORM at present.'.format(optimal_cpus))
@@ -185,7 +185,7 @@ if (__name__ == "__main__"):
     # List
     list_parser = subparser.add_parser('list', help='Display all jobs in the database',
         description="Display all jobs in the database")
-    list_parser.add_argument('epmt_cmd_args', nargs='*', help="job IDs to search for", metavar="jobids")
+    list_parser.add_argument('epmt_cmd_args', nargs='*', help="Either keyword: jobs, unprocessed_jobs, unanalyzed_jobs, refmodels, procs/processes, thread_metrics, op_metrics, job_proc_tags or list job IDs to search for", metavar="jobids")
     # Notebook
     notebook_parser = subparser.add_parser('notebook', help="Start iPython Notebook environment",
                                            description="Perform programmatic, interactive analyses of EPMT data in iPython")

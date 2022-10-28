@@ -15,7 +15,8 @@ from epmt_query import analyze_jobs, get_unprocessed_jobs, post_process_jobs
 from epmtlib import check_pid, epmt_logging_init
 from epmt_cmd_retire import epmt_retire
 import epmt_settings as settings
-
+from orm import orm_db_provider
+    
 logger = logging.getLogger(__name__)  # you can use other name
 
 PID_FILE = '/tmp/epmt.pid.' + getuser()
@@ -94,6 +95,7 @@ def stop_daemon(pidfile = PID_FILE):
     if stat:
         logger.info('Sending SIGUSR1 signal to EPMT daemon PID {0}'.format(pid))
         try:
+            print("Sending SIGUSR1 to EPMT daemon pid "+str(pid))
             kill(pid, SIGUSR1)
         except Exception as e:
             logger.error('Error killing process PID {0}: {1}'.format(pid, str(e)))
@@ -153,24 +155,27 @@ def daemon_loop(context, niters = 0, post_process = True, analyze = True, retire
     if retire:
         if (settings.retire_jobs_ndays == 0) and (settings.retire_models_ndays == 0):
             logger.error('You have enabled retire mode for the daemon. However, settings.py has it disabled. Please set a non-zero value for "retire_jobs_ndays" and/or "retire_models_ndays". Alternatively, disable retire mode for the daemon')
-            return False
+            return True
         logger.info('retire mode enabled for daemon')
-        if settings.retire_jobs_ndays:
-            logger.info('jobs will be retired after {} days'.format(settings.retire_jobs_ndays))
-        if settings.retire_models_ndays:
-            logger.info('models will be retired after {} days'.format(settings.retire_models_ndays))
+        logger.info('jobs will be retired after {} days'.format(settings.retire_jobs_ndays))
+        logger.info('models will be retired after {} days'.format(settings.retire_models_ndays))
 
     if ingest:
         logger.info('ingestion mode enabled for daemon')
         logger.info('ingestion mode (path={},recursive={},keep={})'.format(ingest,recursive, keep))
         if not (path.isdir(ingest)):
             logger.error('Ingest path ({}) does not exist'.format(ingest))
-            return False
+            return True
+        from epmtlib import suggested_cpu_count_for_submit
+        ncpus = suggested_cpu_count_for_submit()
+        if (ncpus > 1) and ((settings.orm != 'sqlalchemy') or (orm_db_provider() != "postgres")):
+            logger.error('Parallel submit is only supported for Postgres + SQLAlchemy at present')
+            return True
 
     if post_process:
         if ingest and settings.post_process_job_on_ingest:
             logger.error('Settings has post_process_job_on_ingest set, but post_processing was selected')
-            return False
+            return True
         logger.info('post-process mode enabled for daemon')
         if analyze:
             logger.info('analysis mode enabled for daemon')
@@ -203,11 +208,11 @@ def daemon_loop(context, niters = 0, post_process = True, analyze = True, retire
             # with the task. Multiple tasks may be enabled.
             _t1 = time()
             if ingest:
-                logger.debug('checking {} for new jobs to ingest'.format(ingest))
+                logger.debug('checking dir {} for jobs to ingest'.format(ingest))
                 tgz_files = find_files_in_dir(ingest, '*.tgz', recursive = recursive)
                 if tgz_files:
-                    logger.info('{} staged files found (to ingest)'.format(len(tgz_files)))
-                    epmt_submit(tgz_files, dry_run = False, remove_file=not(keep))
+                    logger.info('{} .tgz files found to ingest'.format(len(tgz_files)))
+                    epmt_submit(tgz_files, dry_run = False, ncpus=ncpus, remove_file=not(keep))
             if post_process:
                 # unprocessed jobs (these are jobs on whom post-processing
                 # pipeline hasn't run; these are different from jobs on whom
