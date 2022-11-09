@@ -1852,12 +1852,14 @@ remove_models : boolean, optional
 
     """
 
+    logger.debug("Jobs sent in"+str(jobs))
     jobs = orm_jobs_col(jobs)
 
     if ((before != None) or (after != None)):
         jobs = get_jobs(jobs, before=before, after=after, fmt='orm')
 
     num_jobs = jobs.count()
+    logger.debug("Jobs in collection: " + str(num_jobs))
     if num_jobs == 0:
         if warn:
             logger.warning('No jobs matched; none deleted')
@@ -1870,6 +1872,7 @@ remove_models : boolean, optional
     jobs_with_models = {}
     jobs_to_delete = []
     for j in jobs:
+        logger.debug("Job to delete: %s",j.jobid)
         if j.ref_models: 
             jobs_with_models[j.jobid] = [r.id for r in j.ref_models]
         else:
@@ -2811,9 +2814,9 @@ def is_job_post_processed(job):
         job = Job[job]
     # only processed jobs have this set
     info_dict = job.info_dict or {}
-    # we retain the j.proc_sums check to retain backward compatibility
-    return ((info_dict.get('post_processed', 0) > 0) or (job.proc_sums != None))
-
+    retval = info_dict.get('post_processed', 0) > 0
+    logger.error("is_job_post_processed(%s): %s",job.jobid,retval)
+    return retval
 
 @db_session
 def get_job_staging_ids(j):
@@ -2868,15 +2871,14 @@ def post_process_jobs(jobs, check = True):
     if type(jobs) in (Job, str, int):
         jobs = [ jobs ]
 
-    num_processed = 0
     out = []
+    cnt = 0;
     for j in jobs:
         jobid = j.jobid if type(j) == Job else str(j)
-        if not check or is_job_post_processed(jobid):
-            if post_process_job(jobid):
-                out.append(jobid)
-                num_processed += 1
-    logger.debug("%d of %d jobs post-processed",num_processed,len(jobs))
+        if post_process_job(jobid,force=not check):
+            out.append(jobid)
+        cnt += 1
+    logger.info("%d of %d jobs post-processed",len(out),cnt)
     return out
 
 
