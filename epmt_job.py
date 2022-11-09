@@ -4,6 +4,7 @@ from os import environ
 from logging import getLogger
 from json import dumps, loads
 from epmtlib import tag_from_string, sum_dicts, timing, dotdict, get_first_key_match, check_fix_metadata, logfn
+from epmt_query import is_job_post_processed
 from datetime import datetime, timedelta
 from functools import reduce
 import time
@@ -580,9 +581,10 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
         j = Job[jobid]
     else:
         jobid = j.jobid
-    if j.proc_sums and (not force):
-        logger.warning('skipped processing jobid {0} as it is not unprocessed'.format(j.jobid))
-        return False
+    if not force:
+        if is_job_post_processed(j):
+            logger.warning('skipped processing jobid {0} as it has been already processed'.format(j.jobid))
+            return False
 
     # we need to set up signal handlers so the user doesn't
     # abort the post-processing midway.
