@@ -8,10 +8,12 @@ from os import getppid
 from sys import exit
 from time import sleep, time
 from daemon import DaemonContext, pidfile
+from contextlib import nullcontext
 from signal import SIGHUP, SIGTERM, SIGQUIT, SIGINT, SIGUSR1
-from epmtlib import find_files_in_dir
 from epmt_cmds import epmt_submit
 from epmt_query import analyze_jobs, get_unprocessed_jobs, post_process_jobs
+from epmtlib import suggested_cpu_count_for_submit
+from epmtlib import find_files_in_dir
 from epmtlib import check_pid, epmt_logging_init
 from epmt_cmd_retire import epmt_retire
 import epmt_settings as settings
@@ -41,7 +43,6 @@ def start_daemon(foreground = False, lockfile = PID_FILE, **daemon_args):
     # logger.debug('Finished setting up signal handlers')
 
     if foreground:
-        from contextlib import nullcontext
         context = nullcontext()
     else:
         context = DaemonContext()
@@ -66,7 +67,7 @@ def start_daemon(foreground = False, lockfile = PID_FILE, **daemon_args):
 
     # start daemon
     logger.info('Using lock file {0} for the EPMT daemon'.format(lockfile))
-    exit(daemon_loop(context,**daemon_args))
+    exit(daemon_loop(context = context, **daemon_args))
     return 0
 
 def is_daemon_running(pidfile = PID_FILE):
@@ -125,12 +126,13 @@ def print_daemon_status(pidfile = PID_FILE):
 
 # if niters is set, then the daemon loop will end after 'niters' iterations
 # otherwise loop forever or until we get interrupted by a signal
-def daemon_loop(context, niters = 0, post_process = True, analyze = True, retire = False, ingest = False, recursive = False, keep = False, verbose = 0):
+def daemon_loop(context = nullcontext(), niters = 0, post_process = True, analyze = True, retire = False, ingest = False, recursive = False, keep = False, verbose = 0):
     '''
     Runs a daemon loop niters times, performing enabled actions
     such as post-processing, ingestion, etc.
 
-          niters: Number of times to run the daemon loop
+          context: Python context, either Daemon context or nullcontext
+          niters: Number of times to run the daemon loop, 0 = forever
     post_process: Perform post-process of unprocessed
                   jobs. Default True.
          analyze: Perform analysis on post-processed jobs. Default True.
@@ -150,7 +152,7 @@ def daemon_loop(context, niters = 0, post_process = True, analyze = True, retire
     global sig_count
     sig_count = 0
 
-    logger.debug('daemon_loop(niters=%d,post_process=%s,analyze=%s,retire=%s,ingest=%s,recursive=%s,keep=%s)', niters, post_process, analyze, retire, ingest, recursive, keep)
+    logger.debug('daemon_loop(context=%s,niters=%d,post_process=%s,analyze=%s,retire=%s,ingest=%s,recursive=%s,keep=%s)', str(context), niters, post_process, analyze, retire, ingest, recursive, keep)
 
     if retire:
         if (settings.retire_jobs_ndays == 0) and (settings.retire_models_ndays == 0):
@@ -166,11 +168,10 @@ def daemon_loop(context, niters = 0, post_process = True, analyze = True, retire
         if not (path.isdir(ingest)):
             logger.error('Ingest path ({}) does not exist'.format(ingest))
             return True
-        from epmtlib import suggested_cpu_count_for_submit
         ncpus = suggested_cpu_count_for_submit()
         if (ncpus > 1) and ((settings.orm != 'sqlalchemy') or (orm_db_provider() != "postgres")):
-            logger.error('Parallel submit is only supported for Postgres + SQLAlchemy at present')
-            return True
+            logger.warning('Parallel submit only supported for Postgres+SQLAlchemy, using 1 cpu')
+            ncpus = 1
 
     if post_process:
         if ingest and settings.post_process_job_on_ingest:
@@ -202,7 +203,7 @@ def daemon_loop(context, niters = 0, post_process = True, analyze = True, retire
         while (True):
             if (sig_count > 0):
                 logger.warning('Terminating EPMT daemon gracefully')
-                exit(0)
+                return False
             # We check whether a task (such as ingest, post-processing or
             # retirement is enabled and if so, do the actions associated
             # with the task. Multiple tasks may be enabled.
@@ -224,7 +225,7 @@ def daemon_loop(context, niters = 0, post_process = True, analyze = True, retire
                 # Jobs that fail, should be removed and logged
                 unpdj = get_unprocessed_jobs()
                 logger.info("%d unprocessed jobs found",len(unpdj))
-                ppd_jobs = post_process_jobs(unpdj)
+                ppd_jobs = post_process_jobs(unpdj, check=False)
                 # unpdj - ppd_jobs should be 0 in size, let's check
                 err_ppd_jobs = list(filter(lambda i: i not in ppd_jobs, unpdj))
                 tot_pp_jobs += len(ppd_jobs)
@@ -246,7 +247,7 @@ def daemon_loop(context, niters = 0, post_process = True, analyze = True, retire
                     epmt_retire()
 
             iters += 1
-            if niters and (iters > niters):
+            if (niters > 0) and (iters >= niters):
                 logger.debug('ending daemon loop, as requested iterations completed')
                 break
             _loop_time = (time() - _t1)
@@ -256,7 +257,7 @@ def daemon_loop(context, niters = 0, post_process = True, analyze = True, retire
                 sleep(delay)
             else:
                 logger.warning("daemon loop took {0} seconds. No sleep for me!".format(_loop_time))
-        exit(0)
+        return False
 
 def signal_handler(signum, frame):
     global sig_count
