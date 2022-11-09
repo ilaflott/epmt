@@ -6,19 +6,27 @@ from . import *
 from epmt_cmds import epmt_dbsize
 from epmt_cmd_delete import epmt_delete_jobs
 from epmt_cmd_list import  epmt_list_jobs, epmt_list_procs, epmt_list_job_proc_tags, epmt_list_refmodels, epmt_list_op_metrics, epmt_list_thread_metrics
+from epmt_daemon import daemon_loop
 
+from contextlib import nullcontext
+from os import path
 
 def do_cleanup():
     eq.delete_jobs(['685000', '627919', '691201', '692544'], force=True, remove_models = True)
 
 @timing
 def setUpModule():
-    print('\n' + str(settings.db_params))
+#    print('\n' + str(settings.db_params))
     setup_db(settings)
     do_cleanup()
     datafiles='{}/test/data/misc/685000.tgz'.format(install_root)
     print('setUpModule: importing {0}'.format(datafiles))
+    settings.post_process_job_on_ingest = True
     epmt_submit(glob(datafiles), dry_run=False)
+    settings.post_process_job_on_ingest = False
+    logger.error("Why the heck....setupModule....unprocessed jobs"+str(eq.get_unprocessed_jobs()))
+    assert eq.get_jobs(['685000'], fmt='terse') == ['685000']
+    assert eq.get_unprocessed_jobs() == []
     
 def tearDownModule():
     do_cleanup()
@@ -55,19 +63,20 @@ class EPMTCmds(unittest.TestCase):
         
     @db_session
     def test_daemon_ingest(self):
-        from epmt_daemon import daemon_loop
-        from os import path
         self.assertFalse(eq.orm_get(eq.Job, '691201') or eq.orm_get(eq.Job, '692544'))
-        # now start the daemon and make it watch the directory containing the .tgz
+        # now start 1 iteration of the daemon code
+        # watching the directory containing the .tgz
+        # This should result in one unprocessed job in the database
+        settings.post_process_job_on_ingest = False
         with capture() as (out,err):
-            # use daemon solely for ingest
-            daemon_loop(1, ingest='{}/test/data/daemon/ingest'.format(install_root), post_process=False, retire=False, keep=True, recursive=False)
+            self.assertFalse(daemon_loop(nullcontext(), niters=1, ingest='{}/test/data/daemon/ingest'.format(install_root), post_process=False, analyze=False, retire=False, keep=True, recursive=False))
         # by now the files should be in the DB
-        self.assertEqual(set(eq.get_jobs(['691201', '692544'], fmt='terse')), {'691201', '692544'})
+        logger.error("What the....jobs now in DB"+str(eq.get_jobs(fmt='terse')))
+        self.assertEqual(set(eq.get_jobs(['691201', '692544'], fmt='terse')), set({'691201', '692544'}))
         # make sure the files aren't removed (since we used the "keep" option)
         self.assertTrue(path.exists('{}/test/data/daemon/ingest/691201.tgz'.format(install_root)) and path.exists('{}/test/data/daemon/ingest/692544.tgz'.format(install_root)))
 
-    @unittest.skipIf(eq.get_unprocessed_jobs(), 'unprocessed jobs in database')
+#    @unittest.skipIf(len(eq.get_unprocessed_jobs()) == 0, 'unprocessed jobs in database') 
     @db_session
     def test_daemon_post_process(self):
         # We first make sure the DB has one more unanalyzed and
@@ -76,27 +85,26 @@ class EPMTCmds(unittest.TestCase):
         # unanalyzed jobs
         from epmt_daemon import is_daemon_running, daemon_loop
         from epmt_job import post_process_pending_jobs
-        self.assertFalse(is_daemon_running())
-        if settings.orm == 'sqlalchemy':
-            # only sqlalchemy allows this option
-            settings.post_process_job_on_ingest = False
+        self.assertTrue(is_daemon_running() == (False, -1))
+        settings.post_process_job_on_ingest = False
         with capture() as (out,err):
-            epmt_submit(glob('{}/test/data/daemon/627919.tgz'.format(install_root)), dry_run=False)
-        settings.post_process_job_on_ingest = True
+            self.assertTrue(epmt_submit(glob('{}/test/data/daemon/627919.tgz'.format(install_root)), dry_run=False))
         up_jobs = eq.get_unprocessed_jobs()
-        if settings.orm == 'sqlalchemy':
-            self.assertTrue(UnprocessedJob['627919'])
-            self.assertTrue(up_jobs)
+        self.assertTrue(UnprocessedJob['627919'])
+        self.assertTrue(up_jobs)
         self.assertTrue(eq.get_unanalyzed_jobs())
         # a daemon loop should clear the backlog of unprocessed
         # and unanalyzed jobs
-        daemon_loop(1)
+        #       with capture() as (out,err):
+        with capture() as (out,err):
+            self.assertFalse(daemon_loop(nullcontext(), niters=1, ingest=False, post_process=True, analyze=False, retire=False, keep=True, recursive=False))
         self.assertFalse(eq.get_unprocessed_jobs())
-        self.assertFalse(eq.get_unanalyzed_jobs())
+        self.assertFalse(eq.get_unanalyzed_jobs() == [])
         # now mark all jobs unanalyzed so future tests aren't affected
-        all_jobs = eq.get_jobs(fmt='terse')
-        for j in all_jobs:
-            eq.remove_job_analyses(j)
+        # all_jobs = eq.get_jobs(fmt='terse')
+        #for j in all_jobs:
+        #    eq.remove_job_analyses(j)
+
         # from warnings import simplefilter
         # simplefilter("ignore", ResourceWarning)
         # rc = start_daemon()
@@ -200,16 +208,16 @@ class EPMTCmds(unittest.TestCase):
         # restore logging level
         epmt_logging_init(-1)
         
-    def test_yy_retire(self):
+    def test_yyy_retire(self):
         from datetime import datetime, timedelta
-        with capture() as (out,err):
-            epmt_submit(glob('{}/test/data/daemon/627919.tgz'.format(install_root)), dry_run=False)
-        org_jobs = eq.get_jobs(fmt='terse')
-        self.assertTrue('627919' in org_jobs)
-        # ndays = (datetime.now() - datetime(2019,6,15,7,52)).days # days since start of 685000 
-        # Job 627919 start: 2019-06-10 06:23:08.427666-04:00
-        ndays = (datetime.now() - datetime(2019,6,10,6,23)).days
+#        with capture() as (out,err):
+#            epmt_submit(glob('{}/test/data/daemon/627919.tgz'.format(install_root)), dry_run=False)
+        org_jobs = eq.get_jobs([685000],fmt='dict')
+        self.assertTrue(org_jobs)
+        # datetime.datetime(2019, 6, 15, 7, 52, 4, 73965)
+        ndays = (datetime.now() - datetime(2019,6,15,7,52,4)).days
         org_setting = settings.retire_jobs_ndays
+#        print(str(ndays))
         settings.retire_jobs_ndays = ndays - 1 # to make sure we retire 627919
         from epmt_cmd_retire import epmt_retire
         with capture() as (out,err):
@@ -217,7 +225,7 @@ class EPMTCmds(unittest.TestCase):
         settings.retire_jobs_ndays = org_setting # restore original setting
         self.assertTrue(jobs_delete_count > 0)
         jobs = eq.get_jobs(fmt='terse')
-        self.assertFalse('627919' in jobs)
+        self.assertFalse('685000' in jobs)
 
     @unittest.skipUnless(orm_in_memory(), 'skip on persistent database')
     def test_zz_drop_db(self):
