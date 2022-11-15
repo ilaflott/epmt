@@ -19,6 +19,7 @@ ipython==7.9.0
 ipython-genutils==0.2.0
 ipywidgets==7.5.1
 isort==4.3.21
+itsdangerous==1.1.0
 jedi==0.15.1
 Jinja2==2.10.3
 joblib==0.14.1
