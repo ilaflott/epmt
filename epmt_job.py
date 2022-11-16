@@ -1050,7 +1050,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     j.submit = submit_ts.replace(tzinfo=None) # Wait time is start - submit and should probably be stored
     info_dict = {'tz': start_ts.tzinfo.tzname(None), 'status': job_status, 'procs_in_process_table': 0, 'post_processed': 0}
     j.duration = int((j.end - j.start).total_seconds()*1000000)
-    logger.info("Computed duration of job: %f us, %.2f m",j.duration,j.duration/60000000)
+    logger.info("Computed duration of job %s: %f us, %.2f m",jobid,j.duration,j.duration/60000000)
 
     didsomething = False
     all_tags = set()
@@ -1371,14 +1371,14 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     else:
         # mark job as unprocessed. It will need post-processing later
         orm_create(UnprocessedJob, jobid=j.jobid)
-        logger.debug('Skipped post-processing and marked job %d as **UNPROCESSED**',j.jobid)
+        logger.debug('Skipped post-processing and marked job %s as **UNPROCESSED**',j.jobid)
 
-    logger.debug("Committing job %d to database",j.jobid)
+    logger.debug("Committing job %s to database",j.jobid)
     _c0 = time.time()
     orm_commit()
     logger.debug("Commit time: %2.5f sec", time.time() - _c0)
     now = datetime.now()
-    logger.info("Staged import of job %d with %d processes took %s, %f processes/sec",
+    logger.info("Staged import of job %s with %d processes took %s, %f processes/sec",
                 j.jobid,total_procs, now - then,total_procs/float((now-then).total_seconds()))
     print("Imported successfully - job:",jobid,"processes:",total_procs,"rate:",total_procs/float((now-then).total_seconds()))
     return (True, 'Import successful', (j.jobid, total_procs))
