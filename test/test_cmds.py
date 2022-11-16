@@ -212,7 +212,7 @@ class EPMTCmds(unittest.TestCase):
         from datetime import datetime, timedelta
 #        with capture() as (out,err):
 #            epmt_submit(glob('{}/test/data/daemon/627919.tgz'.format(install_root)), dry_run=False)
-        org_jobs = eq.get_jobs([685000],fmt='dict')
+        org_jobs = eq.get_jobs(["685000"],fmt='dict')
         self.assertTrue(org_jobs)
         # datetime.datetime(2019, 6, 15, 7, 52, 4, 73965)
         ndays = (datetime.now() - datetime(2019,6,15,7,52,4)).days
