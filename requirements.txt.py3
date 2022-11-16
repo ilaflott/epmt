@@ -92,6 +92,7 @@ typed-ast==1.4.0
 tzlocal==2.0.0
 wcwidth==0.1.7
 webencodings==0.5.1
+werkzeug==2.0.3
 widgetsnbextension==3.5.1
 wrapt==1.11.2
 zipp==0.6.0
