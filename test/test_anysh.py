@@ -32,8 +32,10 @@ def setUpModule():
     from os import environ
     environ['SLURM_JOB_ID'] = jobid
     environ['SLURM_JOB_USER'] = tuser
+    settings.post_process_job_on_ingest = True
 
 def tearDownModule():
+    settings.post_process_job_on_ingest = False
     do_cleanup()
 
 
