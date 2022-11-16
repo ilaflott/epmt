@@ -25,7 +25,7 @@ lint:
 # Also, if needed install a virtual environment in .venv374
 install-py3:
 	@if [ "`python3 -V`" != "Python 3.7.4" ]; then \
-		echo "Installing Python 3.7.4 using pyenv" ; \
+		set -e; echo "Installing Python 3.7.4 using pyenv" ; \
 		which pyenv > /dev/null || curl https://pyenv.run | bash ; \
 		PATH="$$HOME/.pyenv/bin:$$PATH" ; \
 		eval "$$(pyenv init -)" ; \
@@ -37,7 +37,7 @@ install-py3:
 	fi ; \
 	rm -rf .venv374 ; \
 	if python3 -m epmt_query 2>&1| grep ModuleNotFound > /dev/null; then \
-		echo "Setting up a virtual environment (in .venv374).." ; \
+		set -e; echo "Setting up a virtual environment (in .venv374).." ; \
 		[ -d .venv374 ] || python3 -m venv .venv374 ; \
 		source .venv374/bin/activate; set -e ; \
 		pip3 install --upgrade pip ; \
