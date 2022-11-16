@@ -10,7 +10,7 @@ from functools import wraps
 from os import chdir, getcwd, path
 
 from logging import getLogger
-logger = getLogger('orm.sqlalchemy')  # you can use other name
+logger = getLogger(__name__) 
 import epmt_settings as settings
 
 logger.info('sqlalchemy orm selected')
@@ -79,7 +79,7 @@ def setup_db(settings,drop=False,create=True):
     global engine
 
     if db_setup_complete and not(drop):
-        logger.debug('skipping DB setup as it has already been initialized')
+        logger.info('skipping DB setup as it has already been initialized')
         return True
     logger.info("Creating engine with db_params: %s", settings.db_params)
     _connect_engine()
@@ -329,7 +329,6 @@ def orm_jobs_col(jobs):
 def orm_to_dict(obj, **kwargs):
     from .models import Job, Process, User, Host, ReferenceModel
     from epmtlib import isString
-
     # we need to make sure jobs are post-processed first and foremost
     # This step has to be done before we get a dict from the object
     if type(obj) == Job:
