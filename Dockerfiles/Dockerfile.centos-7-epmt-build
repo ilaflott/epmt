@@ -17,9 +17,12 @@ RUN ldconfig
 RUN python3 -V
 RUN pip3 install --upgrade pip
 
-COPY ui/requirements-ui.txt.py3 requirements.txt.py3 /tmp/
+COPY requirements.txt.py3 /tmp/
 RUN pip3 install -r /tmp/requirements.txt.py3
+COPY ui/requirements-ui.txt.py3 /tmp
 RUN pip3 install -r /tmp/requirements-ui.txt.py3 
+RUN rm -f /tmp/requirements.txt.py3 /tmp/requirements-ui.txt.py3
 
 RUN yum clean all
 RUN rm -rf /usr/src /var/cache/yum
+
