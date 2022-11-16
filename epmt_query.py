@@ -85,7 +85,6 @@ def conv_jobs(jobs, fmt='dict', merge_sums = True, trigger_post_process = True):
 
     # convert the ORM into a list of dictionaries, excluding blacklisted fields
     out_list = [ orm_to_dict(j, exclude = 'processes', trigger_post_process = trigger_post_process) for j in jobs ]
-
     # do we need to merge process' sum fields into the job?
     if merge_sums:
         for j in out_list:
@@ -2815,7 +2814,7 @@ def is_job_post_processed(job):
     # only processed jobs have this set
     info_dict = job.info_dict or {}
     retval = info_dict.get('post_processed', 0) > 0
-    logger.error("is_job_post_processed(%s): %s",job.jobid,retval)
+    logger.debug("is_job_post_processed(%s): %s",job.jobid,retval)
     return retval
 
 @db_session
