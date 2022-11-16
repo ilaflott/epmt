@@ -27,7 +27,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (4,9,1)
+_version = (4,9,2)
 
 def version():
     return _version
@@ -60,8 +60,11 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
     elif intlvl >= 2:
         level = DEBUG
 
-
+    # Set level and remove all existing handlers 
     rootLogger = getLogger()
+    rootLogger.debug("epmt_logging_init(%d,%s,%s): %d handlers",intlvl,check,log_pid,len(rootLogger.handlers))
+    for handler in rootLogger.handlers:
+        rootLogger.removeHandler(handler)
     rootLogger.setLevel(level)
 
     # only log to file if stdout is not a tty
@@ -71,15 +74,14 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
         logFormatter = logging.Formatter("[%(asctime)-19.19s, %(process)6d] %(levelname)-7.7s %(name)s:%(message)s")
         fileHandler = logging.FileHandler(settings.logfile)
         fileHandler.setFormatter(logFormatter)
+        fileHandler.setLevel(level)
+        rootLogger.debug("epmt_logging_init(): not_a_tty: adding handler for settings.logfile=%s",settings.logfile)
         rootLogger.addHandler(fileHandler)
 
     consoleHandler = logging.StreamHandler()
     consoleFormatter = logging.Formatter("[PID %(process)d] %(levelname)7.7s: %(name)s: %(message)s" if log_pid else "%(levelname)7.7s: %(name)s: %(message)s")
     consoleHandler.setFormatter(consoleFormatter)
     rootLogger.addHandler(consoleHandler)
-
-    for handler in rootLogger.handlers:
-        handler.setLevel(level)
 
     # matplotlib generates a ton of debug messages
     mpl_logger = logging.getLogger('matplotlib') 
