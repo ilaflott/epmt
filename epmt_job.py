@@ -1370,8 +1370,14 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         # logger.debug('post process job took: %2.5f sec', time.time() - _post_process_start_ts)
     else:
         # mark job as unprocessed. It will need post-processing later
-        orm_create(UnprocessedJob, jobid=j.jobid)
-        logger.debug('Skipped post-processing and marked job %s as **UNPROCESSED**',j.jobid)
+        from sqlalchemy import exc
+        try:
+            logger.debug('inserting **UNPROCESSED** reference for job %s',j.jobid)
+            orm_create(UnprocessedJob, jobid=j.jobid)
+        except exc.IntegrityError as e:
+            logger.warning('**UNPROCESSED** reference for job %s already exists',j.jobid)
+            Session.rollback()
+            return (False, "Job already in database (unprocessed)", ())
 
     logger.debug("Committing job %s to database",j.jobid)
     _c0 = time.time()

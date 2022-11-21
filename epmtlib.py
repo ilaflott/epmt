@@ -47,18 +47,18 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
     if check and hasattr(epmt_logging_init, 'initialized'): return
     epmt_logging_init.initialized = True
     if intlvl == None:
-        intlvl = 0
+        intlvl = 0 
     intlvl = int(intlvl)
     if intlvl < -1:
-        level = CRITICAL
+        level = CRITICAL # 50
     if intlvl == -1:
-        level = ERROR
+        level = ERROR # 40
     if intlvl == 0:
-        level = WARNING
+        level = WARNING # 30
     if intlvl == 1:
-        level = INFO
+        level = INFO # 20
     elif intlvl >= 2:
-        level = DEBUG
+        level = DEBUG # 10
 
     # Set level and remove all existing handlers 
     rootLogger = getLogger()
@@ -105,7 +105,7 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
     # to show the sqlalchemy's INFO level messages (but instead
     # a level higher).
     sqlalchemy_logger = logging.getLogger('sqlalchemy')
-    sqlalchemy_logger.setLevel(level+1)
+    sqlalchemy_logger.setLevel(level+10)
 
 def init_settings(settings):
     if hasattr(init_settings, 'initialized'): return
