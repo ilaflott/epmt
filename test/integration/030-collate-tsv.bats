@@ -46,7 +46,7 @@ teardown() {
   # assert_success
 
   run epmt dump -k tags $jobid 
-  assert_output "{'op': 'check-tsv'}"
+  assert_output --partial "{'op': 'check-tsv'}"
   run test -f ${stage_dest}/989.tgz || fail
   assert_success
   rm -f ${stage_dest}/989.tgz

@@ -9,6 +9,7 @@ setup() {
   jobs_in_module='625151 627907 629322 633114 675992 680163 685000 685001 685003 685016 691209 692500 693129'
   epmt delete ${jobs_in_module} || true
   epmt submit ${resource_path}/test/data/submit/692500.tgz ${resource_path}/test/data/query/*.tgz ${resource_path}/test/data/outliers_nb/{625151,627907,629322,633114,675992,680163,685001,691209,693129}.tgz
+  epmt dump ${jobs_in_module} # force PP
 }
 teardown() {
   epmt delete ${jobs_in_module} || true

@@ -21,14 +21,14 @@ setup() {
 
 @test "no daemon running" {
   # skip test if we have any unprocessed jobs
-  [[ "$unprocessed_jobs" == "[]" ]] || skip
+  [[ "$unprocessed_jobs" == "[]" ]] || skip "unprocessed jobs in database"
   run epmt daemon
   assert_output --partial "EPMT daemon is not running"
 }
 
 @test "start epmt daemon" {
   # skip test if we have any unprocessed jobs
-  [[ "$unprocessed_jobs" == "[]" ]] || skip
+  [[ "$unprocessed_jobs" == "[]" ]] || skip "unprocessed jobs in database"
   trap sig_handler SIGINT SIGTERM SIGQUIT SIGHUP
   run epmt -v daemon --start
   run epmt daemon
@@ -45,7 +45,7 @@ setup() {
 
 @test "stop epmt daemon" {
   # skip test if we have any unprocessed jobs
-  [[ "$unprocessed_jobs" == "[]" ]] || skip
+  [[ "$unprocessed_jobs" == "[]" ]] || skip "unprocessed jobs in database"
   run epmt daemon
   assert_output --partial "EPMT daemon running OK"
   run epmt daemon --stop

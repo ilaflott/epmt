@@ -10,3 +10,4 @@ epmt annotate c=200 d=400
 f=`epmt stage`           # Move to medium term storage
 epmt annotate $f e=300 f=600  # annotate staged job
 epmt submit $f           # Submit from staged storage
+epmt dump ${SLURM_JOBID} # Force post-process of job

@@ -64,6 +64,8 @@ exp_output=('-d" -f2' '\\\' ' b' '\' ',' "'" '-e \tHello' '-e \tThereU\nR' '-e \
 
     run epmt list 12340
     assert_output "['12340']"
+    run epmt dump 12340
+    assert_success
 
   # Below we have the expected output in sequence, don't use run as it doesn't play with a pipe
     if [ $(uname -s) == "Linux" ] && $(test -f "${papiex_path}/lib/libpapiex.so") ; then 
@@ -92,6 +94,8 @@ exp_output=('-d" -f2' '\\\' ' b' '\' ',' "'" '-e \tHello' '-e \tThereU\nR' '-e \
 
   run epmt list 12340
   assert_output "['12340']"
+  run epmt dump 12340
+  assert_success
 
   # Below we have the expected output in sequence, don't use run as it doesn't play with a pipe
   for i in ${!exp_output[*]}; do
