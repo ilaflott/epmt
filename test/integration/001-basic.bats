@@ -20,6 +20,7 @@ setup() {
 
 teardown() {
   # Remove any jobs before starting a test & ignore error code
+  epmt dump ${jobs_in_module} > /dev/null || true # force post processing so delete happens 
   epmt delete ${jobs_in_module} || true
   rm -rf ${epmt_output_prefix}/[12]
 }
@@ -62,11 +63,10 @@ teardown() {
 
 @test "epmt submit -e" {
   run epmt submit -e ${resource_path}/test/data/submit/692500.tgz
+  assert_success
   run epmt submit -e ${resource_path}/test/data/submit/692500.tgz ${resource_path}/test/data/query/685000.tgz
   assert_failure
-  assert_output --partial "Job already in database"
-  # Path may not be exact
-  assert_output --partial "test/data/submit/692500.tgz"
+  assert_output --partial "Job 692500 (at 2019-06-16 13:39:28.843357) is already in the database"
   run epmt list 685000
   assert_output "[]"
 }

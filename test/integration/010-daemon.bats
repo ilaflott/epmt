@@ -23,7 +23,7 @@ setup() {
   # skip test if we have any unprocessed jobs
   [[ "$unprocessed_jobs" == "[]" ]] || skip "unprocessed jobs in database"
   run epmt daemon
-  assert_output --partial "EPMT daemon is not running"
+  assert_output --partial "EPMT daemon not running"
 }
 
 @test "start epmt daemon" {
@@ -32,7 +32,7 @@ setup() {
   trap sig_handler SIGINT SIGTERM SIGQUIT SIGHUP
   run epmt -v daemon --start
   run epmt daemon
-  assert_output --partial "EPMT daemon running OK"
+  assert_output --partial "EPMT daemon running PID"
   sleep 1
   run grep "starting daemon loop" $logfile
 #  echo $logfile
@@ -47,9 +47,9 @@ setup() {
   # skip test if we have any unprocessed jobs
   [[ "$unprocessed_jobs" == "[]" ]] || skip "unprocessed jobs in database"
   run epmt daemon
-  assert_output --partial "EPMT daemon running OK"
+  assert_output --partial "EPMT daemon running PID"
   run epmt daemon --stop
-  assert_output --partial "Sending signal to EPMT daemon with PID"
+  assert_output --partial "Sending SIGUSR1 to EPMT daemon pid"
   # cleanup up as we did verbose logging to log file
   rm -f $logfile
 }
