@@ -64,7 +64,7 @@ teardown() {
   run epmt submit -e ${resource_path}/test/data/submit/692500.tgz
   run epmt submit -e ${resource_path}/test/data/submit/692500.tgz ${resource_path}/test/data/query/685000.tgz
   assert_failure
-  assert_output --partial "Job already in database:"
+  assert_output --partial "Job already in database"
   # Path may not be exact
   assert_output --partial "test/data/submit/692500.tgz"
   run epmt list 685000
