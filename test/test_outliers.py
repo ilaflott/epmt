@@ -12,13 +12,14 @@ def do_cleanup():
 
 @timing
 def setUpModule():
-    print('\n' + str(settings.db_params))
+#    print('\n' + str(settings.db_params))
     setup_db(settings)
     do_cleanup()
     datafiles='{}/test/data/outliers/*.tgz'.format(install_root)
-    print('setUpModule: importing {0}'.format(datafiles))
+#    print('setUpModule: importing {0}'.format(datafiles))
     environ['EPMT_TZ'] = 'Asia/Kolkata'
-    epmt_submit(glob(datafiles), dry_run=False)
+    with capture() as (out,err):
+        epmt_submit(glob(datafiles), dry_run=False)
     # only use madz for outlier detection by default
     settings.univariate_classifiers = ['modified_z_score']
     # set lower madz and z-score thresholds to easily detect outliers

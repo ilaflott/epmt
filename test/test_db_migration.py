@@ -5,7 +5,7 @@ from . import *
 from orm import orm_in_memory
 
 def setUpModule():
-    print('\n' + str(settings.db_params))
+#    print('\n' + str(settings.db_params))
     setup_db(settings)
 
 

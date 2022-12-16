@@ -35,7 +35,7 @@ odir = settings.epmt_output_prefix + get_username() + "/"
 @timing
 def setUpModule():
     setup_db(settings)
-    print('\n' + str(settings.db_params))
+#    print('\n' + str(settings.db_params))
     remove_stale_files()
     from os import environ
     environ['SLURM_JOB_USER'] = tuser

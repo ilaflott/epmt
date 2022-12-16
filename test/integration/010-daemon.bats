@@ -49,7 +49,7 @@ setup() {
   run epmt daemon
   assert_output --partial "EPMT daemon running PID"
   run epmt daemon --stop
-  assert_output --partial "Sending SIGUSR1 to EPMT daemon pid"
+  assert_output --partial "Sending signal to EPMT daemon pid"
   # cleanup up as we did verbose logging to log file
   rm -f $logfile
 }

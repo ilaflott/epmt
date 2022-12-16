@@ -6,7 +6,7 @@ from . import *
 
 @timing
 def setUpModule():
-    print('\n' + str(settings.db_params))
+#    print('\n' + str(settings.db_params))
     setup_db(settings)
 
 

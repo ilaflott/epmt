@@ -201,8 +201,6 @@ def run_shell_cmd(*cmd):
 
 def cmd_exists(cmd):
     if not cmd: return False
-    # rc = run_shell_cmd('which', cmd)
-    # return (rc == 0)
     from shutil import which
     return which(cmd) is not None
 
@@ -227,7 +225,8 @@ def timing(f):
         return result
     return wrap
 
-
+# This function has a bug because it does not work with subprocess.run().
+# Needs to be fixed
 
 @contextmanager
 def capture():

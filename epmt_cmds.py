@@ -3,7 +3,7 @@ from __future__ import print_function
 from datetime import datetime
 from os import environ, makedirs, mkdir, path, getpid, chdir, remove,  uname, kill
 from socket import gethostname
-from subprocess import call as forkexecwait
+from subprocess import run
 from glob import glob
 from sys import stderr
 from json import dumps, loads
@@ -117,7 +117,7 @@ def verify_install_prefix():
                "lib/libpapi.so","lib/libpfm.so","bin/papi_command_line" ]:
         cmd = "ls -l "+install_prefix+e+">/dev/null 2>&1"
         logger.info("\t"+cmd)
-        return_code = forkexecwait(cmd, shell=True)
+        return_code = run(cmd, shell=True).returncode
         if return_code != 0:
             logger.error("%s failed",cmd)
             retval = False
@@ -150,13 +150,13 @@ def verify_epmt_output_prefix():
 # Test to make sure we can access it
     cmd = "ls -lR "+opf+" >/dev/null"    
     logger.info("\t"+cmd)
-    return_code = forkexecwait(cmd, shell=True)
+    return_code = run(cmd, shell=True).returncode
     if return_code != 0:
         retval = False
 # Remove the created tmp dir
     cmd = "rm -rf "+opf+"tmp"
     logger.info("\t"+cmd)
-    return_code = forkexecwait(cmd, shell=True)
+    return_code = run(cmd, shell=True).returncode
     if return_code != 0:
         retval = False
 # Cleanup
@@ -174,7 +174,7 @@ def verify_papiex_options():
 # Check for any components
     cmd = settings.install_prefix+"bin/papi_component_avail 2>&1 "+"| sed -n -e '/Active/,$p' | grep perf_event >/dev/null 2>&1"
     logger.info("\t"+cmd)
-    return_code = forkexecwait(cmd, shell=True)
+    return_code = run(cmd, shell=True).returncode
     if return_code != 0:
         logger.error("%s failed",cmd)
         retval = False
@@ -185,7 +185,7 @@ def verify_papiex_options():
             continue
         cmd = settings.install_prefix+"bin/papi_command_line 2>&1 "+e+"| sed -n -e '/PERF_COUNT_SW_CPU_CLOCK\ :/,$p' | grep PERF_COUNT_SW_CPU_CLOCK > /dev/null 2>&1"
         logger.info("\t"+cmd)
-        return_code = forkexecwait(cmd, shell=True)
+        return_code = run(cmd, shell=True).returncode
         if return_code != 0:
             logger.error("%s failed",cmd)
             retval = False
@@ -851,7 +851,8 @@ def epmt_run(cmdline, wrapit=False, dry_run=False, debug=False):
 
     logger.info("Executing(%s)",cmd)
     if not dry_run:
-        return_code = forkexecwait(cmd, shell=True)
+        #        return_code = forkexecwait(cmd, shell=True)
+        return_code = run(cmd,shell=True).returncode
         logger.info("Exit code %d",return_code)
     else:
         print(cmd)
@@ -1139,7 +1140,7 @@ def create_tar(tarfile, indir, remove_dir = False):
         logger.error('{} does not exist'.format(indir))
     cmd = "tar -C "+indir+" -cz -f "+tarfile+" ."
     logger.debug(cmd)
-    retval = forkexecwait(cmd, shell=True)
+    retval = run(cmd, shell=True).returncode
     if retval != 0:
         logger.error('%s failed', cmd)
     if remove_dir:
@@ -1358,7 +1359,7 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True):
 # end HACK
     cmd = settings.stage_command + " " + filetostage + " " + settings.stage_command_dest
     logger.info(cmd)
-    return_code = forkexecwait(cmd, shell=True)
+    return_code = run(cmd, shell=True).returncode
     if path.exists(filetostage):
         try:
             logger.debug("rmtree(%s)",filetostage)

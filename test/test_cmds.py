@@ -10,6 +10,8 @@ from epmt_daemon import daemon_loop
 
 from contextlib import nullcontext
 from os import path
+#from logging import getLogger
+#logger = getLogger(__name__)
 
 def do_cleanup():
     eq.delete_jobs(['685000', '627919', '691201', '692544'], force=True, remove_models = True)
@@ -20,11 +22,11 @@ def setUpModule():
     setup_db(settings)
     do_cleanup()
     datafiles='{}/test/data/misc/685000.tgz'.format(install_root)
-    print('setUpModule: importing {0}'.format(datafiles))
+#    print('setUpModule: importing {0}'.format(datafiles))
     settings.post_process_job_on_ingest = True
-    epmt_submit(glob(datafiles), dry_run=False)
+    with capture() as (out,err):
+        epmt_submit(glob(datafiles), dry_run=False)
     settings.post_process_job_on_ingest = False
-    logger.error("Why the heck....setupModule....unprocessed jobs"+str(eq.get_unprocessed_jobs()))
     assert eq.get_jobs(['685000'], fmt='terse') == ['685000']
     assert eq.get_unprocessed_jobs() == []
     
@@ -71,7 +73,7 @@ class EPMTCmds(unittest.TestCase):
         with capture() as (out,err):
             self.assertFalse(daemon_loop(nullcontext(), niters=1, ingest='{}/test/data/daemon/ingest'.format(install_root), post_process=False, analyze=False, retire=False, keep=True, recursive=False))
         # by now the files should be in the DB
-        logger.error("What the....jobs now in DB"+str(eq.get_jobs(fmt='terse')))
+        # logger.error("What the....jobs now in DB"+str(eq.get_jobs(fmt='terse')))
         self.assertEqual(set(eq.get_jobs(['691201', '692544'], fmt='terse')), set({'691201', '692544'}))
         # make sure the files aren't removed (since we used the "keep" option)
         self.assertTrue(path.exists('{}/test/data/daemon/ingest/691201.tgz'.format(install_root)) and path.exists('{}/test/data/daemon/ingest/692544.tgz'.format(install_root)))

@@ -8,13 +8,14 @@ def do_cleanup():
 
 @timing
 def setUpModule():
-    print('\n' + str(settings.db_params))
+#    print('\n' + str(settings.db_params))
     setup_db(settings)
     do_cleanup()
     datafiles='{}/test/data/misc/685000.tgz'.format(install_root)
-    print('setUpModule: importing {0}'.format(datafiles))
+#    print('setUpModule: importing {0}'.format(datafiles))
     settings.post_process_job_on_ingest = True
-    epmt_submit(glob(datafiles), dry_run=False)
+    with capture() as (out,err):
+        epmt_submit(glob(datafiles), dry_run=False)
     
 def tearDownModule():
     do_cleanup()
