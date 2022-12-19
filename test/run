@@ -24,6 +24,13 @@ compose_args="-f docker-compose-test.yml"
 pg_sqla_settings_file="settings_pg_container_sqlalchemy.py"
 pg_pony_settings_file="settings_pg_container_pony.py"
 
+echo ""
+echo "*** This script is broken and will be deprecated! ***"
+echo ""
+echo "Use ./epmt unittest and/or ./epmt integration to run tests."
+echo ""
+exit 1
+
 case "$1" in
   --no-compose) no_compose=1;;
   "");;
