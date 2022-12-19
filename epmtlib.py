@@ -180,12 +180,15 @@ def init_settings(settings):
         err_msg += '\n - bulk_insert is only supported by sqlalchemy'
     if not hasattr(settings, 'post_process_job_on_ingest'):
         logger.warning("missing settings.post_process_job_on_ingest")
-        settings.post_process_job_on_ingest = True
+        settings.post_process_job_on_ingest = False
+        if (settings.orm == 'sqlalchemy'):
+            settings.post_process_job_on_ingest = True
+    if settings.post_process_job_on_ingest and settings.orm != 'sqlalchemy':
+        logger.warning("settings.post_process_job_on_ingest = True only supported for sqlalchemy, now False")
+        settings.post_process_job_on_ingest = False
     if not hasattr(settings, 'lazy_compute_process_tree'):
         logger.warning("missing settings.lazy_compute_process_tree")
         settings.lazy_compute_process_tree = True
-    if ((settings.orm != 'sqlalchemy') and (not(settings.post_process_job_on_ingest))):
-        err_msg += '\n - post_process_job_on_ingest set as False is only permitted with sqlalchemy'
     if not hasattr(settings, 'db_params'):
         err_msg += "\n - missing settings.db_params"
     if err_msg:
