@@ -57,9 +57,9 @@ dist: install-py3
 	# same shell pipeline so it uses the venv (if activated)
 	# mkdocs also needs the same virtualenv, so includde it in the pipeline
 	if [ -d .venv374 ]; then echo "activating virtualenv.."; source .venv374/bin/activate; fi; set -e; \
-		[ "`python3 -V`" == "Python 3.7.4" ] || exit 1 ; \
-		pyinstaller --clean --noconfirm --distpath=epmt-install epmt.spec ; \
-		mkdocs build -f epmtdocs/mkdocs.yml
+	[ "`python3 -V`" == "Python 3.7.4" ] || exit 1 ; \
+	pyinstaller --clean --noconfirm --distpath=epmt-install epmt.spec ; \
+	mkdocs build -f epmtdocs/mkdocs.yml
 	# Rest of the commands below can be safely run outside the virtualenv
 	# resources
 	cp -Rp preset_settings epmt-install
@@ -68,7 +68,7 @@ dist: install-py3
 	cp -p alembic.ini epmt-install
 	# examples
 	mkdir epmt-install/examples 
-	cp epmt-example.*sh epmt-install/examples
+	cp test/shell/epmt-example.*sh epmt-install/examples
 	# slurm
 	mkdir epmt-install/slurm 
 	cp SLURM/slurm_task_*log_epmt.sh epmt-install/slurm 
@@ -158,13 +158,13 @@ check-integration-tests:
 
 # check-python-shells:
 # 	@rm -rf /tmp/epmt
-# 	@echo "epmt-example.tcsh (tcsh)" ; env -i SLURM_JOB_ID=111 ${EPMT_TEST_ENV} /bin/tcsh -e epmt-example.tcsh
+# 	@echo "epmt-example.tcsh (tcsh)" ; env -i SLURM_JOB_ID=111 ${EPMT_TEST_ENV} /bin/tcsh -e test/shell/epmt-example.tcsh
 # 	@rm -rf /tmp/epmt
-# 	@echo "epmt-example.csh (csh)" ; env -i SLURM_JOB_ID=112 ${EPMT_TEST_ENV} /bin/csh -e epmt-example.csh
+# 	@echo "epmt-example.csh (csh)" ; env -i SLURM_JOB_ID=112 ${EPMT_TEST_ENV} /bin/csh -e test/shell/epmt-example.csh
 # 	@rm -rf /tmp/epmt
-# 	@echo "epmt-example.bash (bash)" ; env -i SLURM_JOB_ID=113 ${EPMT_TEST_ENV} /bin/bash -Eeu epmt-example.bash
+# 	@echo "epmt-example.bash (bash)" ; env -i SLURM_JOB_ID=113 ${EPMT_TEST_ENV} /bin/bash -Eeu test/shell/epmt-example.bash
 # 	@rm -rf /tmp/epmt
-# 	@echo "epmt-example.sh (sh)" ; env -i SLURM_JOB_ID=114 ${EPMT_TEST_ENV} /bin/sh -e epmt-example.sh
+# 	@echo "epmt-example.sh (sh)" ; env -i SLURM_JOB_ID=114 ${EPMT_TEST_ENV} /bin/sh -e test/shell/epmt-example.sh
 # 	@rm -rf /tmp/epmt
 # coverage-unittests:
 # 	@env -i TERM=ansi PATH=${PWD}:${PATH} python3 -m pytest --cov=./ -v test/test_lib.py test/test_stat.py test/test_settings.py test/test_anysh.py test/test_submit.py test/test_run.py test/test_cmds.py test/test_query.py test/test_explore.py test/test_outliers.py test/test_db_schema.py test/test_db_migration.py
