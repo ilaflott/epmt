@@ -27,7 +27,8 @@ pg_pony_settings_file="settings_pg_container_pony.py"
 echo ""
 echo "*** This script is broken and will be deprecated! ***"
 echo ""
-echo "Use ./epmt unittest and/or ./epmt integration to run tests."
+echo "Use 'make check' to run tests in development tree."
+echo "Use 'epmt unittest && epmt integration' to ru tests on production install."
 echo ""
 exit 1
 
