@@ -30,6 +30,10 @@ case "$1" in
   *) echo $usage >&2; exit 0;;
 esac
 
+if [ $no_compose -eq 0 ]; then
+    echo "This script requires you to pass --no-compose to it, as docker support is broken."
+    exit 1
+fi
 
 function finish {
   # Your cleanup code here

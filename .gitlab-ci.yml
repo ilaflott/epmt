@@ -10,7 +10,7 @@ cache:
     - .cache/pip
 
 services:
-  - postgres:9.5
+  - postgres:latest
 
 
 build:python3:

@@ -136,7 +136,6 @@ clean:
 distclean: clean
 	rm -f settings.py $(EPMT_RELEASE_DIR)/*$(OS_TARGET)*
 	rm -rf epmtdocs/site
-	rm -rf release RELEASE # legacy cleanup
 
 # 
 # Simple python version testing with no database
