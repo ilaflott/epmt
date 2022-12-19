@@ -23,6 +23,7 @@ hidden.append('sqlalchemy.ext.baked')
 # pyod, pca
 hidden.extend(['sklearn.neighbors._typedefs','sklearn.neighbors._quad_tree','sklearn.tree._utils','sklearn.utils', 'sklearn.utils._cython_blas', 'sklearn.utils.arrayfuncs', 'sklearn.utils.arrayfuncs.array'])
 
+hidden.append('ui.graphing')
 hidden.append('ui.components')
 hidden.append('ui')
 
