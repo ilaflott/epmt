@@ -150,6 +150,10 @@ def daemon_loop(context, niters = 0, post_process = True, analyze = True, retire
          verbose: As the daemon reinitializes logging, the verbose argument
                   facilitates setting the verbosity from the CLI. Defaults to 0
     '''
+    import epmt_settings as settings
+    from epmtlib import init_settings
+    init_settings(settings) # normally this is done when you import epmt_query
+    
     global sig_count
     sig_count = 0
 

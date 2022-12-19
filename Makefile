@@ -115,7 +115,7 @@ check-release release-test-docker: $(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE)
 	if docker network ls | grep epmt-test-net > /dev/null; then docker network rm epmt-test-net; fi
 	docker network create epmt-test-net
 	docker run -d --rm --name postgres-test --network epmt-test-net -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -e POSTGRES_DB=EPMT-TEST postgres:latest
-	docker run --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged -it --rm -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c 'sysctl kernel.perf_event_paranoid=1; epmt check && epmt unittest && epmt integration; install_prefix=`epmt -h| grep install_prefix|cut -f2 -d:`; cp -v $$install_prefix/../epmt-install/preset_settings/settings_test_pg_container.py $$install_prefix/../epmt-install/epmt/settings.py && epmt check && epmt unittest && epmt integration'
+	docker run --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged -it --rm -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c 'install_prefix=`epmt -h| grep install_prefix|cut -f2 -d:`; cp -fv $$install_prefix/../epmt-install/preset_settings/settings_test_pg_container.py $$install_prefix/../epmt-install/epmt/settings.py && epmt check && epmt unittest && epmt integration'
 	docker stop postgres-test
 	docker network rm epmt-test-net
 
@@ -144,62 +144,63 @@ distclean: clean
 
 # We should get rid of this in favor of a sequence of epmt commands.
 
-check: check-python-shells check-unittests check-integration-tests
+check: check-unittests check-integration-tests
 
-EPMT_TEST_ENV=PATH=${PWD}:${PATH} SLURM_JOB_USER=`whoami`
-
-check-python-shells:
-	@rm -rf /tmp/epmt
-	@echo "epmt-example.tcsh (tcsh)" ; env -i SLURM_JOB_ID=111 ${EPMT_TEST_ENV} /bin/tcsh -e epmt-example.tcsh
-	@rm -rf /tmp/epmt
-	@echo "epmt-example.csh (csh)" ; env -i SLURM_JOB_ID=111 ${EPMT_TEST_ENV} /bin/csh -e epmt-example.csh
-	@rm -rf /tmp/epmt
-	@echo "epmt-example.bash (bash)" ; env -i SLURM_JOB_ID=222 ${EPMT_TEST_ENV} /bin/bash -Eeu epmt-example.bash
-	@rm -rf /tmp/epmt
-	@echo "epmt-example.sh (sh)" ; env -i SLURM_JOB_ID=111 ${EPMT_TEST_ENV} /bin/sh -e epmt-example.sh
-	@rm -rf /tmp/epmt
 check-unittests: # Why not test all of them?
-	@env -i TERM=ansi PATH=${PWD}:${PATH} python3 -m unittest -v -f test.test_lib test.test_stat test.test_settings test.test_anysh test.test_submit test.test_run test.test_cmds test.test_query test.test_explore test.test_outliers test.test_db_schema test.test_db_migration
-coverage-unittests:
-	@env -i TERM=ansi PATH=${PWD}:${PATH} python3 -m pytest --cov=./ -v test/test_lib.py test/test_stat.py test/test_settings.py test/test_anysh.py test/test_submit.py test/test_run.py test/test_cmds.py test/test_query.py test/test_explore.py test/test_outliers.py test/test_db_schema.py test/test_db_migration.py
+	@env -i TERM=ansi PATH=${PWD}:${PATH} epmt unittest
+#@env -i TERM=ansi PATH=${PWD}:${PATH} python3 -m unittest -v -f test.test_lib test.test_stat test.test_settings test.test_anysh test.test_submit test.test_run test.test_cmds test.test_query test.test_explore test.test_outliers test.test_db_schema test.test_db_migration
 check-integration-tests:
 	@env -i TERM=ansi PATH=${PWD}:${PATH} epmt integration
-
 #
 # Not used / Broken
 #
 
-epmt-test:
-	docker run -it --rm --volume=$$PWD:$$PWD:z -w $$PWD centos-7-epmt-build bash -c "PATH=$$PWD:$$PATH; echo; ./epmt check; echo; set -e; ./epmt unittest; ./epmt integration"
+# EPMT_TEST_ENV=PATH=${PWD}:${PATH} SLURM_JOB_USER=`whoami`
 
-docker-test-dist: $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE)
-	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test -t $(OS_TARGET)-epmt-test --build-arg release=$(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) --build-arg release_test=$(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) .
-	docker run --rm -it $(OS_TARGET)-epmt-test
+# check-python-shells:
+# 	@rm -rf /tmp/epmt
+# 	@echo "epmt-example.tcsh (tcsh)" ; env -i SLURM_JOB_ID=111 ${EPMT_TEST_ENV} /bin/tcsh -e epmt-example.tcsh
+# 	@rm -rf /tmp/epmt
+# 	@echo "epmt-example.csh (csh)" ; env -i SLURM_JOB_ID=112 ${EPMT_TEST_ENV} /bin/csh -e epmt-example.csh
+# 	@rm -rf /tmp/epmt
+# 	@echo "epmt-example.bash (bash)" ; env -i SLURM_JOB_ID=113 ${EPMT_TEST_ENV} /bin/bash -Eeu epmt-example.bash
+# 	@rm -rf /tmp/epmt
+# 	@echo "epmt-example.sh (sh)" ; env -i SLURM_JOB_ID=114 ${EPMT_TEST_ENV} /bin/sh -e epmt-example.sh
+# 	@rm -rf /tmp/epmt
+# coverage-unittests:
+# 	@env -i TERM=ansi PATH=${PWD}:${PATH} python3 -m pytest --cov=./ -v test/test_lib.py test/test_stat.py test/test_settings.py test/test_anysh.py test/test_submit.py test/test_run.py test/test_cmds.py test/test_query.py test/test_explore.py test/test_outliers.py test/test_db_schema.py test/test_db_migration.py
 
-docker-dist-slurm: $(EPMT_RELEASE)
-	docker build -f Dockerfiles/Dockerfile.slurm-$(OS_TARGET) -t $(OS_TARGET)-epmt-papiex-slurm-test --build-arg release=$(EPMT_VERSION) .
+# epmt-test:
+# 	docker run -it --rm --volume=$$PWD:$$PWD:z -w $$PWD centos-7-epmt-build bash -c "PATH=$$PWD:$$PATH; echo; ./epmt check; echo; set -e; ./epmt unittest; ./epmt integration"
 
-slurm-start: docker-dist-slurm
-	docker run --name $(OS_TARGET)-slurm --privileged -dt --rm --volume=$(PWD):$(PWD):z -w $(PWD) -h ernie $(OS_TARGET)-epmt-papiex-slurm-test tail -f /dev/null
+# docker-test-dist: $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE)
+# 	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test -t $(OS_TARGET)-epmt-test --build-arg release=$(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) --build-arg release_test=$(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) .
+# 	docker run --rm -it $(OS_TARGET)-epmt-test
 
-slurm-stop:
-	docker stop $(OS_TARGET)-slurm
+# docker-dist-slurm: $(EPMT_RELEASE)
+# 	docker build -f Dockerfiles/Dockerfile.slurm-$(OS_TARGET) -t $(OS_TARGET)-epmt-papiex-slurm-test --build-arg release=$(EPMT_VERSION) .
 
-docker-test-dist-slurm: slurm-start
-	docker exec $(OS_TARGET)-slurm epmt check
-	docker exec $(OS_TARGET)-slurm srun -n1 /opt/epmt/epmt-install/examples/epmt-example.sh
-	docker exec $(OS_TARGET)-slurm srun -n1 /opt/epmt/epmt-install/examples/epmt-example.csh
-	docker exec $(OS_TARGET)-slurm srun -n1 --task-prolog=/opt/epmt/epmt-install/slurm/slurm_task_prolog_epmt.sh --task-epilog=/opt/epmt/epmt-install/slurm/slurm_task_epilog_epmt.sh hostname
-	docker exec $(OS_TARGET)-slurm srun -n1 --task-prolog=/opt/epmt/epmt-install/slurm/slurm_task_prolog_epmt.sh --task-epilog=/opt/epmt/epmt-install/slurm/slurm_task_epilog_epmt.sh sleep 1
-	ls 2.tgz 3.tgz 4.tgz 5.tgz
-	docker exec $(OS_TARGET)-slurm epmt submit 2.tgz 3.tgz 4.tgz 5.tgz
-	docker exec $(OS_TARGET)-slurm sed -i '$$s;$$;\nTaskProlog=/opt/epmt/epmt-install/slurm/slurm_task_prolog_epmt.sh\n;' /etc/slurm/slurm.conf
-	docker exec $(OS_TARGET)-slurm sed -i '$$s;$$;\nTaskEpilog=/opt/epmt/epmt-install/slurm/slurm_task_epilog_epmt.sh\n;' /etc/slurm/slurm.conf
-	docker exec $(OS_TARGET)-slurm killall -s SIGHUP slurmctld slurmd
-	docker exec $(OS_TARGET)-slurm srun -n1 hostname
-	docker exec $(OS_TARGET)-slurm srun -n1 sleep 1
-	ls 6.tgz 7.tgz
-	docker exec $(OS_TARGET)-slurm epmt submit 6.tgz 7.tgz
-	docker stop $(OS_TARGET)-slurm
+# slurm-start: docker-dist-slurm
+# 	docker run --name $(OS_TARGET)-slurm --privileged -dt --rm --volume=$(PWD):$(PWD):z -w $(PWD) -h ernie $(OS_TARGET)-epmt-papiex-slurm-test tail -f /dev/null
 
-FORCE:
+# slurm-stop:
+# 	docker stop $(OS_TARGET)-slurm
+
+# docker-test-dist-slurm: slurm-start
+# 	docker exec $(OS_TARGET)-slurm epmt check
+# 	docker exec $(OS_TARGET)-slurm srun -n1 /opt/epmt/epmt-install/examples/epmt-example.sh
+# 	docker exec $(OS_TARGET)-slurm srun -n1 /opt/epmt/epmt-install/examples/epmt-example.csh
+# 	docker exec $(OS_TARGET)-slurm srun -n1 --task-prolog=/opt/epmt/epmt-install/slurm/slurm_task_prolog_epmt.sh --task-epilog=/opt/epmt/epmt-install/slurm/slurm_task_epilog_epmt.sh hostname
+# 	docker exec $(OS_TARGET)-slurm srun -n1 --task-prolog=/opt/epmt/epmt-install/slurm/slurm_task_prolog_epmt.sh --task-epilog=/opt/epmt/epmt-install/slurm/slurm_task_epilog_epmt.sh sleep 1
+# 	ls 2.tgz 3.tgz 4.tgz 5.tgz
+# 	docker exec $(OS_TARGET)-slurm epmt submit 2.tgz 3.tgz 4.tgz 5.tgz
+# 	docker exec $(OS_TARGET)-slurm sed -i '$$s;$$;\nTaskProlog=/opt/epmt/epmt-install/slurm/slurm_task_prolog_epmt.sh\n;' /etc/slurm/slurm.conf
+# 	docker exec $(OS_TARGET)-slurm sed -i '$$s;$$;\nTaskEpilog=/opt/epmt/epmt-install/slurm/slurm_task_epilog_epmt.sh\n;' /etc/slurm/slurm.conf
+# 	docker exec $(OS_TARGET)-slurm killall -s SIGHUP slurmctld slurmd
+# 	docker exec $(OS_TARGET)-slurm srun -n1 hostname
+# 	docker exec $(OS_TARGET)-slurm srun -n1 sleep 1
+# 	ls 6.tgz 7.tgz
+# 	docker exec $(OS_TARGET)-slurm epmt submit 6.tgz 7.tgz
+# 	docker stop $(OS_TARGET)-slurm
+
+# FORCE:
