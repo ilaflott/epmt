@@ -113,9 +113,9 @@ papiex-dist $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE):
 	@echo " ______8 TARGET: papiex-dist $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE)";	echo "whoami????";	whoami;
 	#am Ian
 	@echo " - building papiex tarball"
-	if [ ! -f $(PAPIEX_SRC)/$(PAPIEX_RELEASE) ]; then make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) docker-dist ; fi
+	if [ ! -f $(PAPIEX_SRC)/$(PAPIEX_RELEASE) ]; then echo "why am i here?" ; ls -la $(PAPIEX_SRC)/$(PAPIEX_RELEASE) ; make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) docker-dist  ; fi
 	mkdir -p $(EPMT_RELEASE_DIR)
-	-cp $(PAPIEX_SRC)/$(PAPIEX_RELEASE) $(EPMT_RELEASE_DIR)
+	cp $(PAPIEX_SRC)/$(PAPIEX_RELEASE) $(EPMT_RELEASE_DIR)
 
 release epmt-full-release: $(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE)
 	@echo " ______10 TARGET: release epmt-full-release";	echo "whoami????";	whoami
@@ -143,10 +143,14 @@ check-release release-test-docker: $(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE)
 release7:
 # Force rebuild
 	@echo " ______1 TARGET: release7";	echo "whoami????";	whoami
+	-ls -la $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE)   
 	-rm -f $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE)
 	-rm -f $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE)
+	-ls -la $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE)
 	-rm -f $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE)
+	-ls -la $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE)
 	-rm -f $(PAPIEX_SRC)/$(PAPIEX_RELEASE)
+	-ls -la $(PAPIEX_SRC)/$(PAPIEX_RELEASE)
 	$(MAKE) OS_TARGET=centos-7 release check-release
 
 release-all: release7
@@ -159,6 +163,7 @@ clean:
 	#am root
 	find . -type f \( -name "core" -or -name "*~" -or -name "*.pyc" -or -name "epmt.log" \) -exec rm -f {} \;
 	rm -rf __pycache__ build epmt-install epmt-install-tests
+	if [ -f $(PAPIEX_SRC)/$(PAPIEX_RELEASE) ]; then chown Ian.Laflotte $(PAPIEX_SRC)/$(PAPIEX_RELEASE) ; ls -la $(PAPIEX_SRC)/$(PAPIEX_RELEASE) ; fi	
 
 distclean: clean
 	@echo " ______4 TARGET: distclean"	;	echo "whoami????";	whoami
