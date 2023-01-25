@@ -17,13 +17,18 @@ PWD=$(shell pwd)
 	dist build compile lint release release6 release7 release-all
 
 epmt-build compile build:
+	@echo " ______  TARGET: epmt-build compile build";	echo "whoami????";	whoami
 	python3 -O -bb -m py_compile *.py orm/*.py orm/*/*.py test/*.py
 lint:
+	@echo " ______  TARGET: lint";	echo "whoami????";	whoami
 	python3 -m pylint -E *.py orm/*.py orm/*/*.py test/*.py
 
 # install python3.7.4 if it's not already installed
 # Also, if needed install a virtual environment in .venv374
 install-py3:
+	@echo " ______5 TARGET: install-py3";	echo "whoami????";	whoami
+	#am root
+
 	@if [ "`python3 -V`" != "Python 3.7.4" ]; then \
 		set -e; echo "Installing Python 3.7.4 using pyenv" ; \
 		which pyenv > /dev/null || curl https://pyenv.run | bash ; \
@@ -51,6 +56,8 @@ install-py3:
 # Otherwise, assume the environment is already ready to run
 # pyinstaller.
 dist: install-py3
+	@echo " ______6 TARGET: dist"	;	echo "whoami????";	whoami
+	#am root
 	rm -rf epmt-install build
 	mkdir -p epmt-install/epmt/epmtdocs
 	# activate venv if it exists, run pyinstaller in the
@@ -80,6 +87,8 @@ dist: install-py3
 	rm -rf epmt-install build .venv374
 
 dist-test:
+	@echo " ______7 TARGET: dist-test";	echo "whoami????";	whoami
+	#am root
 # final location of tarfile
 	rm -rf epmt-install-tests && mkdir epmt-install-tests
 	cp -Rp test epmt-install-tests
@@ -87,53 +96,70 @@ dist-test:
 	tar -czf $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE) epmt-install-tests
 	rm -rf epmt-install-tests
 
-docker-dist $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE): 
+docker-dist $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE):
+	@echo " ______2 TARGET: docker-dist $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE)";	echo "whoami????";	whoami
+	#am self
 	@echo " - building epmt and epmt-test tarball"
 	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build -t $(OS_TARGET)-epmt-build .
+	@echo ".... bout to become root, b.c. docker run"
 	docker run -it --rm --volume=$(PWD):$(PWD):z -w $(PWD) $(OS_TARGET)-epmt-build make OS_TARGET=$(OS_TARGET) distclean dist dist-test
 
 docker-dist-test $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE):
+	@echo " ______  TARGET: docker-dist-test $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE)";	echo "whoami????";	whoami
+	@echo ".... bout to become root, b.c. docker run"
 	docker run -it --rm --volume=$(PWD):$(PWD):z -w $(PWD) $(OS_TARGET)-epmt-build make OS_TARGET=$(OS_TARGET) dist-test
 
 papiex-dist $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE):
+	@echo " ______8 TARGET: papiex-dist $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE)";	echo "whoami????";	whoami;
+	#am Ian
 	@echo " - building papiex tarball"
-	if [ ! -f $(PAPIEX_SRC)/$(PAPIEX_RELEASE) ]; then make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) docker-dist > /dev/null; fi
+	if [ ! -f $(PAPIEX_SRC)/$(PAPIEX_RELEASE) ]; then make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) docker-dist ; fi
 	mkdir -p $(EPMT_RELEASE_DIR)
 	cp $(PAPIEX_SRC)/$(PAPIEX_RELEASE) $(EPMT_RELEASE_DIR)
 
 release epmt-full-release: $(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE)
+	@echo " ______10 TARGET: release epmt-full-release";	echo "whoami????";	whoami
 
 $(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE): $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE)
+	@echo " ______9 TARGET: $(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE)";	echo "whoami????";	whoami
 	@echo "Making EPMT $(EPMT_VERSION) for $(OS_TARGET): $^"
 	mkdir -p $(EPMT_RELEASE_DIR)
 	cd $(EPMT_RELEASE_DIR); tar -czf $(EPMT_FULL_RELEASE) $(notdir $^)
 	@echo "$(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE)"
 
 check-release release-test-docker: $(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE)
+	@echo " ______11 TARGET: check-release release-test-docker";	echo "whoami????";	whoami
 	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test-release -t $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) --build-arg epmt_version=$(EPMT_VERSION) --build-arg install_path=/opt/minimalmetrics --build-arg epmt_full_release=$(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE) .
 	if docker ps | grep postgres-test > /dev/null; then docker stop postgres-test; fi
 	if docker network ls | grep epmt-test-net > /dev/null; then docker network rm epmt-test-net; fi
 	docker network create epmt-test-net
+	@echo ".... bout to become root, b.c. docker run"
 	docker run -d --rm --name postgres-test --network epmt-test-net -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -e POSTGRES_DB=EPMT-TEST postgres:latest
+	@echo ".... bout to become root, b.c. docker run"
 	docker run --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged -it --rm -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c 'install_prefix=`epmt -h| grep install_prefix|cut -f2 -d:`; cp -fv $$install_prefix/../epmt-install/preset_settings/settings_test_pg_container.py $$install_prefix/../epmt-install/epmt/settings.py && epmt check && epmt unittest && epmt integration'
 	docker stop postgres-test
 	docker network rm epmt-test-net
 
 release7:
 # Force rebuild
+	@echo " ______1 TARGET: release7";	echo "whoami????";	whoami
 	rm -f $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE) $(PAPIEX_SRC)/$(PAPIEX_RELEASE)
 	$(MAKE) OS_TARGET=centos-7 release check-release
 
 release-all: release7
-
+	@echo " ______0 TARGET: release-all";	echo "whoami????";	whoami
 #
 #
 #
 clean:
+	@echo " ______3 TARGET: clean";	echo "whoami????";	whoami
+	#am root
 	find . -type f \( -name "core" -or -name "*~" -or -name "*.pyc" -or -name "epmt.log" \) -exec rm -f {} \;
 	rm -rf __pycache__ build epmt-install epmt-install-tests
 
 distclean: clean
+	@echo " ______4 TARGET: distclean"	;	echo "whoami????";	whoami
+	#am root
 	rm -f settings.py $(EPMT_RELEASE_DIR)/*$(OS_TARGET)*
 	rm -rf epmtdocs/site
 
@@ -144,11 +170,14 @@ distclean: clean
 # We should get rid of this in favor of a sequence of epmt commands.
 
 check: check-unittests check-integration-tests
+	@echo " ______  TARGET: check";	echo "whoami????";	whoami
 
 check-unittests: # Why not test all of them?
+	@echo " ______  TARGET: check-unittests";	echo "whoami????";	whoami
 	@env -i TERM=ansi PATH=${PWD}:${PATH} epmt unittest
 #@env -i TERM=ansi PATH=${PWD}:${PATH} python3 -m unittest -v -f test.test_lib test.test_stat test.test_settings test.test_anysh test.test_submit test.test_run test.test_cmds test.test_query test.test_explore test.test_outliers test.test_db_schema test.test_db_migration
 check-integration-tests:
+	@echo " ______  TARGET: check-integration-tests";	echo "whoami????";	whoami
 	@env -i TERM=ansi PATH=${PWD}:${PATH} epmt integration
 #
 # Not used / Broken
