@@ -1,0 +1,1540 @@
+ ______1 TARGET: release7
+whoami????
+Ian.Laflotte
+rm -f release-25012023/epmt-4.9.2-centos-7.tgz release-25012023/test-epmt-4.9.2-centos-7.tgz release-25012023/papiex-epmt-2.3.14-centos-7.tgz ../papiex-oss/papiex-epmt-2.3.14-centos-7.tgz
+make OS_TARGET=centos-7 release check-release
+make[1]: Entering directory `/mnt/data/Ian/current_build/epmt.git'
+ ______2 TARGET: docker-dist release-25012023/epmt-4.9.2-centos-7.tgz
+whoami????
+Ian.Laflotte
+#am self
+ - building epmt and epmt-test tarball
+docker build -f Dockerfiles/Dockerfile.centos-7-epmt-build -t centos-7-epmt-build .
+Sending build context to Docker daemon  303.1MB
+Step 1/15 : FROM centos:7
+ ---> eeb6ee3f44bd
+Step 2/15 : RUN yum update -y
+ ---> Using cache
+ ---> 26dd5bf45614
+Step 3/15 : RUN yum install -y unzip bash tcsh nc curl make git gcc postgresql-devel zlib-devel bzip2 bzip2-devel readline-devel sqlite-devel openssl-devel xz xz-devel libffi-devel
+ ---> Using cache
+ ---> 30fb94abbb77
+Step 4/15 : RUN cd /usr/src && echo "downloading sqlite3" && curl -o sqlite-amalgamation-3300100.zip https://www.sqlite.org/2019/sqlite-amalgamation-3300100.zip && unzip sqlite-amalgamation-3300100.zip && echo "building libsqlite3 with json1 and other useful extensions" && cd sqlite-amalgamation-3300100 && gcc -shared -fPIC -O2  -DSQLITE_ENABLE_JSON1 -DSQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_MAX_VARIABLE_NUMBER=9999 sqlite3.c -o /usr/lib64/libsqlite3.so
+ ---> Using cache
+ ---> 246686132ce0
+Step 5/15 : RUN cd /usr/src && echo "downloading python" && curl -o Python-3.7.4.tgz https://www.python.org/ftp/python/3.7.4/Python-3.7.4.tgz && tar xzf Python-3.7.4.tgz && cd Python-3.7.4 && echo "building python3" && ./configure --prefix=/usr --enable-shared --enable-optimizations --enable-loadable-sqlite-extensions && make --silent install > /dev/null
+ ---> Using cache
+ ---> 90cf85166101
+Step 6/15 : RUN ldconfig
+ ---> Using cache
+ ---> ded2620704a7
+Step 7/15 : RUN python3 -V
+ ---> Using cache
+ ---> f4f6856a9bcf
+Step 8/15 : RUN pip3 install --upgrade pip
+ ---> Using cache
+ ---> 51a5db32d4f4
+Step 9/15 : COPY requirements.txt.py3 /tmp/
+ ---> Using cache
+ ---> 228ec4d72b56
+Step 10/15 : RUN pip3 install -r /tmp/requirements.txt.py3
+ ---> Using cache
+ ---> d798313717d1
+Step 11/15 : COPY ui/requirements-ui.txt.py3 /tmp
+ ---> Using cache
+ ---> d825b7796e7b
+Step 12/15 : RUN pip3 install -r /tmp/requirements-ui.txt.py3
+ ---> Using cache
+ ---> e6d92e1b4a6a
+Step 13/15 : RUN rm -f /tmp/requirements.txt.py3 /tmp/requirements-ui.txt.py3
+ ---> Using cache
+ ---> aba05427cbb1
+Step 14/15 : RUN yum clean all
+ ---> Using cache
+ ---> 2ce329812740
+Step 15/15 : RUN rm -rf /usr/src /var/cache/yum
+ ---> Using cache
+ ---> 3b012ce86fed
+Successfully built 3b012ce86fed
+Successfully tagged centos-7-epmt-build:latest
+.... bout to become root, b.c. docker run
+docker run -it --rm --volume=/mnt/data/Ian/current_build/epmt.git:/mnt/data/Ian/current_build/epmt.git:z -w /mnt/data/Ian/current_build/epmt.git centos-7-epmt-build make OS_TARGET=centos-7 distclean dist dist-test
+ ______3 TARGET: clean
+whoami????
+root
+#am root
+find . -type f \( -name "core" -or -name "*~" -or -name "*.pyc" -or -name "epmt.log" \) -exec rm -f {} \;
+rm -rf __pycache__ build epmt-install epmt-install-tests
+ ______4 TARGET: distclean
+whoami????
+root
+#am root
+rm -f settings.py release-25012023/*centos-7*
+rm -rf epmtdocs/site
+ ______5 TARGET: install-py3
+whoami????
+root
+#am root
+ ______6 TARGET: dist
+whoami????
+root
+#am root
+rm -rf epmt-install build
+mkdir -p epmt-install/epmt/epmtdocs
+# activate venv if it exists, run pyinstaller in the
+# same shell pipeline so it uses the venv (if activated)
+# mkdocs also needs the same virtualenv, so includde it in the pipeline
+if [ -d .venv374 ]; then echo "activating virtualenv.."; source .venv374/bin/activate; fi; set -e; \
+[ "`python3 -V`" == "Python 3.7.4" ] || exit 1 ; \
+pyinstaller --clean --noconfirm --distpath=epmt-install epmt.spec ; \
+mkdocs build -f epmtdocs/mkdocs.yml
+1593 INFO: PyInstaller: 4.2
+1593 INFO: Python: 3.7.4
+1613 INFO: Platform: Linux-3.10.0-1160.80.1.el7.x86_64-x86_64-with-centos-7.9.2009-Core
+1621 INFO: UPX is not available.
+1623 INFO: Removing temporary files and cleaning cache in /root/.cache/pyinstaller
+Hidden modules:  ['notebook', 'notebook.bundler.handlers', 'notebook.services.security.handlers', 'notebook.base.zmqhandlers', 'notebook.terminal.api_handlers', 'notebook.services.api.handlers', 'notebook.notebook.handlers', 'notebook.terminal.handlers', 'notebook.gateway.handlers', 'notebook.services.nbconvert.handlers', 'notebook.services.config.handlers', 'notebook.nbconvert.handlers', 'notebook.files.handlers', 'notebook.view.handlers', 'notebook.services.sessions.handlers', 'notebook.services.kernels.handlers', 'notebook.edit.handlers', 'notebook.base.handlers', 'notebook.services.kernelspecs.handlers', 'notebook.tree.handlers', 'notebook.services.contents.handlers', 'notebook.kernelspecs.handlers', 'notebook.tree', 'pandas', 'ipykernel.datapub', 'orm.sqlalchemy.custom_types', 'sqlalchemy.ext.baked', 'sklearn.neighbors._typedefs', 'sklearn.neighbors._quad_tree', 'sklearn.tree._utils', 'sklearn.utils', 'sklearn.utils._cython_blas', 'sklearn.utils.arrayfuncs', 'sklearn.utils.arrayfuncs.array', 'ui.graphing', 'ui.components', 'ui']
+Excluded modules:  ['settings', 'matplotlib']
+Extra data:  [('/usr/lib/python3.7/site-packages/IPython/extensions/__init__.py', '.'), ('/usr/lib/python3.7/site-packages/IPython/extensions/autoreload.py', '.'), ('/usr/lib/python3.7/site-packages/IPython/extensions/cythonmagic.py', '.'), ('/usr/lib/python3.7/site-packages/IPython/extensions/rmagic.py', '.'), ('/usr/lib/python3.7/site-packages/IPython/extensions/storemagic.py', '.'), ('/usr/lib/python3.7/site-packages/IPython/extensions/sympyprinting.py', '.'), ('/usr/lib/python3.7/site-packages/dash_html_components/package-info.json', 'dash_html_components'), ('/usr/lib/python3.7/site-packages/dash_html_components/dash_html_components.min.js', 'dash_html_components'), ('/usr/lib/python3.7/site-packages/dash_html_components/metadata.json', 'dash_html_components'), ('/usr/lib/python3.7/site-packages/dash_html_components/dash_html_components.min.js.map', 'dash_html_components'), ('/usr/lib/python3.7/site-packages/dash_core_components/dash_core_components.min.js.map', 'dash_core_components'), ('/usr/lib/python3.7/site-packages/dash_core_components/package-info.json', 'dash_core_components'), ('/usr/lib/python3.7/site-packages/dash_core_components/plotly-1.50.1.min.js', 'dash_core_components'), ('/usr/lib/python3.7/site-packages/dash_core_components/highlight.pack.js', 'dash_core_components'), ('/usr/lib/python3.7/site-packages/dash_core_components/metadata.json', 'dash_core_components'), ('/usr/lib/python3.7/site-packages/dash_core_components/dash_core_components.min.js', 'dash_core_components'), ('/usr/lib/python3.7/site-packages/dash_daq/metadata.json', 'dash_daq'), ('/usr/lib/python3.7/site-packages/dash_daq/bundle.js.map', 'dash_daq'), ('/usr/lib/python3.7/site-packages/dash_daq/bundle.js', 'dash_daq'), ('/usr/lib/python3.7/site-packages/dash_daq/package-info.json', 'dash_daq'), ('/usr/lib/python3.7/site-packages/dash_daq/rc-slider@6.1.2.css', 'dash_daq'), ('/usr/lib/python3.7/site-packages/dash_table/bundle.js.map', 'dash_table'), ('/usr/lib/python3.7/site-packages/dash_table/metadata.json', 'dash_table'), ('/usr/lib/python3.7/site-packages/dash_table/package-info.json', 'dash_table'), ('/usr/lib/python3.7/site-packages/dash_table/bundle.js', 'dash_table'), ('/usr/lib/python3.7/site-packages/dash_renderer/dash_renderer.dev.js', 'dash_renderer'), ('/usr/lib/python3.7/site-packages/dash_renderer/react-dom@16.8.6.min.js', 'dash_renderer'), ('/usr/lib/python3.7/site-packages/dash_renderer/react@16.8.6.js', 'dash_renderer'), ('/usr/lib/python3.7/site-packages/dash_renderer/dash_renderer.min.js', 'dash_renderer'), ('/usr/lib/python3.7/site-packages/dash_renderer/prop-types@15.7.2.js', 'dash_renderer'), ('/usr/lib/python3.7/site-packages/dash_renderer/react-dom@16.8.6.js', 'dash_renderer'), ('/usr/lib/python3.7/site-packages/dash_renderer/prop-types@15.7.2.min.js', 'dash_renderer'), ('/usr/lib/python3.7/site-packages/dash_renderer/react@16.8.6.min.js', 'dash_renderer'), ('/usr/lib/python3.7/site-packages/dash_bootstrap_components/_components/dash_bootstrap_components.min.js', 'dash_bootstrap_components/_components'), ('/usr/lib/python3.7/site-packages/dash_bootstrap_components/_components/metadata.json', 'dash_bootstrap_components/_components'), ('migrations/versions/392efb1132ae_baseline.py', '.'), ('migrations/versions/4ae9a1cac540_use_biginteger_for_primary_key_of_.py', '.'), ('migrations/versions/e703296695bf_create_processes_staging_table.py', '.'), ('migrations/env.py', '.'), ('ui/components/__init__.py', '.'), ('ui/components/functions.py', '.'), ('ui/components/functions_unused.py', '.'), ('ui/components/header.py', '.'), ('ui/components/printButton.py', '.'), ('ui/components/table.py', '.'), ('ui/components/url_parser.py', '.'), ('ui/assets/KQrXdb.css', './assets/'), ('ui/assets/bWLwgP.css', './assets/'), ('ui/assets/favicon.ico', './assets/'), ('ui/assets/mm_blue.png', './assets/'), ('/usr/lib/python3.7/site-packages/plotly/package_data/templates/presentation.json', 'plotly/package_data/templates'), ('/usr/lib/python3.7/site-packages/plotly/package_data/templates/ygridoff.json', 'plotly/package_data/templates'), ('/usr/lib/python3.7/site-packages/plotly/package_data/datasets/wind.csv.gz', 'plotly/package_data/datasets'), ('/usr/lib/python3.7/site-packages/plotly/package_data/templates/plotly_dark.json', 'plotly/package_data/templates'), ('/usr/lib/python3.7/site-packages/plotly/package_data/datasets/carshare.csv.gz', 'plotly/package_data/datasets'), ('/usr/lib/python3.7/site-packages/plotly/package_data/templates/xgridoff.json', 'plotly/package_data/templates'), ('/usr/lib/python3.7/site-packages/plotly/package_data/templates/plotly_white.json', 'plotly/package_data/templates'), ('/usr/lib/python3.7/site-packages/plotly/package_data/templates/plotly.json', 'plotly/package_data/templates'), ('/usr/lib/python3.7/site-packages/plotly/package_data/templates/seaborn.json', 'plotly/package_data/templates'), ('/usr/lib/python3.7/site-packages/plotly/package_data/templates/simple_white.json', 'plotly/package_data/templates'), ('/usr/lib/python3.7/site-packages/plotly/package_data/datasets/election.csv.gz', 'plotly/package_data/datasets'), ('/usr/lib/python3.7/site-packages/plotly/package_data/plotly.min.js', 'plotly/package_data'), ('/usr/lib/python3.7/site-packages/plotly/package_data/datasets/gapminder.csv.gz', 'plotly/package_data/datasets'), ('/usr/lib/python3.7/site-packages/plotly/package_data/datasets/tips.csv.gz', 'plotly/package_data/datasets'), ('/usr/lib/python3.7/site-packages/plotly/package_data/templates/ggplot2.json', 'plotly/package_data/templates'), ('/usr/lib/python3.7/site-packages/plotly/package_data/datasets/election.geojson.gz', 'plotly/package_data/datasets'), ('/usr/lib/python3.7/site-packages/plotly/package_data/templates/gridon.json', 'plotly/package_data/templates'), ('/usr/lib/python3.7/site-packages/plotly/package_data/datasets/iris.csv.gz', 'plotly/package_data/datasets'), ('/usr/lib/python3.7/site-packages/parso/python/grammar34.txt', 'parso/python'), ('/usr/lib/python3.7/site-packages/parso/python/grammar38.txt', 'parso/python'), ('/usr/lib/python3.7/site-packages/parso/python/grammar27.txt', 'parso/python'), ('/usr/lib/python3.7/site-packages/parso/python/grammar35.txt', 'parso/python'), ('/usr/lib/python3.7/site-packages/parso/python/grammar26.txt', 'parso/python'), ('/usr/lib/python3.7/site-packages/parso/python/grammar37.txt', 'parso/python'), ('/usr/lib/python3.7/site-packages/parso/python/grammar33.txt', 'parso/python'), ('/usr/lib/python3.7/site-packages/parso/python/grammar36.txt', 'parso/python')]
+60223 INFO: Extending PYTHONPATH with paths
+['/mnt/data/Ian/current_build/epmt.git',
+ '/mnt/data/Ian/current_build/epmt.git',
+ '/mnt/data/Ian/current_build/epmt.git/ui']
+62490 INFO: checking Analysis
+62491 INFO: Building Analysis because Analysis-00.toc is non existent
+62491 INFO: Initializing module dependency graph...
+62501 INFO: Caching module graph hooks...
+62776 INFO: Analyzing base_library.zip ...
+83057 INFO: Caching module dependency graph...
+83475 INFO: running Analysis Analysis-00.toc
+83642 INFO: Analyzing epmt
+91736 INFO: Processing pre-find module path hook distutils from '/usr/lib/python3.7/site-packages/PyInstaller/hooks/pre_find_module_path/hook-distutils.py'.
+91780 INFO: distutils: retargeting to non-venv dir '/usr/lib/python3.7'
+105072 INFO: Processing pre-safe import module hook setuptools.extern.six.moves from '/usr/lib/python3.7/site-packages/PyInstaller/hooks/pre_safe_import_module/hook-setuptools.extern.six.moves.py'.
+108592 INFO: Processing pre-find module path hook site from '/usr/lib/python3.7/site-packages/PyInstaller/hooks/pre_find_module_path/hook-site.py'.
+108609 INFO: site: retargeting to fake-dir '/usr/lib/python3.7/site-packages/PyInstaller/fake-modules'
+160774 INFO: Processing pre-safe import module hook six.moves from '/usr/lib/python3.7/site-packages/PyInstaller/hooks/pre_safe_import_module/hook-six.moves.py'.
+162362 INFO: Processing pre-safe import module hook urllib3.packages.six.moves from '/usr/lib/python3.7/site-packages/PyInstaller/hooks/pre_safe_import_module/hook-urllib3.packages.six.moves.py'.
+253358 INFO: Processing pre-safe import module hook win32com from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/pre_safe_import_module/hook-win32com.py'.
+452955 INFO: Analyzing ui/index.py
+452967 INFO: Analyzing hidden import 'notebook.bundler.handlers'
+453174 INFO: Analyzing hidden import 'notebook.services.security.handlers'
+453183 INFO: Analyzing hidden import 'notebook.services.api.handlers'
+453337 INFO: Analyzing hidden import 'notebook.notebook.handlers'
+453507 INFO: Analyzing hidden import 'notebook.gateway.handlers'
+453774 INFO: Analyzing hidden import 'notebook.services.nbconvert.handlers'
+453917 INFO: Analyzing hidden import 'notebook.services.config.handlers'
+453942 INFO: Analyzing hidden import 'notebook.nbconvert.handlers'
+454082 INFO: Analyzing hidden import 'notebook.view.handlers'
+454206 INFO: Analyzing hidden import 'notebook.services.sessions.handlers'
+454226 INFO: Analyzing hidden import 'notebook.edit.handlers'
+454340 INFO: Analyzing hidden import 'notebook.tree.handlers'
+454452 INFO: Analyzing hidden import 'notebook.services.contents.handlers'
+454495 INFO: Analyzing hidden import 'notebook.kernelspecs.handlers'
+454613 INFO: Analyzing hidden import 'ipykernel.datapub'
+454646 INFO: Analyzing hidden import 'orm.sqlalchemy.custom_types'
+454648 INFO: Analyzing hidden import 'sqlalchemy.ext.baked'
+454705 INFO: Analyzing hidden import 'sklearn.neighbors._typedefs'
+454706 INFO: Analyzing hidden import 'sklearn.neighbors._quad_tree'
+454707 INFO: Analyzing hidden import 'sklearn.tree._utils'
+455016 INFO: Analyzing hidden import 'sklearn.utils._cython_blas'
+455017 INFO: Analyzing hidden import 'sklearn.utils.arrayfuncs.array'
+455017 ERROR: Hidden import 'sklearn.utils.arrayfuncs.array' not found
+455017 INFO: Analyzing hidden import 'ui.graphing'
+455073 INFO: Analyzing hidden import 'ui.components'
+455191 INFO: Processing module hooks...
+455191 INFO: Loading module hook 'hook-IPython.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+456770 INFO: Excluding import of PyQt5 from module IPython.external.qt_loaders
+456783 INFO: Excluding import of PyQt4 from module IPython.external.qt_loaders
+456794 INFO: Excluding import of PySide from module IPython.external.qt_loaders
+456819 INFO: Excluding import of matplotlib from module IPython.core.pylabtools
+456823 INFO: Loading module hook 'hook-certifi.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+456912 INFO: Loading module hook 'hook-dash.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+457112 INFO: Loading module hook 'hook-dash_bootstrap_components.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+457149 INFO: Loading module hook 'hook-dash_core_components.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+457173 INFO: Loading module hook 'hook-dash_html_components.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+457247 INFO: Loading module hook 'hook-dash_renderer.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+457252 INFO: Loading module hook 'hook-dash_table.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+457258 INFO: Loading module hook 'hook-flask_compress.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+457344 INFO: Loading module hook 'hook-jedi.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+460540 INFO: Loading module hook 'hook-jinja2.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+460590 INFO: Loading module hook 'hook-jsonschema.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+460653 INFO: Loading module hook 'hook-llvmlite.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+460839 INFO: Loading module hook 'hook-mako.codegen.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+460861 INFO: Loading module hook 'hook-nbconvert.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+461636 INFO: Loading module hook 'hook-nbformat.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+461812 INFO: Loading module hook 'hook-notebook.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+468912 INFO: Loading module hook 'hook-numba.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+469084 INFO: Excluding import of IPython.utils.path from module numba.caching
+469084 INFO: Excluding import of IPython.paths from module numba.caching
+469135 INFO: Excluding import of scipy from module numba.tests.support
+469145 INFO: Excluding import of scipy.linalg.cython_blas from module numba.targets.linalg
+469145 INFO: Excluding import of scipy.linalg.cython_lapack from module numba.targets.linalg
+469171 INFO: Loading module hook 'hook-parso.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+469288 INFO: Loading module hook 'hook-patsy.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+469306 INFO: Loading module hook 'hook-plotly.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+480525 INFO: Loading module hook 'hook-psycopg2.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+480615 WARNING: Hidden import "mx.DateTime" not found!
+480615 INFO: Loading module hook 'hook-py.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+482075 INFO: Loading module hook 'hook-pycparser.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+482136 INFO: Loading module hook 'hook-pytest.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+485696 INFO: Loading module hook 'hook-sklearn.cluster.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+485753 INFO: Loading module hook 'hook-sklearn.linear_model.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+485760 INFO: Loading module hook 'hook-sklearn.metrics.cluster.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+485768 INFO: Loading module hook 'hook-sklearn.metrics.pairwise.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+485771 INFO: Loading module hook 'hook-sklearn.metrics.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+485776 INFO: Loading module hook 'hook-sklearn.neighbors.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+485785 INFO: Loading module hook 'hook-sklearn.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+488238 INFO: Loading module hook 'hook-sklearn.tree.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+488253 INFO: Loading module hook 'hook-sklearn.utils.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+488256 INFO: Loading module hook 'hook-statsmodels.tsa.statespace.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+492609 INFO: Loading module hook 'hook-zmq.py' from '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/stdhooks'...
+493376 INFO: Loading module hook 'hook-PIL.Image.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+495358 INFO: Loading module hook 'hook-PIL.ImageFilter.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+495485 INFO: Excluding import of numpy from module PIL.ImageFilter
+495486 INFO: Loading module hook 'hook-PIL.SpiderImagePlugin.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+495534 INFO: Import to be excluded not found: 'FixTk'
+495553 INFO: Loading module hook 'hook-PIL.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+495572 INFO: Import to be excluded not found: 'FixTk'
+495593 INFO: Excluding import of PyQt5 from module PIL.ImageQt
+495619 INFO: Excluding import of tkinter from module PIL.ImageTk
+495620 INFO: Loading module hook 'hook-difflib.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+495755 INFO: Excluding import of doctest from module difflib
+495756 INFO: Loading module hook 'hook-distutils.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+495928 INFO: Loading module hook 'hook-distutils.util.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+495970 INFO: Excluding import of lib2to3.refactor from module distutils.util
+495971 INFO: Loading module hook 'hook-encodings.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+496259 INFO: Loading module hook 'hook-heapq.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+496432 INFO: Excluding import of doctest from module heapq
+496432 INFO: Loading module hook 'hook-importlib_metadata.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+496510 INFO: Loading module hook 'hook-lib2to3.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+497348 INFO: Loading module hook 'hook-multiprocessing.util.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+497402 INFO: Loading module hook 'hook-numpy._pytesttester.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+497465 INFO: Excluding import of pytest from module numpy._pytesttester
+497465 INFO: Loading module hook 'hook-numpy.core.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+497472 INFO: Loading module hook 'hook-numpy.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+497474 INFO: Loading module hook 'hook-packaging.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+497476 INFO: Loading module hook 'hook-pandas.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+500394 INFO: Loading module hook 'hook-pickle.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+500444 INFO: Excluding import of argparse from module pickle
+500444 INFO: Loading module hook 'hook-pkg_resources.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+502392 WARNING: Hidden import "pkg_resources.py2_warn" not found!
+502526 WARNING: Hidden import "pkg_resources.markers" not found!
+502546 INFO: Excluding import of __main__ from module pkg_resources
+502546 INFO: Loading module hook 'hook-pygments.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+508078 INFO: Loading module hook 'hook-pytz.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+508779 INFO: Loading module hook 'hook-scipy.io.matlab.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+508783 INFO: Loading module hook 'hook-scipy.linalg.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+508787 INFO: Loading module hook 'hook-scipy.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+508814 INFO: Loading module hook 'hook-scipy.sparse.csgraph.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+508867 INFO: Loading module hook 'hook-scipy.spatial.transform.rotation.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+508872 INFO: Loading module hook 'hook-scipy.special._ellip_harm_2.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+508874 INFO: Loading module hook 'hook-scipy.special._ufuncs.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+508890 INFO: Loading module hook 'hook-scipy.stats._stats.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+508917 INFO: Loading module hook 'hook-setuptools.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+511502 INFO: Excluding import of setuptools.py33compat from module setuptools.depends
+511503 INFO: Excluding import of setuptools.py33compat from module setuptools.package_index
+511516 INFO: Excluding import of setuptools.py27compat from module setuptools.command.easy_install
+511517 INFO: Excluding import of setuptools.py27compat from module setuptools.package_index
+511518 INFO: Loading module hook 'hook-sqlalchemy.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+512691 INFO:   Found 4 sqlalchemy hidden imports
+512696 WARNING: Hidden import "MySQLdb" not found!
+512701 WARNING: Hidden import "sqlalchemy.sql.functions.func" not found!
+512903 INFO: Excluding import of sqlalchemy.testing.util from module sqlalchemy.orm.util
+512906 INFO: Excluding import of sqlalchemy.testing.assertsql from module sqlalchemy.testing
+512907 INFO: Excluding import of sqlalchemy.testing.util from module sqlalchemy.testing
+512907 INFO: Excluding import of sqlalchemy.testing from module sqlalchemy.testing
+512907 INFO: Excluding import of sqlalchemy.testing.exclusions from module sqlalchemy.testing
+512907 INFO: Excluding import of sqlalchemy.testing.engines from module sqlalchemy.testing
+512908 INFO: Excluding import of sqlalchemy.testing.config from module sqlalchemy.testing
+512908 INFO: Excluding import of sqlalchemy.testing.warnings from module sqlalchemy.testing
+512908 INFO: Excluding import of sqlalchemy.testing.assertions from module sqlalchemy.testing
+512909 INFO: Excluding import of sqlalchemy.testing.mock from module sqlalchemy.testing
+512909 INFO: Excluding import of sqlalchemy.testing from module sqlalchemy.testing.config
+512909 INFO: Excluding import of sqlalchemy.testing from module sqlalchemy.testing.mock
+512910 INFO: Excluding import of sqlalchemy.testing.assertsql from module sqlalchemy.testing.assertions
+512910 INFO: Excluding import of sqlalchemy.testing.util from module sqlalchemy.testing.assertions
+512910 INFO: Excluding import of sqlalchemy.testing from module sqlalchemy.testing.assertions
+512911 INFO: Excluding import of sqlalchemy.testing.exclusions from module sqlalchemy.testing.assertions
+512911 INFO: Excluding import of sqlalchemy.testing.config from module sqlalchemy.testing.assertions
+512911 INFO: Excluding import of sqlalchemy.testing.mock from module sqlalchemy.testing.assertions
+512912 INFO: Excluding import of sqlalchemy.testing from module sqlalchemy.testing.assertsql
+512913 INFO: Excluding import of sqlalchemy.testing from module sqlalchemy.testing.util
+512913 INFO: Excluding import of sqlalchemy.testing.engines from module sqlalchemy.testing.util
+512913 INFO: Excluding import of sqlalchemy.testing.config from module sqlalchemy.testing.util
+512914 INFO: Excluding import of sqlalchemy.testing from module sqlalchemy.testing.engines
+512914 INFO: Excluding import of sqlalchemy.testing.util from module sqlalchemy.testing.engines
+512914 INFO: Excluding import of sqlalchemy.testing.assertions from module sqlalchemy.testing.engines
+512914 INFO: Excluding import of sqlalchemy.testing.config from module sqlalchemy.testing.engines
+512923 INFO: Excluding import of sqlalchemy.testing from module sqlalchemy.testing.exclusions
+512924 INFO: Excluding import of sqlalchemy.testing.config from module sqlalchemy.testing.exclusions
+512924 INFO: Excluding import of sqlalchemy.testing from module sqlalchemy.testing.warnings
+512924 INFO: Excluding import of sqlalchemy.testing.assertions from module sqlalchemy.testing.warnings
+512928 INFO: Loading module hook 'hook-sqlite3.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+513268 INFO: Loading module hook 'hook-sysconfig.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+513330 INFO: Loading module hook 'hook-wcwidth.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+513379 INFO: Loading module hook 'hook-xml.dom.domreg.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+513383 INFO: Loading module hook 'hook-xml.etree.cElementTree.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+513386 INFO: Loading module hook 'hook-xml.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+513410 INFO: Loading module hook 'hook-setuptools.msvc.py' from '/usr/lib/python3.7/site-packages/PyInstaller/hooks'...
+513617 INFO: Excluding import of numpy from module setuptools.msvc
+514509 INFO: Looking for ctypes DLLs
+516873 WARNING: library user32 required via ctypes not found
+518491 WARNING: library msvcrt required via ctypes not found
+521228 INFO: Analyzing run-time hooks ...
+521654 INFO: Including run-time hook '/usr/lib/python3.7/site-packages/PyInstaller/hooks/rthooks/pyi_rth_pkgres.py'
+521673 INFO: Including run-time hook '/usr/lib/python3.7/site-packages/PyInstaller/hooks/rthooks/pyi_rth_multiprocessing.py'
+521715 INFO: Including run-time hook '/usr/lib/python3.7/site-packages/_pyinstaller_hooks_contrib/hooks/rthooks/pyi_rth_traitlets.py'
+522071 INFO: Looking for dynamic libraries
+/usr/lib/python3.7/site-packages/numba/npyufunc/tbbpool.cpython-37m-x86_64-linux-gnu.so: /lib64/libstdc++.so.6: version `CXXABI_1.3.8' not found (required by /usr/lib/python3.7/site-packages/numba/npyufunc/../.libs/libtbb-ff5ce226.so.2)
+/usr/lib/python3.7/site-packages/numba/npyufunc/tbbpool.cpython-37m-x86_64-linux-gnu.so: /lib64/libstdc++.so.6: version `CXXABI_1.3.11' not found (required by /usr/lib/python3.7/site-packages/numba/npyufunc/../.libs/libtbb-ff5ce226.so.2)
+/usr/lib/python3.7/site-packages/numba/npyufunc/tbbpool.cpython-37m-x86_64-linux-gnu.so: /lib64/libstdc++.so.6: version `GLIBCXX_3.4.21' not found (required by /usr/lib/python3.7/site-packages/numba/npyufunc/../.libs/libtbb-ff5ce226.so.2)
+/usr/lib/python3.7/site-packages/numba/npyufunc/../.libs/libtbb-ff5ce226.so.2: /lib64/libstdc++.so.6: version `CXXABI_1.3.8' not found (required by /usr/lib/python3.7/site-packages/numba/npyufunc/../.libs/libtbb-ff5ce226.so.2)
+/usr/lib/python3.7/site-packages/numba/npyufunc/../.libs/libtbb-ff5ce226.so.2: /lib64/libstdc++.so.6: version `CXXABI_1.3.11' not found (required by /usr/lib/python3.7/site-packages/numba/npyufunc/../.libs/libtbb-ff5ce226.so.2)
+/usr/lib/python3.7/site-packages/numba/npyufunc/../.libs/libtbb-ff5ce226.so.2: /lib64/libstdc++.so.6: version `GLIBCXX_3.4.21' not found (required by /usr/lib/python3.7/site-packages/numba/npyufunc/../.libs/libtbb-ff5ce226.so.2)
+546114 INFO: Looking for eggs
+546115 INFO: Using Python library /lib/libpython3.7m.so.1.0
+546509 INFO: Warnings written to /mnt/data/Ian/current_build/epmt.git/build/epmt/warn-epmt.txt
+547761 INFO: Graph cross-reference written to /mnt/data/Ian/current_build/epmt.git/build/epmt/xref-epmt.html
+548208 INFO: Appending 'datas' from .spec
+548737 INFO: checking PYZ
+548738 INFO: Building PYZ because PYZ-00.toc is non existent
+548738 INFO: Building PYZ (ZlibArchive) /mnt/data/Ian/current_build/epmt.git/build/epmt/PYZ-00.pyz
+560422 INFO: Building PYZ (ZlibArchive) /mnt/data/Ian/current_build/epmt.git/build/epmt/PYZ-00.pyz completed successfully.
+560628 INFO: checking PKG
+560628 INFO: Building PKG because PKG-00.toc is non existent
+560628 INFO: Building PKG (CArchive) PKG-00.pkg
+560961 INFO: Building PKG (CArchive) PKG-00.pkg completed successfully.
+560962 INFO: Bootloader /usr/lib/python3.7/site-packages/PyInstaller/bootloader/Linux-64bit/run
+560963 INFO: checking EXE
+560963 INFO: Building EXE because EXE-00.toc is non existent
+560963 INFO: Building EXE from EXE-00.toc
+561015 INFO: Appending archive to ELF section in EXE /mnt/data/Ian/current_build/epmt.git/build/epmt/epmt
+561177 INFO: Building EXE from EXE-00.toc completed successfully.
+561193 INFO: checking COLLECT
+561193 INFO: Building COLLECT because COLLECT-00.toc is non existent
+561193 INFO: Removing dir epmt-install/epmt
+561259 INFO: Building COLLECT COLLECT-00.toc
+597422 INFO: Building COLLECT COLLECT-00.toc completed successfully.
+INFO    -  Cleaning site directory 
+INFO    -  Building documentation to directory: /mnt/data/Ian/current_build/epmt.git/epmtdocs/site 
+WARNING -  A relative path to 'db-multiple-users.md' is included in the 'nav' configuration, which is not found in the documentation files 
+WARNING -  Template skipped: 'search.html' not found in theme directories. 
+INFO    -  Documentation built in 1.63 seconds 
+# Rest of the commands below can be safely run outside the virtualenv
+# resources
+cp -Rp preset_settings epmt-install
+cp -Rp notebooks epmt-install
+cp -Rp migrations epmt-install
+cp -p alembic.ini epmt-install
+# examples
+mkdir epmt-install/examples 
+cp test/shell/epmt-example.*sh epmt-install/examples
+# slurm
+mkdir epmt-install/slurm 
+cp SLURM/slurm_task_*log_epmt.sh epmt-install/slurm 
+# docs
+cp -Rp epmtdocs/site epmt-install/epmt/epmtdocs
+# release
+mkdir -p release-25012023
+tar -czf release-25012023/epmt-4.9.2-centos-7.tgz epmt-install 
+rm -rf epmt-install build .venv374
+ ______7 TARGET: dist-test
+whoami????
+root
+#am root
+rm -rf epmt-install-tests && mkdir epmt-install-tests
+cp -Rp test epmt-install-tests
+mkdir -p release-25012023
+tar -czf release-25012023/test-epmt-4.9.2-centos-7.tgz epmt-install-tests
+rm -rf epmt-install-tests
+ ______8 TARGET: papiex-dist release-25012023/papiex-epmt-2.3.14-centos-7.tgz
+whoami????
+Ian.Laflotte
+#am Ian
+ - building papiex tarball
+if [ ! -f ../papiex-oss/papiex-epmt-2.3.14-centos-7.tgz ]; then make -C ../papiex-oss OS_TARGET=centos-7 docker-dist ; fi
+make[2]: Entering directory `/mnt/data/Ian/current_build/papiex-oss'
+docker build -f Dockerfiles/Dockerfile.centos-7-papiex-build -t centos-7-papiex-build .
+Sending build context to Docker daemon  30.99MB
+Step 1/3 : FROM centos:7
+ ---> eeb6ee3f44bd
+Step 2/3 : RUN yum update -y
+ ---> Using cache
+ ---> 26dd5bf45614
+Step 3/3 : RUN yum install -y gcc make file
+ ---> Using cache
+ ---> 0cf92edbe8fd
+Successfully built 0cf92edbe8fd
+Successfully tagged centos-7-papiex-build:latest
+docker run --rm -it -v `pwd`:/build -w /build centos-7-papiex-build make OS_TARGET=centos-7 distclean install dist dist-test
+cd monitor; make clean
+make[1]: Entering directory `/build/monitor'
+make[1]: *** No rule to make target `clean'.  Stop.
+make[1]: Leaving directory `/build/monitor'
+make: [clean] Error 2 (ignored)
+cd libpfm; make clean
+make[1]: Entering directory `/build/libpfm'
+make[2]: Entering directory `/build/libpfm/lib'
+rm -f -f *.o *.lo *.a *.so* *~ *.so
+make[2]: Leaving directory `/build/libpfm/lib'
+make[2]: Entering directory `/build/libpfm/tests'
+rm -f -f *.o validate *~
+make[2]: Leaving directory `/build/libpfm/tests'
+make[2]: Entering directory `/build/libpfm/examples'
+rm -f -f *.o showevtinfo check_events *~
+make[2]: Leaving directory `/build/libpfm/examples'
+make[2]: Entering directory `/build/libpfm/perf_examples'
+make[3]: Entering directory `/build/libpfm/perf_examples/x86'
+rm -f -f *.o  bts_smpl *~
+make[3]: Leaving directory `/build/libpfm/perf_examples/x86'
+rm -f -f *.o self self_basic self_count task task_attach_timeout syst notify_self notify_group task_smpl self_smpl_multi self_pipe syst_count task_cpu syst_smpl evt2raw branch_smpl *~
+make[2]: Leaving directory `/build/libpfm/perf_examples'
+make[2]: Entering directory `/build/libpfm/include'
+make[2]: Nothing to be done for `clean'.
+make[2]: Leaving directory `/build/libpfm/include'
+make[2]: Entering directory `/build/libpfm/docs'
+make[2]: Nothing to be done for `clean'.
+make[2]: Leaving directory `/build/libpfm/docs'
+make[1]: Leaving directory `/build/libpfm'
+cd papi/src; make clean
+make[1]: Entering directory `/build/papi/src'
+make[1]: *** No rule to make target `clean'.  Stop.
+make[1]: Leaving directory `/build/papi/src'
+make: [clean] Error 2 (ignored)
+cd papiex; make clean
+make[1]: Entering directory `/build/papiex'
+rm -rf /build/papiex/x86_64-Linux man/*-man.html
+find . -name "*~" -exec rm -f {} \;
+make[1]: Leaving directory `/build/papiex'
+rm -f *~
+cd monitor; make distclean
+make[1]: Entering directory `/build/monitor'
+make[1]: *** No rule to make target `distclean'.  Stop.
+make[1]: Leaving directory `/build/monitor'
+make: [distclean] Error 2 (ignored)
+cd libpfm; make distclean
+make[1]: Entering directory `/build/libpfm'
+make[2]: Entering directory `/build/libpfm/lib'
+rm -f -f *.o *.lo *.a *.so* *~ *.so
+make[2]: Leaving directory `/build/libpfm/lib'
+make[2]: Entering directory `/build/libpfm/tests'
+rm -f -f *.o validate *~
+make[2]: Leaving directory `/build/libpfm/tests'
+make[2]: Entering directory `/build/libpfm/examples'
+rm -f -f *.o showevtinfo check_events *~
+make[2]: Leaving directory `/build/libpfm/examples'
+make[2]: Entering directory `/build/libpfm/perf_examples'
+make[3]: Entering directory `/build/libpfm/perf_examples/x86'
+rm -f -f *.o  bts_smpl *~
+make[3]: Leaving directory `/build/libpfm/perf_examples/x86'
+rm -f -f *.o self self_basic self_count task task_attach_timeout syst notify_self notify_group task_smpl self_smpl_multi self_pipe syst_count task_cpu syst_smpl evt2raw branch_smpl *~
+make[2]: Leaving directory `/build/libpfm/perf_examples'
+make[2]: Entering directory `/build/libpfm/include'
+make[2]: Nothing to be done for `clean'.
+make[2]: Leaving directory `/build/libpfm/include'
+make[2]: Entering directory `/build/libpfm/docs'
+make[2]: Nothing to be done for `clean'.
+make[2]: Leaving directory `/build/libpfm/docs'
+rm -f -f tags
+make[1]: Leaving directory `/build/libpfm'
+cd papi/src; make distclean
+make[1]: Entering directory `/build/papi/src'
+make[1]: *** No rule to make target `distclean'.  Stop.
+make[1]: Leaving directory `/build/papi/src'
+make: [distclean] Error 2 (ignored)
+cd papiex; make distclean
+make[1]: Entering directory `/build/papiex'
+rm -rf /build/papiex/x86_64-Linux man/*-man.html
+find . -name "*~" -exec rm -f {} \;
+rm -rf /build/papiex/x86_64-Linux
+rm -rf www
+rm -f papiex-2.3.14.tar.gz papiex.html
+cd man; rm -f papiex.html papiex-config-man.html papiex-man.html papiex_start-man.html papiex_stop-man.html papiex_accum-man.html
+make[1]: Leaving directory `/build/papiex'
+rm -rf papiex-epmt-install test-papiex-epmt-2.3.14-centos-7.tgz papiex-epmt-2.3.14-centos-7.tgz
+make -C libpfm OPTIM=-O2 LDCONFIG=true install-lib 
+make[1]: Entering directory `/build/libpfm'
+installing in /build/papiex-epmt-install
+make[2]: Entering directory `/build/libpfm/lib'
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_common.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_perf_event_pmu.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_perf_event.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_perf_event_raw.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_x86_perf_event.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_amd64_perf_event.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_netburst_perf_event.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_snbep_unc_perf_event.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_amd64.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_core.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_x86.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_x86_arch.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_atom.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_nhm_unc.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_nhm.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_wsm.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_snb.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_snb_unc.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_ivb.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_ivb_unc.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_hsw.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_bdw.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_skl.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_rapl.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_snbep_unc.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_snbep_unc_cbo.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_snbep_unc_ha.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_snbep_unc_imc.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_snbep_unc_pcu.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_snbep_unc_qpi.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_snbep_unc_ubo.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_snbep_unc_r2pcie.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_snbep_unc_r3qpi.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_ivbep_unc_cbo.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_ivbep_unc_ha.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_ivbep_unc_imc.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_ivbep_unc_pcu.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_ivbep_unc_qpi.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_ivbep_unc_ubo.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_ivbep_unc_r2pcie.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_ivbep_unc_r3qpi.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_ivbep_unc_irp.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_hswep_unc_cbo.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_hswep_unc_ha.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_hswep_unc_imc.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_hswep_unc_pcu.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_hswep_unc_qpi.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_hswep_unc_ubo.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_hswep_unc_r2pcie.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_hswep_unc_r3qpi.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_hswep_unc_irp.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_hswep_unc_sbo.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_bdx_unc_cbo.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_bdx_unc_ubo.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_bdx_unc_sbo.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_bdx_unc_ha.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_bdx_unc_imc.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_bdx_unc_irp.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_bdx_unc_pcu.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_bdx_unc_qpi.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_bdx_unc_r2pcie.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_bdx_unc_r3qpi.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_skx_unc_cha.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_skx_unc_iio.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_skx_unc_imc.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_skx_unc_irp.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_skx_unc_m2m.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_skx_unc_m3upi.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_skx_unc_pcu.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_skx_unc_ubo.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_skx_unc_upi.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_knc.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_slm.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_knl.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_knl_unc_imc.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_knl_unc_edc.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_knl_unc_cha.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_knl_unc_m2pcie.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_glm.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_netburst.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_amd64_k7.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_amd64_k8.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_amd64_fam10h.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_amd64_fam11h.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_amd64_fam12h.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_amd64_fam14h.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_amd64_fam15h.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_amd64_fam17h.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_amd64_fam16h.c
+rm -f libpfm.a
+ar cq libpfm.a pfmlib_common.o pfmlib_perf_event_pmu.o pfmlib_perf_event.o pfmlib_perf_event_raw.o pfmlib_intel_x86_perf_event.o pfmlib_amd64_perf_event.o pfmlib_intel_netburst_perf_event.o pfmlib_intel_snbep_unc_perf_event.o pfmlib_amd64.o pfmlib_intel_core.o pfmlib_intel_x86.o pfmlib_intel_x86_arch.o pfmlib_intel_atom.o pfmlib_intel_nhm_unc.o pfmlib_intel_nhm.o pfmlib_intel_wsm.o pfmlib_intel_snb.o pfmlib_intel_snb_unc.o pfmlib_intel_ivb.o pfmlib_intel_ivb_unc.o pfmlib_intel_hsw.o pfmlib_intel_bdw.o pfmlib_intel_skl.o pfmlib_intel_rapl.o pfmlib_intel_snbep_unc.o pfmlib_intel_snbep_unc_cbo.o pfmlib_intel_snbep_unc_ha.o pfmlib_intel_snbep_unc_imc.o pfmlib_intel_snbep_unc_pcu.o pfmlib_intel_snbep_unc_qpi.o pfmlib_intel_snbep_unc_ubo.o pfmlib_intel_snbep_unc_r2pcie.o pfmlib_intel_snbep_unc_r3qpi.o pfmlib_intel_ivbep_unc_cbo.o pfmlib_intel_ivbep_unc_ha.o pfmlib_intel_ivbep_unc_imc.o pfmlib_intel_ivbep_unc_pcu.o pfmlib_intel_ivbep_unc_qpi.o pfmlib_intel_ivbep_unc_ubo.o pfmlib_intel_ivbep_unc_r2pcie.o pfmlib_intel_ivbep_unc_r3qpi.o pfmlib_intel_ivbep_unc_irp.o pfmlib_intel_hswep_unc_cbo.o pfmlib_intel_hswep_unc_ha.o pfmlib_intel_hswep_unc_imc.o pfmlib_intel_hswep_unc_pcu.o pfmlib_intel_hswep_unc_qpi.o pfmlib_intel_hswep_unc_ubo.o pfmlib_intel_hswep_unc_r2pcie.o pfmlib_intel_hswep_unc_r3qpi.o pfmlib_intel_hswep_unc_irp.o pfmlib_intel_hswep_unc_sbo.o pfmlib_intel_bdx_unc_cbo.o pfmlib_intel_bdx_unc_ubo.o pfmlib_intel_bdx_unc_sbo.o pfmlib_intel_bdx_unc_ha.o pfmlib_intel_bdx_unc_imc.o pfmlib_intel_bdx_unc_irp.o pfmlib_intel_bdx_unc_pcu.o pfmlib_intel_bdx_unc_qpi.o pfmlib_intel_bdx_unc_r2pcie.o pfmlib_intel_bdx_unc_r3qpi.o pfmlib_intel_skx_unc_cha.o pfmlib_intel_skx_unc_iio.o pfmlib_intel_skx_unc_imc.o pfmlib_intel_skx_unc_irp.o pfmlib_intel_skx_unc_m2m.o pfmlib_intel_skx_unc_m3upi.o pfmlib_intel_skx_unc_pcu.o pfmlib_intel_skx_unc_ubo.o pfmlib_intel_skx_unc_upi.o pfmlib_intel_knc.o pfmlib_intel_slm.o pfmlib_intel_knl.o pfmlib_intel_knl_unc_imc.o pfmlib_intel_knl_unc_edc.o pfmlib_intel_knl_unc_cha.o pfmlib_intel_knl_unc_m2pcie.o pfmlib_intel_glm.o pfmlib_intel_netburst.o pfmlib_amd64_k7.o pfmlib_amd64_k8.o pfmlib_amd64_fam10h.o pfmlib_amd64_fam11h.o pfmlib_amd64_fam12h.o pfmlib_amd64_fam14h.o pfmlib_amd64_fam15h.o pfmlib_amd64_fam17h.o pfmlib_amd64_fam16h.o
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_common.c -o pfmlib_common.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_perf_event_pmu.c -o pfmlib_perf_event_pmu.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_perf_event.c -o pfmlib_perf_event.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_perf_event_raw.c -o pfmlib_perf_event_raw.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_x86_perf_event.c -o pfmlib_intel_x86_perf_event.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_amd64_perf_event.c -o pfmlib_amd64_perf_event.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_netburst_perf_event.c -o pfmlib_intel_netburst_perf_event.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_snbep_unc_perf_event.c -o pfmlib_intel_snbep_unc_perf_event.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_amd64.c -o pfmlib_amd64.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_core.c -o pfmlib_intel_core.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_x86.c -o pfmlib_intel_x86.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_x86_arch.c -o pfmlib_intel_x86_arch.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_atom.c -o pfmlib_intel_atom.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_nhm_unc.c -o pfmlib_intel_nhm_unc.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_nhm.c -o pfmlib_intel_nhm.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_wsm.c -o pfmlib_intel_wsm.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_snb.c -o pfmlib_intel_snb.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_snb_unc.c -o pfmlib_intel_snb_unc.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_ivb.c -o pfmlib_intel_ivb.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_ivb_unc.c -o pfmlib_intel_ivb_unc.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_hsw.c -o pfmlib_intel_hsw.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_bdw.c -o pfmlib_intel_bdw.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_skl.c -o pfmlib_intel_skl.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_rapl.c -o pfmlib_intel_rapl.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_snbep_unc.c -o pfmlib_intel_snbep_unc.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_snbep_unc_cbo.c -o pfmlib_intel_snbep_unc_cbo.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_snbep_unc_ha.c -o pfmlib_intel_snbep_unc_ha.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_snbep_unc_imc.c -o pfmlib_intel_snbep_unc_imc.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_snbep_unc_pcu.c -o pfmlib_intel_snbep_unc_pcu.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_snbep_unc_qpi.c -o pfmlib_intel_snbep_unc_qpi.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_snbep_unc_ubo.c -o pfmlib_intel_snbep_unc_ubo.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_snbep_unc_r2pcie.c -o pfmlib_intel_snbep_unc_r2pcie.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_snbep_unc_r3qpi.c -o pfmlib_intel_snbep_unc_r3qpi.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_ivbep_unc_cbo.c -o pfmlib_intel_ivbep_unc_cbo.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_ivbep_unc_ha.c -o pfmlib_intel_ivbep_unc_ha.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_ivbep_unc_imc.c -o pfmlib_intel_ivbep_unc_imc.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_ivbep_unc_pcu.c -o pfmlib_intel_ivbep_unc_pcu.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_ivbep_unc_qpi.c -o pfmlib_intel_ivbep_unc_qpi.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_ivbep_unc_ubo.c -o pfmlib_intel_ivbep_unc_ubo.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_ivbep_unc_r2pcie.c -o pfmlib_intel_ivbep_unc_r2pcie.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_ivbep_unc_r3qpi.c -o pfmlib_intel_ivbep_unc_r3qpi.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_ivbep_unc_irp.c -o pfmlib_intel_ivbep_unc_irp.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_hswep_unc_cbo.c -o pfmlib_intel_hswep_unc_cbo.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_hswep_unc_ha.c -o pfmlib_intel_hswep_unc_ha.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_hswep_unc_imc.c -o pfmlib_intel_hswep_unc_imc.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_hswep_unc_pcu.c -o pfmlib_intel_hswep_unc_pcu.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_hswep_unc_qpi.c -o pfmlib_intel_hswep_unc_qpi.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_hswep_unc_ubo.c -o pfmlib_intel_hswep_unc_ubo.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_hswep_unc_r2pcie.c -o pfmlib_intel_hswep_unc_r2pcie.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_hswep_unc_r3qpi.c -o pfmlib_intel_hswep_unc_r3qpi.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_hswep_unc_irp.c -o pfmlib_intel_hswep_unc_irp.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_hswep_unc_sbo.c -o pfmlib_intel_hswep_unc_sbo.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_bdx_unc_cbo.c -o pfmlib_intel_bdx_unc_cbo.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_bdx_unc_ubo.c -o pfmlib_intel_bdx_unc_ubo.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_bdx_unc_sbo.c -o pfmlib_intel_bdx_unc_sbo.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_bdx_unc_ha.c -o pfmlib_intel_bdx_unc_ha.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_bdx_unc_imc.c -o pfmlib_intel_bdx_unc_imc.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_bdx_unc_irp.c -o pfmlib_intel_bdx_unc_irp.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_bdx_unc_pcu.c -o pfmlib_intel_bdx_unc_pcu.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_bdx_unc_qpi.c -o pfmlib_intel_bdx_unc_qpi.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_bdx_unc_r2pcie.c -o pfmlib_intel_bdx_unc_r2pcie.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_bdx_unc_r3qpi.c -o pfmlib_intel_bdx_unc_r3qpi.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_skx_unc_cha.c -o pfmlib_intel_skx_unc_cha.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_skx_unc_iio.c -o pfmlib_intel_skx_unc_iio.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_skx_unc_imc.c -o pfmlib_intel_skx_unc_imc.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_skx_unc_irp.c -o pfmlib_intel_skx_unc_irp.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_skx_unc_m2m.c -o pfmlib_intel_skx_unc_m2m.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_skx_unc_m3upi.c -o pfmlib_intel_skx_unc_m3upi.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_skx_unc_pcu.c -o pfmlib_intel_skx_unc_pcu.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_skx_unc_ubo.c -o pfmlib_intel_skx_unc_ubo.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_skx_unc_upi.c -o pfmlib_intel_skx_unc_upi.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_knc.c -o pfmlib_intel_knc.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_slm.c -o pfmlib_intel_slm.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_knl.c -o pfmlib_intel_knl.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_knl_unc_imc.c -o pfmlib_intel_knl_unc_imc.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_knl_unc_edc.c -o pfmlib_intel_knl_unc_edc.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_knl_unc_cha.c -o pfmlib_intel_knl_unc_cha.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_knl_unc_m2pcie.c -o pfmlib_intel_knl_unc_m2pcie.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_glm.c -o pfmlib_intel_glm.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_intel_netburst.c -o pfmlib_intel_netburst.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_amd64_k7.c -o pfmlib_amd64_k7.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_amd64_k8.c -o pfmlib_amd64_k8.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_amd64_fam10h.c -o pfmlib_amd64_fam10h.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_amd64_fam11h.c -o pfmlib_amd64_fam11h.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_amd64_fam12h.c -o pfmlib_amd64_fam12h.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_amd64_fam14h.c -o pfmlib_amd64_fam14h.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_amd64_fam15h.c -o pfmlib_amd64_fam15h.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_amd64_fam17h.c -o pfmlib_amd64_fam17h.lo
+gcc -fPIC -DPIC -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I. -c pfmlib_amd64_fam16h.c -o pfmlib_amd64_fam16h.lo
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/lib/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -D_REENTRANT -I. -fvisibility=hidden -DCONFIG_PFMLIB_ARCH_X86 -DCONFIG_PFMLIB_ARCH_X86_64 -I.  -shared -Wl,-soname -Wl,libpfm.so.4  -o libpfm.so.4.10.1 pfmlib_common.lo pfmlib_perf_event_pmu.lo pfmlib_perf_event.lo pfmlib_perf_event_raw.lo pfmlib_intel_x86_perf_event.lo pfmlib_amd64_perf_event.lo pfmlib_intel_netburst_perf_event.lo pfmlib_intel_snbep_unc_perf_event.lo pfmlib_amd64.lo pfmlib_intel_core.lo pfmlib_intel_x86.lo pfmlib_intel_x86_arch.lo pfmlib_intel_atom.lo pfmlib_intel_nhm_unc.lo pfmlib_intel_nhm.lo pfmlib_intel_wsm.lo pfmlib_intel_snb.lo pfmlib_intel_snb_unc.lo pfmlib_intel_ivb.lo pfmlib_intel_ivb_unc.lo pfmlib_intel_hsw.lo pfmlib_intel_bdw.lo pfmlib_intel_skl.lo pfmlib_intel_rapl.lo pfmlib_intel_snbep_unc.lo pfmlib_intel_snbep_unc_cbo.lo pfmlib_intel_snbep_unc_ha.lo pfmlib_intel_snbep_unc_imc.lo pfmlib_intel_snbep_unc_pcu.lo pfmlib_intel_snbep_unc_qpi.lo pfmlib_intel_snbep_unc_ubo.lo pfmlib_intel_snbep_unc_r2pcie.lo pfmlib_intel_snbep_unc_r3qpi.lo pfmlib_intel_ivbep_unc_cbo.lo pfmlib_intel_ivbep_unc_ha.lo pfmlib_intel_ivbep_unc_imc.lo pfmlib_intel_ivbep_unc_pcu.lo pfmlib_intel_ivbep_unc_qpi.lo pfmlib_intel_ivbep_unc_ubo.lo pfmlib_intel_ivbep_unc_r2pcie.lo pfmlib_intel_ivbep_unc_r3qpi.lo pfmlib_intel_ivbep_unc_irp.lo pfmlib_intel_hswep_unc_cbo.lo pfmlib_intel_hswep_unc_ha.lo pfmlib_intel_hswep_unc_imc.lo pfmlib_intel_hswep_unc_pcu.lo pfmlib_intel_hswep_unc_qpi.lo pfmlib_intel_hswep_unc_ubo.lo pfmlib_intel_hswep_unc_r2pcie.lo pfmlib_intel_hswep_unc_r3qpi.lo pfmlib_intel_hswep_unc_irp.lo pfmlib_intel_hswep_unc_sbo.lo pfmlib_intel_bdx_unc_cbo.lo pfmlib_intel_bdx_unc_ubo.lo pfmlib_intel_bdx_unc_sbo.lo pfmlib_intel_bdx_unc_ha.lo pfmlib_intel_bdx_unc_imc.lo pfmlib_intel_bdx_unc_irp.lo pfmlib_intel_bdx_unc_pcu.lo pfmlib_intel_bdx_unc_qpi.lo pfmlib_intel_bdx_unc_r2pcie.lo pfmlib_intel_bdx_unc_r3qpi.lo pfmlib_intel_skx_unc_cha.lo pfmlib_intel_skx_unc_iio.lo pfmlib_intel_skx_unc_imc.lo pfmlib_intel_skx_unc_irp.lo pfmlib_intel_skx_unc_m2m.lo pfmlib_intel_skx_unc_m3upi.lo pfmlib_intel_skx_unc_pcu.lo pfmlib_intel_skx_unc_ubo.lo pfmlib_intel_skx_unc_upi.lo pfmlib_intel_knc.lo pfmlib_intel_slm.lo pfmlib_intel_knl.lo pfmlib_intel_knl_unc_imc.lo pfmlib_intel_knl_unc_edc.lo pfmlib_intel_knl_unc_cha.lo pfmlib_intel_knl_unc_m2pcie.lo pfmlib_intel_glm.lo pfmlib_intel_netburst.lo pfmlib_amd64_k7.lo pfmlib_amd64_k8.lo pfmlib_amd64_fam10h.lo pfmlib_amd64_fam11h.lo pfmlib_amd64_fam12h.lo pfmlib_amd64_fam14h.lo pfmlib_amd64_fam15h.lo pfmlib_amd64_fam17h.lo pfmlib_amd64_fam16h.lo
+ln -sf libpfm.so.4.10.1 libpfm.so.4
+ln -sf libpfm.so.4.10.1 libpfm.so
+building: libpfm.a libpfm.so.4.10.1
+mkdir -p /build/papiex-epmt-install/lib
+install -m 644 libpfm.a /build/papiex-epmt-install/lib
+install libpfm.so.4.10.1 /build/papiex-epmt-install/lib
+cd /build/papiex-epmt-install/lib; ln -sf libpfm.so.4.10.1 libpfm.so.4
+cd /build/papiex-epmt-install/lib; ln -sf libpfm.so.4.10.1 libpfm.so
+true
+make[2]: Leaving directory `/build/libpfm/lib'
+make[1]: Leaving directory `/build/libpfm'
+make -C libpfm/examples OPTIM=-O2 EXAMPLESDIR=/build/papiex-epmt-install/bin install-examples 
+make[1]: Entering directory `/build/libpfm/examples'
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/examples/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -I. -D_GNU_SOURCE -pthread -c showevtinfo.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/examples/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -I. -D_GNU_SOURCE -pthread -o showevtinfo  showevtinfo.o /build/libpfm/examples/../lib/libpfm.a  -lm -lrt 
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/examples/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -I. -D_GNU_SOURCE -pthread -c check_events.c
+gcc -O2 -g -Wall -Werror -Wextra -Wno-unused-parameter -I. -I/build/libpfm/examples/../include -DCONFIG_PFMLIB_DEBUG -DCONFIG_PFMLIB_OS_LINUX -I. -D_GNU_SOURCE -pthread -o check_events  check_events.o /build/libpfm/examples/../lib/libpfm.a  -lm -lrt 
+installing: showevtinfo check_events
+mkdir -p /build/papiex-epmt-install/bin
+install -m 755 showevtinfo check_events /build/papiex-epmt-install/bin
+make[1]: Leaving directory `/build/libpfm/examples'
+cd papi/src ; ./configure --with-static-user-events --with-static-papi-events --enable-perfevent_rdpmc=no --disable-perf_event_uncore --prefix=/build/papiex-epmt-install --with-pfm-root=/build/libpfm --with-debug=no
+checking for architecture... x86_64
+checking for OS... linux
+checking for OS version... 3.10.0-1160.80.1.el7.x86_64
+checking for perf_event workaround level... autodetect
+checking for if MIC should be used... no
+checking whether the C compiler works... yes
+checking for C compiler default output file name... a.out
+checking for suffix of executables... 
+checking whether we are cross compiling... no
+checking for suffix of object files... o
+checking whether we are using the GNU C compiler... yes
+checking whether gcc accepts -g... yes
+checking for gcc option to accept ISO C89... none needed
+checking for xlf... no
+checking for ifort... no
+checking for gfortran... no
+checking for f95... no
+checking for f90... no
+checking for f77... no
+checking whether we are using the GNU Fortran 77 compiler... no
+checking whether  accepts -g... no
+checking for mpicc... no
+checking for gawk... gawk
+checking how to run the C preprocessor... gcc -E
+checking whether ln -s works... yes
+checking whether make sets $(MAKE)... yes
+checking for ranlib... ranlib
+checking for grep that handles long lines and -e... /usr/bin/grep
+checking for egrep... /usr/bin/grep -E
+checking for ANSI C header files... yes
+checking for sys/types.h... yes
+checking for sys/stat.h... yes
+checking for stdlib.h... yes
+checking for string.h... yes
+checking for memory.h... yes
+checking for strings.h... yes
+checking for inttypes.h... yes
+checking for stdint.h... yes
+checking for unistd.h... yes
+checking minix/config.h usability... no
+checking minix/config.h presence... no
+checking for minix/config.h... no
+checking whether it is safe to define __EXTENSIONS__... yes
+checking for ANSI C header files... (cached) yes
+checking for inline... inline
+checking whether time.h and sys/time.h may both be included... yes
+checking sys/time.h usability... yes
+checking sys/time.h presence... yes
+checking for sys/time.h... yes
+checking c_asm.h usability... no
+checking c_asm.h presence... no
+checking for c_asm.h... no
+checking intrinsics.h usability... no
+checking intrinsics.h presence... no
+checking for intrinsics.h... no
+checking mach/mach_time.h usability... no
+checking mach/mach_time.h presence... no
+checking for mach/mach_time.h... no
+checking sched.h usability... yes
+checking sched.h presence... yes
+checking for sched.h... yes
+checking for gethrtime... no
+checking for read_real_time... no
+checking for time_base_to_time... no
+checking for clock_gettime... yes
+checking for mach_absolute_time... no
+checking for sched_getcpu... yes
+checking for dlopen and dlerror symbols in base system... not found
+checking for dlopen and dlerror symbols in -ldl... found
+checking for debug build... no
+checking for -Wno-override-init... 1
+checking for CPU type... x86
+checking for ffsll... yes
+checking for working gettid... no
+checking for working syscall(SYS_gettid)... yes
+checking for working MMTIMER... no
+checking for working CLOCK_REALTIME_HR POSIX 1b timer... no
+checking for working CLOCK_REALTIME POSIX 1b timer... yes
+checking for which real time clock to use... clock_realtime
+checking for working __thread... yes
+checking for high performance thread local storage... __thread
+checking for working CLOCK_THREAD_CPUTIME_ID POSIX 1b timer... yes
+checking for which virtual timer to use... clock_thread_cputime_id
+checking for static user preset events... yes
+checking for static PAPI preset events... yes
+checking for whether to build static library... yes
+checking for whether to build shared library... yes
+checking for static compile of tests and utilities... no
+checking for linking with papi shared library of tests and utilities... no
+checking for /sys/class/perfctr... no
+checking for /dev/perfctr... no
+checking for /sys/kernel/perfmon/version... no
+checking for /proc/perfmon... no
+checking for /proc/sys/kernel/perf_event_paranoid... yes
+checking for /build/libpfm/include/perfmon/perf_event.h... yes
+checking platform... linux-pe
+checking for components to build... perf_event
+checking for PAPI event CSV filename to use... papi_events.csv
+configure: Compiling genpapifdef with gcc
+configure: Generating fpapi.h
+configure: Generating f77papi.h
+configure: Generating f90papi.h
+configure: Rules.pfm4_pe will be included in the generated Makefile
+configure: creating ./config.status
+config.status: creating Makefile
+config.status: creating papi.pc
+config.status: creating components/Makefile_comp_tests.target
+config.status: creating testlib/Makefile.target
+config.status: creating utils/Makefile.target
+config.status: creating ctests/Makefile.target
+config.status: creating ftests/Makefile.target
+config.status: creating validation_tests/Makefile.target
+config.status: creating config.h
+make -C papi/src install-lib install-utils
+make[1]: Entering directory `/build/papi/src'
+Host architecture   : Linux with perf_event kernel support and libpfm4
+Host CPU component  : perf_event
+Installation DESTDIR: 
+Installation PREFIX : /build/papiex-epmt-install
+Installation EPREFIX: /build/papiex-epmt-install
+Installation INCDIR : /build/papiex-epmt-install/include
+Installation LIBDIR : /build/papiex-epmt-install/lib
+Installation BINDIR : /build/papiex-epmt-install/bin
+Installation MANDIR : /build/papiex-epmt-install/share/man
+Installation DOCDIR : /build/papiex-epmt-install/share/doc/papi
+Installation DATADIR: /build/papiex-epmt-install/share/papi
+
+sh papi_events_table.sh papi_events.csv > papi_events_table.h
+gcc -E  -DFORTRANUNDERSCORE papi_fwrappers.c > papi_fwrappers_.c
+gcc -E  -DFORTRANDOUBLEUNDERSCORE papi_fwrappers.c > papi_fwrappers__.c
+gcc -E  -DFORTRANCAPS papi_fwrappers.c > upper_PAPI_FWRAPPERS.c
+rm -f libpapi.so.5.7.0.0 libpapi.so libpapi.so.5; 
+gcc -fPIC -DPIC -shared -Wl,-soname -Wl,libpapi.so.5 -Xlinker "-rpath" -Xlinker "/build/papiex-epmt-install/lib" -DPAPI_NO_MEMORY_MANAGEMENT -DSTATIC_USER_EVENTS -DSTATIC_PAPI_EVENTS_TABLE  -DPEINCLUDE=\"/build/libpfm/include/perfmon/perf_event.h\" -D_REENTRANT -D_GNU_SOURCE -DUSE_COMPILER_TLS -I/build/libpfm/include -fvisibility=hidden -I. -g -Wextra  -Wall -DOSLOCK=\"linux-lock.h\" -DOSCONTEXT=\"linux-context.h\" -O2 x86_cpuid_info.c papi_libpfm4_events.c papi.c papi_internal.c papi_hl.c extras.c sw_multiplex.c papi_fwrappers.c papi_fwrappers_.c papi_fwrappers__.c upper_PAPI_FWRAPPERS.c threads.c cpus.c linux-memory.c linux-timer.c linux-common.c  papi_preset.c papi_vector.c papi_memory.c components/perf_event/perf_event.c components/perf_event/pe_libpfm4_events.c  -o libpapi.so.5.7.0.0 -Bdynamic -L/build/libpfm/lib -lpfm 
++ test '' '!=' ''
+ln -sf libpapi.so.5.7.0.0 libpapi.so
+ln -sf libpapi.so.5.7.0.0 libpapi.so.5
+ar xv /build/libpfm/lib/libpfm.a
+x - pfmlib_common.o
+x - pfmlib_perf_event_pmu.o
+x - pfmlib_perf_event.o
+x - pfmlib_perf_event_raw.o
+x - pfmlib_intel_x86_perf_event.o
+x - pfmlib_amd64_perf_event.o
+x - pfmlib_intel_netburst_perf_event.o
+x - pfmlib_intel_snbep_unc_perf_event.o
+x - pfmlib_amd64.o
+x - pfmlib_intel_core.o
+x - pfmlib_intel_x86.o
+x - pfmlib_intel_x86_arch.o
+x - pfmlib_intel_atom.o
+x - pfmlib_intel_nhm_unc.o
+x - pfmlib_intel_nhm.o
+x - pfmlib_intel_wsm.o
+x - pfmlib_intel_snb.o
+x - pfmlib_intel_snb_unc.o
+x - pfmlib_intel_ivb.o
+x - pfmlib_intel_ivb_unc.o
+x - pfmlib_intel_hsw.o
+x - pfmlib_intel_bdw.o
+x - pfmlib_intel_skl.o
+x - pfmlib_intel_rapl.o
+x - pfmlib_intel_snbep_unc.o
+x - pfmlib_intel_snbep_unc_cbo.o
+x - pfmlib_intel_snbep_unc_ha.o
+x - pfmlib_intel_snbep_unc_imc.o
+x - pfmlib_intel_snbep_unc_pcu.o
+x - pfmlib_intel_snbep_unc_qpi.o
+x - pfmlib_intel_snbep_unc_ubo.o
+x - pfmlib_intel_snbep_unc_r2pcie.o
+x - pfmlib_intel_snbep_unc_r3qpi.o
+x - pfmlib_intel_ivbep_unc_cbo.o
+x - pfmlib_intel_ivbep_unc_ha.o
+x - pfmlib_intel_ivbep_unc_imc.o
+x - pfmlib_intel_ivbep_unc_pcu.o
+x - pfmlib_intel_ivbep_unc_qpi.o
+x - pfmlib_intel_ivbep_unc_ubo.o
+x - pfmlib_intel_ivbep_unc_r2pcie.o
+x - pfmlib_intel_ivbep_unc_r3qpi.o
+x - pfmlib_intel_ivbep_unc_irp.o
+x - pfmlib_intel_hswep_unc_cbo.o
+x - pfmlib_intel_hswep_unc_ha.o
+x - pfmlib_intel_hswep_unc_imc.o
+x - pfmlib_intel_hswep_unc_pcu.o
+x - pfmlib_intel_hswep_unc_qpi.o
+x - pfmlib_intel_hswep_unc_ubo.o
+x - pfmlib_intel_hswep_unc_r2pcie.o
+x - pfmlib_intel_hswep_unc_r3qpi.o
+x - pfmlib_intel_hswep_unc_irp.o
+x - pfmlib_intel_hswep_unc_sbo.o
+x - pfmlib_intel_bdx_unc_cbo.o
+x - pfmlib_intel_bdx_unc_ubo.o
+x - pfmlib_intel_bdx_unc_sbo.o
+x - pfmlib_intel_bdx_unc_ha.o
+x - pfmlib_intel_bdx_unc_imc.o
+x - pfmlib_intel_bdx_unc_irp.o
+x - pfmlib_intel_bdx_unc_pcu.o
+x - pfmlib_intel_bdx_unc_qpi.o
+x - pfmlib_intel_bdx_unc_r2pcie.o
+x - pfmlib_intel_bdx_unc_r3qpi.o
+x - pfmlib_intel_skx_unc_cha.o
+x - pfmlib_intel_skx_unc_iio.o
+x - pfmlib_intel_skx_unc_imc.o
+x - pfmlib_intel_skx_unc_irp.o
+x - pfmlib_intel_skx_unc_m2m.o
+x - pfmlib_intel_skx_unc_m3upi.o
+x - pfmlib_intel_skx_unc_pcu.o
+x - pfmlib_intel_skx_unc_ubo.o
+x - pfmlib_intel_skx_unc_upi.o
+x - pfmlib_intel_knc.o
+x - pfmlib_intel_slm.o
+x - pfmlib_intel_knl.o
+x - pfmlib_intel_knl_unc_imc.o
+x - pfmlib_intel_knl_unc_edc.o
+x - pfmlib_intel_knl_unc_cha.o
+x - pfmlib_intel_knl_unc_m2pcie.o
+x - pfmlib_intel_glm.o
+x - pfmlib_intel_netburst.o
+x - pfmlib_amd64_k7.o
+x - pfmlib_amd64_k8.o
+x - pfmlib_amd64_fam10h.o
+x - pfmlib_amd64_fam11h.o
+x - pfmlib_amd64_fam12h.o
+x - pfmlib_amd64_fam14h.o
+x - pfmlib_amd64_fam15h.o
+x - pfmlib_amd64_fam17h.o
+x - pfmlib_amd64_fam16h.o
+gcc -DPAPI_NO_MEMORY_MANAGEMENT -DSTATIC_USER_EVENTS -DSTATIC_PAPI_EVENTS_TABLE  -DPEINCLUDE=\"/build/libpfm/include/perfmon/perf_event.h\" -D_REENTRANT -D_GNU_SOURCE -DUSE_COMPILER_TLS -I/build/libpfm/include -fvisibility=hidden -I. -g -Wextra  -Wall -DOSLOCK=\"linux-lock.h\" -DOSCONTEXT=\"linux-context.h\" -O2 -c x86_cpuid_info.c -o x86_cpuid_info.o
+gcc -DPAPI_NO_MEMORY_MANAGEMENT -DSTATIC_USER_EVENTS -DSTATIC_PAPI_EVENTS_TABLE  -DPEINCLUDE=\"/build/libpfm/include/perfmon/perf_event.h\" -D_REENTRANT -D_GNU_SOURCE -DUSE_COMPILER_TLS -I/build/libpfm/include -fvisibility=hidden -I. -g -Wextra  -Wall -DOSLOCK=\"linux-lock.h\" -DOSCONTEXT=\"linux-context.h\" -O2 -c papi_libpfm4_events.c -o papi_libpfm4_events.o
+gcc -DPAPI_NO_MEMORY_MANAGEMENT -DSTATIC_USER_EVENTS -DSTATIC_PAPI_EVENTS_TABLE  -DPEINCLUDE=\"/build/libpfm/include/perfmon/perf_event.h\" -D_REENTRANT -D_GNU_SOURCE -DUSE_COMPILER_TLS -I/build/libpfm/include -fvisibility=hidden -I. -g -Wextra  -Wall -DOSLOCK=\"linux-lock.h\" -DOSCONTEXT=\"linux-context.h\" -O2 -c papi.c -o papi.o
+gcc -DPAPI_NO_MEMORY_MANAGEMENT -DSTATIC_USER_EVENTS -DSTATIC_PAPI_EVENTS_TABLE  -DPEINCLUDE=\"/build/libpfm/include/perfmon/perf_event.h\" -D_REENTRANT -D_GNU_SOURCE -DUSE_COMPILER_TLS -I/build/libpfm/include -fvisibility=hidden -I. -g -Wextra  -Wall -DOSLOCK=\"linux-lock.h\" -DOSCONTEXT=\"linux-context.h\" -O2 -c papi_internal.c -o papi_internal.o
+gcc -DPAPI_NO_MEMORY_MANAGEMENT -DSTATIC_USER_EVENTS -DSTATIC_PAPI_EVENTS_TABLE  -DPEINCLUDE=\"/build/libpfm/include/perfmon/perf_event.h\" -D_REENTRANT -D_GNU_SOURCE -DUSE_COMPILER_TLS -I/build/libpfm/include -fvisibility=hidden -I. -g -Wextra  -Wall -DOSLOCK=\"linux-lock.h\" -DOSCONTEXT=\"linux-context.h\" -O2 -c papi_hl.c -o papi_hl.o
+gcc -DPAPI_NO_MEMORY_MANAGEMENT -DSTATIC_USER_EVENTS -DSTATIC_PAPI_EVENTS_TABLE  -DPEINCLUDE=\"/build/libpfm/include/perfmon/perf_event.h\" -D_REENTRANT -D_GNU_SOURCE -DUSE_COMPILER_TLS -I/build/libpfm/include -fvisibility=hidden -I. -g -Wextra  -Wall -DOSLOCK=\"linux-lock.h\" -DOSCONTEXT=\"linux-context.h\" -O2 -c extras.c -o extras.o
+gcc -DPAPI_NO_MEMORY_MANAGEMENT -DSTATIC_USER_EVENTS -DSTATIC_PAPI_EVENTS_TABLE  -DPEINCLUDE=\"/build/libpfm/include/perfmon/perf_event.h\" -D_REENTRANT -D_GNU_SOURCE -DUSE_COMPILER_TLS -I/build/libpfm/include -fvisibility=hidden -I. -g -Wextra  -Wall -DOSLOCK=\"linux-lock.h\" -DOSCONTEXT=\"linux-context.h\" -O2 -c sw_multiplex.c -o sw_multiplex.o
+gcc -DPAPI_NO_MEMORY_MANAGEMENT -DSTATIC_USER_EVENTS -DSTATIC_PAPI_EVENTS_TABLE  -DPEINCLUDE=\"/build/libpfm/include/perfmon/perf_event.h\" -D_REENTRANT -D_GNU_SOURCE -DUSE_COMPILER_TLS -I/build/libpfm/include -fvisibility=hidden -I. -g -Wextra  -Wall -DOSLOCK=\"linux-lock.h\" -DOSCONTEXT=\"linux-context.h\" -O2 -c papi_fwrappers.c -o papi_fwrappers.o
+gcc -DPAPI_NO_MEMORY_MANAGEMENT -DSTATIC_USER_EVENTS -DSTATIC_PAPI_EVENTS_TABLE  -DPEINCLUDE=\"/build/libpfm/include/perfmon/perf_event.h\" -D_REENTRANT -D_GNU_SOURCE -DUSE_COMPILER_TLS -I/build/libpfm/include -fvisibility=hidden -I. -g -Wextra  -Wall -DOSLOCK=\"linux-lock.h\" -DOSCONTEXT=\"linux-context.h\" -O2 -c papi_fwrappers_.c -o papi_fwrappers_.o 
+gcc -DPAPI_NO_MEMORY_MANAGEMENT -DSTATIC_USER_EVENTS -DSTATIC_PAPI_EVENTS_TABLE  -DPEINCLUDE=\"/build/libpfm/include/perfmon/perf_event.h\" -D_REENTRANT -D_GNU_SOURCE -DUSE_COMPILER_TLS -I/build/libpfm/include -fvisibility=hidden -I. -g -Wextra  -Wall -DOSLOCK=\"linux-lock.h\" -DOSCONTEXT=\"linux-context.h\" -O2 -c papi_fwrappers__.c -o papi_fwrappers__.o
+gcc -DPAPI_NO_MEMORY_MANAGEMENT -DSTATIC_USER_EVENTS -DSTATIC_PAPI_EVENTS_TABLE  -DPEINCLUDE=\"/build/libpfm/include/perfmon/perf_event.h\" -D_REENTRANT -D_GNU_SOURCE -DUSE_COMPILER_TLS -I/build/libpfm/include -fvisibility=hidden -I. -g -Wextra  -Wall -DOSLOCK=\"linux-lock.h\" -DOSCONTEXT=\"linux-context.h\" -O2 -c upper_PAPI_FWRAPPERS.c -o upper_PAPI_FWRAPPERS.o
+gcc -DPAPI_NO_MEMORY_MANAGEMENT -DSTATIC_USER_EVENTS -DSTATIC_PAPI_EVENTS_TABLE  -DPEINCLUDE=\"/build/libpfm/include/perfmon/perf_event.h\" -D_REENTRANT -D_GNU_SOURCE -DUSE_COMPILER_TLS -I/build/libpfm/include -fvisibility=hidden -I. -g -Wextra  -Wall -DOSLOCK=\"linux-lock.h\" -DOSCONTEXT=\"linux-context.h\" -O2 -c threads.c -o threads.o
+gcc -DPAPI_NO_MEMORY_MANAGEMENT -DSTATIC_USER_EVENTS -DSTATIC_PAPI_EVENTS_TABLE  -DPEINCLUDE=\"/build/libpfm/include/perfmon/perf_event.h\" -D_REENTRANT -D_GNU_SOURCE -DUSE_COMPILER_TLS -I/build/libpfm/include -fvisibility=hidden -I. -g -Wextra  -Wall -DOSLOCK=\"linux-lock.h\" -DOSCONTEXT=\"linux-context.h\" -O2 -c cpus.c -o cpus.o
+gcc -DPAPI_NO_MEMORY_MANAGEMENT -DSTATIC_USER_EVENTS -DSTATIC_PAPI_EVENTS_TABLE  -DPEINCLUDE=\"/build/libpfm/include/perfmon/perf_event.h\" -D_REENTRANT -D_GNU_SOURCE -DUSE_COMPILER_TLS -I/build/libpfm/include -fvisibility=hidden -I. -g -Wextra  -Wall -DOSLOCK=\"linux-lock.h\" -DOSCONTEXT=\"linux-context.h\" -O2 -c linux-memory.c -o linux-memory.o
+gcc -DPAPI_NO_MEMORY_MANAGEMENT -DSTATIC_USER_EVENTS -DSTATIC_PAPI_EVENTS_TABLE  -DPEINCLUDE=\"/build/libpfm/include/perfmon/perf_event.h\" -D_REENTRANT -D_GNU_SOURCE -DUSE_COMPILER_TLS -I/build/libpfm/include -fvisibility=hidden -I. -g -Wextra  -Wall -DOSLOCK=\"linux-lock.h\" -DOSCONTEXT=\"linux-context.h\" -O2 -c linux-timer.c -o linux-timer.o
+gcc -DPAPI_NO_MEMORY_MANAGEMENT -DSTATIC_USER_EVENTS -DSTATIC_PAPI_EVENTS_TABLE  -DPEINCLUDE=\"/build/libpfm/include/perfmon/perf_event.h\" -D_REENTRANT -D_GNU_SOURCE -DUSE_COMPILER_TLS -I/build/libpfm/include -fvisibility=hidden -I. -g -Wextra  -Wall -DOSLOCK=\"linux-lock.h\" -DOSCONTEXT=\"linux-context.h\" -O2 -c linux-common.c -o linux-common.o
+gcc -DPAPI_NO_MEMORY_MANAGEMENT -DSTATIC_USER_EVENTS -DSTATIC_PAPI_EVENTS_TABLE  -DPEINCLUDE=\"/build/libpfm/include/perfmon/perf_event.h\" -D_REENTRANT -D_GNU_SOURCE -DUSE_COMPILER_TLS -I/build/libpfm/include -fvisibility=hidden -I. -g -Wextra  -Wall -DOSLOCK=\"linux-lock.h\" -DOSCONTEXT=\"linux-context.h\" -O2 -c papi_preset.c -o papi_preset.o
+gcc -DPAPI_NO_MEMORY_MANAGEMENT -DSTATIC_USER_EVENTS -DSTATIC_PAPI_EVENTS_TABLE  -DPEINCLUDE=\"/build/libpfm/include/perfmon/perf_event.h\" -D_REENTRANT -D_GNU_SOURCE -DUSE_COMPILER_TLS -I/build/libpfm/include -fvisibility=hidden -I. -g -Wextra  -Wall -DOSLOCK=\"linux-lock.h\" -DOSCONTEXT=\"linux-context.h\" -O2 -c papi_vector.c -o papi_vector.o
+gcc -DPAPI_NO_MEMORY_MANAGEMENT -DSTATIC_USER_EVENTS -DSTATIC_PAPI_EVENTS_TABLE  -DPEINCLUDE=\"/build/libpfm/include/perfmon/perf_event.h\" -D_REENTRANT -D_GNU_SOURCE -DUSE_COMPILER_TLS -I/build/libpfm/include -fvisibility=hidden -I. -g -Wextra  -Wall -DOSLOCK=\"linux-lock.h\" -DOSCONTEXT=\"linux-context.h\" -O2 -c papi_memory.c -o papi_memory.o
+gcc -DPAPI_NO_MEMORY_MANAGEMENT -DSTATIC_USER_EVENTS -DSTATIC_PAPI_EVENTS_TABLE  -DPEINCLUDE=\"/build/libpfm/include/perfmon/perf_event.h\" -D_REENTRANT -D_GNU_SOURCE -DUSE_COMPILER_TLS -I/build/libpfm/include -fvisibility=hidden -I. -g -Wextra  -Wall -DOSLOCK=\"linux-lock.h\" -DOSCONTEXT=\"linux-context.h\" -O2 -c components/perf_event/perf_event.c -o perf_event.o 
+gcc -DPAPI_NO_MEMORY_MANAGEMENT -DSTATIC_USER_EVENTS -DSTATIC_PAPI_EVENTS_TABLE  -DPEINCLUDE=\"/build/libpfm/include/perfmon/perf_event.h\" -D_REENTRANT -D_GNU_SOURCE -DUSE_COMPILER_TLS -I/build/libpfm/include -fvisibility=hidden -I. -g -Wextra  -Wall -DOSLOCK=\"linux-lock.h\" -DOSCONTEXT=\"linux-context.h\" -O2 -c components/perf_event/pe_libpfm4_events.c -o pe_libpfm4_events.o 
+rm -f libpapi.a
+ar  rv libpapi.a pfmlib_common.o pfmlib_perf_event_pmu.o pfmlib_perf_event.o pfmlib_perf_event_raw.o pfmlib_intel_x86_perf_event.o pfmlib_amd64_perf_event.o pfmlib_intel_netburst_perf_event.o pfmlib_intel_snbep_unc_perf_event.o pfmlib_amd64.o pfmlib_intel_core.o pfmlib_intel_x86.o pfmlib_intel_x86_arch.o pfmlib_intel_atom.o pfmlib_intel_nhm_unc.o pfmlib_intel_nhm.o pfmlib_intel_wsm.o pfmlib_intel_snb.o pfmlib_intel_snb_unc.o pfmlib_intel_ivb.o pfmlib_intel_ivb_unc.o pfmlib_intel_hsw.o pfmlib_intel_bdw.o pfmlib_intel_skl.o pfmlib_intel_rapl.o pfmlib_intel_snbep_unc.o pfmlib_intel_snbep_unc_cbo.o pfmlib_intel_snbep_unc_ha.o pfmlib_intel_snbep_unc_imc.o pfmlib_intel_snbep_unc_pcu.o pfmlib_intel_snbep_unc_qpi.o pfmlib_intel_snbep_unc_ubo.o pfmlib_intel_snbep_unc_r2pcie.o pfmlib_intel_snbep_unc_r3qpi.o pfmlib_intel_ivbep_unc_cbo.o pfmlib_intel_ivbep_unc_ha.o pfmlib_intel_ivbep_unc_imc.o pfmlib_intel_ivbep_unc_pcu.o pfmlib_intel_ivbep_unc_qpi.o pfmlib_intel_ivbep_unc_ubo.o pfmlib_intel_ivbep_unc_r2pcie.o pfmlib_intel_ivbep_unc_r3qpi.o pfmlib_intel_ivbep_unc_irp.o pfmlib_intel_hswep_unc_cbo.o pfmlib_intel_hswep_unc_ha.o pfmlib_intel_hswep_unc_imc.o pfmlib_intel_hswep_unc_pcu.o pfmlib_intel_hswep_unc_qpi.o pfmlib_intel_hswep_unc_ubo.o pfmlib_intel_hswep_unc_r2pcie.o pfmlib_intel_hswep_unc_r3qpi.o pfmlib_intel_hswep_unc_irp.o pfmlib_intel_hswep_unc_sbo.o pfmlib_intel_bdx_unc_cbo.o pfmlib_intel_bdx_unc_ubo.o pfmlib_intel_bdx_unc_sbo.o pfmlib_intel_bdx_unc_ha.o pfmlib_intel_bdx_unc_imc.o pfmlib_intel_bdx_unc_irp.o pfmlib_intel_bdx_unc_pcu.o pfmlib_intel_bdx_unc_qpi.o pfmlib_intel_bdx_unc_r2pcie.o pfmlib_intel_bdx_unc_r3qpi.o pfmlib_intel_skx_unc_cha.o pfmlib_intel_skx_unc_iio.o pfmlib_intel_skx_unc_imc.o pfmlib_intel_skx_unc_irp.o pfmlib_intel_skx_unc_m2m.o pfmlib_intel_skx_unc_m3upi.o pfmlib_intel_skx_unc_pcu.o pfmlib_intel_skx_unc_ubo.o pfmlib_intel_skx_unc_upi.o pfmlib_intel_knc.o pfmlib_intel_slm.o pfmlib_intel_knl.o pfmlib_intel_knl_unc_imc.o pfmlib_intel_knl_unc_edc.o pfmlib_intel_knl_unc_cha.o pfmlib_intel_knl_unc_m2pcie.o pfmlib_intel_glm.o pfmlib_intel_netburst.o pfmlib_amd64_k7.o pfmlib_amd64_k8.o pfmlib_amd64_fam10h.o pfmlib_amd64_fam11h.o pfmlib_amd64_fam12h.o pfmlib_amd64_fam14h.o pfmlib_amd64_fam15h.o pfmlib_amd64_fam17h.o pfmlib_amd64_fam16h.o x86_cpuid_info.o papi_libpfm4_events.o papi.o papi_internal.o papi_hl.o extras.o sw_multiplex.o papi_fwrappers.o papi_fwrappers_.o papi_fwrappers__.o upper_PAPI_FWRAPPERS.o threads.o cpus.o linux-memory.o linux-timer.o linux-common.o  papi_preset.o papi_vector.o papi_memory.o perf_event.o pe_libpfm4_events.o
+ar: creating libpapi.a
+a - pfmlib_common.o
+a - pfmlib_perf_event_pmu.o
+a - pfmlib_perf_event.o
+a - pfmlib_perf_event_raw.o
+a - pfmlib_intel_x86_perf_event.o
+a - pfmlib_amd64_perf_event.o
+a - pfmlib_intel_netburst_perf_event.o
+a - pfmlib_intel_snbep_unc_perf_event.o
+a - pfmlib_amd64.o
+a - pfmlib_intel_core.o
+a - pfmlib_intel_x86.o
+a - pfmlib_intel_x86_arch.o
+a - pfmlib_intel_atom.o
+a - pfmlib_intel_nhm_unc.o
+a - pfmlib_intel_nhm.o
+a - pfmlib_intel_wsm.o
+a - pfmlib_intel_snb.o
+a - pfmlib_intel_snb_unc.o
+a - pfmlib_intel_ivb.o
+a - pfmlib_intel_ivb_unc.o
+a - pfmlib_intel_hsw.o
+a - pfmlib_intel_bdw.o
+a - pfmlib_intel_skl.o
+a - pfmlib_intel_rapl.o
+a - pfmlib_intel_snbep_unc.o
+a - pfmlib_intel_snbep_unc_cbo.o
+a - pfmlib_intel_snbep_unc_ha.o
+a - pfmlib_intel_snbep_unc_imc.o
+a - pfmlib_intel_snbep_unc_pcu.o
+a - pfmlib_intel_snbep_unc_qpi.o
+a - pfmlib_intel_snbep_unc_ubo.o
+a - pfmlib_intel_snbep_unc_r2pcie.o
+a - pfmlib_intel_snbep_unc_r3qpi.o
+a - pfmlib_intel_ivbep_unc_cbo.o
+a - pfmlib_intel_ivbep_unc_ha.o
+a - pfmlib_intel_ivbep_unc_imc.o
+a - pfmlib_intel_ivbep_unc_pcu.o
+a - pfmlib_intel_ivbep_unc_qpi.o
+a - pfmlib_intel_ivbep_unc_ubo.o
+a - pfmlib_intel_ivbep_unc_r2pcie.o
+a - pfmlib_intel_ivbep_unc_r3qpi.o
+a - pfmlib_intel_ivbep_unc_irp.o
+a - pfmlib_intel_hswep_unc_cbo.o
+a - pfmlib_intel_hswep_unc_ha.o
+a - pfmlib_intel_hswep_unc_imc.o
+a - pfmlib_intel_hswep_unc_pcu.o
+a - pfmlib_intel_hswep_unc_qpi.o
+a - pfmlib_intel_hswep_unc_ubo.o
+a - pfmlib_intel_hswep_unc_r2pcie.o
+a - pfmlib_intel_hswep_unc_r3qpi.o
+a - pfmlib_intel_hswep_unc_irp.o
+a - pfmlib_intel_hswep_unc_sbo.o
+a - pfmlib_intel_bdx_unc_cbo.o
+a - pfmlib_intel_bdx_unc_ubo.o
+a - pfmlib_intel_bdx_unc_sbo.o
+a - pfmlib_intel_bdx_unc_ha.o
+a - pfmlib_intel_bdx_unc_imc.o
+a - pfmlib_intel_bdx_unc_irp.o
+a - pfmlib_intel_bdx_unc_pcu.o
+a - pfmlib_intel_bdx_unc_qpi.o
+a - pfmlib_intel_bdx_unc_r2pcie.o
+a - pfmlib_intel_bdx_unc_r3qpi.o
+a - pfmlib_intel_skx_unc_cha.o
+a - pfmlib_intel_skx_unc_iio.o
+a - pfmlib_intel_skx_unc_imc.o
+a - pfmlib_intel_skx_unc_irp.o
+a - pfmlib_intel_skx_unc_m2m.o
+a - pfmlib_intel_skx_unc_m3upi.o
+a - pfmlib_intel_skx_unc_pcu.o
+a - pfmlib_intel_skx_unc_ubo.o
+a - pfmlib_intel_skx_unc_upi.o
+a - pfmlib_intel_knc.o
+a - pfmlib_intel_slm.o
+a - pfmlib_intel_knl.o
+a - pfmlib_intel_knl_unc_imc.o
+a - pfmlib_intel_knl_unc_edc.o
+a - pfmlib_intel_knl_unc_cha.o
+a - pfmlib_intel_knl_unc_m2pcie.o
+a - pfmlib_intel_glm.o
+a - pfmlib_intel_netburst.o
+a - pfmlib_amd64_k7.o
+a - pfmlib_amd64_k8.o
+a - pfmlib_amd64_fam10h.o
+a - pfmlib_amd64_fam11h.o
+a - pfmlib_amd64_fam12h.o
+a - pfmlib_amd64_fam14h.o
+a - pfmlib_amd64_fam15h.o
+a - pfmlib_amd64_fam17h.o
+a - pfmlib_amd64_fam16h.o
+a - x86_cpuid_info.o
+a - papi_libpfm4_events.o
+a - papi.o
+a - papi_internal.o
+a - papi_hl.o
+a - extras.o
+a - sw_multiplex.o
+a - papi_fwrappers.o
+a - papi_fwrappers_.o
+a - papi_fwrappers__.o
+a - upper_PAPI_FWRAPPERS.o
+a - threads.o
+a - cpus.o
+a - linux-memory.o
+a - linux-timer.o
+a - linux-common.o
+a - papi_preset.o
+a - papi_vector.o
+a - papi_memory.o
+a - perf_event.o
+a - pe_libpfm4_events.o
+Headers (INCDIR) being installed in: "/build/papiex-epmt-install/include"
+install -d /build/papiex-epmt-install/include
+cp fpapi.h f77papi.h f90papi.h papi.h papiStdEventDefs.h /build/papiex-epmt-install/include
+cd /build/papiex-epmt-install/include; chmod go+r fpapi.h f77papi.h f90papi.h papi.h papiStdEventDefs.h
+make -C /build/libpfm ARCH="x86_64" DESTDIR= PREFIX=/build/papiex-epmt-install install_prefix=/build/papiex-epmt-install LIBDIR=/build/papiex-epmt-install/lib INCDIR=/build/papiex-epmt-install/include MANDIR=/build/papiex-epmt-install/share/man install
+make[2]: Entering directory `/build/libpfm'
+installing in /build/papiex-epmt-install
+make[3]: Entering directory `/build/libpfm/lib'
+building: libpfm.a libpfm.so.4.10.1
+mkdir -p /build/papiex-epmt-install/lib
+install -m 644 libpfm.a /build/papiex-epmt-install/lib
+install libpfm.so.4.10.1 /build/papiex-epmt-install/lib
+cd /build/papiex-epmt-install/lib; ln -sf libpfm.so.4.10.1 libpfm.so.4
+cd /build/papiex-epmt-install/lib; ln -sf libpfm.so.4.10.1 libpfm.so
+ldconfig
+make[3]: Leaving directory `/build/libpfm/lib'
+make[3]: Entering directory `/build/libpfm/tests'
+make[3]: Nothing to be done for `install'.
+make[3]: Leaving directory `/build/libpfm/tests'
+make[3]: Entering directory `/build/libpfm/examples'
+make[3]: Nothing to be done for `install'.
+make[3]: Leaving directory `/build/libpfm/examples'
+make[3]: Entering directory `/build/libpfm/perf_examples'
+make[3]: Nothing to be done for `install'.
+make[3]: Leaving directory `/build/libpfm/perf_examples'
+make[3]: Entering directory `/build/libpfm/include'
+mkdir -p /build/papiex-epmt-install/include/perfmon
+install -m 644 perfmon/pfmlib.h perfmon/perf_event.h perfmon/pfmlib_perf_event.h /build/papiex-epmt-install/include/perfmon
+make[3]: Leaving directory `/build/libpfm/include'
+make[3]: Entering directory `/build/libpfm/docs'
+mkdir -p /build/papiex-epmt-install/share/man/man3
+( cd man3; install -m 644 libpfm.3 pfm_find_event.3 pfm_get_event_attr_info.3 pfm_get_event_info.3 pfm_get_event_encoding.3 pfm_get_event_next.3 pfm_get_pmu_info.3 pfm_get_os_event_encoding.3 pfm_get_version.3 pfm_initialize.3 pfm_terminate.3 pfm_strerror.3 libpfm_intel_core.3 libpfm_intel_x86_arch.3 libpfm_amd64.3 libpfm_amd64_k7.3 libpfm_amd64_k8.3 libpfm_amd64_fam10h.3 libpfm_amd64_fam15h.3 libpfm_amd64_fam16h.3 libpfm_amd64_fam17h.3 libpfm_intel_atom.3 libpfm_intel_nhm.3 libpfm_intel_nhm_unc.3 libpfm_intel_wsm.3 libpfm_intel_wsm_unc.3 libpfm_intel_snb.3 libpfm_intel_snb_unc.3 libpfm_intel_ivb.3 libpfm_intel_ivb_unc.3 libpfm_intel_hsw.3 libpfm_intel_bdw.3 libpfm_intel_rapl.3 libpfm_intel_slm.3 libpfm_intel_skl.3 libpfm_intel_glm.3 libpfm_intel_knl.3 libpfm_intel_knm.3 libpfm_intel_snbep_unc_cbo.3 libpfm_intel_snbep_unc_ha.3 libpfm_intel_snbep_unc_imc.3 libpfm_intel_snbep_unc_pcu.3 libpfm_intel_snbep_unc_qpi.3 libpfm_intel_snbep_unc_ubo.3 libpfm_intel_snbep_unc_r2pcie.3 libpfm_intel_snbep_unc_r3qpi.3 libpfm_intel_ivbep_unc_cbo.3 libpfm_intel_ivbep_unc_ha.3 libpfm_intel_ivbep_unc_imc.3 libpfm_intel_ivbep_unc_pcu.3 libpfm_intel_ivbep_unc_qpi.3 libpfm_intel_ivbep_unc_ubo.3 libpfm_intel_ivbep_unc_r2pcie.3 libpfm_intel_ivbep_unc_r3qpi.3 libpfm_intel_ivbep_unc_irp.3 libpfm_intel_knc.3 libpfm_intel_hswep_unc_cbo.3 libpfm_intel_hswep_unc_ha.3 libpfm_intel_hswep_unc_imc.3 libpfm_intel_hswep_unc_irp.3 libpfm_intel_hswep_unc_pcu.3 libpfm_intel_hswep_unc_qpi.3 libpfm_intel_hswep_unc_r2pcie.3 libpfm_intel_hswep_unc_r3qpi.3 libpfm_intel_hswep_unc_sbo.3 libpfm_intel_hswep_unc_ubo.3 libpfm_intel_bdx_unc_cbo.3 libpfm_intel_bdx_unc_ha.3 libpfm_intel_bdx_unc_imc.3 libpfm_intel_bdx_unc_irp.3 libpfm_intel_bdx_unc_pcu.3 libpfm_intel_bdx_unc_qpi.3 libpfm_intel_bdx_unc_r2pcie.3 libpfm_intel_bdx_unc_r3qpi.3 libpfm_intel_bdx_unc_sbo.3 libpfm_intel_bdx_unc_ubo.3 libpfm_intel_skx_unc_cha.3 libpfm_intel_skx_unc_imc.3 libpfm_intel_skx_unc_irp.3 libpfm_intel_skx_unc_m2m.3 libpfm_intel_skx_unc_m3upi.3 libpfm_intel_skx_unc_pcu.3 libpfm_intel_skx_unc_ubo.3 libpfm_intel_skx_unc_upi.3 pfm_get_perf_event_encoding.3 libpfm_perf_event_raw.3 /build/papiex-epmt-install/share/man/man3 )
+make[3]: Leaving directory `/build/libpfm/docs'
+make[2]: Leaving directory `/build/libpfm'
+install -d /build/papiex-epmt-install/lib
+install -d /build/papiex-epmt-install/share/papi
+cp -f ./papi_events.csv /build/papiex-epmt-install/share/papi
+Libraries (LIBDIR) being installed in: "/build/papiex-epmt-install/lib"
+mkdir -p /build/papiex-epmt-install/lib
+chmod go+rx /build/papiex-epmt-install/lib
+cp libpapi.a /build/papiex-epmt-install/lib && \
+    chmod go+r /build/papiex-epmt-install/lib/libpapi.a
+cp libpapi.so.5.7.0.0 /build/papiex-epmt-install/lib/libpapi.so.5.7.0.0 && \
+    chmod go+r /build/papiex-epmt-install/lib/libpapi.so.5.7.0.0 && \
+ 	    cd /build/papiex-epmt-install/lib && ln -sf libpapi.so.5.7.0.0 libpapi.so.5.7.0 && \
+    cd /build/papiex-epmt-install/lib && ln -sf libpapi.so.5.7.0.0 libpapi.so.5 && cd /build/papiex-epmt-install/lib; ln -sf libpapi.so.5.7.0.0 libpapi.so
+make -C testlib
+make[2]: Entering directory `/build/papi/src/testlib'
+gcc -I. -I.. -g -Wextra  -Wall -O1  -c test_utils.c
+ar  rv libtestlib.a test_utils.o
+ar: creating libtestlib.a
+a - test_utils.o
+gcc -I. -I.. -g -Wextra  -Wall -O1 -O0 -c do_loops.c
+gcc -I. -I.. -g -Wextra  -Wall -O1  -c clockcore.c
+make[2]: Leaving directory `/build/papi/src/testlib'
+make -C utils
+make[2]: Entering directory `/build/papi/src/utils'
+gcc -g -Wextra  -Wall -O2  -I../testlib -I.. -I. -c papi_avail.c
+gcc -I../testlib -I.. -I. -g -Wextra  -Wall -O2  -c print_header.c
+gcc -ldl  -o papi_avail papi_avail.o print_header.o ../libpapi.a
+gcc -g -Wextra  -Wall -O2  -I../testlib -I.. -I. -c papi_mem_info.c
+gcc -ldl  -o papi_mem_info papi_mem_info.o ../libpapi.a
+gcc -g -Wextra  -Wall -O2  -I../testlib -I.. -I. -c papi_cost.c
+gcc -I../testlib -I.. -I. -g -Wextra  -Wall -O2  -c cost_utils.c
+gcc -ldl  -o papi_cost papi_cost.o cost_utils.o ../libpapi.a -lm
+gcc -g -Wextra  -Wall -O2  -I../testlib -I.. -I. -c papi_clockres.c
+gcc -ldl  -o papi_clockres papi_clockres.o ../libpapi.a ../testlib/clockcore.o -lm
+gcc -g -Wextra  -Wall -O2  -I../testlib -I.. -I. -c papi_native_avail.c
+gcc -ldl  -o papi_native_avail papi_native_avail.o ../libpapi.a print_header.o
+gcc -g -Wextra  -Wall -O2  -I../testlib -I.. -I. -c papi_command_line.c
+gcc -ldl  -o papi_command_line papi_command_line.o ../libpapi.a ../testlib/do_loops.o
+gcc -g -Wextra  -Wall -O2  -I../testlib -I.. -I. -c papi_event_chooser.c
+gcc -ldl  -o papi_event_chooser papi_event_chooser.o print_header.o ../libpapi.a
+gcc -g -Wextra  -Wall -O2  -I../testlib -I.. -I. -c papi_decode.c
+gcc -ldl  -o papi_decode papi_decode.o ../libpapi.a
+gcc -g -Wextra  -Wall -O2  -I../testlib -I.. -I. -c papi_xml_event_info.c
+gcc -ldl  -o papi_xml_event_info papi_xml_event_info.o ../libpapi.a
+gcc -g -Wextra  -Wall -O2  -I../testlib -I.. -I. -c papi_version.c
+gcc -ldl  -o papi_version papi_version.o ../libpapi.a
+gcc -g -Wextra  -Wall -O2  -I../testlib -I.. -I. -c papi_multiplex_cost.c
+gcc -ldl  -o papi_multiplex_cost papi_multiplex_cost.o cost_utils.o ../libpapi.a -lm
+gcc -g -Wextra  -Wall -O2  -I../testlib -I.. -I. -c papi_component_avail.c
+gcc -ldl  -o papi_component_avail papi_component_avail.o ../libpapi.a print_header.o
+gcc -g -Wextra  -Wall -O2  -I../testlib -I.. -I. -c papi_error_codes.c
+gcc -ldl  -o papi_error_codes papi_error_codes.o ../libpapi.a
+make[2]: Leaving directory `/build/papi/src/utils'
+make -C utils BINDIR="/build/papiex-epmt-install/bin" CC="gcc" CC_R="gcc -pthread" CFLAGS="-I.. -g -Wextra  -Wall" TOPTFLAGS="-O1" SMPCFLGS="" OMPCFLGS="-fopenmp" NOOPT="" LDFLAGS=" " LIBRARY="../libpapi.a" install
+make[2]: Entering directory `/build/papi/src/utils'
+Utilities (BINDIR) being installed in: "/build/papiex-epmt-install/bin"
+mkdir -p /build/papiex-epmt-install/bin
+chmod go+rx /build/papiex-epmt-install/bin
+find . -perm -100 -type f -exec cp {} /build/papiex-epmt-install/bin \;
+make[2]: Leaving directory `/build/papi/src/utils'
+make[1]: Leaving directory `/build/papi/src'
+cd monitor; ./configure --prefix=/build/papiex-epmt-install
+checking for a BSD-compatible install... /usr/bin/install -c
+checking whether build environment is sane... yes
+checking for a thread-safe mkdir -p... /usr/bin/mkdir -p
+checking for gawk... gawk
+checking whether make sets $(MAKE)... yes
+checking whether make supports nested variables... yes
+checking whether to enable maintainer-specific portions of Makefiles... no
+checking for style of include used by make... GNU
+checking for gcc... gcc
+checking whether the C compiler works... yes
+checking for C compiler default output file name... a.out
+checking for suffix of executables... 
+checking whether we are cross compiling... no
+checking for suffix of object files... o
+checking whether we are using the GNU C compiler... yes
+checking whether gcc accepts -g... yes
+checking for gcc option to accept ISO C89... none needed
+checking whether gcc understands -c and -o together... yes
+checking dependency style of gcc... gcc3
+checking for ar... ar
+checking the archiver (ar) interface... ar
+checking for gcc... (cached) gcc
+checking whether we are using the GNU C compiler... (cached) yes
+checking whether gcc accepts -g... (cached) yes
+checking for gcc option to accept ISO C89... (cached) none needed
+checking whether gcc understands -c and -o together... (cached) yes
+checking dependency style of gcc... (cached) gcc3
+checking how to run the C preprocessor... gcc -E
+checking build system type... x86_64-unknown-linux-gnu
+checking host system type... x86_64-unknown-linux-gnu
+checking how to print strings... printf
+checking for a sed that does not truncate output... /usr/bin/sed
+checking for grep that handles long lines and -e... /usr/bin/grep
+checking for egrep... /usr/bin/grep -E
+checking for fgrep... /usr/bin/grep -F
+checking for ld used by gcc... /usr/bin/ld
+checking if the linker (/usr/bin/ld) is GNU ld... yes
+checking for BSD- or MS-compatible name lister (nm)... /usr/bin/nm -B
+checking the name lister (/usr/bin/nm -B) interface... BSD nm
+checking whether ln -s works... yes
+checking the maximum length of command line arguments... 1572864
+checking how to convert x86_64-unknown-linux-gnu file names to x86_64-unknown-linux-gnu format... func_convert_file_noop
+checking how to convert x86_64-unknown-linux-gnu file names to toolchain format... func_convert_file_noop
+checking for /usr/bin/ld option to reload object files... -r
+checking for objdump... objdump
+checking how to recognize dependent libraries... pass_all
+checking for dlltool... no
+checking how to associate runtime and link libraries... printf %s\n
+checking for archiver @FILE support... @
+checking for strip... strip
+checking for ranlib... ranlib
+checking command to parse /usr/bin/nm -B output from gcc object... ok
+checking for sysroot... no
+checking for a working dd... /usr/bin/dd
+checking how to truncate binary pipes... /usr/bin/dd bs=4096 count=1
+checking for mt... no
+checking if : is a manifest tool... no
+checking for ANSI C header files... yes
+checking for sys/types.h... yes
+checking for sys/stat.h... yes
+checking for stdlib.h... yes
+checking for string.h... yes
+checking for memory.h... yes
+checking for strings.h... yes
+checking for inttypes.h... yes
+checking for stdint.h... yes
+checking for unistd.h... yes
+checking for dlfcn.h... yes
+checking for objdir... .libs
+checking if gcc supports -fno-rtti -fno-exceptions... no
+checking for gcc option to produce PIC... -fPIC -DPIC
+checking if gcc PIC flag -fPIC -DPIC works... yes
+checking if gcc static flag -static works... no
+checking if gcc supports -c -o file.o... yes
+checking if gcc supports -c -o file.o... (cached) yes
+checking whether the gcc linker (/usr/bin/ld -m elf_x86_64) supports shared libraries... yes
+checking whether -lc should be explicitly linked in... no
+checking dynamic linker characteristics... GNU/Linux ld.so
+checking how to hardcode library paths into programs... immediate
+checking whether stripping libraries is possible... yes
+checking if libtool supports shared libraries... yes
+checking whether to build shared libraries... yes
+checking whether to build static libraries... no
+checking for gawk... (cached) gawk
+checking for grep that handles long lines and -e... (cached) /usr/bin/grep
+checking for a sed that does not truncate output... (cached) /usr/bin/sed
+checking for gcc... /usr/bin/gcc
+configure: C compiler: gcc (GCC) 4.8.5 20150623 (Red Hat 4.8.5-44)
+checking size of void *... 8
+checking host wordsize... 64 bits
+checking if asm fence labels work with CFLAGS='-g -O2'... yes
+checking if CC supports GNU atomic ops... yes
+checking for blue gene/Q compute node... no
+checking for library containing dlsym... -ldl
+checking for library containing __libc_start_main... none required
+checking for library containing dlopen... none required
+checking for library containing fork... none required
+checking for library containing execve... none required
+checking for library containing pthread_create... -lpthread
+checking for pthread_equal in -lpthread... yes
+checking for pthread_cleanup_push in -lpthread... no
+checking for library containing sigaction... none required
+checking client signals list... none
+checking shootdown signal... default
+checking type of __libc_start_main() function... x86
+checking that generated files are newer than configure... done
+configure: creating ./config.status
+config.status: creating Makefile
+config.status: creating src/Makefile
+config.status: creating src/monitor-link
+config.status: creating src/monitor-run
+config.status: creating config.h
+config.status: executing depfiles commands
+config.status: executing libtool commands
+configure: -------------------
+configure: Libmonitor summary
+configure: -------------------
+configure: prefix: /build/papiex-epmt-install
+configure: build: x86_64-unknown-linux-gnu
+configure: host:  x86_64-unknown-linux-gnu
+configure: C compiler: gcc (GCC) 4.8.5 20150623 (Red Hat 4.8.5-44)
+configure: Path: /usr/bin/gcc
+configure: CC:   'gcc'
+configure: CFLAGS: '-g -O2'
+configure: Fence CFLAGS: '-g -O2'
+configure: wordsize: 64 bits
+configure: gnu atomic ops: yes
+configure: enable debug: no
+configure: enable link preload: yes
+configure: enable link static: yes
+configure: enable dlfcn: yes
+configure: enable fork: yes
+configure: enable mpi: yes
+configure: enable pthreads: yes
+configure: enable signals: yes
+configure: client signals: none
+configure: shootdown signal: default
+configure: start main type: x86
+cd monitor; make install
+make[1]: Entering directory `/build/monitor'
+Making install in src
+make[2]: Entering directory `/build/monitor/src'
+gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_STATIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_wrap_a-callback.o -MD -MP -MF .deps/libmonitor_wrap_a-callback.Tpo -c -o libmonitor_wrap_a-callback.o `test -f 'callback.c' || echo './'`callback.c
+mv -f .deps/libmonitor_wrap_a-callback.Tpo .deps/libmonitor_wrap_a-callback.Po
+gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_STATIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_wrap_a-mpi.o -MD -MP -MF .deps/libmonitor_wrap_a-mpi.Tpo -c -o libmonitor_wrap_a-mpi.o `test -f 'mpi.c' || echo './'`mpi.c
+mv -f .deps/libmonitor_wrap_a-mpi.Tpo .deps/libmonitor_wrap_a-mpi.Po
+gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_STATIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_wrap_a-utils.o -MD -MP -MF .deps/libmonitor_wrap_a-utils.Tpo -c -o libmonitor_wrap_a-utils.o `test -f 'utils.c' || echo './'`utils.c
+mv -f .deps/libmonitor_wrap_a-utils.Tpo .deps/libmonitor_wrap_a-utils.Po
+gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_STATIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_wrap_a-dlopen.o -MD -MP -MF .deps/libmonitor_wrap_a-dlopen.Tpo -c -o libmonitor_wrap_a-dlopen.o `test -f 'dlopen.c' || echo './'`dlopen.c
+mv -f .deps/libmonitor_wrap_a-dlopen.Tpo .deps/libmonitor_wrap_a-dlopen.Po
+gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_STATIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_wrap_a-fork.o -MD -MP -MF .deps/libmonitor_wrap_a-fork.Tpo -c -o libmonitor_wrap_a-fork.o `test -f 'fork.c' || echo './'`fork.c
+mv -f .deps/libmonitor_wrap_a-fork.Tpo .deps/libmonitor_wrap_a-fork.Po
+gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_STATIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_wrap_a-signal.o -MD -MP -MF .deps/libmonitor_wrap_a-signal.Tpo -c -o libmonitor_wrap_a-signal.o `test -f 'signal.c' || echo './'`signal.c
+mv -f .deps/libmonitor_wrap_a-signal.Tpo .deps/libmonitor_wrap_a-signal.Po
+gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_STATIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_wrap_a-mpi_init_c.o -MD -MP -MF .deps/libmonitor_wrap_a-mpi_init_c.Tpo -c -o libmonitor_wrap_a-mpi_init_c.o `test -f 'mpi_init_c.c' || echo './'`mpi_init_c.c
+mv -f .deps/libmonitor_wrap_a-mpi_init_c.Tpo .deps/libmonitor_wrap_a-mpi_init_c.Po
+gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_STATIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_wrap_a-mpi_init_thread_c.o -MD -MP -MF .deps/libmonitor_wrap_a-mpi_init_thread_c.Tpo -c -o libmonitor_wrap_a-mpi_init_thread_c.o `test -f 'mpi_init_thread_c.c' || echo './'`mpi_init_thread_c.c
+mv -f .deps/libmonitor_wrap_a-mpi_init_thread_c.Tpo .deps/libmonitor_wrap_a-mpi_init_thread_c.Po
+gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_STATIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_wrap_a-mpi_final_c.o -MD -MP -MF .deps/libmonitor_wrap_a-mpi_final_c.Tpo -c -o libmonitor_wrap_a-mpi_final_c.o `test -f 'mpi_final_c.c' || echo './'`mpi_final_c.c
+mv -f .deps/libmonitor_wrap_a-mpi_final_c.Tpo .deps/libmonitor_wrap_a-mpi_final_c.Po
+gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_STATIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_wrap_a-mpi_comm_c.o -MD -MP -MF .deps/libmonitor_wrap_a-mpi_comm_c.Tpo -c -o libmonitor_wrap_a-mpi_comm_c.o `test -f 'mpi_comm_c.c' || echo './'`mpi_comm_c.c
+mv -f .deps/libmonitor_wrap_a-mpi_comm_c.Tpo .deps/libmonitor_wrap_a-mpi_comm_c.Po
+gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_STATIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_wrap_a-mpi_init_f0.o -MD -MP -MF .deps/libmonitor_wrap_a-mpi_init_f0.Tpo -c -o libmonitor_wrap_a-mpi_init_f0.o `test -f 'mpi_init_f0.c' || echo './'`mpi_init_f0.c
+mv -f .deps/libmonitor_wrap_a-mpi_init_f0.Tpo .deps/libmonitor_wrap_a-mpi_init_f0.Po
+gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_STATIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_wrap_a-mpi_init_thread_f0.o -MD -MP -MF .deps/libmonitor_wrap_a-mpi_init_thread_f0.Tpo -c -o libmonitor_wrap_a-mpi_init_thread_f0.o `test -f 'mpi_init_thread_f0.c' || echo './'`mpi_init_thread_f0.c
+mv -f .deps/libmonitor_wrap_a-mpi_init_thread_f0.Tpo .deps/libmonitor_wrap_a-mpi_init_thread_f0.Po
+gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_STATIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_wrap_a-mpi_final_f0.o -MD -MP -MF .deps/libmonitor_wrap_a-mpi_final_f0.Tpo -c -o libmonitor_wrap_a-mpi_final_f0.o `test -f 'mpi_final_f0.c' || echo './'`mpi_final_f0.c
+mv -f .deps/libmonitor_wrap_a-mpi_final_f0.Tpo .deps/libmonitor_wrap_a-mpi_final_f0.Po
+gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_STATIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_wrap_a-mpi_comm_f0.o -MD -MP -MF .deps/libmonitor_wrap_a-mpi_comm_f0.Tpo -c -o libmonitor_wrap_a-mpi_comm_f0.o `test -f 'mpi_comm_f0.c' || echo './'`mpi_comm_f0.c
+mv -f .deps/libmonitor_wrap_a-mpi_comm_f0.Tpo .deps/libmonitor_wrap_a-mpi_comm_f0.Po
+gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_STATIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_wrap_a-mpi_init_f1.o -MD -MP -MF .deps/libmonitor_wrap_a-mpi_init_f1.Tpo -c -o libmonitor_wrap_a-mpi_init_f1.o `test -f 'mpi_init_f1.c' || echo './'`mpi_init_f1.c
+mv -f .deps/libmonitor_wrap_a-mpi_init_f1.Tpo .deps/libmonitor_wrap_a-mpi_init_f1.Po
+gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_STATIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_wrap_a-mpi_init_thread_f1.o -MD -MP -MF .deps/libmonitor_wrap_a-mpi_init_thread_f1.Tpo -c -o libmonitor_wrap_a-mpi_init_thread_f1.o `test -f 'mpi_init_thread_f1.c' || echo './'`mpi_init_thread_f1.c
+mv -f .deps/libmonitor_wrap_a-mpi_init_thread_f1.Tpo .deps/libmonitor_wrap_a-mpi_init_thread_f1.Po
+gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_STATIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_wrap_a-mpi_final_f1.o -MD -MP -MF .deps/libmonitor_wrap_a-mpi_final_f1.Tpo -c -o libmonitor_wrap_a-mpi_final_f1.o `test -f 'mpi_final_f1.c' || echo './'`mpi_final_f1.c
+mv -f .deps/libmonitor_wrap_a-mpi_final_f1.Tpo .deps/libmonitor_wrap_a-mpi_final_f1.Po
+gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_STATIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_wrap_a-mpi_comm_f1.o -MD -MP -MF .deps/libmonitor_wrap_a-mpi_comm_f1.Tpo -c -o libmonitor_wrap_a-mpi_comm_f1.o `test -f 'mpi_comm_f1.c' || echo './'`mpi_comm_f1.c
+mv -f .deps/libmonitor_wrap_a-mpi_comm_f1.Tpo .deps/libmonitor_wrap_a-mpi_comm_f1.Po
+gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_STATIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_wrap_a-mpi_init_f2.o -MD -MP -MF .deps/libmonitor_wrap_a-mpi_init_f2.Tpo -c -o libmonitor_wrap_a-mpi_init_f2.o `test -f 'mpi_init_f2.c' || echo './'`mpi_init_f2.c
+mv -f .deps/libmonitor_wrap_a-mpi_init_f2.Tpo .deps/libmonitor_wrap_a-mpi_init_f2.Po
+gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_STATIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_wrap_a-mpi_init_thread_f2.o -MD -MP -MF .deps/libmonitor_wrap_a-mpi_init_thread_f2.Tpo -c -o libmonitor_wrap_a-mpi_init_thread_f2.o `test -f 'mpi_init_thread_f2.c' || echo './'`mpi_init_thread_f2.c
+mv -f .deps/libmonitor_wrap_a-mpi_init_thread_f2.Tpo .deps/libmonitor_wrap_a-mpi_init_thread_f2.Po
+gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_STATIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_wrap_a-mpi_final_f2.o -MD -MP -MF .deps/libmonitor_wrap_a-mpi_final_f2.Tpo -c -o libmonitor_wrap_a-mpi_final_f2.o `test -f 'mpi_final_f2.c' || echo './'`mpi_final_f2.c
+mv -f .deps/libmonitor_wrap_a-mpi_final_f2.Tpo .deps/libmonitor_wrap_a-mpi_final_f2.Po
+gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_STATIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_wrap_a-mpi_comm_f2.o -MD -MP -MF .deps/libmonitor_wrap_a-mpi_comm_f2.Tpo -c -o libmonitor_wrap_a-mpi_comm_f2.o `test -f 'mpi_comm_f2.c' || echo './'`mpi_comm_f2.c
+mv -f .deps/libmonitor_wrap_a-mpi_comm_f2.Tpo .deps/libmonitor_wrap_a-mpi_comm_f2.Po
+gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_STATIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libfence_wrap_a-main.o -MD -MP -MF .deps/libfence_wrap_a-main.Tpo -c -o libfence_wrap_a-main.o `test -f 'main.c' || echo './'`main.c
+mv -f .deps/libfence_wrap_a-main.Tpo .deps/libfence_wrap_a-main.Po
+gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_STATIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libfence_wrap_a-pthread.o -MD -MP -MF .deps/libfence_wrap_a-pthread.Tpo -c -o libfence_wrap_a-pthread.o `test -f 'pthread.c' || echo './'`pthread.c
+mv -f .deps/libfence_wrap_a-pthread.Tpo .deps/libfence_wrap_a-pthread.Po
+rm -f libmonitor_wrap.a
+ar cru libmonitor_wrap.a libmonitor_wrap_a-callback.o libmonitor_wrap_a-mpi.o libmonitor_wrap_a-utils.o libmonitor_wrap_a-dlopen.o libmonitor_wrap_a-fork.o  libmonitor_wrap_a-signal.o libmonitor_wrap_a-mpi_init_c.o libmonitor_wrap_a-mpi_init_thread_c.o libmonitor_wrap_a-mpi_final_c.o libmonitor_wrap_a-mpi_comm_c.o libmonitor_wrap_a-mpi_init_f0.o libmonitor_wrap_a-mpi_init_thread_f0.o libmonitor_wrap_a-mpi_final_f0.o libmonitor_wrap_a-mpi_comm_f0.o libmonitor_wrap_a-mpi_init_f1.o libmonitor_wrap_a-mpi_init_thread_f1.o libmonitor_wrap_a-mpi_final_f1.o libmonitor_wrap_a-mpi_comm_f1.o libmonitor_wrap_a-mpi_init_f2.o libmonitor_wrap_a-mpi_init_thread_f2.o libmonitor_wrap_a-mpi_final_f2.o libmonitor_wrap_a-mpi_comm_f2.o libfence_wrap_a-main.o libfence_wrap_a-pthread.o
+ranlib libmonitor_wrap.a
+rm -f libfence_wrap.a
+ar cru libfence_wrap.a libfence_wrap_a-main.o libfence_wrap_a-pthread.o 
+ranlib libfence_wrap.a
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_la-callback.lo -MD -MP -MF .deps/libmonitor_la-callback.Tpo -c -o libmonitor_la-callback.lo `test -f 'callback.c' || echo './'`callback.c
+libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I.. -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS -g -O2 -MT libmonitor_la-callback.lo -MD -MP -MF .deps/libmonitor_la-callback.Tpo -c callback.c  -fPIC -DPIC -o .libs/libmonitor_la-callback.o
+mv -f .deps/libmonitor_la-callback.Tpo .deps/libmonitor_la-callback.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_la-mpi.lo -MD -MP -MF .deps/libmonitor_la-mpi.Tpo -c -o libmonitor_la-mpi.lo `test -f 'mpi.c' || echo './'`mpi.c
+libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I.. -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS -g -O2 -MT libmonitor_la-mpi.lo -MD -MP -MF .deps/libmonitor_la-mpi.Tpo -c mpi.c  -fPIC -DPIC -o .libs/libmonitor_la-mpi.o
+mv -f .deps/libmonitor_la-mpi.Tpo .deps/libmonitor_la-mpi.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_la-utils.lo -MD -MP -MF .deps/libmonitor_la-utils.Tpo -c -o libmonitor_la-utils.lo `test -f 'utils.c' || echo './'`utils.c
+libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I.. -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS -g -O2 -MT libmonitor_la-utils.lo -MD -MP -MF .deps/libmonitor_la-utils.Tpo -c utils.c  -fPIC -DPIC -o .libs/libmonitor_la-utils.o
+mv -f .deps/libmonitor_la-utils.Tpo .deps/libmonitor_la-utils.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_la-dlopen.lo -MD -MP -MF .deps/libmonitor_la-dlopen.Tpo -c -o libmonitor_la-dlopen.lo `test -f 'dlopen.c' || echo './'`dlopen.c
+libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I.. -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS -g -O2 -MT libmonitor_la-dlopen.lo -MD -MP -MF .deps/libmonitor_la-dlopen.Tpo -c dlopen.c  -fPIC -DPIC -o .libs/libmonitor_la-dlopen.o
+mv -f .deps/libmonitor_la-dlopen.Tpo .deps/libmonitor_la-dlopen.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_la-fork.lo -MD -MP -MF .deps/libmonitor_la-fork.Tpo -c -o libmonitor_la-fork.lo `test -f 'fork.c' || echo './'`fork.c
+libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I.. -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS -g -O2 -MT libmonitor_la-fork.lo -MD -MP -MF .deps/libmonitor_la-fork.Tpo -c fork.c  -fPIC -DPIC -o .libs/libmonitor_la-fork.o
+mv -f .deps/libmonitor_la-fork.Tpo .deps/libmonitor_la-fork.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_la-signal.lo -MD -MP -MF .deps/libmonitor_la-signal.Tpo -c -o libmonitor_la-signal.lo `test -f 'signal.c' || echo './'`signal.c
+libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I.. -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS -g -O2 -MT libmonitor_la-signal.lo -MD -MP -MF .deps/libmonitor_la-signal.Tpo -c signal.c  -fPIC -DPIC -o .libs/libmonitor_la-signal.o
+mv -f .deps/libmonitor_la-signal.Tpo .deps/libmonitor_la-signal.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_la-mpi_init_c.lo -MD -MP -MF .deps/libmonitor_la-mpi_init_c.Tpo -c -o libmonitor_la-mpi_init_c.lo `test -f 'mpi_init_c.c' || echo './'`mpi_init_c.c
+libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I.. -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS -g -O2 -MT libmonitor_la-mpi_init_c.lo -MD -MP -MF .deps/libmonitor_la-mpi_init_c.Tpo -c mpi_init_c.c  -fPIC -DPIC -o .libs/libmonitor_la-mpi_init_c.o
+mv -f .deps/libmonitor_la-mpi_init_c.Tpo .deps/libmonitor_la-mpi_init_c.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_la-mpi_init_thread_c.lo -MD -MP -MF .deps/libmonitor_la-mpi_init_thread_c.Tpo -c -o libmonitor_la-mpi_init_thread_c.lo `test -f 'mpi_init_thread_c.c' || echo './'`mpi_init_thread_c.c
+libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I.. -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS -g -O2 -MT libmonitor_la-mpi_init_thread_c.lo -MD -MP -MF .deps/libmonitor_la-mpi_init_thread_c.Tpo -c mpi_init_thread_c.c  -fPIC -DPIC -o .libs/libmonitor_la-mpi_init_thread_c.o
+mv -f .deps/libmonitor_la-mpi_init_thread_c.Tpo .deps/libmonitor_la-mpi_init_thread_c.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_la-mpi_final_c.lo -MD -MP -MF .deps/libmonitor_la-mpi_final_c.Tpo -c -o libmonitor_la-mpi_final_c.lo `test -f 'mpi_final_c.c' || echo './'`mpi_final_c.c
+libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I.. -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS -g -O2 -MT libmonitor_la-mpi_final_c.lo -MD -MP -MF .deps/libmonitor_la-mpi_final_c.Tpo -c mpi_final_c.c  -fPIC -DPIC -o .libs/libmonitor_la-mpi_final_c.o
+mv -f .deps/libmonitor_la-mpi_final_c.Tpo .deps/libmonitor_la-mpi_final_c.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_la-mpi_comm_c.lo -MD -MP -MF .deps/libmonitor_la-mpi_comm_c.Tpo -c -o libmonitor_la-mpi_comm_c.lo `test -f 'mpi_comm_c.c' || echo './'`mpi_comm_c.c
+libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I.. -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS -g -O2 -MT libmonitor_la-mpi_comm_c.lo -MD -MP -MF .deps/libmonitor_la-mpi_comm_c.Tpo -c mpi_comm_c.c  -fPIC -DPIC -o .libs/libmonitor_la-mpi_comm_c.o
+mv -f .deps/libmonitor_la-mpi_comm_c.Tpo .deps/libmonitor_la-mpi_comm_c.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_la-mpi_init_f0.lo -MD -MP -MF .deps/libmonitor_la-mpi_init_f0.Tpo -c -o libmonitor_la-mpi_init_f0.lo `test -f 'mpi_init_f0.c' || echo './'`mpi_init_f0.c
+libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I.. -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS -g -O2 -MT libmonitor_la-mpi_init_f0.lo -MD -MP -MF .deps/libmonitor_la-mpi_init_f0.Tpo -c mpi_init_f0.c  -fPIC -DPIC -o .libs/libmonitor_la-mpi_init_f0.o
+mv -f .deps/libmonitor_la-mpi_init_f0.Tpo .deps/libmonitor_la-mpi_init_f0.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_la-mpi_init_thread_f0.lo -MD -MP -MF .deps/libmonitor_la-mpi_init_thread_f0.Tpo -c -o libmonitor_la-mpi_init_thread_f0.lo `test -f 'mpi_init_thread_f0.c' || echo './'`mpi_init_thread_f0.c
+libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I.. -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS -g -O2 -MT libmonitor_la-mpi_init_thread_f0.lo -MD -MP -MF .deps/libmonitor_la-mpi_init_thread_f0.Tpo -c mpi_init_thread_f0.c  -fPIC -DPIC -o .libs/libmonitor_la-mpi_init_thread_f0.o
+mv -f .deps/libmonitor_la-mpi_init_thread_f0.Tpo .deps/libmonitor_la-mpi_init_thread_f0.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_la-mpi_final_f0.lo -MD -MP -MF .deps/libmonitor_la-mpi_final_f0.Tpo -c -o libmonitor_la-mpi_final_f0.lo `test -f 'mpi_final_f0.c' || echo './'`mpi_final_f0.c
+libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I.. -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS -g -O2 -MT libmonitor_la-mpi_final_f0.lo -MD -MP -MF .deps/libmonitor_la-mpi_final_f0.Tpo -c mpi_final_f0.c  -fPIC -DPIC -o .libs/libmonitor_la-mpi_final_f0.o
+mv -f .deps/libmonitor_la-mpi_final_f0.Tpo .deps/libmonitor_la-mpi_final_f0.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_la-mpi_comm_f0.lo -MD -MP -MF .deps/libmonitor_la-mpi_comm_f0.Tpo -c -o libmonitor_la-mpi_comm_f0.lo `test -f 'mpi_comm_f0.c' || echo './'`mpi_comm_f0.c
+libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I.. -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS -g -O2 -MT libmonitor_la-mpi_comm_f0.lo -MD -MP -MF .deps/libmonitor_la-mpi_comm_f0.Tpo -c mpi_comm_f0.c  -fPIC -DPIC -o .libs/libmonitor_la-mpi_comm_f0.o
+mv -f .deps/libmonitor_la-mpi_comm_f0.Tpo .deps/libmonitor_la-mpi_comm_f0.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_la-mpi_init_f1.lo -MD -MP -MF .deps/libmonitor_la-mpi_init_f1.Tpo -c -o libmonitor_la-mpi_init_f1.lo `test -f 'mpi_init_f1.c' || echo './'`mpi_init_f1.c
+libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I.. -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS -g -O2 -MT libmonitor_la-mpi_init_f1.lo -MD -MP -MF .deps/libmonitor_la-mpi_init_f1.Tpo -c mpi_init_f1.c  -fPIC -DPIC -o .libs/libmonitor_la-mpi_init_f1.o
+mv -f .deps/libmonitor_la-mpi_init_f1.Tpo .deps/libmonitor_la-mpi_init_f1.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_la-mpi_init_thread_f1.lo -MD -MP -MF .deps/libmonitor_la-mpi_init_thread_f1.Tpo -c -o libmonitor_la-mpi_init_thread_f1.lo `test -f 'mpi_init_thread_f1.c' || echo './'`mpi_init_thread_f1.c
+libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I.. -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS -g -O2 -MT libmonitor_la-mpi_init_thread_f1.lo -MD -MP -MF .deps/libmonitor_la-mpi_init_thread_f1.Tpo -c mpi_init_thread_f1.c  -fPIC -DPIC -o .libs/libmonitor_la-mpi_init_thread_f1.o
+mv -f .deps/libmonitor_la-mpi_init_thread_f1.Tpo .deps/libmonitor_la-mpi_init_thread_f1.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_la-mpi_final_f1.lo -MD -MP -MF .deps/libmonitor_la-mpi_final_f1.Tpo -c -o libmonitor_la-mpi_final_f1.lo `test -f 'mpi_final_f1.c' || echo './'`mpi_final_f1.c
+libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I.. -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS -g -O2 -MT libmonitor_la-mpi_final_f1.lo -MD -MP -MF .deps/libmonitor_la-mpi_final_f1.Tpo -c mpi_final_f1.c  -fPIC -DPIC -o .libs/libmonitor_la-mpi_final_f1.o
+mv -f .deps/libmonitor_la-mpi_final_f1.Tpo .deps/libmonitor_la-mpi_final_f1.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_la-mpi_comm_f1.lo -MD -MP -MF .deps/libmonitor_la-mpi_comm_f1.Tpo -c -o libmonitor_la-mpi_comm_f1.lo `test -f 'mpi_comm_f1.c' || echo './'`mpi_comm_f1.c
+libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I.. -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS -g -O2 -MT libmonitor_la-mpi_comm_f1.lo -MD -MP -MF .deps/libmonitor_la-mpi_comm_f1.Tpo -c mpi_comm_f1.c  -fPIC -DPIC -o .libs/libmonitor_la-mpi_comm_f1.o
+mv -f .deps/libmonitor_la-mpi_comm_f1.Tpo .deps/libmonitor_la-mpi_comm_f1.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_la-mpi_init_f2.lo -MD -MP -MF .deps/libmonitor_la-mpi_init_f2.Tpo -c -o libmonitor_la-mpi_init_f2.lo `test -f 'mpi_init_f2.c' || echo './'`mpi_init_f2.c
+libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I.. -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS -g -O2 -MT libmonitor_la-mpi_init_f2.lo -MD -MP -MF .deps/libmonitor_la-mpi_init_f2.Tpo -c mpi_init_f2.c  -fPIC -DPIC -o .libs/libmonitor_la-mpi_init_f2.o
+mv -f .deps/libmonitor_la-mpi_init_f2.Tpo .deps/libmonitor_la-mpi_init_f2.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_la-mpi_init_thread_f2.lo -MD -MP -MF .deps/libmonitor_la-mpi_init_thread_f2.Tpo -c -o libmonitor_la-mpi_init_thread_f2.lo `test -f 'mpi_init_thread_f2.c' || echo './'`mpi_init_thread_f2.c
+libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I.. -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS -g -O2 -MT libmonitor_la-mpi_init_thread_f2.lo -MD -MP -MF .deps/libmonitor_la-mpi_init_thread_f2.Tpo -c mpi_init_thread_f2.c  -fPIC -DPIC -o .libs/libmonitor_la-mpi_init_thread_f2.o
+mv -f .deps/libmonitor_la-mpi_init_thread_f2.Tpo .deps/libmonitor_la-mpi_init_thread_f2.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_la-mpi_final_f2.lo -MD -MP -MF .deps/libmonitor_la-mpi_final_f2.Tpo -c -o libmonitor_la-mpi_final_f2.lo `test -f 'mpi_final_f2.c' || echo './'`mpi_final_f2.c
+libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I.. -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS -g -O2 -MT libmonitor_la-mpi_final_f2.lo -MD -MP -MF .deps/libmonitor_la-mpi_final_f2.Tpo -c mpi_final_f2.c  -fPIC -DPIC -o .libs/libmonitor_la-mpi_final_f2.o
+mv -f .deps/libmonitor_la-mpi_final_f2.Tpo .deps/libmonitor_la-mpi_final_f2.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_la-mpi_comm_f2.lo -MD -MP -MF .deps/libmonitor_la-mpi_comm_f2.Tpo -c -o libmonitor_la-mpi_comm_f2.lo `test -f 'mpi_comm_f2.c' || echo './'`mpi_comm_f2.c
+libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I.. -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS -g -O2 -MT libmonitor_la-mpi_comm_f2.lo -MD -MP -MF .deps/libmonitor_la-mpi_comm_f2.Tpo -c mpi_comm_f2.c  -fPIC -DPIC -o .libs/libmonitor_la-mpi_comm_f2.o
+mv -f .deps/libmonitor_la-mpi_comm_f2.Tpo .deps/libmonitor_la-mpi_comm_f2.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libmonitor_la-pmpi.lo -MD -MP -MF .deps/libmonitor_la-pmpi.Tpo -c -o libmonitor_la-pmpi.lo `test -f 'pmpi.c' || echo './'`pmpi.c
+libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I.. -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS -g -O2 -MT libmonitor_la-pmpi.lo -MD -MP -MF .deps/libmonitor_la-pmpi.Tpo -c pmpi.c  -fPIC -DPIC -o .libs/libmonitor_la-pmpi.o
+mv -f .deps/libmonitor_la-pmpi.Tpo .deps/libmonitor_la-pmpi.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libfence_la-main.lo -MD -MP -MF .deps/libfence_la-main.Tpo -c -o libfence_la-main.lo `test -f 'main.c' || echo './'`main.c
+libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I.. -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS -g -O2 -MT libfence_la-main.lo -MD -MP -MF .deps/libfence_la-main.Tpo -c main.c  -fPIC -DPIC -o .libs/libfence_la-main.o
+mv -f .deps/libfence_la-main.Tpo .deps/libfence_la-main.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..  -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS  -g -O2  -MT libfence_la-pthread.lo -MD -MP -MF .deps/libfence_la-pthread.Tpo -c -o libfence_la-pthread.lo `test -f 'pthread.c' || echo './'`pthread.c
+libtool: compile:  gcc -DHAVE_CONFIG_H -I. -I.. -DMONITOR_DYNAMIC -DUSE_GNU_ATOMIC_OPS -g -O2 -MT libfence_la-pthread.lo -MD -MP -MF .deps/libfence_la-pthread.Tpo -c pthread.c  -fPIC -DPIC -o .libs/libfence_la-pthread.o
+mv -f .deps/libfence_la-pthread.Tpo .deps/libfence_la-pthread.Plo
+/bin/sh ../libtool  --tag=CC   --mode=link gcc -g -O2    -o libfence.la  libfence_la-main.lo libfence_la-pthread.lo  -ldl 
+libtool: link: ar cru .libs/libfence.a .libs/libfence_la-main.o .libs/libfence_la-pthread.o 
+libtool: link: ranlib .libs/libfence.a
+libtool: link: ( cd ".libs" && rm -f "libfence.la" && ln -s "../libfence.la" "libfence.la" )
+/bin/sh ../libtool  --tag=CC   --mode=link gcc -g -O2    -o libmonitor.la -rpath /build/papiex-epmt-install/lib libmonitor_la-callback.lo libmonitor_la-mpi.lo libmonitor_la-utils.lo libmonitor_la-dlopen.lo libmonitor_la-fork.lo  libmonitor_la-signal.lo libmonitor_la-mpi_init_c.lo libmonitor_la-mpi_init_thread_c.lo libmonitor_la-mpi_final_c.lo libmonitor_la-mpi_comm_c.lo libmonitor_la-mpi_init_f0.lo libmonitor_la-mpi_init_thread_f0.lo libmonitor_la-mpi_final_f0.lo libmonitor_la-mpi_comm_f0.lo libmonitor_la-mpi_init_f1.lo libmonitor_la-mpi_init_thread_f1.lo libmonitor_la-mpi_final_f1.lo libmonitor_la-mpi_comm_f1.lo libmonitor_la-mpi_init_f2.lo libmonitor_la-mpi_init_thread_f2.lo libmonitor_la-mpi_final_f2.lo libmonitor_la-mpi_comm_f2.lo libmonitor_la-pmpi.lo libfence.la -ldl 
+libtool: link: gcc -shared  -fPIC -DPIC  .libs/libmonitor_la-callback.o .libs/libmonitor_la-mpi.o .libs/libmonitor_la-utils.o .libs/libmonitor_la-dlopen.o .libs/libmonitor_la-fork.o .libs/libmonitor_la-signal.o .libs/libmonitor_la-mpi_init_c.o .libs/libmonitor_la-mpi_init_thread_c.o .libs/libmonitor_la-mpi_final_c.o .libs/libmonitor_la-mpi_comm_c.o .libs/libmonitor_la-mpi_init_f0.o .libs/libmonitor_la-mpi_init_thread_f0.o .libs/libmonitor_la-mpi_final_f0.o .libs/libmonitor_la-mpi_comm_f0.o .libs/libmonitor_la-mpi_init_f1.o .libs/libmonitor_la-mpi_init_thread_f1.o .libs/libmonitor_la-mpi_final_f1.o .libs/libmonitor_la-mpi_comm_f1.o .libs/libmonitor_la-mpi_init_f2.o .libs/libmonitor_la-mpi_init_thread_f2.o .libs/libmonitor_la-mpi_final_f2.o .libs/libmonitor_la-mpi_comm_f2.o .libs/libmonitor_la-pmpi.o  -Wl,--whole-archive ./.libs/libfence.a -Wl,--no-whole-archive  -ldl  -g -O2   -Wl,-soname -Wl,libmonitor.so.0 -o .libs/libmonitor.so.0.0.0
+libtool: link: (cd ".libs" && rm -f "libmonitor.so.0" && ln -s "libmonitor.so.0.0.0" "libmonitor.so.0")
+libtool: link: (cd ".libs" && rm -f "libmonitor.so" && ln -s "libmonitor.so.0.0.0" "libmonitor.so")
+libtool: link: ( cd ".libs" && rm -f "libmonitor.la" && ln -s "../libmonitor.la" "libmonitor.la" )
+make[3]: Entering directory `/build/monitor/src'
+ /usr/bin/mkdir -p '/build/papiex-epmt-install/bin'
+ /usr/bin/install -c monitor-run monitor-link '/build/papiex-epmt-install/bin'
+ /usr/bin/mkdir -p '/build/papiex-epmt-install/lib'
+ /usr/bin/install -c -m 644  libmonitor_wrap.a '/build/papiex-epmt-install/lib'
+ ( cd '/build/papiex-epmt-install/lib' && ranlib libmonitor_wrap.a )
+ /usr/bin/mkdir -p '/build/papiex-epmt-install/lib'
+ /bin/sh ../libtool   --mode=install /usr/bin/install -c   libmonitor.la '/build/papiex-epmt-install/lib'
+libtool: install: /usr/bin/install -c .libs/libmonitor.so.0.0.0 /build/papiex-epmt-install/lib/libmonitor.so.0.0.0
+libtool: install: (cd /build/papiex-epmt-install/lib && { ln -s -f libmonitor.so.0.0.0 libmonitor.so.0 || { rm -f libmonitor.so.0 && ln -s libmonitor.so.0.0.0 libmonitor.so.0; }; })
+libtool: install: (cd /build/papiex-epmt-install/lib && { ln -s -f libmonitor.so.0.0.0 libmonitor.so || { rm -f libmonitor.so && ln -s libmonitor.so.0.0.0 libmonitor.so; }; })
+libtool: install: /usr/bin/install -c .libs/libmonitor.lai /build/papiex-epmt-install/lib/libmonitor.la
+libtool: finish: PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/sbin" ldconfig -n /build/papiex-epmt-install/lib
+----------------------------------------------------------------------
+Libraries have been installed in:
+   /build/papiex-epmt-install/lib
+
+If you ever happen to want to link against installed libraries
+in a given directory, LIBDIR, you must either use libtool, and
+specify the full pathname of the library, or use the '-LLIBDIR'
+flag during linking and do at least one of the following:
+   - add LIBDIR to the 'LD_LIBRARY_PATH' environment variable
+     during execution
+   - add LIBDIR to the 'LD_RUN_PATH' environment variable
+     during linking
+   - use the '-Wl,-rpath -Wl,LIBDIR' linker flag
+   - have your system administrator add LIBDIR to '/etc/ld.so.conf'
+
+See any operating system documentation about shared libraries for
+more information, such as the ld(1) and ld.so(8) manual pages.
+----------------------------------------------------------------------
+ /usr/bin/mkdir -p '/build/papiex-epmt-install/include'
+ /usr/bin/install -c -m 644 monitor.h '/build/papiex-epmt-install/include'
+make[3]: Leaving directory `/build/monitor/src'
+make[2]: Leaving directory `/build/monitor/src'
+make[2]: Entering directory `/build/monitor'
+make[3]: Entering directory `/build/monitor'
+make[3]: Nothing to be done for `install-exec-am'.
+make[3]: Nothing to be done for `install-data-am'.
+make[3]: Leaving directory `/build/monitor'
+make[2]: Leaving directory `/build/monitor'
+make[1]: Leaving directory `/build/monitor'
+cd papiex; make CC=gcc OCC=gcc MONITOR_INC_PATH=/build/papiex-epmt-install/include MONITOR_LIB_PATH=/build/papiex-epmt-install/lib PAPI_INC_PATH=/build/papiex-epmt-install/include PAPI_LIB_PATH=/build/papiex-epmt-install/lib install
+make[1]: Entering directory `/build/papiex'
+mkdir -p /build/papiex/x86_64-Linux/tests
+make -C /build/papiex/x86_64-Linux -f /build/papiex/src/Makefile 
+make[2]: Entering directory `/build/papiex/x86_64-Linux'
+gcc -pthread -O2 -g -Wall -fPIC -DPIC -DHAVE_MONITOR  -D_REENTRANT -DDEBUG -D_GNU_SOURCE -DPAPIEX_VERSION=\"2.3.14\" -I/build/papiex/src -I/build/papiex-epmt-install/include -c /build/papiex/src/api.c
+gcc -pthread -O2 -g -Wall -fPIC -DPIC -DHAVE_MONITOR  -D_REENTRANT -DDEBUG -D_GNU_SOURCE -DPAPIEX_VERSION=\"2.3.14\" -I/build/papiex/src -I/build/papiex-epmt-install/include -c /build/papiex/src/thread.c
+gcc -pthread -O2 -g -Wall -fPIC -DPIC -DHAVE_MONITOR  -D_REENTRANT -DDEBUG -D_GNU_SOURCE -DPAPIEX_VERSION=\"2.3.14\" -I/build/papiex/src -I/build/papiex-epmt-install/include -c /build/papiex/src/process.c
+gcc -pthread -O2 -g -Wall -fPIC -DPIC -DHAVE_MONITOR  -D_REENTRANT -DDEBUG -D_GNU_SOURCE -DPAPIEX_VERSION=\"2.3.14\" -I/build/papiex/src -I/build/papiex-epmt-install/include -c /build/papiex/src/library.c
+gcc -pthread -O2 -g -Wall -fPIC -DPIC -DHAVE_MONITOR  -D_REENTRANT -DDEBUG -D_GNU_SOURCE -DPAPIEX_VERSION=\"2.3.14\" -I/build/papiex/src -I/build/papiex-epmt-install/include -c /build/papiex/src/papiex.c
+gcc -pthread -O2 -g -Wall -fPIC -DPIC -DHAVE_MONITOR  -D_REENTRANT -DDEBUG -D_GNU_SOURCE -DPAPIEX_VERSION=\"2.3.14\" -I/build/papiex/src -I/build/papiex-epmt-install/include -c /build/papiex/src/monitor.c
+gcc -pthread -O2 -g -Wall -fPIC -DPIC -DHAVE_MONITOR  -D_REENTRANT -DDEBUG -D_GNU_SOURCE -DPAPIEX_VERSION=\"2.3.14\" -I/build/papiex/src -I/build/papiex-epmt-install/include -c /build/papiex/src/output.c
+gcc -pthread -shared api.o thread.o process.o library.o papiex.o monitor.o output.o -Wl,-soname -Wl,libpapiex.so.2 -o libpapiex.so.2.3.14 -L/build/papiex-epmt-install/lib -Wl,-rpath -Wl,/build/papiex-epmt-install/lib
+ln -sf libpapiex.so.2.3.14 libpapiex.so.2
+ln -sf libpapiex.so.2 libpapiex.so 
+make[2]: Leaving directory `/build/papiex/x86_64-Linux'
+install -d /build/papiex-epmt-install/bin
+install -d /build/papiex-epmt-install/lib
+install -d /build/papiex-epmt-install/include
+install -d /build/papiex-epmt-install/share/papiex/doc
+install -d /build/papiex-epmt-install/share/papiex
+install -d /build/papiex-epmt-install/share/man/man3
+install -d /build/papiex-epmt-install/share/man/man1
+install /build/papiex/x86_64-Linux/libpapiex.so.2.3.14 /build/papiex-epmt-install/lib
+cd /build/papiex-epmt-install/lib; ln -fs libpapiex.so.2.3.14 libpapiex.so.2
+cd /build/papiex-epmt-install/lib; ln -fs libpapiex.so.2 libpapiex.so
+install -m 0644 src/papiex.h /build/papiex-epmt-install/include
+make[1]: Leaving directory `/build/papiex'
+mv /build/papiex-epmt-install/bin /build/papiex-epmt-install/bin.old
+mkdir -p /build/papiex-epmt-install/bin
+for f in papi_command_line papi_native_avail papi_avail papi_component_avail check_events showevtinfo ; do strip /build/papiex-epmt-install/bin.old/$f; cp /build/papiex-epmt-install/bin.old/$f /build/papiex-epmt-install/bin/$f; done
+for f in monitor-link monitor-run; do cp /build/papiex-epmt-install/bin.old/$f /build/papiex-epmt-install/bin/$f; done
+rm -f /build/papiex-epmt-install/lib/libmonitor.la
+for f in /build/papiex-epmt-install/lib/*; do strip $f; done
+rm -r /build/papiex-epmt-install/bin.old
+rm -rf /build/papiex-epmt-install/include
+rm -rf /build/papiex-epmt-install/share
+cd /build/papiex-epmt-install/..; rm -f papiex-epmt-2.3.14-centos-7.tgz; tar cvfz papiex-epmt-2.3.14-centos-7.tgz `basename /build/papiex-epmt-install`
+papiex-epmt-install/
+papiex-epmt-install/lib/
+papiex-epmt-install/lib/libpfm.a
+papiex-epmt-install/lib/libpfm.so.4.10.1
+papiex-epmt-install/lib/libpfm.so.4
+papiex-epmt-install/lib/libpfm.so
+papiex-epmt-install/lib/libpapi.a
+papiex-epmt-install/lib/libpapi.so.5.7.0.0
+papiex-epmt-install/lib/libpapi.so.5.7.0
+papiex-epmt-install/lib/libpapi.so.5
+papiex-epmt-install/lib/libpapi.so
+papiex-epmt-install/lib/libmonitor_wrap.a
+papiex-epmt-install/lib/libmonitor.so.0.0.0
+papiex-epmt-install/lib/libmonitor.so.0
+papiex-epmt-install/lib/libmonitor.so
+papiex-epmt-install/lib/libpapiex.so.2.3.14
+papiex-epmt-install/lib/libpapiex.so.2
+papiex-epmt-install/lib/libpapiex.so
+papiex-epmt-install/bin/
+papiex-epmt-install/bin/papi_command_line
+papiex-epmt-install/bin/papi_native_avail
+papiex-epmt-install/bin/papi_avail
+papiex-epmt-install/bin/papi_component_avail
+papiex-epmt-install/bin/check_events
+papiex-epmt-install/bin/showevtinfo
+papiex-epmt-install/bin/monitor-link
+papiex-epmt-install/bin/monitor-run
+cd papiex/src; tar cvfz ../../test-papiex-epmt-2.3.14-centos-7.tgz tests
+tests/
+tests/checkcsv.py
+tests/dotprod_mutex.c
+tests/dotprod_mutex_fork.c
+tests/dumb-mpi-main.c
+tests/dumb-mpi.c
+tests/evilcsh.csh
+tests/fft_openmp.f90
+tests/md_openmp.cpp
+tests/module-test.csh
+tests/papiex-test-module
+tests/sieve.csh
+tests/sieve.pl
+tests/sieve.py
+tests/sieve.sh
+tests/sigurg.go
+tests/sleeploop.h
+tests/test.sh
+tests/test.tcl
+tests/toughone.tcl
+tests/toughthree.sh
+tests/toughthree.tcl
+tests/toughtwo.tcl
+tests/unit1.c
+tests/unit2.c
+tests/unit3.c
+tests/unit4.c
+make[2]: Leaving directory `/mnt/data/Ian/current_build/papiex-oss'
+mkdir -p release-25012023
+cp ../papiex-oss/papiex-epmt-2.3.14-centos-7.tgz release-25012023
+cp: cannot create regular file ‘release-25012023/papiex-epmt-2.3.14-centos-7.tgz’: Permission denied
+make[1]: *** [release-25012023/papiex-epmt-2.3.14-centos-7.tgz] Error 1
+make[1]: Leaving directory `/mnt/data/Ian/current_build/epmt.git'
+make: *** [release7] Error 2
+]0;Ian.Laflotte@lscmdb02-d:/mnt/data/Ian/current_build/epmt.git[30;1m[epmt.git $] [38;5;22mtimed out waiting for input: auto-logout
