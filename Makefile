@@ -115,7 +115,7 @@ papiex-dist $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE):
 	@echo " - building papiex tarball"
 	if [ ! -f $(PAPIEX_SRC)/$(PAPIEX_RELEASE) ]; then make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) docker-dist ; fi
 	mkdir -p $(EPMT_RELEASE_DIR)
-	cp $(PAPIEX_SRC)/$(PAPIEX_RELEASE) $(EPMT_RELEASE_DIR)
+	-cp $(PAPIEX_SRC)/$(PAPIEX_RELEASE) $(EPMT_RELEASE_DIR)
 
 release epmt-full-release: $(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE)
 	@echo " ______10 TARGET: release epmt-full-release";	echo "whoami????";	whoami
@@ -143,7 +143,10 @@ check-release release-test-docker: $(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE)
 release7:
 # Force rebuild
 	@echo " ______1 TARGET: release7";	echo "whoami????";	whoami
-	rm -f $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE) $(PAPIEX_SRC)/$(PAPIEX_RELEASE)
+	-rm -f $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE)
+	-rm -f $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE)
+	-rm -f $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE)
+	-rm -f $(PAPIEX_SRC)/$(PAPIEX_RELEASE)
 	$(MAKE) OS_TARGET=centos-7 release check-release
 
 release-all: release7
