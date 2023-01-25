@@ -92,7 +92,7 @@ dist-test:
 # final location of tarfile
 	rm -rf epmt-install-tests && mkdir epmt-install-tests
 	cp -Rp test epmt-install-tests
-	mkdir -p $(EPMT_RELEASE_DIR)
+	mkdir -p $(EPMT_RELEASE_DIR) ; chown -R Ian.Laflotte $(EPMT_RELEASE_DIR) ; chmod -R a+wr $(EPMT_RELEASE_DIR) 
 	tar -czf $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE) epmt-install-tests
 	rm -rf epmt-install-tests
 
@@ -113,7 +113,8 @@ papiex-dist $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE):
 	@echo " ______8 TARGET: papiex-dist $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE)";	echo "whoami????";	whoami;
 	#am Ian
 	@echo " - building papiex tarball"
-	if [ ! -f $(PAPIEX_SRC)/$(PAPIEX_RELEASE) ]; then echo "why am i here?" ; ls -la $(PAPIEX_SRC)/$(PAPIEX_RELEASE) ; make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) docker-dist  ; fi
+	ls $(PAPIEX_SRC)/$(PAPIEX_RELEASE)
+	#if [ ! -f $(PAPIEX_SRC)/$(PAPIEX_RELEASE) ]; then echo "why am i here?" ; ls -la $(PAPIEX_SRC)/$(PAPIEX_RELEASE) ; make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) docker-dist  ; fi
 	mkdir -p $(EPMT_RELEASE_DIR)
 	cp $(PAPIEX_SRC)/$(PAPIEX_RELEASE) $(EPMT_RELEASE_DIR)
 
@@ -144,12 +145,12 @@ release7:
 # Force rebuild
 	@echo " ______1 TARGET: release7";	echo "whoami????";	whoami
 	-ls -la $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE)   
-	-rm -f $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE)
-	-rm -f $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE)
+	#-rm -f $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE)
+	#-rm -f $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE)
 	-ls -la $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE)
-	-rm -f $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE)
+	#-rm -f $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE)
 	-ls -la $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE)
-	-rm -f $(PAPIEX_SRC)/$(PAPIEX_RELEASE)
+	#-rm -f $(PAPIEX_SRC)/$(PAPIEX_RELEASE)
 	-ls -la $(PAPIEX_SRC)/$(PAPIEX_RELEASE)
 	$(MAKE) OS_TARGET=centos-7 release check-release
 
@@ -163,7 +164,7 @@ clean:
 	#am root
 	find . -type f \( -name "core" -or -name "*~" -or -name "*.pyc" -or -name "epmt.log" \) -exec rm -f {} \;
 	rm -rf __pycache__ build epmt-install epmt-install-tests
-	if [ -f $(PAPIEX_SRC)/$(PAPIEX_RELEASE) ]; then chown Ian.Laflotte $(PAPIEX_SRC)/$(PAPIEX_RELEASE) ; ls -la $(PAPIEX_SRC)/$(PAPIEX_RELEASE) ; fi	
+	#if [ -f $(PAPIEX_SRC)/$(PAPIEX_RELEASE) ]; then chown Ian.Laflotte $(PAPIEX_SRC)/$(PAPIEX_RELEASE) ; ls -la $(PAPIEX_SRC)/$(PAPIEX_RELEASE) ; fi	
 
 distclean: clean
 	@echo " ______4 TARGET: distclean"	;	echo "whoami????";	whoami
