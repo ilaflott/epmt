@@ -1,6 +1,7 @@
 OS_TARGET=centos-7
 PAPIEX_VERSION?=2.3.14
 PAPIEX_SRC?=../papiex
+PYTHON_VERSION=3.9.16
 EPMT_VERSION=$(shell sed -n '/_version = /p' epmtlib.py | sed 's/ //g; s/,/./g; s/.*(\(.*\))/\1/')
 EPMT_RELEASE=epmt-$(EPMT_VERSION)-$(OS_TARGET).tgz
 EPMT_FULL_RELEASE=EPMT-release-$(EPMT_VERSION)-$(OS_TARGET).tgz
@@ -26,26 +27,27 @@ lint:
 # install python3.7.4 if it's not already installed
 # Also, if needed install a virtual environment in .venv374
 install-py3:
-	@if [ "`python3 -V`" != "Python 3.7.4" ]; then \
-		set -e; echo "Installing Python 3.7.4 using pyenv" ; \
+	@if [ "`python3 -V`" != "$(PYTHON_VERSION)" ]; then \
+		set -e; echo "Installing Python $(PYTHON_VERSION) using pyenv" ; \
 		which pyenv > /dev/null || curl https://pyenv.run | bash ; \
 		PATH="$$HOME/.pyenv/bin:$$PATH" ; \
 		eval "$$(pyenv init -)" ; \
 		eval "$$(pyenv virtualenv-init -)" ; \
 		pyenv versions ; \
-		PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -s 3.7.4 ; \
-		pyenv shell 3.7.4 ; \
+		PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -s $(PYTHON_VERSION) ; \
+		pyenv shell $(PYTHON_VERSION) ; \
 		python3 -V ; \
-	fi ; \
-	rm -rf .venv374 ; \
-	if python3 -m epmt_query 2>&1| grep ModuleNotFound > /dev/null; then \
-		set -e; echo "Setting up a virtual environment (in .venv374).." ; \
-		[ -d .venv374 ] || python3 -m venv .venv374 ; \
-		source .venv374/bin/activate; set -e ; \
-		pip3 install --upgrade pip ; \
-		pip3 install -r requirements.txt.py3 ; \
-		pip3 install -r ui/requirements-ui.txt.py3 ; \
-	fi
+	fi ; 
+
+#rm -rf .venv374 ; \
+#	if python3 -m epmt_query 2>&1| grep ModuleNotFound > /dev/null; then \
+#		set -e; echo "Setting up a virtual environment (in .venv374).." ; \
+#		[ -d .venv374 ] || python3 -m venv .venv374 ; \
+#		source .venv374/bin/activate; set -e ; \
+#		pip3 install --upgrade pip ; \
+#		pip3 install -r requirements.txt.py3 ; \
+#		pip3 install -r ui/requirements-ui.txt.py3 ; \
+#	fi
 
 # This target runs pyinstaller to produce an epmt tarball that
 # has all the dpeendencies included.
