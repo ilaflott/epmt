@@ -1,13 +1,15 @@
 OS_TARGET=centos-7
 PAPIEX_VERSION?=2.3.14
-PAPIEX_SRC?=../papiex-oss
+PAPIEX_SRC?=../papiex
 EPMT_VERSION=$(shell sed -n '/_version = /p' epmtlib.py | sed 's/ //g; s/,/./g; s/.*(\(.*\))/\1/')
-EPMT_RELEASE_DIR=release-$(shell date "+%d%m%Y")
 EPMT_RELEASE=epmt-$(EPMT_VERSION)-$(OS_TARGET).tgz
 EPMT_FULL_RELEASE=EPMT-release-$(EPMT_VERSION)-$(OS_TARGET).tgz
 PAPIEX_RELEASE=papiex-epmt-$(PAPIEX_VERSION)-$(OS_TARGET).tgz
 #
 SHELL=/bin/bash
+DOCKER_RUN:=docker run
+DOCKER_BUILD:=docker build -f
+DOCKER_RUN_OPTS:=--rm -it
 PWD=$(shell pwd)
 
 .PHONY: default \\
@@ -50,7 +52,8 @@ install-py3:
 # If a virtual environment is found in .venv374 then use it
 # Otherwise, assume the environment is already ready to run
 # pyinstaller.
-dist: install-py3
+$(EPMT_RELEASE) dist:
+	$(MAKE) install-py3
 	rm -rf epmt-install build
 	mkdir -p epmt-install/epmt/epmtdocs
 	# activate venv if it exists, run pyinstaller in the
@@ -75,66 +78,65 @@ dist: install-py3
 	# docs
 	cp -Rp epmtdocs/site epmt-install/epmt/epmtdocs
 	# release
-	mkdir -p $(EPMT_RELEASE_DIR)
-	tar -czf $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) epmt-install 
-	rm -rf epmt-install build .venv374
+	tar -czf $(EPMT_RELEASE) epmt-install 
 
-dist-test:
+test-$(EPMT_RELEASE) dist-test:
 # final location of tarfile
 	rm -rf epmt-install-tests && mkdir epmt-install-tests
 	cp -Rp test epmt-install-tests
-	mkdir -p $(EPMT_RELEASE_DIR)
-	tar -czf $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE) epmt-install-tests
+	tar -czf test-$(EPMT_RELEASE) epmt-install-tests
 	rm -rf epmt-install-tests
 
-docker-dist $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE): 
+docker-dist: 
 	@echo " - building epmt and epmt-test tarball"
-	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build -t $(OS_TARGET)-epmt-build .
-	docker run -it --rm --volume=$(PWD):$(PWD):z -w $(PWD) $(OS_TARGET)-epmt-build make OS_TARGET=$(OS_TARGET) distclean dist dist-test
+	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build -t $(OS_TARGET)-epmt-build .
+	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build make OS_TARGET=$(OS_TARGET) distclean dist dist-test
 
-docker-dist-test $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE):
-	docker run -it --rm --volume=$(PWD):$(PWD):z -w $(PWD) $(OS_TARGET)-epmt-build make OS_TARGET=$(OS_TARGET) dist-test
+docker-dist-test:
+	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) -it --rm --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build make OS_TARGET=$(OS_TARGET) dist-test
 
-papiex-dist $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE):
-	@echo " - building papiex tarball"
-	if [ ! -f $(PAPIEX_SRC)/$(PAPIEX_RELEASE) ]; then make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) docker-dist > /dev/null; fi
-	mkdir -p $(EPMT_RELEASE_DIR)
-	cp $(PAPIEX_SRC)/$(PAPIEX_RELEASE) $(EPMT_RELEASE_DIR)
+papiex-dist: $(PAPIEX_RELEASE)
 
-release epmt-full-release: $(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE)
+$(PAPIEX_RELEASE): $(PAPIEX_SRC)/$(PAPIEX_RELEASE)
+	cp $< $@
 
-$(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE): $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE)
+$(PAPIEX_SRC)/$(PAPIEX_RELEASE):
+	make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) docker-dist 
+
+epmt-full-release: $(EPMT_FULL_RELEASE)
+
+$(EPMT_FULL_RELEASE): $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(PAPIEX_RELEASE)
 	@echo "Making EPMT $(EPMT_VERSION) for $(OS_TARGET): $^"
-	mkdir -p $(EPMT_RELEASE_DIR)
-	cd $(EPMT_RELEASE_DIR); tar -czf $(EPMT_FULL_RELEASE) $(notdir $^)
-	@echo "$(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE)"
+	tar -cvzf $(EPMT_FULL_RELEASE) $(notdir $^)
+	@echo
+	@echo "$(EPMT_FULL_RELEASE) build complete!"
+	@echo
 
-check-release release-test-docker: $(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE)
-	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test-release -t $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) --build-arg epmt_version=$(EPMT_VERSION) --build-arg install_path=/opt/minimalmetrics --build-arg epmt_full_release=$(EPMT_RELEASE_DIR)/$(EPMT_FULL_RELEASE) .
+check-release release-test-docker: $(EPMT_FULL_RELEASE)
+	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test-release -t $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) --build-arg epmt_version=$(EPMT_VERSION) --build-arg install_path=/opt/minimalmetrics --build-arg epmt_full_release=$(EPMT_FULL_RELEASE) .
 	if docker ps | grep postgres-test > /dev/null; then docker stop postgres-test; fi
 	if docker network ls | grep epmt-test-net > /dev/null; then docker network rm epmt-test-net; fi
 	docker network create epmt-test-net
-	docker run -d --rm --name postgres-test --network epmt-test-net -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -e POSTGRES_DB=EPMT-TEST postgres:latest
-	docker run --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged -it --rm -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c 'install_prefix=`epmt -h| grep install_prefix|cut -f2 -d:`; cp -fv $$install_prefix/../epmt-install/preset_settings/settings_test_pg_container.py $$install_prefix/../epmt-install/epmt/settings.py && epmt check && epmt unittest && epmt integration'
+	$(DOCKER_RUN) -d --rm --name postgres-test --network epmt-test-net -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -e POSTGRES_DB=EPMT-TEST postgres:latest
+	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged -it --rm -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; install_prefix=`epmt -h| grep install_prefix|cut -f2 -d:`; cp -fv $$install_prefix/../epmt-install/preset_settings/settings_test_pg_container.py $$install_prefix/../epmt-install/epmt/settings.py && epmt check && epmt unittest && epmt integration'
 	docker stop postgres-test
 	docker network rm epmt-test-net
 
-release7:
-# Force rebuild
-	rm -f $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/$(PAPIEX_RELEASE) $(PAPIEX_SRC)/$(PAPIEX_RELEASE)
-	$(MAKE) OS_TARGET=centos-7 release check-release
-
-release-all: release7
+release release-all release7:
+	$(MAKE) distclean
+	$(MAKE) docker-dist
+	$(MAKE) epmt-full-release
+	$(MAKE) check-release
 
 #
 #
 #
 clean:
 	find . -type f \( -name "core" -or -name "*~" -or -name "*.pyc" -or -name "epmt.log" \) -exec rm -f {} \;
-	rm -rf __pycache__ build epmt-install epmt-install-tests
+	rm -rf ui/__pycache__ __pycache__ build epmt-install epmt-install-tests .venv374ß
 
 distclean: clean
-	rm -f settings.py $(EPMT_RELEASE_DIR)/*$(OS_TARGET)*
+	rm -f settings.py $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(PAPIEX_RELEASE)
 	rm -rf epmtdocs/site
 
 # 
@@ -150,56 +152,3 @@ check-unittests: # Why not test all of them?
 #@env -i TERM=ansi PATH=${PWD}:${PATH} python3 -m unittest -v -f test.test_lib test.test_stat test.test_settings test.test_anysh test.test_submit test.test_run test.test_cmds test.test_query test.test_explore test.test_outliers test.test_db_schema test.test_db_migration
 check-integration-tests:
 	@env -i TERM=ansi PATH=${PWD}:${PATH} epmt integration
-#
-# Not used / Broken
-#
-
-# EPMT_TEST_ENV=PATH=${PWD}:${PATH} SLURM_JOB_USER=`whoami`
-
-# check-python-shells:
-# 	@rm -rf /tmp/epmt
-# 	@echo "epmt-example.tcsh (tcsh)" ; env -i SLURM_JOB_ID=111 ${EPMT_TEST_ENV} /bin/tcsh -e test/shell/epmt-example.tcsh
-# 	@rm -rf /tmp/epmt
-# 	@echo "epmt-example.csh (csh)" ; env -i SLURM_JOB_ID=112 ${EPMT_TEST_ENV} /bin/csh -e test/shell/epmt-example.csh
-# 	@rm -rf /tmp/epmt
-# 	@echo "epmt-example.bash (bash)" ; env -i SLURM_JOB_ID=113 ${EPMT_TEST_ENV} /bin/bash -Eeu test/shell/epmt-example.bash
-# 	@rm -rf /tmp/epmt
-# 	@echo "epmt-example.sh (sh)" ; env -i SLURM_JOB_ID=114 ${EPMT_TEST_ENV} /bin/sh -e test/shell/epmt-example.sh
-# 	@rm -rf /tmp/epmt
-# coverage-unittests:
-# 	@env -i TERM=ansi PATH=${PWD}:${PATH} python3 -m pytest --cov=./ -v test/test_lib.py test/test_stat.py test/test_settings.py test/test_anysh.py test/test_submit.py test/test_run.py test/test_cmds.py test/test_query.py test/test_explore.py test/test_outliers.py test/test_db_schema.py test/test_db_migration.py
-
-# epmt-test:
-# 	docker run -it --rm --volume=$$PWD:$$PWD:z -w $$PWD centos-7-epmt-build bash -c "PATH=$$PWD:$$PATH; echo; ./epmt check; echo; set -e; ./epmt unittest; ./epmt integration"
-
-# docker-test-dist: $(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) $(EPMT_RELEASE_DIR)/test-$(EPMT_RELEASE)
-# 	docker build -f Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test -t $(OS_TARGET)-epmt-test --build-arg release=$(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) --build-arg release_test=$(EPMT_RELEASE_DIR)/$(EPMT_RELEASE) .
-# 	docker run --rm -it $(OS_TARGET)-epmt-test
-
-# docker-dist-slurm: $(EPMT_RELEASE)
-# 	docker build -f Dockerfiles/Dockerfile.slurm-$(OS_TARGET) -t $(OS_TARGET)-epmt-papiex-slurm-test --build-arg release=$(EPMT_VERSION) .
-
-# slurm-start: docker-dist-slurm
-# 	docker run --name $(OS_TARGET)-slurm --privileged -dt --rm --volume=$(PWD):$(PWD):z -w $(PWD) -h ernie $(OS_TARGET)-epmt-papiex-slurm-test tail -f /dev/null
-
-# slurm-stop:
-# 	docker stop $(OS_TARGET)-slurm
-
-# docker-test-dist-slurm: slurm-start
-# 	docker exec $(OS_TARGET)-slurm epmt check
-# 	docker exec $(OS_TARGET)-slurm srun -n1 /opt/epmt/epmt-install/examples/epmt-example.sh
-# 	docker exec $(OS_TARGET)-slurm srun -n1 /opt/epmt/epmt-install/examples/epmt-example.csh
-# 	docker exec $(OS_TARGET)-slurm srun -n1 --task-prolog=/opt/epmt/epmt-install/slurm/slurm_task_prolog_epmt.sh --task-epilog=/opt/epmt/epmt-install/slurm/slurm_task_epilog_epmt.sh hostname
-# 	docker exec $(OS_TARGET)-slurm srun -n1 --task-prolog=/opt/epmt/epmt-install/slurm/slurm_task_prolog_epmt.sh --task-epilog=/opt/epmt/epmt-install/slurm/slurm_task_epilog_epmt.sh sleep 1
-# 	ls 2.tgz 3.tgz 4.tgz 5.tgz
-# 	docker exec $(OS_TARGET)-slurm epmt submit 2.tgz 3.tgz 4.tgz 5.tgz
-# 	docker exec $(OS_TARGET)-slurm sed -i '$$s;$$;\nTaskProlog=/opt/epmt/epmt-install/slurm/slurm_task_prolog_epmt.sh\n;' /etc/slurm/slurm.conf
-# 	docker exec $(OS_TARGET)-slurm sed -i '$$s;$$;\nTaskEpilog=/opt/epmt/epmt-install/slurm/slurm_task_epilog_epmt.sh\n;' /etc/slurm/slurm.conf
-# 	docker exec $(OS_TARGET)-slurm killall -s SIGHUP slurmctld slurmd
-# 	docker exec $(OS_TARGET)-slurm srun -n1 hostname
-# 	docker exec $(OS_TARGET)-slurm srun -n1 sleep 1
-# 	ls 6.tgz 7.tgz
-# 	docker exec $(OS_TARGET)-slurm epmt submit 6.tgz 7.tgz
-# 	docker stop $(OS_TARGET)-slurm
-
-# FORCE:
