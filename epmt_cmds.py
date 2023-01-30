@@ -16,7 +16,7 @@ from orm import db_session
 
 logger = getLogger(__name__)  # you can use other name
 import epmt_settings as settings
-from epmtlib import get_username, epmt_logging_init, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm, dict_filter, check_fix_metadata, logfn, capture
+from epmtlib import get_username, epmt_logging_init, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm, dict_filter, check_fix_metadata, logfn
 
 def find_diffs_in_envs(start_env,stop_env):
     env = {}
@@ -226,7 +226,7 @@ def verify_perf():
             PrintPass()
             return True
     except Exception as e:
-        print(str(e), file=stderr)
+        logger.error(str(e))
         PrintFail()
     return False
 
@@ -262,12 +262,9 @@ def verify_stage_command():
 
 def verify_papiex():
     print("epmt run functionality", end='')
-    logger.info("\tepmt run -a /bin/sleep 1, output to %s",dir)
-    with capture() as (out, err):
-        retval = epmt_run(["/bin/sleep","1"],wrapit=True)
+    logger.info("\tepmt run -a /bin/sleep 1")
+    retval = epmt_run(["/bin/sleep","1"],wrapit=True)
     if retval != 0:
-        logger.error(out)
-        logger.error(err)
         retval = False
     else:
         retval = True
@@ -413,6 +410,7 @@ def epmt_start_job(keep_going=True,other=[]):
     if not (global_jobid and global_datadir and global_metadatafile):
         return False
     if path.exists(started_metadata_file(global_metadatafile)):
+        logger.info(started_metadata_file(global_metadatafile))
         # this means we are calling epmt start again
         # let's be tolerant and issue a warning, but not flag this as an error
         if keep_going:
@@ -423,6 +421,7 @@ def epmt_start_job(keep_going=True,other=[]):
             return False
     if path.exists(stopped_metadata_file(global_metadatafile)):
         # this means we are calling epmt start after a stop, this is not supported
+        logger.info(stopped_metadata_file(global_metadatafile))
         if keep_going:
             logger.warning("job is already complete, ignoring")
             return True
@@ -442,6 +441,7 @@ def epmt_stop_job(keep_going=True, other=[]):
 
     if path.exists(stopped_metadata_file(global_metadatafile)):
         # this means we are calling epmt start after a stop, this is not supported
+        logger.info(stopped_metadata_file(global_metadatafile))
         if keep_going:
             logger.warning("job is already complete, ignoring")
             return True
@@ -451,6 +451,7 @@ def epmt_stop_job(keep_going=True, other=[]):
 
     start_metadata = read_job_metadata(started_metadata_file(global_metadatafile))
     if not start_metadata:
+        logger.info(started_metadata_file(global_metadatafile))
         logger.error("job is not started")
         return False
 
