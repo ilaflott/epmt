@@ -16,7 +16,7 @@ from orm import db_session
 
 logger = getLogger(__name__)  # you can use other name
 import epmt_settings as settings
-from epmtlib import get_username, epmt_logging_init, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm, dict_filter, check_fix_metadata, logfn
+from epmtlib import get_username, epmt_logging_init, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm, dict_filter, check_fix_metadata, logfn, capture
 
 def find_diffs_in_envs(start_env,stop_env):
     env = {}
@@ -263,8 +263,11 @@ def verify_stage_command():
 def verify_papiex():
     print("epmt run functionality", end='')
     logger.info("\tepmt run -a /bin/sleep 1, output to %s",dir)
-    retval = epmt_run(["/bin/sleep","1"],wrapit=True)
+    with capture() as (out, err):
+        retval = epmt_run(["/bin/sleep","1"],wrapit=True)
     if retval != 0:
+        logger.error(out)
+        logger.error(err)
         retval = False
     else:
         retval = True
