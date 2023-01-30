@@ -17,7 +17,8 @@ PWD=$(shell pwd)
 	epmt-build epmt-test \\
 	clean distclean \\
 	check check-python-native check-python-driver check-python-2.6 check-python-2.7 check-python-3 check-integration-tests\\
-	dist build compile lint release release6 release7 release-all
+	dist build compile lint release release6 release7 release-all \\
+	install-py3-pyenv install-py3deps-pyenv
 
 epmt-build compile build:
 	python3 -O -bb -m py_compile *.py orm/*.py orm/*/*.py test/*.py
@@ -26,7 +27,7 @@ lint:
 
 # install python3.7.4 if it's not already installed
 # Also, if needed install a virtual environment in .venv374
-install-py3:
+install-py3-pyenv:
 	@if [ "`python3 -V`" != "$(PYTHON_VERSION)" ]; then \
 		set -e; echo "Installing Python $(PYTHON_VERSION) using pyenv" ; \
 		which pyenv > /dev/null || curl https://pyenv.run | bash ; \
@@ -38,6 +39,12 @@ install-py3:
 		pyenv shell $(PYTHON_VERSION) ; \
 		python3 -V ; \
 	fi ; 
+
+install-py3deps-pyenv:
+	set -e ;\
+	pyenv virtualenv $(PYTHON_VERSION) epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION) ; \
+	pyenv local epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION) ; \ 
+	pip install -r requirements.txt.py3
 
 #rm -rf .venv374 ; \
 #	if python3 -m epmt_query 2>&1| grep ModuleNotFound > /dev/null; then \
