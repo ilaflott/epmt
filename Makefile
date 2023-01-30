@@ -25,8 +25,9 @@ epmt-build compile build:
 lint:
 	python3 -m pylint -E *.py orm/*.py orm/*/*.py test/*.py
 
-# install python3.7.4 if it's not already installed
-# Also, if needed install a virtual environment in .venv374
+# install python if it's not already installed
+# install a virtual environment
+
 install-py3-pyenv:
 	@if [ "`python3 -V`" != "$(PYTHON_VERSION)" ]; then \
 		set -e; echo "Installing Python $(PYTHON_VERSION) using pyenv" ; \
@@ -41,10 +42,12 @@ install-py3-pyenv:
 	fi ; 
 
 install-py3deps-pyenv:
-	set -e ;\
+	set -e ; \
 	pyenv virtualenv $(PYTHON_VERSION) epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION) ; \
-	pyenv local epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION) ; \ 
-	pip install -r requirements.txt.py3
+	pyenv local epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION) ; \
+	pip install --upgrade pip ; \
+	pip install -r requirements.txt.py3 ; # \
+#	pip install -r ui/requirements-ui.txt.py3
 
 #rm -rf .venv374 ; \
 #	if python3 -m epmt_query 2>&1| grep ModuleNotFound > /dev/null; then \
@@ -62,15 +65,14 @@ install-py3deps-pyenv:
 # Otherwise, assume the environment is already ready to run
 # pyinstaller.
 $(EPMT_RELEASE) dist:
-	$(MAKE) install-py3
 	rm -rf epmt-install build
 	mkdir -p epmt-install/epmt/epmtdocs
 	# activate venv if it exists, run pyinstaller in the
 	# same shell pipeline so it uses the venv (if activated)
 	# mkdocs also needs the same virtualenv, so includde it in the pipeline
-	if [ -d .venv374 ]; then echo "activating virtualenv.."; source .venv374/bin/activate; fi; set -e; \
-	[ "`python3 -V`" == "Python 3.7.4" ] || exit 1 ; \
-	pyinstaller --clean --noconfirm --distpath=epmt-install epmt.spec ; \
+	# if [ -d .venv374 ]; then echo "activating virtualenv.."; source .venv374/bin/activate; fi; set -e; \
+	# [ "`python3 -V`" == "Python 3.7.4" ] || exit 1 ; 
+	pyinstaller --clean --noconfirm --distpath=epmt-install epmt.spec
 	mkdocs build -f epmtdocs/mkdocs.yml
 	# Rest of the commands below can be safely run outside the virtualenv
 	# resources
@@ -98,7 +100,7 @@ test-$(EPMT_RELEASE) dist-test:
 
 docker-dist: 
 	@echo " - building epmt and epmt-test tarball"
-	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build -t $(OS_TARGET)-epmt-build .
+	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build -t $(OS_TARGET)-epmt-build --build-arg python_version=$(PYTHON_VERSION) .
 	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build make OS_TARGET=$(OS_TARGET) distclean dist dist-test
 
 docker-dist-test:
