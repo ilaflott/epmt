@@ -136,7 +136,7 @@ clean:
 	rm -rf ui/__pycache__ __pycache__ build epmt-install epmt-install-tests .venv374ß
 
 distclean: clean
-	rm -f settings.py $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(PAPIEX_RELEASE)
+	rm -f settings.py $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(PAPIEX_RELEASE) $(EPMT_FULL_RELEASE)
 	rm -rf epmtdocs/site
 
 # 
