@@ -1,10 +1,11 @@
 #!/bin/bash -e
+REV=feature/mkdir-perf-issue
 
 # Clone up the repos
 exec > >(tee -a "FRESH.log") 2>&1
 
-git clone git@gitlab.com:minimal-metrics-llc/epmt/papiex.git
-git clone git@gitlab.com:minimal-metrics-llc/epmt/epmt.git
+git clone -b $REV git@gitlab.com:minimal-metrics-llc/epmt/papiex.git
+git clone -b $REV git@gitlab.com:minimal-metrics-llc/epmt/epmt.git
 cd epmt.git
 # Update the submodules
 git submodule update --init --recursive --remote
