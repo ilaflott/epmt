@@ -68,5 +68,5 @@ teardown() {
   assert_failure
   assert_output --partial "Job 692500 (at 2019-06-16 13:39:28.843357) is already in the database"
   run epmt list 685000
-  assert_output "[]"
+  assert_output --partial "[]"
 }

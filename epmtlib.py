@@ -260,8 +260,9 @@ def tag_from_string(s, delim = ';', sep = ':', tag_default_value = '1'):
     import warnings
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore",category=DeprecationWarning)
-        from pony.orm.ormtypes import TrackedDict
-    if type(s) in (dict, TrackedDict): return s
+        # from pony.orm.ormtypes import TrackedDict
+#    if type(s) in (dict, TrackedDict): return s
+    if type(s) == dict: return s
     if not s: return (None if s == None else {})
 
     logger = getLogger(__name__)
@@ -296,11 +297,12 @@ def tag_dict_to_string(tag, delim = ';', sep = ':'):
 # the input can be a list of strings or a single string.
 # each string will be converted to a dict
 def tags_list(tags):
-    from pony.orm.ormtypes import TrackedDict
+#    from pony.orm.ormtypes import TrackedDict
     # do we have a single tag in string or dict form? 
     if isString(tags):
         tags = [tag_from_string(tags)]
-    elif type(tags) in [dict, TrackedDict]:
+#    elif type(tags) in [dict, TrackedDict]:
+    elif type(tags) == dict:        
         tags = [tags]
     tags = [tag_from_string(t) if isString(t) else t for t in tags]
     return tags

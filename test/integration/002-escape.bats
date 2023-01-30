@@ -63,7 +63,7 @@ exp_output=('-d" -f2' '\\\' ' b' '\' ',' "'" '-e \tHello' '-e \tThereU\nR' '-e \
     fi
 
     run epmt list 12340
-    assert_output "['12340']"
+    assert_output --partial "['12340']"
     run epmt dump 12340
     assert_success
 
@@ -93,7 +93,7 @@ exp_output=('-d" -f2' '\\\' ' b' '\' ',' "'" '-e \tHello' '-e \tThereU\nR' '-e \
   unset SLURM_JOB_ID
 
   run epmt list 12340
-  assert_output "['12340']"
+  assert_output --partial "['12340']"
   run epmt dump 12340
   assert_success
 

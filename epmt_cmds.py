@@ -264,11 +264,11 @@ def verify_papiex():
     print("epmt run functionality", end='')
     logger.info("\tepmt run -a /bin/sleep 1")
     retval = epmt_run(["/bin/sleep","1"],wrapit=True)
+    global_jobid,global_datadir,global_metadatafile = setup_vars()
     if retval != 0:
         retval = False
     else:
         retval = True
-        global_jobid,global_datadir,global_metadatafile = setup_vars()
         files = glob(global_datadir+settings.input_pattern)
         if 'COLLATED_TSV' in get_papiex_options(settings):
             num_to_find = 2 # We have a header file that matches the pattern in this case, sadly
@@ -284,9 +284,10 @@ def verify_papiex():
             logger.error("%s matched %d job_metadata files instead of 1",global_datadir+"job_metadata",len(files))
             retval = False
 
+    logger.info("rmtree %s",global_datadir) 
+    rmtree(global_datadir, ignore_errors=True)
+
     if retval == True:
-        logger.info("rmtree %s",global_datadir) 
-        rmtree(global_datadir, ignore_errors=True)
         PrintPass()
     else:
         PrintFail()
@@ -1472,11 +1473,11 @@ def epmt_entrypoint(args):
             # SQLA doesn't care. We also don't have the SQLA db_session
             # honoring the context manager contract yet. So, we have
             # to have some conditional code unfortunately
-            if settings.orm == 'pony':
-                with db_session:
-                    exec(f.read())
-            else:
-                exec(f.read())
+            #if settings.orm == 'pony':
+            #    with db_session:
+            #        exec(f.read())
+            #else:
+            exec(f.read())
         else:
             epmt_shell(ipython = False)
         return 0

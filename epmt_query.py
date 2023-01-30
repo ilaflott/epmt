@@ -339,7 +339,7 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
     
     jobs   : list, optional
              List of jobids to narrow the search space. The jobs can
-             a list of jobids (i.e., list of strings), or the result of a Pony
+             a list of jobids (i.e., list of strings), or the result of a 
              query on Job (i.e., a Query object), or a pandas dataframe of jobs.
              It is *strongly* recommended that you provide a list of
              jobids to narrow the search and limit the load on the database.
@@ -367,7 +367,7 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
              (Job.jobid == '685000')
              (Job.jobid.in_(['685000', '685016']))
 
-             For Pony, you can use a lamdba function or a string
+             For ORM's, you may be able to use a lamdba function or a string
              e.g., lambda j: count(j.processes) > 100 will filter jobs more than 100 processes
              or, 'j.duration > 100000' will filter jobs whose duration is more than 100000
     
@@ -379,8 +379,7 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
              jobs are returned in the order they were created (not necessarily the
              same as the other of ingestion -- Job.created_at)
 
-             If you are using Pony as the ORM layer, then you can also pass
-             in a lambda function, such as:
+             For ORM's, then you may be able to pass in a lambda function, such as:
                  lambda j: j.created_at
              or a string like 'desc(j.created_at)'
 
@@ -438,7 +437,7 @@ def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offs
              'dict': each job object is converted to a dict, and the entire
                      output is a list of dictionaries
              'pandas': Output a pandas dataframe with one row for each matching job
-             'orm':  returns a Pony Query object (ADVANCED)
+             'orm':  returns an ORM Query object (ADVANCED)
              'terse': In this format only the primary key ID is printed for each job
              Default is 'dict'
     
@@ -579,21 +578,14 @@ def get_procs(jobs = [], tags = None, fltr = None, order = None, offset=0, limit
 
     
     fltr:    callable or string or ORM-specific conditional expression, optional
-             This argument is ORM-specific. For Pony you can give a
-             lambda function. For SQLA, you can give a condition.
-
-             Pony allows lambda expression or a string of the form:
-             lambda p: p.duration > 1000
-              OR
-             'p.duration > 1000 and p.numtids < 4'
+             This argument is ORM-specific. For SQLA, you can give a condition.
 
              For SQLA, you could give something like:
              (Process.duration > 1000)
 
     order:   callable or string or ORM-specific expression, optional
              Order the returned set by the supplied expression.
-             For pony, you can use a expression like 'p.created_at'
-             or a lambda function. For SQLA, something like Process.created_at
+             For SQLA, something like Process.created_at
     
     limit:   int, optional
              If set, limits the total number of results. A value of
@@ -971,8 +963,7 @@ def get_refmodels(name=None, tag = {}, fltr=None, limit=0, order=None, before=No
             filter models based on supplied key/value pairs. A logical
             AND is performed across the keys
     fltr  : callable or string or ORM-specific conditional
-            The filter expression is ORM-dependent. For Pony you can
-            supply a lambda function or a string. For SQLA, something
+            The filter expression is ORM-dependent. For SQLA, something
             like (ReferenceModel.created_at < datetime(....))
     limit : int, optional
             used to limit the number of output items, 0 means no limit
@@ -1173,7 +1164,7 @@ enabled: boolean, optional
     create a job ref model with a list of jobids
     >>> eq.create_refmodel(jobs=[u'615503', u'625135'], methods= [es.modified_z_score])
     
-    or use pony orm query result:
+    or use SQLA orm query result:
     >>> jobs = eq.get_jobs(tags='exp_component:atmos', fmt='orm')
     >>> r = eq.create_refmodel(jobs)
     
@@ -1741,13 +1732,13 @@ op_duration_method: string, optional
             else:
                 concat_threads_sums = func.group_concat(Process.threads_sums, '@@@')
             procs_grp_by_job = orm_get_procs(jobs, t, None, None, 0, 0, None, [], exact_tags_only, [Process.jobid, func.count(Process.id), func.min(Process.start), func.max(Process.end), func.sum(Process.duration), func.sum(Process.cpu_time), func.sum(Process.numtids), concat_threads_sums]).group_by(Process.jobid).order_by(Process.jobid)
-        else:
-            # Pony ORM
-            # we use order=0 as a hack to avoid going to the default order of p.start
-            # That does not work with the GROUP BY clause. By having order=0, we use the
-            # implicit order and works with GROUP BY
-            procs = get_procs(jobs, order=0, tags = t, exact_tag_only = exact_tags_only, fmt='orm')
-            procs_grp_by_job = select((p.job, count(p.id), min(p.start), max(p.end), sum(p.duration), sum(p.cpu_time), sum(p.numtids), group_concat(p.threads_sums, sep='@@@')) for p in procs)
+        #else:
+        #    # Pony ORM
+        #    # we use order=0 as a hack to avoid going to the default order of p.start
+        #    # That does not work with the GROUP BY clause. By having order=0, we use the
+        #    # implicit order and works with GROUP BY
+        #    procs = get_procs(jobs, order=0, tags = t, exact_tag_only = exact_tags_only, fmt='orm')
+        #    procs_grp_by_job = select((p.job, count(p.id), min(p.start), max(p.end), sum(p.duration), sum(p.cpu_time), sum(p.numtids), group_concat(p.threads_sums, sep='@@@')) for p in procs)
 
         for row in procs_grp_by_job:
             (j, nprocs, start, end, duration, excl_cpu, ntids, threads_sums_str) = row
@@ -2943,7 +2934,7 @@ def verify_jobs(jobs):
     >>>  'Process[191898] >> threads_sums >> rdtsc_duration is negative']
     '''
     from math import isnan, isinf
-    from pony.orm.ormtypes import TrackedList, TrackedDict
+#    from pony.orm.ormtypes import TrackedList, TrackedDict
     import datetime
     def verify_num(n):
         if isnan(n): return 'is Nan'
@@ -2960,7 +2951,8 @@ def verify_jobs(jobs):
         now = datetime.datetime.now()
 
         # we try to iterate over a list or dict identically to keep code DRY
-        keys = range(len(c)) if type(c) in (list, TrackedList) else c.keys()
+#        keys = range(len(c)) if type(c) in (list, TrackedList) else c.keys()
+        keys = range(len(c)) if type(c) == list else c.keys()
         # Are we dealing with a Process dict?
         # If so we can have a more meaningful label
         if 'id' in keys:
@@ -2984,7 +2976,8 @@ def verify_jobs(jobs):
                     err.append('{}{} {}'.format(prefix, k, 'contains an invalid timestamp (too old)'))
                 elif (val > now):
                     err.append('{}{} {}'.format(prefix, k, 'contains an invalid timestamp (in the future)'))
-            elif type(val) in (dict, list, TrackedList, TrackedDict):
+#            elif type(val) in (dict, list, TrackedList, TrackedDict):
+            elif type(val) in (dict, list):
                 # recurse underneath
                 err += verify_collection(val, prefix = "{}{} >> ".format(prefix, k))
         return err
