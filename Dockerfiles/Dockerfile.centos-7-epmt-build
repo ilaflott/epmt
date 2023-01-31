@@ -20,13 +20,12 @@ RUN python3 -V
 RUN pip3 install --upgrade pip
 
 RUN yum install -y gcc-c++
+
 COPY requirements.txt.py3 /tmp/
 RUN pip3 install -r /tmp/requirements.txt.py3
 
 COPY ui/requirements-ui.txt.py3 /tmp
 RUN pip3 install -r /tmp/requirements-ui.txt.py3 
-
-RUN pip3 install pyinstaller
 
 RUN rm -f /tmp/requirements.txt.py3 /tmp/requirements-ui.txt.py3
 RUN yum clean all
