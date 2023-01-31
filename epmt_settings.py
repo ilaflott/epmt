@@ -13,4 +13,5 @@ except Exception as e:
         logger.error(str(e)+":install one from preset_settings?")
     else:
         logger.error(str(e))
-    exit(1)
+    raise
+    #exit(1) # this breaks pyinstaller, don't do it

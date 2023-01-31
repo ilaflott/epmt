@@ -93,7 +93,7 @@ python-dateutil==2.8.0
 python-editor==1.0.4
 pytz==2019.2
 PyYAML==6.0
-pyzmq==18.1.1
+pyzmq==25.0.0
 qtconsole==4.6.0
 regex==2022.10.31
 requests==2.28.2
