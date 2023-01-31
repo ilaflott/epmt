@@ -46,8 +46,8 @@ install-py3deps-pyenv:
 	pyenv virtualenv $(PYTHON_VERSION) epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION) ; \
 	pyenv local epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION) ; \
 	pip install --upgrade pip ; \
-	pip install -r requirements.txt.py3 ; # \
-#	pip install -r ui/requirements-ui.txt.py3
+	pip install -r requirements.txt.py3 ; \
+	pip install -r ui/requirements-ui.txt.py3
 
 #rm -rf .venv374 ; \
 #	if python3 -m epmt_query 2>&1| grep ModuleNotFound > /dev/null; then \
