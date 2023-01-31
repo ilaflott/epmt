@@ -14,7 +14,7 @@ services:
 
 
 build:python3:
-  # image: python:3.7.4
+  # image: python:3.9.16
   # script: # Modify the commands below to build your repository.
   #   - python3 -V
   #   - pip3 install -r requirements.txt.py3
@@ -28,7 +28,7 @@ build:python3:
     # additional deps needed to compile linux 
     # - yum install -y ncurses-devel bc bison flex elfutils-libelf-devel grub2
     - (cd /usr/src && echo "downloading sqlite3" && curl -o sqlite-amalgamation-3300100.zip https://www.sqlite.org/2019/sqlite-amalgamation-3300100.zip && unzip sqlite-amalgamation-3300100.zip && echo "building libsqlite3 with json1 and other useful extensions" && cd sqlite-amalgamation-3300100 && gcc -shared -fPIC -O2  -DSQLITE_ENABLE_JSON1 -DSQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_MAX_VARIABLE_NUMBER=9999 sqlite3.c -o /usr/lib64/libsqlite3.so)
-    - (cd /usr/src && echo "downloading python" && curl -o Python-3.7.4.tgz https://www.python.org/ftp/python/3.7.4/Python-3.7.4.tgz && tar xzf Python-3.7.4.tgz && cd Python-3.7.4 && echo "building python3" && ./configure --quiet --prefix=/usr --enable-shared --enable-optimizations --enable-loadable-sqlite-extensions && make --silent install > /dev/null)
+    - (cd /usr/src && echo "downloading python" && curl -o Python-3.9.16.tgz https://www.python.org/ftp/python/3.9.16/Python-3.9.16.tgz && tar xzf Python-3.9.16.tgz && cd Python-3.9.16 && echo "building python3" && ./configure --quiet --prefix=/usr --enable-shared --enable-optimizations --enable-loadable-sqlite-extensions && make --silent install > /dev/null)
     - ldconfig && yum clean all && rm -rf /usr/src /var/cache/yum
     - python3 -V && pip3 install --upgrade pip && pip3 install -r requirements.txt.py3 && python3 -m py_compile epmt *.py orm/*/*.py
     - rm -f settings.py
