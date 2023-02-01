@@ -1,3 +1,5 @@
+.ONESHELL:
+
 OS_TARGET=centos-7
 PAPIEX_VERSION?=2.3.14
 PAPIEX_SRC?=../papiex
@@ -8,6 +10,7 @@ EPMT_FULL_RELEASE=EPMT-release-$(EPMT_VERSION)-$(OS_TARGET).tgz
 PAPIEX_RELEASE=papiex-epmt-$(PAPIEX_VERSION)-$(OS_TARGET).tgz
 #
 SHELL=/bin/bash
+CONDA_ACTIVATE = source $$(conda info --base)/etc/profile.d/conda.sh ; conda activate ; conda activate
 DOCKER_RUN:=docker run
 DOCKER_BUILD:=docker build -f
 DOCKER_RUN_OPTS:=--rm -it
@@ -25,29 +28,26 @@ epmt-build compile build:
 lint:
 	python3 -m pylint -E *.py orm/*.py orm/*/*.py test/*.py
 
-# install python if it's not already installed
+#	which pyenv > /dev/null || curl https://pyenv.run | bash 
+#	PATH="$$HOME/.pyenv/bin:$$PATH" ; \
+#	eval "$$(pyenv init -)" ; \
+#	eval "$$(pyenv virtualenv-init -)" ; 
+
 # install a virtual environment
 
+install-py3-conda:
+	set -e; echo "Installing Python $(PYTHON_VERSION) using conda" ; \
+	conda create -n $(EPMT_VERSION)_py$(PYTHON_VERSION) python=$(PYTHON_VERSION) -y ; \
+	$(CONDA_ACTIVATE) $(EPMT_VERSION)_py$(PYTHON_VERSION) ; $(MAKE) install-deps ; \
+	echo ; echo "Your virtual python environment is epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION)." ;
 install-py3-pyenv:
-	@if [ "`python3 -V`" != "$(PYTHON_VERSION)" ]; then \
-		set -e; echo "Installing Python $(PYTHON_VERSION) using pyenv" ; \
-		which pyenv > /dev/null || curl https://pyenv.run | bash ; \
-		PATH="$$HOME/.pyenv/bin:$$PATH" ; \
-		eval "$$(pyenv init -)" ; \
-		eval "$$(pyenv virtualenv-init -)" ; \
-		pyenv versions ; \
-		PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -s $(PYTHON_VERSION) ; \
-		pyenv shell $(PYTHON_VERSION) ; \
-		python3 -V ; \
-	fi ; 
-
-install-py3deps-pyenv:
-	set -e ; \
+	set -e; echo "Installing Python $(PYTHON_VERSION) using pyenv"  
+	PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install -s $(PYTHON_VERSION)  ; \
 	pyenv virtualenv $(PYTHON_VERSION) epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION) ; \
-	pyenv local epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION) ; \
-	pip install --upgrade pip ; \
-	pip install -r requirements.txt.py3 ; \
-	pip install -r ui/requirements-ui.txt.py3
+	pyenv local epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION) ; $(MAKE) install-deps ; \
+	echo ; echo "Your virtual python environment is epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION)." ;
+install-deps:
+	set -e ; pip install --upgrade pip ; pip install -r requirements.txt.py3 ; pip install -r ui/requirements-ui.txt.py3
 
 #rm -rf .venv374 ; \
 #	if python3 -m epmt_query 2>&1| grep ModuleNotFound > /dev/null; then \
