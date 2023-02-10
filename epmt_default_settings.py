@@ -19,6 +19,9 @@ papiex_options = "PERF_COUNT_SW_CPU_CLOCK,COLLATED_TSV"
 epmt_output_prefix = "/tmp/epmt/"
 stage_command = "mv"
 stage_command_dest = "./"
+ingest_remove_on_success=True
+ingest_failed_dir="/tmp/"
+
 verbose = 0
 # gather profiling information or not
 profile = False

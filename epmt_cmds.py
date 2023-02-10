@@ -922,8 +922,8 @@ def get_filedict(dirname,pattern,tar=False):
     return filedict
 
 # if remove_file is set, then on successful ingest the .tgz file will be removed
-def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1, remove_file=False):
-    logger.debug("epmt_submit(%s,dry_run=%s,drop=%s,keep_going=%s,ncpus=%d,remove_file=%s)",dirs,dry_run,drop,keep_going,ncpus,remove_file)
+def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1, remove_file=False, move_file=False):
+    logger.debug("epmt_submit(%s,dry_run=%s,drop=%s,keep_going=%s,ncpus=%d,remove_file=%s,move_file=%s)",dirs,dry_run,drop,keep_going,ncpus,remove_file,move_file)
 
     # ARG checking
     
@@ -967,7 +967,8 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1, remo
         logger.debug('Worker %d, PID %d', tid, getpid())
         retval = {}
         for f in work_list:
-            r = submit_to_db(f,settings.input_pattern,dry_run=dry_run, remove_file=remove_file)
+            r = submit_dir_or_tgz_to_db(f, pattern=settings.input_pattern, dry_run=dry_run, remove_on_success=remove_file, move_on_failure=move_file)
+            # r = submit_to_db(f,settings.input_pattern,dry_run=dry_run, remove_file=remove_file)
             retval[f] = r
             (status, _, submit_details) = r
             if not keep_going:
@@ -1233,6 +1234,46 @@ def open_compressed_tar(inputf):
 #    metadata = check_and_add_workflowdb_envvars(metadata,total_env)
 
 # remove_file is set, then we will delete the file on success
+def submit_dir_or_tgz_to_db(inputf, pattern=settings.input_pattern, dry_run=True, remove_on_success=settings.ingest_remove_on_success, move_on_failure=settings.ingest_failed_dir):
+    def move_away(from_file,to_dir):
+        if to_dir:
+            try:
+                logger.info("move(%s,%s)",from_file,to_dir)
+                move(from_file,to_dir)
+            except Exception as e:
+                logger.error("Exception from move(%s,%s): %s",from_file,to_dir,str(e))
+            
+    def trash(from_path):
+        logger.info("sending %s to trash",from_path);
+        try:
+            if path.isfile(from_path):
+                remove(from_path)
+            elif path.isdir(from_path):
+                rmtree(from_path, ignore_errors=True)
+        except Exception as e:
+            logger.error("Exception from remove/rmtree(%s): %s",from_path,str(e))
+
+    def goodpath(from_path):
+        return path.isfile(from_path) or path.isdir(from_path)
+
+    try:
+        status = False
+        if not goodpath(inputf):
+            return (False, "submit_dir_or_tgz_to_db("+inputf+") not a job dir or archive", ())
+        r = submit_to_db(inputf,pattern,dry_run=dry_run)
+        if r:
+            (status, msg, submit_details) = r
+        else:
+            r = (False, "submit_dir_or_tgz_to_db("+inputf+")", ()) 
+        if not status:
+            move_away(inputf,move_on_failure)
+        elif remove_on_success:
+            trash(inputf)
+        return r
+    except Exception as e:
+        move_away(inputf,move_on_failure)
+        return (False, "Exception in submit_dir_or_tgz_to_db("+inputf+"): {}".format(str(e)), ())
+        
 def submit_to_db(inputf, pattern, dry_run=True, remove_file=False):
     logger.info("submit_to_db(%s,%s,dry_run=%s,remove_file=%s)",inputf,pattern,str(dry_run),str(remove_file))
 
@@ -1287,16 +1328,6 @@ def submit_to_db(inputf, pattern, dry_run=True, remove_file=False):
         return (False, 'Error in DB setup', ())
     from epmt_job import ETL_job_dict
     r = ETL_job_dict(metadata,filedict,settings,tarfile=tar)
-    if remove_file:
-        if r[0]:
-            logger.info('Removing {} on successful ingest into db'.format(inputf))
-            if path.isfile(inputf):
-                remove(inputf)
-            elif path.isdir(inputf):
-                rmtree(inputf, ignore_errors=True)
-        else:
-            logger.debug('Not removing {} as ingest failed'.format(inputf))
-    # if not r[0]:
     return r
     # (j, process_count) = r[-1]
     # logger.info("Committed job %s to database: %s",j.jobid,j)
@@ -1666,7 +1697,7 @@ def epmt_entrypoint(args):
     if args.command == 'dump':
         return(epmt_dump_metadata(args.epmt_cmd_args, key = args.key) == False)
     if args.command == 'submit':
-        return(epmt_submit(args.epmt_cmd_args,dry_run=args.dry_run,drop=args.drop,keep_going=not args.error, ncpus = args.num_cpus, remove_file=args.remove) == False)
+        return(epmt_submit(args.epmt_cmd_args,dry_run=args.dry_run,drop=args.drop,keep_going=not args.error, ncpus = args.num_cpus, remove_file=args.remove, move_file=settings.ingest_failed_dir if args.move_away else False) == False)
     if args.command == 'check':
         return(epmt_check() == False)
     if args.command == 'delete':

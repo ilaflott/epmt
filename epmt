@@ -127,7 +127,8 @@ if (__name__ == "__main__"):
     daemon_parser.add_argument('--no-analyze',action='store_true',help="Do not perform analyses on unprocessed jobs, requires --post-process")
     daemon_parser.add_argument('--retire',action='store_true',help="Perform data retirement based on the retention policy in settings")
     daemon_parser.add_argument('-i', '--ingest',nargs='?', default=False, const=settings.stage_command_dest, help="Perform ingestion into the database from the specified directory. If no path is specified the staging destination directory ({}), specified in settings, will be used. See also, --keep and --recursive".format(settings.stage_command_dest), metavar='ingest_path')
-    daemon_parser.add_argument('-k', '--keep', default = False, action='store_true', help='Do not remove file on successful ingest. Only meaningful with --ingest')
+    daemon_parser.add_argument('-k', '--keep', default = False, action='store_true', help='Keep files after successful ingest. Only meaningful with --ingest')
+    daemon_parser.add_argument('-m', '--move', default = True, action='store_true', help='Move away files on failed ingest. Only meaningful with --ingest')
     daemon_parser.add_argument('-r', '--recursive', default = False, action='store_true', help='Recurse into sub-directories to find staged files. Only meaningful if --ingest is set')
     daemon_parser.set_defaults(start_daemon=False, stop_daemon=False, foreground=False, post_process=False, no_analyze=False,retire=False)
     # shell
@@ -161,12 +162,13 @@ if (__name__ == "__main__"):
                 up to submission.")
     submit_parser.add_argument('epmt_cmd_args', nargs='*', help="List of job .tgz files or directories", metavar="job_or_dir")
     submit_parser.add_argument('-e', '--error', action='store_true',help="Exit at the first sign of trouble")
-    submit_parser.add_argument('--remove', action='store_true',help="Remove the job .tgz on successful submission")
-    submit_parser.add_argument('-n', '--dry-run', action='store_true',help="Don't touch the database")
+    submit_parser.add_argument('-r', '--remove', action='store_true',help="Remove the job .tgz on successful ingestion")
+    submit_parser.add_argument('-m', '--move-away', default = True, action='store_true', help='Move away files upon failed ingestion to settings.ingest_failed_dir')
+    submit_parser.add_argument('-n', '--dry-run', action='store_true',help="Don't touch the database, but files will still be manipulated")
     submit_parser.add_argument('--drop',action='store_true',help="Drop all tables/data and recreate before submission")
     from epmtlib import suggested_cpu_count_for_submit
     optimal_cpus = suggested_cpu_count_for_submit()
-    submit_parser.add_argument('-p', '--num-cpus', type=int, nargs='?', default=1, const=optimal_cpus, help='Number of parallel processes to use for submission. If this option is selected, but no value is specified, then the optimal value ({0}) will be used, based on your hardware resources. Note: This option is only supported for SQLAlchemy ORM at present.'.format(optimal_cpus))
+    submit_parser.add_argument('-p', '--num-cpus', type=int, nargs='?', default=1, const=optimal_cpus, help='Number of parallel processes to use for submission. If this option is selected, but no value is specified, then the discovered value ({0}) will be used.'.format(optimal_cpus))
 
     # DBSize
     dbsize_parser = subparser.add_parser('dbsize', help="Find detailed size of database",
