@@ -960,7 +960,7 @@ def epmt_submit(dirs, ncpus = 1, dry_run=True, drop=False, keep_going=False, rem
         # when using multiple processes. This should be fixable.
         logger.error('Dropping tables in a parallel submit mode, not supported')
         return(False)
-
+        
     if drop:
         from orm import orm_drop_db, setup_db
         setup_db(settings)
@@ -972,7 +972,7 @@ def epmt_submit(dirs, ncpus = 1, dry_run=True, drop=False, keep_going=False, rem
         logger.debug('Worker %d, PID %d', tid, getpid())
         retval = {}
         for f in work_list:
-            r = submit_dir_or_tgz_to_db(f, pattern=settings.input_pattern, dry_run=dry_run, keep_going=keep_going, remove_on_success=remove_on_success, move_on_failure=move_on_failure)
+            r = submit_dir_or_tgz_to_db(f, pattern=settings.input_pattern, dry_run=dry_run, keep_going=keep_going, remove_on_success=remove_on_success, move_on_failure=move_on_failure if not move_on_failure else settings.ingest_failed_dir)
             # r = submit_to_db(f,settings.input_pattern,dry_run=dry_run, remove_on_success=remove_on_success)
             retval[f] = r
             (status, _, submit_details) = r
@@ -1714,7 +1714,7 @@ def epmt_entrypoint(args):
     if args.command == 'dump':
         return(epmt_dump_metadata(args.epmt_cmd_args, key = args.key) == False)
     if args.command == 'submit':
-        return(epmt_submit(args.epmt_cmd_args,dry_run=args.dry_run,drop=args.drop,keep_going=not args.error, ncpus = args.num_cpus, remove_on_success=args.remove, move_on_failure=settings.ingest_failed_dir if args.move_away else False) == False)
+        return(epmt_submit(args.epmt_cmd_args,dry_run=args.dry_run,drop=args.drop,keep_going=not args.error, ncpus = args.num_cpus, remove_on_success=args.remove, move_on_failure=args.move_away) == False)
     if args.command == 'check':
         return(epmt_check() == False)
     if args.command == 'delete':

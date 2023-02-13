@@ -66,7 +66,7 @@ teardown() {
   assert_success
   run epmt submit -e ${resource_path}/test/data/submit/692500.tgz ${resource_path}/test/data/query/685000.tgz
   assert_failure
-  assert_output --partial "ob 692500 is already in the database"
+  assert_output --partial "ob 692500 is already in database"
   run epmt list 685000
   assert_output --partial "[]"
 }

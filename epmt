@@ -163,7 +163,7 @@ if (__name__ == "__main__"):
     submit_parser.add_argument('epmt_cmd_args', nargs='*', help="List of job .tgz files or directories", metavar="job_or_dir")
     submit_parser.add_argument('-e', '--error', action='store_true',help="Exit at the first sign of trouble")
     submit_parser.add_argument('-r', '--remove', action='store_true',help="Remove the job .tgz on successful ingestion")
-    submit_parser.add_argument('-m', '--move-away', default = True, action='store_true', help='Move away files upon failed ingestion to settings.ingest_failed_dir')
+    submit_parser.add_argument('-m', '--move-away', default=False, action='store_true', help='Move away files upon failed ingestion to settings.ingest_failed_dir')
     submit_parser.add_argument('-n', '--dry-run', action='store_true',help="Don't touch the database, but files will still be manipulated")
     submit_parser.add_argument('--drop',action='store_true',help="Drop all tables/data and recreate before submission")
     from epmtlib import suggested_cpu_count_for_submit
