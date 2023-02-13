@@ -1259,10 +1259,10 @@ def submit_dir_or_tgz_to_db(inputf, pattern=settings.input_pattern, dry_run=True
             logger.error("Exception from remove/rmtree(%s): %s",from_path,str(e))
 
     def goodpath(from_path):
-        return path.isfile(from_path) or path.isdir(from_path)
-
+        return (path.isfile(from_path) and (from_path.endswith("tar.gz") or from_path.endswith("tgz") or from_path.endswith("tar"))) or path.isdir(from_path) 
+    
     if not goodpath(inputf):
-        return (False, "submit_dir_or_tgz_to_db("+inputf+") not a job dir or archive", ())
+        return (False, "submit_dir_or_tgz_to_db("+inputf+") not a job dir or tar archive", ())
 
     status = False
     exc = None
