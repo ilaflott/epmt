@@ -228,7 +228,7 @@ def daemon_loop(context, niters = 0, post_process = True, analyze = True, retire
                 tgz_files = find_files_in_dir(ingest, '*.tgz', recursive = recursive)
                 if tgz_files:
                     logger.info('{} .tgz files found to ingest'.format(len(tgz_files)))
-                    epmt_submit(tgz_files, dry_run = False, ncpus=ncpus, remove_file=not(keep))
+                    epmt_submit(tgz_files, ncpus=ncpus, dry_run=False, keep_going=True, remove_on_success=not(keep), move_on_failure=True)
 
             if post_process:
                 # unprocessed jobs (these are jobs on whom post-processing
