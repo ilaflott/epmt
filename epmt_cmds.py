@@ -916,9 +916,14 @@ def get_filedict(dirname,pattern,tar=False):
 
     return filedict
 
-# if remove_file is set, then on successful ingest the .tgz file will be removed
-def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1, remove_file=False):
-    logger.debug("epmt_submit(%s,dry_run=%s,drop=%s,keep_going=%s,ncpus=%d,remove_file=%s)",dirs,dry_run,drop,keep_going,ncpus,remove_file)
+# if remove_on_success is set, on successful ingest the .tgz or job dir will be deleted
+# if move_on_failure is set, on failed ingested, the .tgz or dir is moved away
+# if keep_going is set, exceptions will not be raised
+# if dry_run is set, don't touch the DB
+# if drop is set, well just don't do that
+
+def epmt_submit(dirs, ncpus = 1, dry_run=True, drop=False, keep_going=False, remove_on_success=False, move_on_failure=False):
+    logger.debug("epmt_submit(%s,dry_run=%s,drop=%s,keep_going=%s,ncpus=%d,remove_on_success=%s,move_on_failure=%s)",dirs,dry_run,drop,keep_going,ncpus,remove_on_success,move_on_failure)
 
     # ARG checking
     
@@ -950,7 +955,7 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1, remo
         # when using multiple processes. This should be fixable.
         logger.error('Dropping tables in a parallel submit mode, not supported')
         return(False)
-
+        
     if drop:
         from orm import orm_drop_db, setup_db
         setup_db(settings)
@@ -962,7 +967,8 @@ def epmt_submit(dirs, dry_run=True, drop=False, keep_going=True, ncpus = 1, remo
         logger.debug('Worker %d, PID %d', tid, getpid())
         retval = {}
         for f in work_list:
-            r = submit_to_db(f,settings.input_pattern,dry_run=dry_run, remove_file=remove_file)
+            r = submit_dir_or_tgz_to_db(f, pattern=settings.input_pattern, dry_run=dry_run, keep_going=keep_going, remove_on_success=remove_on_success, destdir_on_failure=move_on_failure if not move_on_failure else settings.ingest_failed_dir)
+            # r = submit_to_db(f,settings.input_pattern,dry_run=dry_run, remove_on_success=remove_on_success)
             retval[f] = r
             (status, _, submit_details) = r
             if not keep_going:
@@ -1227,9 +1233,61 @@ def open_compressed_tar(inputf):
 # Check for Experiment related variables
 #    metadata = check_and_add_workflowdb_envvars(metadata,total_env)
 
-# remove_file is set, then we will delete the file on success
-def submit_to_db(inputf, pattern, dry_run=True, remove_file=False):
-    logger.info("submit_to_db(%s,%s,dry_run=%s,remove_file=%s)",inputf,pattern,str(dry_run),str(remove_file))
+# remove_on_success is set, then we will delete the file on success
+def submit_dir_or_tgz_to_db(inputf, pattern=settings.input_pattern, dry_run=True, keep_going=False, remove_on_success=settings.ingest_remove_on_success, destdir_on_failure=settings.ingest_failed_dir):
+    def move_away(from_file,to_dir):
+        if to_dir:
+            logger.info("move(%s,%s)",from_file,to_dir)
+            try:
+                move(from_file,to_dir)
+            except Exception as e:
+                logger.error("Exception from move(%s,%s): %s",from_file,to_dir,str(e))
+        
+    def trash(from_path):
+        logger.info("sending %s to trash",from_path);
+        try:
+            if path.isfile(from_path):
+                remove(from_path)
+            elif path.isdir(from_path):
+                rmtree(from_path, ignore_errors=True)
+        except Exception as e:
+            logger.error("Exception from remove/rmtree(%s): %s",from_path,str(e))
+
+    def goodpath(from_path):
+        return (path.isfile(from_path) and (from_path.endswith("tar.gz") or from_path.endswith("tgz") or from_path.endswith("tar"))) or path.isdir(from_path) 
+    
+    if not goodpath(inputf):
+        return (False, "submit_dir_or_tgz_to_db("+inputf+") not a job dir or tar archive", ())
+
+    status = False
+    exc = None
+    r = None
+    msg = "submit_dir_or_tgz_to_db({}): ".format(inputf) 
+    
+    try:
+        r = submit_to_db(inputf,pattern,dry_run=dry_run)
+    except Exception as e:
+        msg += str(e)
+        exc = e
+        if not keep_going:
+            exc.args = (msg, *exc.args)
+            move_away(inputf,destdir_on_failure)
+            raise exc
+        
+    if not r:
+        r = (False, msg, ())
+    (status, msg, submit_details) = r
+
+    if not status:
+        logger.debug("Status is False")
+        move_away(inputf,destdir_on_failure)
+    elif remove_on_success:
+        trash(inputf)
+
+    return r
+
+def submit_to_db(inputf, pattern, dry_run=True):
+    logger.info("submit_to_db(%s,%s,dry_run=%s)",inputf,pattern,str(dry_run))
 
     err,tar = open_compressed_tar(inputf)
     if err:
@@ -1282,16 +1340,6 @@ def submit_to_db(inputf, pattern, dry_run=True, remove_file=False):
         return (False, 'Error in DB setup', ())
     from epmt_job import ETL_job_dict
     r = ETL_job_dict(metadata,filedict,settings,tarfile=tar)
-    if remove_file:
-        if r[0]:
-            logger.info('Removing {} on successful ingest into db'.format(inputf))
-            if path.isfile(inputf):
-                remove(inputf)
-            elif path.isdir(inputf):
-                rmtree(inputf, ignore_errors=True)
-        else:
-            logger.debug('Not removing {} as ingest failed'.format(inputf))
-    # if not r[0]:
     return r
     # (j, process_count) = r[-1]
     # logger.info("Committed job %s to database: %s",j.jobid,j)
@@ -1611,7 +1659,7 @@ def epmt_entrypoint(args):
                 logger.warning('No daemon mode set, defaulting to post-process and analysis')
                 args.post_process = True
                 args.no_analyze = False
-            daemon_args = { 'post_process': args.post_process, 'analyze': not args.no_analyze, 'ingest': args.ingest, 'recursive': args.recursive, 'keep': args.keep, 'retire': args.retire, 'verbose': args.verbose }
+            daemon_args = { 'post_process': args.post_process, 'analyze': not args.no_analyze, 'ingest': args.ingest, 'recursive': args.recursive, 'keep': args.keep, 'move_away': args.move_away, 'retire': args.retire, 'verbose': args.verbose }
             return start_daemon(args.foreground,**daemon_args)
         elif args.stop:
             return stop_daemon()
@@ -1661,7 +1709,7 @@ def epmt_entrypoint(args):
     if args.command == 'dump':
         return(epmt_dump_metadata(args.epmt_cmd_args, key = args.key) == False)
     if args.command == 'submit':
-        return(epmt_submit(args.epmt_cmd_args,dry_run=args.dry_run,drop=args.drop,keep_going=not args.error, ncpus = args.num_cpus, remove_file=args.remove) == False)
+        return(epmt_submit(args.epmt_cmd_args,dry_run=args.dry_run,drop=args.drop,keep_going=not args.error, ncpus = args.num_cpus, remove_on_success=args.remove, move_on_failure=args.move_away) == False)
     if args.command == 'check':
         return(epmt_check() == False)
     if args.command == 'delete':
