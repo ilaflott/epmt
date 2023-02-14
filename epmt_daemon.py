@@ -127,7 +127,7 @@ def print_daemon_status(pidf = PID_FILE):
 
 # if niters is set, then the daemon loop will end after 'niters' iterations
 # otherwise loop forever or until we get interrupted by a signal
-def daemon_loop(context, niters = 0, post_process = True, analyze = True, retire = False, ingest = False, recursive = False, keep = False, verbose = 0):
+def daemon_loop(context, niters = 0, post_process = True, analyze = True, retire = False, ingest = False, recursive = False, keep = False, move_away = True, verbose = 0):
     '''
     Runs a daemon loop niters times, performing enabled actions
     such as post-processing, ingestion, etc.
@@ -147,6 +147,11 @@ def daemon_loop(context, niters = 0, post_process = True, analyze = True, retire
                   on successful ingest the file should be retained or not.
                   By default, False; meaning the files will be removed on
                   successful submission to the database.
+            move_away: Only meaningful when ingest is set. It indicates whether
+                  on failed ingest the file should be moved away to the value
+                  in settings.failed_ingest_dir 
+                  By default, True; meaning the files will be moved away on
+                  failed submission to the database.
          verbose: As the daemon reinitializes logging, the verbose argument
                   facilitates setting the verbosity from the CLI. Defaults to 0
     '''
@@ -158,7 +163,7 @@ def daemon_loop(context, niters = 0, post_process = True, analyze = True, retire
     sig_count = 0
 
     logger = logging.getLogger(daemon_loop.__name__)
-    logger.debug('(context=%s,niters=%d,post_process=%s,analyze=%s,retire=%s,ingest=%s,recursive=%s,keep=%s,verbose=%d)', type(context), niters, post_process, analyze, retire, ingest, recursive, keep, verbose)
+    logger.debug('(context=%s,niters=%d,post_process=%s,analyze=%s,retire=%s,ingest=%s,recursive=%s,keep=%s,moveaway=%s,verbose=%d)', type(context), niters, post_process, analyze, retire, ingest, recursive, keep, move_away, verbose)
 
     if retire:
         if (settings.retire_jobs_ndays == 0) and (settings.retire_models_ndays == 0):
@@ -170,7 +175,7 @@ def daemon_loop(context, niters = 0, post_process = True, analyze = True, retire
 
     if ingest:
         logger.info('ingestion mode enabled for daemon')
-        logger.info('ingestion mode (path={},recursive={},keep={})'.format(ingest,recursive, keep))
+        logger.info('ingestion mode (path={},recursive={},keep={},move_away={})'.format(ingest,recursive, keep, move_away))
         if not (path.isdir(ingest)):
             logger.error('Ingest path ({}) does not exist'.format(ingest))
             return True
@@ -228,7 +233,7 @@ def daemon_loop(context, niters = 0, post_process = True, analyze = True, retire
                 tgz_files = find_files_in_dir(ingest, '*.tgz', recursive = recursive)
                 if tgz_files:
                     logger.info('{} .tgz files found to ingest'.format(len(tgz_files)))
-                    epmt_submit(tgz_files, ncpus=ncpus, dry_run=False, keep_going=True, remove_on_success=not(keep), move_on_failure=True)
+                    epmt_submit(tgz_files, ncpus=ncpus, dry_run=False, keep_going=True, remove_on_success=not(keep), move_on_failure=move_away)
 
             if post_process:
                 # unprocessed jobs (these are jobs on whom post-processing

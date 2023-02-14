@@ -972,7 +972,7 @@ def epmt_submit(dirs, ncpus = 1, dry_run=True, drop=False, keep_going=False, rem
         logger.debug('Worker %d, PID %d', tid, getpid())
         retval = {}
         for f in work_list:
-            r = submit_dir_or_tgz_to_db(f, pattern=settings.input_pattern, dry_run=dry_run, keep_going=keep_going, remove_on_success=remove_on_success, move_on_failure=move_on_failure if not move_on_failure else settings.ingest_failed_dir)
+            r = submit_dir_or_tgz_to_db(f, pattern=settings.input_pattern, dry_run=dry_run, keep_going=keep_going, remove_on_success=remove_on_success, destdir_on_failure=move_on_failure if not move_on_failure else settings.ingest_failed_dir)
             # r = submit_to_db(f,settings.input_pattern,dry_run=dry_run, remove_on_success=remove_on_success)
             retval[f] = r
             (status, _, submit_details) = r
@@ -1239,7 +1239,7 @@ def open_compressed_tar(inputf):
 #    metadata = check_and_add_workflowdb_envvars(metadata,total_env)
 
 # remove_on_success is set, then we will delete the file on success
-def submit_dir_or_tgz_to_db(inputf, pattern=settings.input_pattern, dry_run=True, keep_going=False, remove_on_success=settings.ingest_remove_on_success, move_on_failure=settings.ingest_failed_dir):
+def submit_dir_or_tgz_to_db(inputf, pattern=settings.input_pattern, dry_run=True, keep_going=False, remove_on_success=settings.ingest_remove_on_success, destdir_on_failure=settings.ingest_failed_dir):
     def move_away(from_file,to_dir):
         if to_dir:
             logger.info("move(%s,%s)",from_file,to_dir)
@@ -1276,7 +1276,7 @@ def submit_dir_or_tgz_to_db(inputf, pattern=settings.input_pattern, dry_run=True
         exc = e
         if not keep_going:
             exc.args = (msg, *exc.args)
-            move_away(inputf,move_on_failure)
+            move_away(inputf,destdir_on_failure)
             raise exc
         
     if not r:
@@ -1285,7 +1285,7 @@ def submit_dir_or_tgz_to_db(inputf, pattern=settings.input_pattern, dry_run=True
 
     if not status:
         logger.debug("Status is False")
-        move_away(inputf,move_on_failure)
+        move_away(inputf,destdir_on_failure)
     elif remove_on_success:
         trash(inputf)
 
@@ -1664,7 +1664,7 @@ def epmt_entrypoint(args):
                 logger.warning('No daemon mode set, defaulting to post-process and analysis')
                 args.post_process = True
                 args.no_analyze = False
-            daemon_args = { 'post_process': args.post_process, 'analyze': not args.no_analyze, 'ingest': args.ingest, 'recursive': args.recursive, 'keep': args.keep, 'retire': args.retire, 'verbose': args.verbose }
+            daemon_args = { 'post_process': args.post_process, 'analyze': not args.no_analyze, 'ingest': args.ingest, 'recursive': args.recursive, 'keep': args.keep, 'move_away': args.move_away, 'retire': args.retire, 'verbose': args.verbose }
             return start_daemon(args.foreground,**daemon_args)
         elif args.stop:
             return stop_daemon()

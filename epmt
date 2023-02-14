@@ -128,8 +128,8 @@ if (__name__ == "__main__"):
     daemon_parser.add_argument('--retire',action='store_true',help="Perform data retirement based on the retention policy in settings")
     daemon_parser.add_argument('-i', '--ingest',nargs='?', default=False, const=settings.stage_command_dest, help="Perform ingestion into the database from the specified directory. If no path is specified the staging destination directory ({}), specified in settings, will be used. See also, --keep and --recursive".format(settings.stage_command_dest), metavar='ingest_path')
     daemon_parser.add_argument('-k', '--keep', default = False, action='store_true', help='Keep files after successful ingest. Only meaningful with --ingest')
-    daemon_parser.add_argument('-m', '--move', default = True, action='store_true', help='Move away files on failed ingest. Only meaningful with --ingest')
-    daemon_parser.add_argument('-r', '--recursive', default = False, action='store_true', help='Recurse into sub-directories to find staged files. Only meaningful if --ingest is set')
+    daemon_parser.add_argument('-m', '--move-away', default = True, action='store_true', help='Move away files on failed ingest. Only meaningful with --ingest')
+    daemon_parser.add_argument('-r', '--recursive', default = False, action='store_true', help='Recurse into sub-directories to find staged files. Only meaningful with --ingest')
     daemon_parser.set_defaults(start_daemon=False, stop_daemon=False, foreground=False, post_process=False, no_analyze=False,retire=False)
     # shell
     shell_parser = subparser.add_parser('shell', help = "Start an interactive IPython shell, see 'epmt python'",
