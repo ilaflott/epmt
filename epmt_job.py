@@ -618,14 +618,15 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     if not j.processes:
         logger.warning('Job {} contains no processes, perhaps an error in collation or populating the staging data?'.format(jobid))
 
-
     if all_tags == None:
-        logger.info("  recreating all_tags..")
+        logger.debug("Creating all_tags")
         all_tags = set()
         # we need to read the tags from the processes
+        t = ()
         for p in j.processes:
-            if p.tags:
-                all_tags.add(dumps(p.tags, sort_keys=True))
+            if not p.tags:
+                continue
+            all_tags.add(dumps(p.tags, sort_keys=True))
 
     # Add sum of tags to job
     if all_tags:
@@ -1288,15 +1289,15 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 cnt += 1
                 nrecs += p.numtids
                 csvt = datetime.now() - csv
-                if (((nrecs % 1000) == 0) or \
+                if (((nrecs % 10000) == 0) or \
                     ((cntmax==1) and (nrecs == nrows)) or \
                     ((cntmax > 1) and (fileno == cntmax))):
                     if cntmax > 1:
                         # many small files each with a single process
-                        logger.info("Did %d (%d/%d files)...%.2f/sec",nrecs,fileno, cntmax,nrecs/csvt.total_seconds())
+                        logger.debug("Did %d (%d/%d files)...%.2f/sec",nrecs,fileno, cntmax,nrecs/csvt.total_seconds())
                     else:
                         # collated file
-                        logger.info("Did %d (%d in file)...%.2f/sec",nrecs,nrows,nrecs/csvt.total_seconds())
+                        logger.debug("Did %d (%d in file)...%.2f/sec",nrecs,nrows,nrecs/csvt.total_seconds())
                     # break
                 proc_misc_time += time.time() - _t
 
