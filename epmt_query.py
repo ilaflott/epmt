@@ -2423,8 +2423,8 @@ def get_unprocessed_jobs():
     -------
     List (possibly empty) of unprocessed jobids (list of strings)
     '''
-    uj = orm_findall(UnprocessedJob)
-    return [ u.jobid for u in uj ]
+    uj = orm_findall(UnprocessedJob.jobid)
+    return [ u for (u,) in uj ]
 
 @db_session
 def comparable_job_partitions(jobs, matching_keys = ['exp_name', 'exp_component']):

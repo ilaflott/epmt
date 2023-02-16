@@ -21,6 +21,7 @@ stage_command = "mv"
 stage_command_dest = "./"
 ingest_remove_on_success=True
 ingest_failed_dir="/tmp/"
+limit_orm_findall=10000
 
 verbose = 0
 # gather profiling information or not

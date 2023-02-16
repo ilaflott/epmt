@@ -4,7 +4,7 @@ from os import environ
 from logging import getLogger
 from json import dumps, loads
 from epmtlib import tag_from_string, sum_dicts, timing, dotdict, get_first_key_match, check_fix_metadata, logfn
-from epmt_query import is_job_post_processed
+from epmt_query import is_job_post_processed, get_unprocessed_jobs
 from datetime import datetime, timedelta
 from functools import reduce
 import time
@@ -1401,11 +1401,9 @@ def post_process_pending_jobs():
         logger.error("post-processing is not supported for Pony")
         return []
 
-    unproc_jobs = orm_findall(UnprocessedJob)
     did_process = []
-    for u in unproc_jobs:
-        jobid = u.jobid
-        j = u.job
+    jids = get_unprocessed_jobs()
+    for jobid in jids:
         logger.debug('post-processing {0}'.format(jobid))
         if post_process_job(jobid):
             did_process.append(jobid)

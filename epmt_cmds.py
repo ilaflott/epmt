@@ -1237,14 +1237,14 @@ def open_compressed_tar(inputf):
 def submit_dir_or_tgz_to_db(inputf, pattern=settings.input_pattern, dry_run=True, keep_going=False, remove_on_success=settings.ingest_remove_on_success, destdir_on_failure=settings.ingest_failed_dir):
     def move_away(from_file,to_dir):
         if to_dir:
-            logger.info("move(%s,%s)",from_file,to_dir)
+            logger.warning("Moving away %s after failed ingest to %s",from_file,to_dir)
             try:
                 move(from_file,to_dir)
             except Exception as e:
                 logger.error("Exception from move(%s,%s): %s",from_file,to_dir,str(e))
         
     def trash(from_path):
-        logger.info("sending %s to trash",from_path);
+        logger.debug("Removing %s after successful ingest",from_path);
         try:
             if path.isfile(from_path):
                 remove(from_path)
@@ -1257,29 +1257,34 @@ def submit_dir_or_tgz_to_db(inputf, pattern=settings.input_pattern, dry_run=True
         return (path.isfile(from_path) and (from_path.endswith("tar.gz") or from_path.endswith("tgz") or from_path.endswith("tar"))) or path.isdir(from_path) 
     
     if not goodpath(inputf):
-        return (False, "submit_dir_or_tgz_to_db("+inputf+") not a job dir or tar archive", ())
-
+        if path.exists(inputf):
+            move_away(inputf, destdir_on_failure)
+            return (False, inputf + " is not a job dir or tar archive", ())
+        else:
+            return (False, inputf + " does not exist", ())
+        
     status = False
     exc = None
-    r = None
     msg = "submit_dir_or_tgz_to_db({}): ".format(inputf) 
+    r = (False, msg, ())
     
     try:
         r = submit_to_db(inputf,pattern,dry_run=dry_run)
     except Exception as e:
         msg += str(e)
+        r = (False, msg, ())
         exc = e
+        logger.warning(msg)
         if not keep_going:
             exc.args = (msg, *exc.args)
             move_away(inputf,destdir_on_failure)
             raise exc
         
-    if not r:
-        r = (False, msg, ())
     (status, msg, submit_details) = r
 
     if not status:
-        logger.debug("Status is False")
+        if not exc:
+            logger.warning(msg)
         move_away(inputf,destdir_on_failure)
     elif remove_on_success:
         trash(inputf)
@@ -1300,7 +1305,7 @@ def submit_to_db(inputf, pattern, dry_run=True):
 #        import tarfile
 #        tar = tarfile.open(input, "r:")
     if not tar and not inputf.endswith("/"):
-        logger.warning("missing trailing / on submit dirname %s",inputf);
+        logger.info("missing trailing / on submit dirname %s",inputf);
         inputf += "/"
 
     if tar:

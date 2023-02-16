@@ -43,7 +43,7 @@ def db_session(func):
             completed = True
         except Exception as e:
             logger.debug(str(e),exc_info=True)
-            logger.warning('Rolling back due to exception: {}'.format(e))
+            logger.info('Rolling back due to exception: {}'.format(e))
             #, exc_info=True)
             # import traceback, sys
             # print('-'*60)
@@ -166,7 +166,7 @@ def orm_get(model, pk=None, **kwargs):
  
 
 def orm_findall(model, **kwargs):
-    return Session.query(model).filter_by(**kwargs)
+    return Session.query(model).filter_by(**kwargs).limit(settings.limit_orm_findall)
 
 # def orm_set(o, **kwargs):
 #     for k in kwargs.keys():
