@@ -4,7 +4,7 @@ OS_TARGET=centos-7
 PAPIEX_VERSION?=2.3.14
 PAPIEX_SRC?=../papiex
 PYTHON_VERSION=3.9.16
-EPMT_VERSION=$(shell sed -n '/_version = /p' epmtlib.py | sed 's/ //g; s/,/./g; s/.*(\(.*\))/\1/')
+EPMT_VERSION=$(shell sed -n '/_version = /p' src/epmt/epmtlib.py | sed 's/ //g; s/,/./g; s/.*(\(.*\))/\1/')
 EPMT_RELEASE=epmt-$(EPMT_VERSION)-$(OS_TARGET).tgz
 EPMT_FULL_RELEASE=EPMT-release-$(EPMT_VERSION)-$(OS_TARGET).tgz
 PAPIEX_RELEASE=papiex-epmt-$(PAPIEX_VERSION)-$(OS_TARGET).tgz
@@ -24,14 +24,11 @@ PWD=$(shell pwd)
 	install-py3-pyenv install-py3deps-pyenv
 
 epmt-build compile build:
+	cd src/epmt
 	python3 -O -bb -m py_compile *.py orm/*.py orm/*/*.py test/*.py
 lint:
+	cd src/epmt
 	python3 -m pylint -E *.py orm/*.py orm/*/*.py test/*.py
-
-#	which pyenv > /dev/null || curl https://pyenv.run | bash 
-#	PATH="$$HOME/.pyenv/bin:$$PATH" ; \
-#	eval "$$(pyenv init -)" ; \
-#	eval "$$(pyenv virtualenv-init -)" ; 
 
 # install a virtual environment
 
@@ -47,7 +44,7 @@ install-py3-pyenv:
 	pyenv local epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION) ; $(MAKE) install-deps ; \
 	echo ; echo "Your virtual python environment is epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION)." ;
 install-deps:
-	set -e ; pip install --upgrade pip ; pip install -r requirements.txt.py3 ; pip install -r ui/requirements-ui.txt.py3
+	set -e ; pip install --upgrade pip ; pip install -r requirements.txt.py3 ; pip install -r src/epmt/ui/requirements-ui.txt.py3
 
 #rm -rf .venv374 ; \
 #	if python3 -m epmt_query 2>&1| grep ModuleNotFound > /dev/null; then \
@@ -78,23 +75,25 @@ $(EPMT_RELEASE) dist:
 	# resources
 	cp -Rp preset_settings epmt-install
 	cp -Rp notebooks epmt-install
-	cp -Rp migrations epmt-install
-	cp -p alembic.ini epmt-install
+	cp -Rp src/epmt/epmt_migrations epmt-install/migrations
+	cp -p src/epmt/alembic.ini epmt-install
 	# examples
 	mkdir epmt-install/examples 
-	cp test/shell/epmt-example.*sh epmt-install/examples
+	cp src/epmt/test/shell/epmt-example.*sh epmt-install/examples
 	# slurm
 	mkdir epmt-install/slurm 
 	cp SLURM/slurm_task_*log_epmt.sh epmt-install/slurm 
 	# docs
 	cp -Rp epmtdocs/site epmt-install/epmt/epmtdocs
 	# release
-	tar -czf $(EPMT_RELEASE) epmt-install 
+	tar -czf $(EPMT_RELEASE) epmt-install
+	# python package
+	cd src; python3 -m build
 
 test-$(EPMT_RELEASE) dist-test:
 # final location of tarfile
 	rm -rf epmt-install-tests && mkdir epmt-install-tests
-	cp -Rp test epmt-install-tests
+	cp -Rp src/epmt/test epmt-install-tests
 	tar -czf test-$(EPMT_RELEASE) epmt-install-tests
 	rm -rf epmt-install-tests
 
@@ -144,7 +143,7 @@ release release-all release7:
 #
 clean:
 	find . -type f \( -name "core" -or -name "*~" -or -name "*.pyc" -or -name "epmt.log" \) -exec rm -f {} \;
-	rm -rf ui/__pycache__ __pycache__ build epmt-install epmt-install-tests .venv374ß
+	rm -rf src/epmt/ui/__pycache__ __pycache__ build epmt-install epmt-install-tests .venv374ß
 
 distclean: clean
 	rm -f settings.py $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(PAPIEX_RELEASE) $(EPMT_FULL_RELEASE)
