@@ -46,12 +46,12 @@ for f in alembic_migration_files:
 
 # Move web components into root
 dash_resources = []
-files = glob('ui/components/*.py')
+files = glob('src/epmt/ui/components/*.py')
 for f in files:
     dash_resources.append((f, '.'))
 
 # Move Web assets into subdirectory
-files = glob('ui/assets/*')
+files = glob('src/epmt/ui/assets/*')
 for f in files:
     dash_resources.append((f, './assets/'))
 
@@ -63,7 +63,7 @@ extra_datas = ipe_extra_datas + dash_extra_datas + alembic_extras + dash_resourc
 print("Extra data: ",extra_datas)
 
 # see we add the ui directory to 
-a = Analysis(['epmt','ui/index.py'],
+a = Analysis(['epmt','src/epmt/ui/index.py'],
              pathex=['./ui'],
              binaries=[],
              datas=extra_datas,
