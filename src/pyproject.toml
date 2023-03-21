@@ -1,19 +1,19 @@
 [build-system]
-requires	= ["hatchling"]
-build-backend	= "hatchling.build"
-
-[tool.hatch.build]
-artifacts	= [ "settings.py" ]
+requires	= [
+		"setuptools >= 61",
+		"setuptools_scm[toml] >= 4, <6",
+		"wheel >= 0.29.0"
+]
+build-backend = "setuptools.build_meta"
 
 [project]
-name		= "EPMT"
-version		= "4.9.2"
+name		= "epmt"
+version		= "4.10.0"
 authors		= [ { name = "Minimal Metrics, LLC", email = "some.where@over.there" } ]
 description	= "Experiment Performance Metrics Toolkit"
 readme		= "README.md"
 requires-python	= ">=3.9"
 classifiers	= [    "Programming Language :: Python :: 3", ]
-
 dependencies	= [ 
 		"alembic==1.9.2",
 		"altgraph==0.17.3",
