@@ -400,7 +400,7 @@ def exp_find_jobs(exp_name, components = [], exp_times = [], failed = None, **kw
             raise ValueError("You cannot use the 'fltr' option in conjunction with 'failed'")
         # pony and sqlalchemy have different syntax for filters
         if settings.orm == 'sqlalchemy':
-            from orm import Job
+            from epmt.orm import Job
             kwargs['fltr'] = (Job.exitcode != 0) if failed else (Job.exitcode == 0)
         else:
             # pony

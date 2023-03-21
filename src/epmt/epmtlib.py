@@ -27,7 +27,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (4,9,2)
+_version = (4,10,0)
 
 def version():
     return _version
@@ -672,9 +672,10 @@ def suggested_cpu_count_for_submit():
     '''
     Suggests the optimal number of cpus to use for the submit operation
     '''
-    from multiprocessing import cpu_count
-    max_procs = cpu_count()
-    return max(1, max_procs - 1)
+    return 1
+    # from multiprocessing import cpu_count
+    # max_procs = cpu_count()
+    # return max(1, max_procs - 1)
 
 
 def conv_to_datetime(t):
@@ -1009,7 +1010,7 @@ def get_install_root():
     >>> '/abc/def/ghi.py'.rsplit('/',1)
     ['/abc/def', 'ghi.py']
     '''
-    return (__file__.rsplit('/', 1)[0])
+    return (__file__.rsplit('/', 2)[0])
 
 def logfn(func):
     '''

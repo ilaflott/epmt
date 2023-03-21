@@ -15,7 +15,7 @@ from io import StringIO
 
 logger = getLogger(__name__)  # you can use other name
 import epmt.epmt_settings as settings
-from orm import *
+from epmt.orm import *
 
 #
 # Spinning cursor sequence

@@ -12,7 +12,7 @@ import errno
 import fnmatch
 import pickle
 from logging import getLogger
-from orm import db_session
+from epmt.orm import db_session
 
 logger = getLogger(__name__)  # you can use other name
 import epmt.epmt_settings as settings
@@ -199,7 +199,7 @@ def verify_papiex_options():
 def verify_db_params():
     print("settings.db_params =",str(settings.db_params), end='')
     try:
-        from orm import setup_db
+        from epmt.orm import setup_db
         if setup_db(settings) == False:
             PrintFail()
             return False
@@ -493,7 +493,7 @@ def epmt_dump_metadata(filelist, key = None):
                 logger.error("%s does not exist!",f)
                 return False
             logger.debug('{} was not found in the file-system. Checking database..'.format(f))
-            from epmt_cmd_show import epmt_show_job
+            from epmt.epmt_cmd_show import epmt_show_job
             # if the file does not exist then we check the DB
             rc = epmt_show_job(f, key = key)
             if not(rc):
@@ -578,7 +578,7 @@ def annotate_metadata(metadatafile, annotations, replace = False):
 def epmt_annotate(argslist, replace = False):
     if not argslist: return False # nothing to do
 
-    from epmtlib import kwargify
+    from epmt.epmtlib import kwargify
     staged_file = job_dir = jobid = running_job = False  # initialize
 
     # this function returns the annotation dictionary from kwargs
@@ -659,12 +659,12 @@ def epmt_annotate(argslist, replace = False):
             # database jobid form
             jobid = argslist[0]
             logger.info('annotating job {0} in db: {1}'.format(jobid, annotations))
-            from epmt_query import annotate_job
+            from epmt.epmt_query import annotate_job
             updated_ann = annotate_job(jobid, annotations, replace)
             logger.debug('updated annotations: {}'.format(updated_ann))
             if settings.job_tags_env in annotations:
                 # we need to set <job>.tags to the value of EPMT_JOB_TAGS
-                from epmt_query import tag_job
+                from epmt.epmt_query import tag_job
                 # we have to overwrite the existing tags (not merge it in)
                 r = tag_job(jobid, annotations[settings.job_tags_env], True)
                 logger.debug('Updated tags for job {} to {}'.format(jobid, r))
@@ -935,7 +935,7 @@ def epmt_submit(dirs, ncpus = 1, dry_run=True, drop=False, keep_going=False, rem
     if dry_run and drop:
         logger.error("You can't drop tables and do a dry run")
         return(False)
-    from orm import orm_db_provider
+    from epmt.orm import orm_db_provider
     if (ncpus > 1) and ((settings.orm != 'sqlalchemy') or (orm_db_provider() != "postgres")):
         logger.error('Parallel submit is only supported for Postgres + SQLAlchemy at present')
         return False
@@ -962,7 +962,7 @@ def epmt_submit(dirs, ncpus = 1, dry_run=True, drop=False, keep_going=False, rem
         return(False)
         
     if drop:
-        from orm import orm_drop_db, setup_db
+        from epmt.orm import orm_drop_db, setup_db
         setup_db(settings)
         orm_drop_db()
 
@@ -973,6 +973,7 @@ def epmt_submit(dirs, ncpus = 1, dry_run=True, drop=False, keep_going=False, rem
         retval = {}
         for f in work_list:
             r = submit_dir_or_tgz_to_db(f, pattern=settings.input_pattern, dry_run=dry_run, keep_going=keep_going, remove_on_success=remove_on_success, destdir_on_failure=move_on_failure if not move_on_failure else settings.ingest_failed_dir)
+            logger.debug('post submit_dir_or_tgz_to_db()')
             # r = submit_to_db(f,settings.input_pattern,dry_run=dry_run, remove_on_success=remove_on_success)
             retval[f] = r
             (status, _, submit_details) = r
@@ -987,6 +988,7 @@ def epmt_submit(dirs, ncpus = 1, dry_run=True, drop=False, keep_going=False, rem
                     break
         # stringify the return values
         ret_dict[tid] = dumps(retval)
+        logger.debug('submit_fn(): about to return')
         return
     # we shouldn't use more processors than the number of discrete
     # work items. We don't currently split the work within a directory.
@@ -1006,6 +1008,7 @@ def epmt_submit(dirs, ncpus = 1, dry_run=True, drop=False, keep_going=False, rem
     if nprocs == 1:
         return_dict = {}
         submit_fn(worker_id, dirs, return_dict)
+        logger.debug('post-submit_fn()')
     else:
         logger.info('Using %d worker processes', nprocs)
         from numpy import array_split
@@ -1015,6 +1018,7 @@ def epmt_submit(dirs, ncpus = 1, dry_run=True, drop=False, keep_going=False, rem
         for work in array_split(dirs, nprocs):
             logger.debug('Worker %d will work on directory %s', worker_id, str(work))
             process = multiprocessing.Process(target = submit_fn, args=(worker_id, work, return_dict))
+            logger.debug('MP: post-submit_fn()')
             procs.append(process)
             worker_id += 1
         for p in procs:
@@ -1248,6 +1252,7 @@ def submit_dir_or_tgz_to_db(inputf, pattern=settings.input_pattern, dry_run=True
                 move(from_file,to_dir)
             except Exception as e:
                 logger.error("Exception from move(%s,%s): %s",from_file,to_dir,str(e))
+            logger.info("done: move(%s,%s)",from_file,to_dir)
         
     def trash(from_path):
         logger.info("sending %s to trash",from_path);
@@ -1341,10 +1346,10 @@ def submit_to_db(inputf, pattern, dry_run=True):
         return (True, 'Dry run finished, skipping DB work', ())
 
 # Now we touch the Database
-    from orm import setup_db
+    from epmt.orm import setup_db
     if setup_db(settings,False) == False:
         return (False, 'Error in DB setup', ())
-    from epmt_job import ETL_job_dict
+    from epmt.epmt_job import ETL_job_dict
     r = ETL_job_dict(metadata,filedict,settings,tarfile=tar)
     return r
     # (j, process_count) = r[-1]
@@ -1378,7 +1383,7 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True):
                 return False
         else:
             # the old csv 1.0 concatenation using csvjoiner
-            from epmt_concat import csvjoiner
+            from epmt.epmt_concat import csvjoiner
             status, _, badfiles = csvjoiner(indir, outpath=tempdir+"/", keep_going=keep_going, errdir=settings.error_dest)
             if status == False:
                 logger.debug("csv concatenation returned status = %s",status)
@@ -1454,7 +1459,7 @@ def epmt_stage(dirs, keep_going=True, collate=True, compress_and_tar=True):
     return r
 
 def epmt_dbsize(findwhat=['database','table','index','tablespace'], usejson=True, usebytes=True):
-    from orm import orm_db_size
+    from epmt.orm import orm_db_size
 # Absolutely all argument checking should go here, specifically the findwhat stuff
     if findwhat == "all":
         findwhat = ['database','table','index','tablespace']
@@ -1531,16 +1536,16 @@ def epmt_entrypoint(args):
             epmt_shell(ipython = False)
         return 0
     if args.command == 'convert':
-        from epmt_convert_csv import convert_csv_in_tar
+        from epmt.epmt_convert_csv import convert_csv_in_tar
         return (convert_csv_in_tar(args.src_tgz, args.dest_tgz) == False)
     if args.command == 'explore':
-        from epmt_exp_explore import exp_explore
+        from epmt.epmt_exp_explore import exp_explore
         exp_explore(args.epmt_cmd_args, metric = args.metric, limit = args.limit)
         return 0
     if args.command == 'gui':
         # Start both Dash interface and Static Web Server
         from threading import Thread
-        from ui import init_app, app
+        from epmt.ui import init_app, app
         from serve_static import app as docsapp
         # Bug in pyinstaller does not import the idna encoding
         import encodings.idna
@@ -1554,7 +1559,7 @@ def epmt_entrypoint(args):
 
     if args.command == 'integration':
         import subprocess
-        from epmtlib import get_install_root
+        from epmt.epmtlib import get_install_root
         from glob import glob
         req_tests = None
         tests_to_run = []
@@ -1605,7 +1610,7 @@ def epmt_entrypoint(args):
         logger.debug(cmd)
         # set up a signal handler so we can make sure we trap common
         # interrupts and also send the SIGTERM to spanwed child processes
-        from epmtlib import set_signal_handlers
+        from epmt.epmtlib import set_signal_handlers
         from signal import SIGTERM
         import psutil
         from sys import stderr
@@ -1644,7 +1649,7 @@ def epmt_entrypoint(args):
         return 0
 
     if args.command == 'retire':
-        from epmt_cmd_retire import epmt_retire
+        from epmt.epmt_cmd_retire import epmt_retire
         epmt_retire()
         return 0
 
@@ -1654,7 +1659,7 @@ def epmt_entrypoint(args):
         return(0 if epmt_check() else 1)
 
     if args.command == 'daemon':
-        from epmt_daemon import start_daemon, stop_daemon, daemon_loop, print_daemon_status
+        from epmt.epmt_daemon import start_daemon, stop_daemon, daemon_loop, print_daemon_status
         if args.no_analyze and not args.post_process:
             logger.error("Skipping analysis requires post processing to be enabled")
             return 0
@@ -1678,7 +1683,7 @@ def epmt_entrypoint(args):
             if (confirm.upper() not in ('Y', 'YES')):
                 return 0
         logger.info('request to drop all data in the database')
-        from orm import orm_drop_db
+        from epmt.orm import orm_drop_db
         orm_drop_db()
         return 0
     if args.command == 'dbsize':
@@ -1695,16 +1700,16 @@ def epmt_entrypoint(args):
         return(epmt_annotate(args.epmt_cmd_args, args.replace) == False)
 
     if args.command == 'schema':
-        from orm import orm_dump_schema
+        from epmt.orm import orm_dump_schema
         return (orm_dump_schema() == False)
 
     if args.command == 'migrate':
-        from orm import setup_db
+        from epmt.orm import setup_db
         return (setup_db(settings) == False)
 
     # show functionality is now handled in the 'dump' command
     # if args.command == 'show':
-    #     from epmt_cmd_show import epmt_show_job
+    #     from epmt.epmt_cmd_show import epmt_show_job
     #     return(epmt_show_job(args.epmt_cmd_args, key = args.key) == False)
     if args.command == 'source':
         s = epmt_source(slurm_prolog=args.slurm,papiex_debug=(args.verbose > 2),monitor_debug=(args.verbose > 3))
@@ -1719,13 +1724,13 @@ def epmt_entrypoint(args):
     if args.command == 'check':
         return(epmt_check() == False)
     if args.command == 'delete':
-        from epmt_cmd_delete import epmt_delete_jobs
+        from epmt.epmt_cmd_delete import epmt_delete_jobs
         return(epmt_delete_jobs(args.epmt_cmd_args) == False)
     if args.command == 'list':
-        from epmt_cmd_list import epmt_list
+        from epmt.epmt_cmd_list import epmt_list
         return(epmt_list(args.epmt_cmd_args) == False)
     if args.command == 'notebook':
-        from epmt_cmd_notebook import epmt_notebook
+        from epmt.epmt_cmd_notebook import epmt_notebook
         return(epmt_notebook(args.epmt_cmd_args) == False)
 
     logger.error("Unknown command, %s. See -h for options.",args.command)

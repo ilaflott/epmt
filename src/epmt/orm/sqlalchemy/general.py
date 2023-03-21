@@ -680,7 +680,7 @@ def chdir_for_alembic_and_restore_cwd(function):
 def check_and_apply_migrations():
     from alembic import config, script
     database_schema_version = get_db_schema_version()
-    alembic_cfg = config.Config('alembic.ini')
+    alembic_cfg = config.Config('epmt/alembic.ini')
     script_ = script.ScriptDirectory.from_config(alembic_cfg)
     epmt_schema_head = script_.get_current_head()
 
@@ -698,7 +698,7 @@ def get_db_schema_version():
     from alembic import config
     from alembic.runtime import migration
     engine = _connect_engine()
-    alembic_cfg = config.Config('alembic.ini')
+    alembic_cfg = config.Config('epmt/alembic.ini')
     with engine.begin() as conn:
         context = migration.MigrationContext.configure(conn)
         database_schema_version = context.get_current_revision()
@@ -709,7 +709,7 @@ def get_db_schema_version():
 def migrate_db():
     from alembic import config, script
     from sqlalchemy import exc
-    alembic_cfg = config.Config('alembic.ini')
+    alembic_cfg = config.Config('epmt/alembic.ini')
     script_ = script.ScriptDirectory.from_config(alembic_cfg)
     epmt_schema_head = script_.get_current_head()
     logger.info('Migrating database to HEAD: {}'.format(epmt_schema_head))
