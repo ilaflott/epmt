@@ -7,6 +7,7 @@ PYTHON_VERSION=3.9.16
 EPMT_VERSION=$(shell sed -n '/_version = /p' src/epmt/epmtlib.py | sed 's/ //g; s/,/./g; s/.*(\(.*\))/\1/')
 EPMT_RELEASE=epmt-$(EPMT_VERSION)-$(OS_TARGET).tgz
 EPMT_FULL_RELEASE=EPMT-release-$(EPMT_VERSION)-$(OS_TARGET).tgz
+EPMT_PYTHON_FULL_RELEASE=epmt-$(EPMT_VERSION).tar.gz
 PAPIEX_RELEASE=papiex-epmt-$(PAPIEX_VERSION)-$(OS_TARGET).tgz
 #
 SHELL=/bin/bash
@@ -76,7 +77,7 @@ $(EPMT_RELEASE) dist:
 	cp -Rp preset_settings epmt-install
 	cp -Rp notebooks epmt-install
 	cp -Rp src/epmt/epmt_migrations epmt-install/migrations
-	cp -p src/epmt/alembic.ini epmt-install
+	cp -pr src/epmt epmt-install
 	# examples
 	mkdir epmt-install/examples 
 	cp src/epmt/test/shell/epmt-example.*sh epmt-install/examples
@@ -87,8 +88,11 @@ $(EPMT_RELEASE) dist:
 	cp -Rp epmtdocs/site epmt-install/epmt/epmtdocs
 	# release
 	tar -czf $(EPMT_RELEASE) epmt-install
-	# python package
-	cd src; python3 -m build
+	# ok enough of pyinstaller.  here's a pip-installable piece
+	cd src
+	tar zxf ../$(PAPIEX_RELEASE)
+	python3 setup.py sdist
+	chmod a+r dist/*
 
 test-$(EPMT_RELEASE) dist-test:
 # final location of tarfile
@@ -123,12 +127,12 @@ $(EPMT_FULL_RELEASE): $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(PAPIEX_RELEASE)
 	@echo
 
 check-release release-test-docker: $(EPMT_FULL_RELEASE)
-	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test-release -t $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) --build-arg epmt_version=$(EPMT_VERSION) --build-arg install_path=/opt/minimalmetrics --build-arg epmt_full_release=$(EPMT_FULL_RELEASE) .
+	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test-release -t $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) --build-arg epmt_version=$(EPMT_VERSION) --build-arg install_path=/opt/epmt --build-arg epmt_full_release=$(EPMT_PYTHON_FULL_RELEASE) .
 	if docker ps | grep postgres-test > /dev/null; then docker stop postgres-test; fi
 	if docker network ls | grep epmt-test-net > /dev/null; then docker network rm epmt-test-net; fi
 	docker network create epmt-test-net
 	$(DOCKER_RUN) -d --rm --name postgres-test --network epmt-test-net -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -e POSTGRES_DB=EPMT-TEST postgres:latest
-	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged -it --rm -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; install_prefix=`epmt -h| grep install_prefix|cut -f2 -d:`; cp -fv $$install_prefix/../epmt-install/preset_settings/settings_test_pg_container.py $$install_prefix/../epmt-install/epmt/settings.py && epmt check && epmt unittest && epmt integration'
+	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged -it --rm -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; install_prefix=`epmt -h| grep install_prefix|cut -f2 -d:`; cp -fv $$install_prefix/epmt-$(EPMT_VERSION)/epmt-install/preset_settings/settings_test_pg_container.py $$install_prefix/epmt-$(EPMT_VERSION)/epmt-install/epmt/settings.py && epmt check && epmt unittest && epmt integration'
 	docker stop postgres-test
 	docker network rm epmt-test-net
 
@@ -146,7 +150,7 @@ clean:
 	rm -rf src/epmt/ui/__pycache__ __pycache__ build epmt-install epmt-install-tests .venv374ß
 
 distclean: clean
-	rm -f settings.py $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(PAPIEX_RELEASE) $(EPMT_FULL_RELEASE)
+	rm -f settings.py $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(PAPIEX_RELEASE) $(EPMT_FULL_RELEASE) src/dist/*
 	rm -rf epmtdocs/site
 
 # 
