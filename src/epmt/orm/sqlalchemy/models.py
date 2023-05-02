@@ -89,8 +89,7 @@ class Job(with_metaclass(CommonMeta, Base)):
     annotations = Column(JSON, default={}, index=True)
     analyses = Column(JSON, default={}, index=True)
     start = Column(DateTime, default=datetime.now, index=True)
-    #end = Column(DateTime, default=datetime.now, index=True)
-    end = Column(DateTime, default=datetime.now) #why is the end not indexed? 
+    end = Column(DateTime, default=datetime.now)
     duration = Column(Float, default=0)
     proc_sums = Column(JSON) # aggregates across processes of job
     env_dict = Column(JSON)

@@ -39,7 +39,6 @@ THREAD_SUMS_FIELD_IN_PROC='threads_sums'
 
 def conv_jobs(jobs, fmt='dict', merge_sums = True, trigger_post_process = True):
     print(f'(epmt_query.py: conv_jobs())------------FUNCTION CALL')
-    print(f'args: jobs=\n{jobs}\n, fmt={fmt}, merge_sums={merge_sums}, trigger_post_process={trigger_post_process})!')
     """
     Convert jobs from one format to another::Jobs
 
@@ -72,18 +71,16 @@ def conv_jobs(jobs, fmt='dict', merge_sums = True, trigger_post_process = True):
     Job collection in the format specified by `fmt`
     """
 
-    _empty_collection_check(jobs) #this passes for 'fmt=terse'
+    _empty_collection_check(jobs)
 
-    #print(f'(conv_jobs) jobs = orm_jobs_col({jobs})')
     jobs = orm_jobs_col(jobs)
     #print(f'(conv_jobs) after orm_jobs_col... jobs is now \n{jobs}\n')
+
     if fmt == 'orm':
-        #jobs=Session.Query(jobs)
         print(f'\n(epmt_query.py: conv_jobs())------------RETURNING jobs')
         return jobs
 
     jobids = [ j.jobid for j in jobs ]
-    #print(f'(conv_jobs) jobids={jobids}')
 
     if fmt=='terse':
         print(f'\n(epmt_query.py: conv_jobs())------------RETURNING jobids')
@@ -345,12 +342,6 @@ def op_roots(jobs, tag, fmt='dict'):
 def get_jobs(jobs = [], tags=None, fltr = None, order = None, limit = None, offset = 0, when=None, before=None, after=None, hosts=[], fmt='dict', annotations=None, analyses=None, merge_proc_sums=True, exact_tag_only = False, trigger_post_process=True):
     print(f'(epmt_query.py: get_jobs())------------FUNCTION CALL')
     #print(f'args:jobs       =\n{jobs       }')
-    print(f'args:jobs       =jobs       ')
-    print(f'args:tags       ={tags       },fltr       ={fltr       },order      ={order      },limit      ={limit      },')
-    print(f'args:offset     ={offset     }, when       ={when       },before     ={before     },after      ={after      },hosts      ={hosts      },')
-    print(f'args:fmt        ={fmt        }, annotations={annotations},analyses   ={analyses   },                                                    ')
-    print(f'args:merge_proc_sums     ={merge_proc_sums     },exact_tag_only      ={exact_tag_only      },                                           ')
-    print(f'args:trigger_post_process={trigger_post_process}                                                                                        ')
     """
     Returns a collection of jobs based on some filtering and ordering criteria::Jobs
 
@@ -522,7 +513,6 @@ trigger_post_process : boolean, optional
     #         limit = 10000
     #         logger.warning('No limit set, defaults to {0}. Set limit=0 to avoid limits'.format(limit))
 
-    ##why not leave this as none?
     if order is None:
         order = Job.start
 
@@ -541,35 +531,24 @@ trigger_post_process : boolean, optional
     #after = before
     if before is not None:
         print(f'converting before={before} to datetime')
-        print(f'before converting to datetime, before={before}')
-        print(f'before converting to datetime, type(before)={type(before)}')
         before = conv_to_datetime(before)
         print(f'after converting to datetime, before={before}')
-        print(f'after converting to datetime, type(before)={type(before)}')
-
 
     if after is not None:
         print(f'converting after={after} to datetime')
-        print(f'before converting to datetime, after={after}')
-        print(f'before converting to datetime, type(after)={type(after)}')
         after = conv_to_datetime(after)
         print(f'after converting to datetime, after={after}')
-        print(f'after converting to datetime, type(after)={type(after)}')
-
-    #print(f'(get_jobs) FORCE RETURN')
-    #return 0
 
     if hosts:
         if isString(hosts):
             # user probably forgot to wrap in a list
             hosts = hosts.split(",")
 
-    #print(f'(get_jobs) qs=orm_get_jobs(qs, {tags}, {fltr}, {order}, {limit}, {offset}, {when}, {before}, {after}, {hosts}, {annotations}, {analyses}, {exact_tag_only})')
     qs = orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, hosts, annotations, analyses, exact_tag_only)
 
     if fmt == 'orm':
-        #print(f'before return... qs=\n{qs}\n')
         print(f'\n(epmt_query.py: get_jobs())------------RETURNING qs')
+        #print(f'before return... qs=\n{qs}\n')
         return qs
 
     print(f'\n(epmt_query.py: get_jobs())------------RETURNING conv_jobs(qs, fmt, merge_proc_sums, trigger_post_process)')
@@ -996,10 +975,6 @@ def rank_proc_tags_keys(jobs, order = 'cardinality', exclude = []):
 @db_session
 def get_refmodels(name=None, tag = {}, fltr=None, limit=0, order=None, before=None, after=None, exact_tag_only=False, merge_nested_fields=True, fmt='dict'):
     print(f'(epmt_query.py: get_refmodels())------------FUNCTION CALL')
-    print(f'args:tag       ={tag       },fltr       ={fltr       },order      ={order      },limit      ={limit      },')
-    print(f'args:name=     ={name      }, before     ={before     },after      ={after      }')
-    print(f'args:fmt        ={fmt        },                                                     ')
-    print(f'args:merge_nested_fields     ={merge_nested_fields     },exact_tag_only      ={exact_tag_only      },                                           ')
     """
     Returns collection of reference models filtered using specified criteria::Reference Models
 
@@ -1069,8 +1044,7 @@ def get_refmodels(name=None, tag = {}, fltr=None, limit=0, order=None, before=No
         after = conv_to_datetime(after)
 
     qs = orm_get_refmodels(name, tag, fltr, limit, order, before, after, exact_tag_only)
-
-    print(f'\n(epmt_query.py: get_refmodels()) qs = \n {qs}')
+    #print(f'\n(epmt_query.py: get_refmodels()) qs = \n {qs}')
 
     if fmt == 'orm':
         return qs
@@ -1402,18 +1376,13 @@ def retire_refmodels(ndays = settings.retire_models_ndays):
         return 0
 
     # ndays > 0
-    models = get_refmodels(before=-ndays, fmt='terse')    # no models... too old
-    #models = get_refmodels(before=-80, fmt='terse',limit=1)# no models?
-    #models = get_refmodels(before=-10, fmt='terse',limit=1)# no models?
-    #models = get_refmodels(fmt='terse')# no models?
-    print(f'# of models retrieved: len(models)={len(models)}')
+    models = get_refmodels(before=-ndays, fmt='terse') # no models older than 120 days
+    #models = get_refmodels(fmt='terse') # no models at all apparently... 
     print(f'models=\n{models}')
-    #assert(len(models)>0)
 
     if models:
         logger.info('Retiring following models (older than %d days): %s', ndays, str(models))
         print(f'\n(epmt_query.py: retire_refmodels())------------RETURNING delete_refmodels(models)')
-        return 0
         return delete_refmodels(models)
     else:
         logger.info('No models to retire (older than %d days)', ndays)
@@ -1857,12 +1826,7 @@ op_duration_method: string, optional
 @db_session
 def delete_jobs(jobs, force = False, before=None, after=None, warn = True, remove_models = False):
     print(f'(epmt_query.py: delete_jobs())------------FUNCTION CALL/STEP4')
-    print(f'args: jobs      ={jobs           }')
-    #print(f'args: force          ={force          },')
-    #print(f'args: before         ={before         },')
-    #print(f'args: after          ={after          },')
-    #print(f'args: warn           ={warn           },')
-    #print(f'args: remove_models  ={remove_models  } ')
+    #print(f'args: jobs      ={jobs           }')
     """
     Deletes one or more jobs and returns the number of jobs deleted::Jobs
 
@@ -1915,56 +1879,30 @@ remove_models : boolean, optional
 
         # delete jobs executed in the last 7 days
         >>> delete_jobs([], force=True, after=-7)
+
     """
 
     logger.debug("Jobs sent in"+str(jobs))
     jobs= orm_jobs_col(jobs) #construct barebones PostgreSQL query by passing empty list to orm_jobs_col
     #print(f'\n(epmt_query.py: delete_jobs())------------after jobs=orm_jobs_col(jobs):')
-    #print(f'type(jobs)={type(jobs)}')
     #print(f'jobs=\n{jobs}\n')
-    #print(f'attempting to grab the jobs (key words for finding this line: UNIQUE ALBATROSS TANGO')
-    #print(f'jobs.all()=\n{jobs.all()}') #THIS QUERY WORKS! Problem: grabs every damn job
-    #return 0
 
-    #limit=9
-    #limit=None
-
-    myformat='orm' #does not return any jobs
-    #myformat='terse'
-    #myformat='dict' #does not return any jobs
-    #myformat='pandas' #does not return any jobs
-    
     if ((before != None) or (after != None)):
-        print(f'attempting to grab the jobs (key words for finding this line: UNBELIEVABLE CORNY OFFICE')
-
-        #jobs = get_jobs(jobs = jobs , fmt = 'orm' , before = -80 , after = None , limit = None    )# works... kinda... fast delete doesn't give up, but the query looks too large. # POST DEBUG STATEMENT FIND IN general.py, about 5.5k jobs
-        #jobs = get_jobs(jobs = jobs , fmt = 'orm' , before = -80 , after = None , limit = 5000    )# limit=floor(2^13/5)+1
-        #jobs = get_jobs(jobs = jobs , fmt = 'orm' , before = -80 , after = None , limit = 1639    )# limit=floor(2^13/5)+1
-        #jobs = get_jobs(jobs = jobs , fmt = 'orm' , before = -80 , after = None , limit = 1638    )# limit=floor(2^13/5)
-        #jobs = get_jobs(jobs = jobs , fmt = 'orm' , before = -80 , after = None , limit = 1300    )# works... kinda... fast delete doesn't give up, but the query looks too large. # POST DEBUG STATEMENT FIND IN general.py
-        #jobs = get_jobs(jobs = jobs , fmt = 'orm' , before = -80 , after = None , limit = 500    )# does work, so few jobs...
-        #jobs = get_jobs(jobs = jobs , fmt = 'orm' , before = -80 , after = None , limit = 100    )# does work, so few jobs...
-        jobs = get_jobs(jobs = jobs , fmt = 'orm' , before = -80 , after = None , limit = 10    )# does work, so few jobs...
+        print(f'attempting to query the pSQL DB for jobs')
+        jobs = get_jobs(jobs, before=before, after=after, fmt='orm') # no jobs older than 120 days... oldest ones are ~80 days old.
+        #jobs = get_jobs(jobs = jobs , fmt = 'orm' , before = -80 , after = after , limit = None    )
+        #jobs = get_jobs(jobs = jobs , fmt = 'orm' , before = -80 , after = after , limit = 500    )# does work, so few jobs...
+        #jobs = get_jobs(jobs = jobs , fmt = 'orm' , before = -80 , after = after , limit = 100    )# does work, so few jobs...
+        #jobs = get_jobs(jobs = jobs , fmt = 'orm' , before = -80 , after = after , limit = 10    )# does work, so few jobs...
         
-
-    #print(f'{jobs.all()}')
 
     num_jobs = jobs.count()
     print(f'\n(epmt_query.py: delete_jobs())------------after num_jobs=jobs.count()')
     print(f'num_jobs={num_jobs}')
-    
-    print(f'FORCE RETURN')
-    return 0
-    
-    #num_jobs=-1
-    #if (myformat != "terse"):
-    #    num_jobs = jobs.count()
-    #else:
-    #    num_jobs=len(jobs)
-    assert(num_jobs>0)
-    #print(f'made it past assert(num_jobs>0). return 0. FORCE STOP')
+    #print(f'jobs.all()= \n{jobs.all()}\n')
+    #print(f'FORCE RETURN')
     #return 0
-        
+    
     logger.debug("Jobs in collection: " + str(num_jobs))
     if num_jobs == 0:
         if warn:
@@ -1980,25 +1918,17 @@ remove_models : boolean, optional
     jobs_with_models = {}
     jobs_to_delete = []
 
-    print(f'(delete_jobs) entering LOOP')
+    print(f'(delete_jobs) entering loop')
     for j in jobs:
-        #print(f'(delete_jobs) insideLOOP: j={j}')
-        if myformat!="terse":
-            logger.debug("Job to delete: %s",j.jobid)
-            if j.ref_models: 
-                jobs_with_models[j.jobid] = [r.id for r in j.ref_models]
-            else:
-                #print(f'j.end={j.end}')
-                jobs_to_delete.append(j.jobid)   
+        logger.debug("Job to delete: %s",j.jobid)
+        #print(f'(delete_jobs) inside loop: j={j}')
+        if j.ref_models: 
+            jobs_with_models[j.jobid] = [r.id for r in j.ref_models]
         else:
-            logger.debug("Job to delete: %s",str(j))
-            jobs_to_delete.append(j)
-    
-    print(f'ALMOST THERE')
+            jobs_to_delete.append(j.jobid)   
+                
     #print(f'jobs_to_delete=\n{jobs_to_delete}\n')
     #print(f'jobs_with_models=\n{jobs_with_models}\n')
-    #print(f'FORCE RETURN.')
-    #return 0
 
     #will worry about the models next
     if jobs_with_models:
@@ -2016,32 +1946,20 @@ remove_models : boolean, optional
         logger.info('No jobs match criteria to delete. Bailing..')
         return 0
 
-    print(f'ALMOST THERE 2')
     print(f'jobs = orm_jobs_col(jobs_to_delete)')
     jobs = orm_jobs_col(jobs_to_delete)
-    print(f'AFTER ALMOST THERE 2\n jobs=\n{jobs}\n')
-    #print(f'num_jobs = len(jobs_to_delete)')
     num_jobs = len(jobs_to_delete)
-    print(f'num_jobs = len(jobs_to_delete) = {num_jobs}')
 
-
-    print(f'\n(epmt_query.py: delete_jobs())------------RETURNING num_jobs if orm_delete_jobs(jobs) else 0')
     # if orm_delete_jobs fails then it was one atomic transaction that failed
     # so no jobs will be deleted
     logger.info('deleting %d jobs (%s), in an atomic operation..', num_jobs, str(jobs_to_delete))
+    print(f'num_jobs = len(jobs_to_delete) = {num_jobs}')
+    print(f'\n(epmt_query.py: delete_jobs())------------RETURNING num_jobs if orm_delete_jobs(jobs) else 0')
     return num_jobs if orm_delete_jobs(jobs) else 0
-
-    #logger.info('deleting %d jobs (%s), in an IAN operation..', num_jobs, str(jobs_to_delete))
-    #return num_jobs if orm_delete_jobs_tortoise_edition(jobs,before=before,after=after) else 0
-    
-    #print(f'deleting {num_jobs} jobs ({jobs_to_delete}) via orm_delete_jobs_hardcode()...')
-    #logger.info('deleting %d jobs (%s), orm_delete_jobs_hardcode()...', num_jobs, str(jobs_to_delete))
-    #return num_jobs if orm_delete_jobs_hardcode(jobs) else 0
-
 
 
 def retire_jobs(ndays = settings.retire_jobs_ndays):
-    #print(f'(epmt_query.py: retire_jobs())------------FUNCTION CALL/STEP3')
+    #print(f'(epmt_query.py: retire_jobs())------------FUNCTION CALL')
     #print(f'args: ndays={ndays}')
     """
     Retires jobs older than specified number of days::Jobs
@@ -2063,16 +1981,8 @@ def retire_jobs(ndays = settings.retire_jobs_ndays):
         return 0
 
     print(f'\n(epmt_query.py: retire_jobs())------------RETURNING delete_jobs([], force=True, before = -ndays, warn = False)')
-    return delete_jobs([], force=True, after = None, before = -ndays, warn = False) #this should in theory work, but something goes wrong when converting the 'before' value to a PostgreSQL query
+    return delete_jobs([], force=True, after = None, before = -ndays, warn = False) 
 
-    #print(f'\n(epmt_query.py: retire_jobs())------------RETURNING delete_jobs([], force=True, after = ndays, warn = False)')
-    #return delete_jobs([], force=True, after = ndays, warn = False) # this also should in theory work... cause i figure... before = -ndays --> -(after)=-ndays --> after=ndays.... but not quite true... conv to date time gives me '1969' or so...
-
-    #print(f'\n(epmt_query.py: retire_jobs())------------RETURNING delete_jobs([], force=True, after = -ndays, warn = False)')
-    #return delete_jobs([], force=True, after = -ndays, before = None, warn = False) # this also should in theory work... cause i figure... before = -ndays --> -(after)=-ndays --> after=ndays.... but not quite true... conv to date time gives me '1969' or so...
-
-    #print(f'\n(epmt_query.py: retire_jobs())------------RETURNING delete_jobs([], force=True, after = -ndays, warn = False)')
-    #return delete_jobs([], force=True, after = None, before = -ndays, warn = False) # this also should in theory work... cause i figure... before = -ndays --> -(after)=-ndays --> after=ndays.... but not quite true... conv to date time gives me '1969' or so...
 
 # @db_session
 # def dm_calc(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op:dmput', 'op:hsmget', 'op:rm', 'op:cp']):
@@ -2681,12 +2591,11 @@ def _warn_incomparable_jobs(jobs):
 
 
 def _empty_collection_check(col):
-    print(f'(epmt_query.py: _empty_collection_check())------------FUNCTION CALL')
-    print(f'args: col={col}')
+    #print(f'(epmt_query.py: _empty_collection_check())------------FUNCTION CALL')
     if (not(orm_is_query(col))) and (type(col) != pd.DataFrame) and (col in [[], '', None]):
         msg = 'You need to specify a non-empty collection as a parameter'
         logger.warning(msg)
-        print(f'\n(epmt_query.py: _empty_collection_check())------------RAISING ValueError(msg)')
+        #print(f'\n(epmt_query.py: _empty_collection_check())------------RAISING ValueError(msg)')
         raise ValueError(msg)
 
 @db_session
