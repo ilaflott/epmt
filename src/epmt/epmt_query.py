@@ -1889,8 +1889,8 @@ remove_models : boolean, optional
 
     if ((before != None) or (after != None)):
         print(f'attempting to query the pSQL DB for jobs')
-        jobs = get_jobs(jobs, before=before, after=after, fmt='orm') # no jobs older than 120 days... oldest ones are ~80 days old.
-        #jobs = get_jobs(jobs = jobs , fmt = 'orm' , before = -80 , after = after , limit = None    )
+        #jobs = get_jobs(jobs, before=before, after=after, fmt='orm') # no jobs older than 120 days... oldest ones are ~80 days old.
+        jobs = get_jobs(jobs = jobs , fmt = 'orm' , before = -80 , after = after , limit = 205    )
         #jobs = get_jobs(jobs = jobs , fmt = 'orm' , before = -80 , after = after , limit = 500    )# does work, so few jobs...
         #jobs = get_jobs(jobs = jobs , fmt = 'orm' , before = -80 , after = after , limit = 100    )# does work, so few jobs...
         #jobs = get_jobs(jobs = jobs , fmt = 'orm' , before = -80 , after = after , limit = 10    )# does work, so few jobs...
@@ -1900,7 +1900,7 @@ remove_models : boolean, optional
     print(f'\n(epmt_query.py: delete_jobs())------------after num_jobs=jobs.count()')
     print(f'num_jobs={num_jobs}')
     #print(f'jobs.all()= \n{jobs.all()}\n')
-    #print(f'FORCE RETURN')
+    #print(f'spot-check return')
     #return 0
     
     logger.debug("Jobs in collection: " + str(num_jobs))
@@ -1981,7 +1981,7 @@ def retire_jobs(ndays = settings.retire_jobs_ndays):
         return 0
 
     print(f'\n(epmt_query.py: retire_jobs())------------RETURNING delete_jobs([], force=True, before = -ndays, warn = False)')
-    return delete_jobs([], force=True, after = None, before = -ndays, warn = False) 
+    return delete_jobs([], force=True, before = -ndays, warn = False) 
 
 
 # @db_session
