@@ -1889,11 +1889,11 @@ remove_models : boolean, optional
 
     if ((before != None) or (after != None)):
         print(f'attempting to query the pSQL DB for jobs')
-        #jobs = get_jobs(jobs, before=before, after=after, fmt='orm') # no jobs older than 120 days... oldest ones are ~80 days old.
-        jobs = get_jobs(jobs = jobs , fmt = 'orm' , before = -80 , after = after , limit = 205    )
-        #jobs = get_jobs(jobs = jobs , fmt = 'orm' , before = -80 , after = after , limit = 500    )# does work, so few jobs...
-        #jobs = get_jobs(jobs = jobs , fmt = 'orm' , before = -80 , after = after , limit = 100    )# does work, so few jobs...
-        #jobs = get_jobs(jobs = jobs , fmt = 'orm' , before = -80 , after = after , limit = 10    )# does work, so few jobs...
+        jobs = get_jobs(jobs, before=before, after=after, fmt='orm') # no jobs older than 120 days... oldest ones are ~80 days old.
+        #jobs = get_jobs(jobs = jobs , fmt = 'orm' , before = -80 , after = after , limit = 205    )#minium # of jobs that will kill the retire command
+        #jobs = get_jobs(jobs = jobs , fmt = 'orm' , before = -80 , after = after , limit = 500    )# does work
+        #jobs = get_jobs(jobs = jobs , fmt = 'orm' , before = -80 , after = after , limit = 100    )# does work
+        #jobs = get_jobs(jobs = jobs , fmt = 'orm' , before = -80 , after = after , limit = 10    )# does work
         
 
     num_jobs = jobs.count()

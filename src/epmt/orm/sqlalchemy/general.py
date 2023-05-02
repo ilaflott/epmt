@@ -213,8 +213,8 @@ def orm_delete_jobs(jobs, use_orm = False):
             print(f'\n(orm/sqlalchemy/general.py: orm_delete_jobs())------------RETURNING True')
             return True
         except Exception as e:
-            print(f'\n(orm/sqlalchemy/general.py: orm_delete_jobs())------------EXCEPTION THROWN!') #this fires when the format command throws the exception
-            assert(False)
+            #print(f'\n(orm/sqlalchemy/general.py: orm_delete_jobs())------------EXCEPTION THROWN!') # if the logger.debug line in orm_raw_sql throws an exception,
+            #assert(False)                                                                           # this and the following assert statement are executed.
             # postgres permission denied for R/O accounts
             if 'permission denied' in str(e):
                 logger.error('You do not have sufficient privileges to delete jobs')
@@ -650,23 +650,13 @@ def get_mapper(tbl):
 def orm_raw_sql(sql, commit = False):
     print(f'(general.py: orm_raw_sql(sql,commit))------------FUNCTION CALL')
     #print(f'args: sql={sql}')
-    print(f'args: commit={commit}')
+    #print(f'args: commit={commit}')
     
     # As we may get really long queries when moving processes from staging,
     # only log the first 1k of long queries
-    print(f'SHOWTIME!!!!')
-    logger.debug('Executing: {0}'.format( ('(first 1024 only) \n'.join(map(str,sql[:1024]))) if len(sql) > 1024 else sql )) # problem line
-    #print(f'{0}'.format((sql[:1024] + '.. (SQL too long to show)') if len(sql) > 1024 else sql)) #will this error the same way? --> answer is YES! the problem isn't logger
-    #a_string='{0}'.format((sql[:1024] + '.. (SQL too long to show)') if len(sql) > 1024 else sql) #will this error the same way? --> answer is YES! problem is definitely `format`
-    if len(sql) > 1024:
-        #logger.debug('Executing: {0}'.format((sql[:1024] + '.. (SQL too long to show)'))) # problem line
-        logger.debug("Executing (first 1024 only): ".join(map(str,sql[:1024])))
-        #print("{0}".format((sql[:1024] + '.. (SQL too long to show)')))
-        #a_string="{0}".format((sql[:1024] + '.. (SQL too long to show)'))
-    else:
-        logger.debug("Executing: ".join(map(str,sql)))
-    assert(False) # if any of the above three lines are uncommented, this line will not be reached if one requests 205 jobs to delete (205*5=1025>1024)
-
+    logger.debug('Executing: {0}'.format(  ("... SQL too long, first 1024 entries are ...\n".join(map(str,sql[:1024]))) if len(sql) > 1024 else sql  ))
+    #assert(False)
+    
     print(f'attempting to connect to engine')
     connection = engine.connect()
     print(f'attempting to begin transaction')
