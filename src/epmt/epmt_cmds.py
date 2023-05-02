@@ -13,6 +13,7 @@ import fnmatch
 import pickle
 from logging import getLogger
 from epmt.orm import db_session
+#from .orm import db_session # this way was in chan's py39+epmt area on nbhome
 
 logger = getLogger(__name__)  # you can use other name
 import epmt.epmt_settings as settings
@@ -1650,7 +1651,9 @@ def epmt_entrypoint(args):
 
     if args.command == 'retire':
         from epmt.epmt_cmd_retire import epmt_retire
+        #print(f'\n\n\n\n$$$---(epmt_cmds.py: epmt_entrypoint()) FUNCTION CALL/STEP1---$$$')
         epmt_retire()
+        #print(f'\n$$$---(epmt_cmds.py: epmt_entrypoint()) RETURNING 0---$$$')
         return 0
 
     if args.command == 'check':

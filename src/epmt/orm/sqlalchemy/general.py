@@ -27,8 +27,12 @@ db_setup_complete = False
 
 ### sqlalchemy-specific API implementation ###
 def db_session(func):
+    #print(f'(general.py: db_session())------------FUNCTION CALL')
+    #print(f'func=\n {func} \n')
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args, **kwargs):        
+        #print(f'args: *args={*args}') # this doesn't work... thought it would at least print a mem address...
+        #print(f'args: *kwargs={**kwargs}') # same as above line
         if not hasattr(thr_data, 'session') or (thr_data.session is None):
             thr_data.session = Session()  # (this is now a scoped session)
         session = thr_data.session
@@ -50,16 +54,21 @@ def db_session(func):
             # traceback.print_exc(file=sys.stdout)
             # print('-'*60)
             try:
+                print(f'(general.py: db_session()) session.rollback()')
                 session.rollback()
             except:
+                print(f'(general.py: db_session()) exception caught, pass')
                 pass
+            print(f'(general.py: db_session()) exception caught, raise')
             raise
         finally:
             thr_data.nestlevel -= 1
             if thr_data.nestlevel == 0: 
                 if completed:
+                    print(f'(general.py: db_session()) session.commit()')
                     session.commit()
                 #Session.remove()  # NOTE: *remove* rather than *close* here
+        #print(f'\n(general.py: db_session())------------RETURNING retval')
         return retval
     return wrapper
 
@@ -186,6 +195,7 @@ def orm_delete(o):
     Session.delete(o)
 
 def orm_delete_jobs(jobs, use_orm = False):
+    print(f'(orm/sqlalchemy/general.py: orm_delete_jobs())------------FUNCTION CALL')
     if not use_orm:
         stmts = []
         for j in jobs:
@@ -203,20 +213,27 @@ def orm_delete_jobs(jobs, use_orm = False):
             stmts.append('DELETE FROM jobs WHERE jobs.jobid = \'{0}\''.format(jobid))
         try:
             orm_raw_sql(stmts, commit = True)
+            print(f'\n(orm/sqlalchemy/general.py: orm_delete_jobs())------------RETURNING True')
             return True
         except Exception as e:
             # postgres permission denied for R/O accounts
             if 'permission denied' in str(e):
                 logger.error('You do not have sufficient privileges to delete jobs')
+                print(f'\n(orm/sqlalchemy/general.py: orm_delete_jobs())------------RETURNING False')
                 return False
             logger.warning("Could not execute delete SQL: {0}".format(str(e)))
 
     # do a slow delete using ORM
     logger.warning("Fast-path delete did not work. Doing a slow delete using ORM..")
     for j in jobs:
+        print(f'(orm_delete_jobs) deleting job j={j}')
         Session.delete(j)
+    #print(f'(orm_delete_jobs) Session.commit()')
     Session.commit()
+
+    print(f'\n(orm/sqlalchemy/general.py: orm_delete_jobs())------------RETURNING True')
     return True
+
 
 def orm_delete_refmodels(ref_ids):
     from .models import ReferenceModel
@@ -250,7 +267,14 @@ def orm_sum_attribute(collection, attribute):
     return sum([getattr(c, attribute) for c in collection])
 
 def orm_is_query(obj):
-    return (type(obj) == Query)
+    #print(f'(orm/sqlalchemy/general.py: orm_is_query())------------FUNCTION CALL')
+    #print(f'(orm/sqlalchemy/general.py: orm_is_query())------------RETURNING ({type(obj)==Query})')         
+    is_it_query=(type(obj) == Query)
+    if is_it_query:
+        print(f'orm_is_query indeed...')
+    else:
+        print(f'NOT orm_is_query! NOT!!!')
+    return is_it_query
 
 def orm_procs_col(procs):
     """
@@ -294,6 +318,8 @@ def orm_procs_col(procs):
 
 
 def orm_jobs_col(jobs):
+    print(f'(orm/sqlalchemy/general.py: orm_jobs_col())------------FUNCTION CALL')
+    print(f'args:jobs       =\njobs       \n')
     """
     This is an internal function that returns a Job Query object.
     The input can be collection of jobs spcified as a string, a list
@@ -302,29 +328,44 @@ def orm_jobs_col(jobs):
     from pandas import DataFrame
     from epmt.epmtlib import isString
     from .models import Job
+    
     if orm_is_query(jobs):
+        print(f'\n(orm/sqlalchemy/general.py: orm_jobs_col())------------RETURNING jobs')
         return jobs
+
     if ((type(jobs) != DataFrame) and not(jobs)):
+        print(f'type(jobs)!=DataFrame, and jobs is empty.')
+        print(f'\n(orm/sqlalchemy/general.py: orm_jobs_col())------------RETURNING Session.query(Job)')
         return Session.query(Job)
+
     if type(jobs) == DataFrame:
+        print(f'type(jobs)==DataFrame')
         jobs = list(jobs['jobid'])
     if isString(jobs):
+        print(f'isString(jobs)=True')
         if ',' in jobs:
             # jobs a string of comma-separated job ids
             jobs = [ j.strip() for j in jobs.split(",") ]
         else:
             # job is a single jobid
             jobs = Session.query(Job).filter_by(jobid=jobs)
+
     if type(jobs) == Job:
         # is it a singular job?
+        print(f'single job!')
+        print(f'\n(orm/sqlalchemy/general.py: orm_jobs_col())------------RETURNING Session.query(Job).filter(Job.jobid == jobs.jobid)')
         return Session.query(Job).filter(Job.jobid == jobs.jobid)
+
     if type(jobs) in [list, set]:
+        print(f'type(jobs)=a list or set')
         # jobs is a list of Job objects or a list of jobids or a list of dicts
         # so first convert the dict list to a jobid list
         jobs = [ j['jobid'] if type(j) == dict else j for j in jobs ]
         jobs = [ j.jobid if type(j)==Job else j for j in jobs ]
         # and now convert to a Query object so the user can chain
         jobs = Session.query(Job).filter(Job.jobid.in_(jobs))
+
+    print(f'\n(orm/sqlalchemy/general.py: orm_jobs_col())------------RETURNING jobs')
     return jobs
 
 
@@ -436,6 +477,14 @@ def orm_get_procs(jobs, tags, fltr, order, limit, offset, when, hosts, exact_tag
     return qs
 
 def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, hosts, annotations, analyses, exact_tag_only, processed = None):
+    print(f'(orm/sqlalchemy/general.py: orm_get_jobs())------------FUNCTION CALL')
+    print(f'args: qs=qs, limit={limit}, before={before}, after ={after}')
+    #print(f'args:qs       =\nqs       \n')
+    #print(f'args:tags       ={tags       },fltr       ={fltr       },order      ={order      },limit      ={limit      },')
+    #print(f'args:offset     ={offset     }, when       ={when       },before     ={before     },after      ={after      },hosts      ={hosts      },')
+    #print(f'annotations={annotations}, analyses   ={analyses   },                                                    ')
+    #print(f'exact_tag_only      ={exact_tag_only      }, processed={processed}\n')
+
     from .models import Job, Host
     from epmt.epmtlib import tags_list, isString, tag_from_string
     from datetime import datetime
@@ -460,13 +509,13 @@ def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, host
             qst = _tag_filter(org_qs, t, exact_tag_only)
             qs = qst if (idx == 0) else qs.union(qst)
             idx += 1
-
+    
     # Remember, annotations = {} demands an exact match with an empty dict!
     if annotations != None:
         if type(annotations) == str:
             annotations = tag_from_string(annotations)
         qs = _annotation_filter(qs, annotations)
-
+    
     # Remember, annotations = {} demands an exact match with an empty dict!
     if analyses != None:
         if type(analyses) == str:
@@ -481,12 +530,22 @@ def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, host
             qs = qs.filter(Job.start <= when_job.end, Job.end >= when_job.start)
 
     if before != None:
+        print(f'before specified but not setting before={before}')
+        # note to self, a Job's `end` may need to be quote-surrounded in order to not clash with sqlalchemy's reserved word, end
+        #Job.end <= before
+        #print(f'before qs.filter(foo): type(before)={type(before)}')
+        #print(f'before qs.filter(foo): type(qs)={type(qs)}')
+        #print(f'before qs.filter(foo): \n qs= \n qs')
         qs = qs.filter(Job.end <= before)
+        #qs = qs.filter(Job.start <= before)
+        #print(f'after qs.filter(foo): type(qs)={type(qs)}')
+        #print(f'after qs.filter(foo): \n qs= \n qs\n')
 
     if after != None:
+        print(f'after specified but not setting after={after}')
         qs = qs.filter(Job.start >= after)
+        #qs = qs.filter(Job.start <= after)
                 
-
     if hosts:
         qs = qs.join(Host, Job.hosts).filter(Host.name.in_(hosts))
 
@@ -497,11 +556,15 @@ def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, host
         qs = qs.order_by(order)
 
     # finally set limits on the number of jobs returned
+    #if not (limit is None) and int(limit)>0:
     if limit:
+        #print(f'(orm_get_jobs) setting limit to {limit}')
         qs = qs.limit(int(limit))
+
     if offset:
         qs = qs.offset(offset)
-
+        
+    print(f'\n(orm/sqlalchemy/general.py: orm_get_jobs())------------RETURNING qs')
     return qs
 
 
@@ -614,23 +677,53 @@ def get_mapper(tbl):
 # the orm API will define a higher-level function to use this
 # function after guarding against injection and dangerous sql commands
 def orm_raw_sql(sql, commit = False):
+    print(f'(general.py: orm_raw_sql(sql,commit))------------FUNCTION CALL')
+    #print(f'args: sql={sql}') # 
+    print(f'args: commit={commit}') # 
+    print(f'type(sql)={type(sql)}')
+    print(f'len(sql)={len(sql)}')
+    
     # As we may get really long queries when moving processes from staging,
     # only log the first 1k of long queries
-    logger.debug('Executing: {0}'.format((sql[:1024] + '.. (SQL too long to show)') if len(sql) > 1024 else sql))
+    print(f'logger.debug(<stuff>)')
+    #logger.debug(
+        #'Executing: {0}'.format( (sql[:1024] + '.. (SQL too long to show)') if len(sql) > 1024 else sql ) 
+        #)
+#    logger.debug(
+#        'Executing: {0}'.format( 
+#            #(sql[:1025] + '.. (SQL too long to show)') if len(sql) > 1025 else sql 
+#            if len(sql) > 1025:
+#               "sql[:1025]"
+#            else:
+#               "sql"
+#) 
+#    )
 
+    print(f'attempting to connect to engine')
     connection = engine.connect()
+    print(f'attempting to begin transaction')
     trans = connection.begin()
     if type(sql) != list:
+        print(f'(general.py: orm_raw_sql(sql,commit)) type(sql)!=list, converting to list.')
         sql = [sql]
     try:
+        print(f'(general.py: orm_raw_sql(sql,commit)) trying to execute sql statements one-by-one')
+        exe_count=0
+        tot_exe_count=len(sql)
         for s in sql:
+            if exe_count%100==0:
+                print(f'executing statement #{exe_count} out of {tot_exe_count}')
             res = connection.execute(s)
+            exe_count=exe_count+1
         if commit:
             trans.commit()
             return True
     except:
+        print(f'(general.py: orm_raw_sql(sql,commit)) exception caught, rolling back trans=connection.begin()')
         trans.rollback()
+        print(f'(general.py: orm_raw_sql(sql,commit)) raising...')
         raise
+    print(f'(general.py: orm_raw_sql(sql,commit)) closing connection and RETURNING res={res}')
     connection.close()
     return res
 
