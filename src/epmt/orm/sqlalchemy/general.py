@@ -616,13 +616,8 @@ def get_mapper(tbl):
 def orm_raw_sql(sql, commit = False):
     # As we may get really long queries when moving processes from staging,
     # only log the first 1k of long queries
-    #logger.debug('Executing: {0}'.format((sql[:1024] + '.. (SQL too long to show)') if len(sql) > 1024 else sql)) # old line, tries to add list of orm query objects to string if
-                    # sql is > 1024 elements long
-                    # yields "cannot concatenate list to str" error, that
-                    # may not print to screen, which throws an exception,
-                    # triggering line 207 in orm_delete_jobs
     if len(sql) > 1024:
-        logger.debug('Executing: {0}'.format(( "\n".join(map(str,sql[:1024])) + '\n ... (SQL too long to show)'))) # new line, maps query objects to string. does not throw exception
+        logger.debug(f'Executing: {join(map(str,sql[:1024]))}...(SQL too long to show)') # new line, maps query objects to string. does not throw exception
     else:
         logger.debug('Executing: {0}'.format((sql)))
 
