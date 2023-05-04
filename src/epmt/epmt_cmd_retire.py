@@ -8,8 +8,8 @@ def epmt_retire():
     num_jobs_retired = 0
     num_models_retired = 0
 
-    #logger.info('Retiring models older than %d days', settings.retire_models_ndays)
-    #num_models_retired = retire_refmodels(settings.retire_models_ndays)
+    logger.info('Retiring models older than %d days', settings.retire_models_ndays)
+    num_models_retired = retire_refmodels(settings.retire_models_ndays)
 
     logger.info('Retiring jobs older than %d days', settings.retire_jobs_ndays)
     num_jobs_retired = retire_jobs(settings.retire_jobs_ndays)
