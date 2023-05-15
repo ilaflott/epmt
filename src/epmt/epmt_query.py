@@ -1326,7 +1326,7 @@ def delete_refmodels(*ref_ids):
     ref_ids = [int(r) for r in ref_ids]
     return orm_delete_refmodels(ref_ids)
 
-def retire_refmodels(ndays = settings.retire_models_ndays):
+def retire_refmodels(ndays = settings.retire_models_ndays, dry_run = False):
     """
     Retire models older than a certain number of days::Reference Models
 
@@ -1346,7 +1346,10 @@ def retire_refmodels(ndays = settings.retire_models_ndays):
     models = get_refmodels(before=-ndays, fmt='terse')
     if models:
         logger.info('Retiring following models (older than %d days): %s', ndays, str(models))
-        return delete_refmodels(models)
+        if dry_run:
+            return len(models)
+        else:
+            return delete_refmodels(models)
     else:
         logger.info('No models to retire (older than %d days)', ndays)
     return 0
@@ -1786,7 +1789,7 @@ op_duration_method: string, optional
     return all_procs
 
 @db_session
-def delete_jobs(jobs, force = False, before=None, after=None, warn = True, remove_models = False):
+def delete_jobs(jobs, force = False, before=None, after=None, warn = True, remove_models = False, dry_run = False):
     """
     Deletes one or more jobs and returns the number of jobs deleted::Jobs
 
@@ -1850,6 +1853,8 @@ remove_models : boolean, optional
 
     num_jobs = jobs.count()
     logger.debug("Jobs in collection: " + str(num_jobs))
+
+
     if num_jobs == 0:
         if warn:
             logger.warning('No jobs matched; none deleted')
@@ -1885,12 +1890,15 @@ remove_models : boolean, optional
     jobs = orm_jobs_col(jobs_to_delete)
     num_jobs = len(jobs_to_delete)
     logger.info('deleting %d jobs (%s), in an atomic operation..', num_jobs, str(jobs_to_delete))
+    if dry_run:
+        logger.info('dry_run = True')
+        return num_jobs
     # if orm_delete_jobs fails then it was one atomic transaction that failed
     # so no jobs will be deleted
     return num_jobs if orm_delete_jobs(jobs) else 0
 
 
-def retire_jobs(ndays = settings.retire_jobs_ndays):
+def retire_jobs(ndays = settings.retire_jobs_ndays, dry_run = False):
     """
     Retires jobs older than specified number of days::Jobs
 
@@ -1905,8 +1913,9 @@ def retire_jobs(ndays = settings.retire_jobs_ndays):
     -------
     The number of jobs retired (int)
     """
+    
     if ndays <= 0: return 0
-    return delete_jobs([], force=True, before = -ndays, warn = False)
+    return delete_jobs([], force=True, before = -ndays, warn = False, dry_run = dry_run)
 
 # @db_session
 # def dm_calc(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op:dmput', 'op:hsmget', 'op:rm', 'op:cp']):

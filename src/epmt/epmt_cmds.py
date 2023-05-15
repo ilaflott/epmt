@@ -1650,7 +1650,7 @@ def epmt_entrypoint(args):
 
     if args.command == 'retire':
         from epmt.epmt_cmd_retire import epmt_retire
-        epmt_retire()
+        epmt_retire(dry_run=args.dry_run)
         return 0
 
     if args.command == 'check':
