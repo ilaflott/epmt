@@ -617,7 +617,8 @@ def orm_raw_sql(sql, commit = False):
     # As we may get really long queries when moving processes from staging,
     # only log the first 1k of long queries
     if len(sql) > 1024:
-        logger.debug(f'Executing: {join(map(str,sql[:1024]))}...(SQL too long to show)') # new line, maps query objects to string. does not throw exception
+        logger.debug('Executing very long SQL statement(s): ... ')
+        logger.debug(f''.join(map(str,sql[:1024])))
     else:
         logger.debug('Executing: {0}'.format((sql)))
 
