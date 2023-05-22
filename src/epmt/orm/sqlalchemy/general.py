@@ -618,7 +618,7 @@ def orm_raw_sql(sql, commit = False):
     # only log the first 1k of long queries
     if len(sql) > 1024:
         logger.debug('Executing very long SQL statement(s): ... ')
-        logger.debug(f''.join(map(str,sql[:1024])))
+        logger.debug(''.join(map(str,sql[:1024])))
     else:
         logger.debug('Executing: {0}'.format((sql)))
 
