@@ -1938,7 +1938,7 @@ def retire_jobs(ndays = settings.retire_jobs_ndays, dry_run = False):
         return num_deleted
 
     else:
-        return delete_jobs([], force=True, before = -ndays, warn = False, limit=400, dry_run = dry_run)
+        return delete_jobs([], force=True, before = -ndays, warn = False, dry_run = dry_run)
 
 # @db_session
 # def dm_calc(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op:dmput', 'op:hsmget', 'op:rm', 'op:cp']):
