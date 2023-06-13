@@ -1,20 +1,18 @@
 from __future__ import print_function
 
-def epmt_retire(dry_run = False):
+def epmt_retire(skip_unprocessed = False, dry_run = False):
 
     import epmt.epmt_settings as settings
     from epmt.epmt_query import retire_jobs, retire_refmodels
     from logging import getLogger
     logger = getLogger(__name__)  # you can use other name
-    num_jobs_retired = 0
+    
     num_models_retired = 0
-
     logger.info('Retiring models older than %d days', settings.retire_models_ndays)
     num_models_retired = retire_refmodels(settings.retire_models_ndays, dry_run=dry_run)
 
     import tracemalloc as tm
     tm.start()
-
     #__________________
     print(f'second pos, current tracemalloc mem usage before recording snapshots, taking peak measurements...')
     print(f'{tm.get_tracemalloc_memory()/1024/1000} MiB')
@@ -24,8 +22,9 @@ def epmt_retire(dry_run = False):
     tm.reset_peak()
     #------------------
 
+    num_jobs_retired = 0
     logger.info('Retiring jobs older than %d days', settings.retire_jobs_ndays)
-    num_jobs_retired = retire_jobs(settings.retire_jobs_ndays, dry_run=dry_run)
+    num_jobs_retired = retire_jobs(settings.retire_jobs_ndays, skip_unprocessed = skip_unprocessed, dry_run=dry_run)
 
     #__________________
     print(f'third pos, current tracemalloc mem usage before recording snapshots, taking peak measurements...')

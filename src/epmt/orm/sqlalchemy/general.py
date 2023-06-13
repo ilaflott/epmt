@@ -616,10 +616,10 @@ def get_mapper(tbl):
 # function after guarding against injection and dangerous sql commands
 def orm_raw_sql(sql, commit = False):
     # As we may get really long queries when moving processes from staging,
-    # only log the first 1k of long queries
-    if len(sql) > 1024:
+    # only log the first 100 or so of long queries
+    if len(sql) > settings.max_log_statement_length:
         logger.debug('Executing very long SQL statement(s): ... ') 
-        logger.debug(''.join(map(str,sql[:1024])))
+        logger.debug(''.join(map(str,sql[:settings.max_log_statement_length])))
     else:
         logger.debug('Executing: {0}'.format((sql)))
 
