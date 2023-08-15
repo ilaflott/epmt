@@ -1942,7 +1942,7 @@ def retire_jobs(ndays = settings.retire_jobs_ndays, skip_unprocessed = False, dr
     The number of jobs retired (int)
     """
     if ndays <= 0: return 0
-    JOBS_PER_DELETE_MAX=2000
+    JOBS_PER_DELETE_MAX=(settings.retire_jobs_per_delete_max if settings.retire_jobs_per_delete_max>0 else 2000)
     num_jobs=get_jobs(before=-ndays, fmt='orm', trigger_post_process = False).count()
 
     ##uncomment me for training wheels/debug/tests
