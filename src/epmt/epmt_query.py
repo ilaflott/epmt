@@ -1790,7 +1790,8 @@ op_duration_method: string, optional
     return all_procs
 
 @db_session
-def delete_jobs(jobs, force = False, before=None, after=None, warn = True, remove_models = False, limit = None, skip_unprocessed = False, dry_run = False):
+def delete_jobs(jobs, force = False, before=None, after=None, warn = True, remove_models = False,
+                limit = None, offset=0, skip_unprocessed = False, dry_run = False):
     """
     Deletes one or more jobs and returns the number of jobs deleted::Jobs
 
@@ -1849,9 +1850,12 @@ remove_models : boolean, optional
     logger.debug("Jobs sent in"+str(jobs))
     jobs = orm_jobs_col(jobs)
 
-    if ((before != None) or (after != None) or (limit != None)):
-        #jobs = get_jobs(jobs, before=before, after=after, fmt='orm')
-        jobs = get_jobs(jobs, before=before, after=after, limit=limit, fmt='orm', trigger_post_process=(not skip_unprocessed))
+    if any( [ before is not None, after is not None,
+              limit is not None, offset > 0 ] ):
+        logger.info('(delete_jobs) offset = {}'.format(offset))
+        jobs = get_jobs(jobs, before=before, after=after, limit=limit,
+                        offset=offset, fmt='orm',
+                        trigger_post_process=(not skip_unprocessed))
 
     num_jobs = jobs.count()
     init_num_jobs = num_jobs
@@ -1902,8 +1906,10 @@ remove_models : boolean, optional
     jobs = orm_jobs_col(jobs_to_delete)
     num_jobs = len(jobs_to_delete)
     if num_jobs != init_num_jobs:
-        logger.warning('WARNING: requested to delete %d jobs, but will actually delete %d jobs.', init_num_jobs, num_jobs)
-        logger.warning('WARNING: %d unprocessed jobs and %d jobs with models were targeted for deletion but will be spared instead', len(jobs_unprocessed), num_jobs_with_models_unremoved)
+        logger.warning('requested to delete %d jobs, but will actually delete %d jobs.',
+                       init_num_jobs, num_jobs)
+        logger.warning('%d unprocessed jobs and %d jobs with models were targeted for deletion but will be spared instead',
+                       len(jobs_unprocessed), num_jobs_with_models_unremoved)
 
     logger.info('deleting %d jobs, in an atomic operation..', num_jobs)
 
@@ -1924,6 +1930,9 @@ def retire_jobs(ndays = settings.retire_jobs_ndays, skip_unprocessed = False, dr
                Jobs older then `ndays` ago will be retired
                `ndays` must be > 0 for any jobs to be retired. 
                For ndays <=0, no jobs are retired.
+      skip_unprocessed : boolean, optional
+               If True, jobs older than `ndays` that have not been
+               post-processed will be spared.
       dry_run: boolean, optional
                if True, don't delete any jobs, just print to
                screen how many WOULD be deleted with this set
@@ -1933,7 +1942,7 @@ def retire_jobs(ndays = settings.retire_jobs_ndays, skip_unprocessed = False, dr
     The number of jobs retired (int)
     """
     if ndays <= 0: return 0
-    JOBS_PER_DELETE_MAX=1000
+    JOBS_PER_DELETE_MAX=2000
     num_jobs=get_jobs(before=-ndays, fmt='orm', trigger_post_process = False).count()
 
     ##uncomment me for training wheels/debug/tests
@@ -1942,31 +1951,47 @@ def retire_jobs(ndays = settings.retire_jobs_ndays, skip_unprocessed = False, dr
     if num_jobs>JOBS_PER_DELETE_MAX:
         logger.info('number of jobs older than {0} days is {1}'.format(ndays,num_jobs))
         logger.info('will be deleting jobs in chunks of %d', JOBS_PER_DELETE_MAX )
-        
-        num_deleted=0
-        num_delete_attempts=0 # sometimes jobs will not be deleted. so keep track of num we *attempt* to delete as well.
+
+        tot_num_deleted=0
+        num_delete_attempts=0 # keep track of num we attempt to delete
+        offset=0 # if jobs spared via ref-model-assoc, stop targeting those jobs.
+
         while num_delete_attempts<num_jobs: 
             logger.info('%d jobs to go', (num_jobs-num_delete_attempts))
+
             _attempt_to_delete_max=( (num_delete_attempts + JOBS_PER_DELETE_MAX) <= num_jobs)
             limit=0
             if _attempt_to_delete_max:
                 limit=JOBS_PER_DELETE_MAX
             else:
                 limit=num_jobs-num_delete_attempts
-            logger.info('attempting to delete %d jobs now...', limit)
 
-            num_deleted+=delete_jobs([], force=True, before = -ndays, warn = False, limit=limit, skip_unprocessed = skip_unprocessed, dry_run = dry_run)
-            num_delete_attempts+=limit
+            logger.info('attempting to delete %d jobs now...', limit)
+            num_deleted=delete_jobs( jobs = [], force = True, before = -ndays, warn = False,
+                                     limit = limit, offset = offset, skip_unprocessed = skip_unprocessed,
+                                     dry_run = dry_run)
             
-            logger.info('%d jobs out of %d deleted so far', num_deleted, num_delete_attempts)
+            tot_num_deleted+=num_deleted
+            num_delete_attempts+=limit            
+            num_not_deleted=limit-num_deleted
+
+            if dry_run:
+                offset+=limit # dry-run delete_jobs just returns the target # of jobs
+            else:
+                if (num_not_deleted > 0):                print(f'offset was: {offset}')                
+                offset+=(limit-num_deleted)
+                if (num_not_deleted > 0):                print(f'offset is now: {offset}')
+            
+            logger.info('%d jobs out of %d deleted so far', tot_num_deleted, num_delete_attempts)
             
         else:
             logger.info('done deleting jobs in chunks!')
 
-        return num_deleted
+        return tot_num_deleted
 
-    else:
-        return delete_jobs([], force=True, before = -ndays, warn = False, skip_unprocessed = skip_unprocessed, dry_run = dry_run)
+    else: #can delete in one swoop, when less than max.
+        return delete_jobs([], force=True, before = -ndays, warn = False,
+                           skip_unprocessed = skip_unprocessed, dry_run = dry_run)
 
 # @db_session
 # def dm_calc(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op:dmput', 'op:hsmget', 'op:rm', 'op:cp']):

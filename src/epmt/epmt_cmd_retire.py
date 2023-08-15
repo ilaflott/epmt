@@ -5,7 +5,7 @@ def epmt_retire(skip_unprocessed = False, dry_run = False):
     import epmt.epmt_settings as settings
     from epmt.epmt_query import retire_jobs, retire_refmodels
     from logging import getLogger
-    logger = getLogger(__name__)  # you can use other name
+    logger = getLogger(__name__)
     
     num_models_retired = 0
     logger.info('Retiring models older than %d days', settings.retire_models_ndays)
@@ -13,12 +13,10 @@ def epmt_retire(skip_unprocessed = False, dry_run = False):
 
     import tracemalloc as tm
     tm.start()
+
     #__________________
-    print(f'second pos, current tracemalloc mem usage before recording snapshots, taking peak measurements...')
-    print(f'{tm.get_tracemalloc_memory()/1024/1000} MiB')
-    second_size, second_peak=tm.get_traced_memory()
-    #tm.take_snapshot().dump('tm_snapshot2')
-    print(f'after model retire: memory_size={second_size/1024/1000} MiB, memory_peak={second_peak/1024/1000} MiB')
+    model_retire_size, model_retire_peak=tm.get_traced_memory()
+    print(f'after model retire: memory_size={model_retire_size/1024/1000} MiB, memory_peak={model_retire_peak/1024/1000} MiB')
     tm.reset_peak()
     #------------------
 
@@ -27,11 +25,8 @@ def epmt_retire(skip_unprocessed = False, dry_run = False):
     num_jobs_retired = retire_jobs(settings.retire_jobs_ndays, skip_unprocessed = skip_unprocessed, dry_run=dry_run)
 
     #__________________
-    print(f'third pos, current tracemalloc mem usage before recording snapshots, taking peak measurements...')
-    print(f'{tm.get_tracemalloc_memory()/1024/1000} MiB')
-    third_size, third_peak=tm.get_traced_memory()
-    #tm.take_snapshot().dump('tm_snapshot3')
-    print(f'  after job retire: memory_size={third_size/1024/1000} MiB, memory_peak={third_peak/1024/1000} MiB')
+    job_retire_size, job_retire_peak=tm.get_traced_memory()
+    print(f'  after job retire: memory_size={job_retire_size/1024/1000} MiB, memory_peak={job_retire_peak/1024/1000} MiB')
     tm.reset_peak()    
     #------------------
 
