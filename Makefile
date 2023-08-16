@@ -1,6 +1,7 @@
 .ONESHELL:
 
-OS_TARGET=centos-7
+#OS_TARGET=centos-7
+OS_TARGET=ubuntu
 PAPIEX_VERSION?=2.3.14
 PAPIEX_SRC?=../papiex
 PYTHON_VERSION=3.9.16
@@ -103,6 +104,7 @@ test-$(EPMT_RELEASE) dist-test:
 
 docker-dist: 
 	@echo " - building epmt and epmt-test tarball"
+	@echo " - Dockerfile=Dockerfiles/Dockerfile.${OS_TARGET}-epmt-build"
 	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build -t $(OS_TARGET)-epmt-build --build-arg python_version=$(PYTHON_VERSION) .
 	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build make OS_TARGET=$(OS_TARGET) distclean dist dist-test
 
@@ -137,9 +139,13 @@ check-release release-test-docker: $(EPMT_FULL_RELEASE)
 	docker network rm epmt-test-net
 
 release release-all release7:
+	@echo "--- make distclean"
 	$(MAKE) distclean
+	@echo "--- make docker-dist"
 	$(MAKE) docker-dist
+	@echo "--- make epmt-full-release"
 	$(MAKE) epmt-full-release
+	@echo "--- make check-release"
 	$(MAKE) check-release
 
 #
