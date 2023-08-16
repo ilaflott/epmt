@@ -1,5 +1,7 @@
 # FROM giovtorres/docker-centos7-slurm:latest
-from ubuntu:latest
+FROM ubuntu:latest
+
+ENV DEBIAN_FRONTEND=noninteractive
 
 # RUN yum update -y
 # RUN yum install -y tcsh environment-modules
@@ -45,6 +47,7 @@ ARG epmt_full_release
 WORKDIR ${install_path}
 COPY src/dist/${epmt_full_release} .
 RUN python3 -m pip install ${epmt_full_release}
+
 #COPY utils/epmt-installer .
 #RUN echo -ne "\n\n" | ./epmt-installer `basename ${epmt_full_release}`
 #ENV PATH="${install_path}/epmt-${epmt_version}/epmt-install/epmt:${PATH}"
