@@ -15,7 +15,7 @@ RUN apt-get update -y
 
 # RUN yum install -y unzip bash tcsh nc curl make git gcc postgresql-devel zlib-devel bzip2 bzip2-devel readline-devel sqlite-devel openssl-devel xz xz-devel libffi-devel
 # RUN apt install -y unzip bash tcsh netcat curl make git gcc postgresql zlib1g-dev bzip2 lbzip2 libreadline-dev libsqlite3-dev libssl-dev xz-utils liblzma-dev libffi-dev
-RUN apt-get install -y unzip bash tcsh netcat curl make git gcc postgresql zlib1g-dev bzip2 lbzip2 libreadline-dev libsqlite3-dev libssl-dev xz-utils liblzma-dev libffi-dev
+RUN apt-get install -y unzip bash tcsh netcat curl make git gcc postgresql zlib1g-dev bzip2 libbz2-dev libreadline-dev libsqlite3-dev libssl-dev xz-utils liblzma-dev libffi-dev
 
 
 # we set SQLITE_MAX_VARIABLE_NUMBER to a limit higher than 999
