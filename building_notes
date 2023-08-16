@@ -1,0 +1,61 @@
+
+126551 WARNING: Hidden import "MySQLdb" not found!
+------ python3-mysqldb/jammy 1.4.6-1build1 amd64
+
+
+
+127867 INFO: Looking for ctypes DLLs
+127998 WARNING: Library user32 required via ctypes not found
+128193 WARNING: Library msvcrt required via ctypes not found
+
+
+128841 INFO: Looking for dynamic libraries
+747 WARNING: Cannot find libtbb.so.12 (needed by /usr/lib/python3.9/site-packages/numba/np/ufunc/tbbpool.cpython-39-x86_64-linux-gnu.so)
+------ libtbb12/jammy 2021.5.0-7ubuntu2 amd64
+
+2237 WARNING: Cannot find libbrotlicommon-702ab7f8.so.1 (needed by /usr/lib/python3.9/site-packages/PIL/../Pillow.libs/libbrotlidec-7a796284.so.1.0.9)
+libbrotli1/jammy 1.0.9-2build6 amd64
+python3-brotli/jammy 1.0.9-2build6 amd64
+
+
+2250 WARNING: Cannot find libfreetype-8b16add1.so.6.20.0 (needed by /usr/lib/python3.9/site-packages/PIL/../Pillow.libs/libharfbuzz-adaef2a2.so.0.60730.0)
+
+
+2257 WARNING: Cannot find libpng16-39c06ea1.so.16.40.0 (needed by /usr/lib/python3.9/site-packages/PIL/../Pillow.libs/libfreetype-8b16add1.so.6.20.0)
+2257 WARNING: Cannot find libbrotlidec-7a796284.so.1.0.9 (needed by /usr/lib/python3.9/site-packages/PIL/../Pillow.libs/libfreetype-8b16add1.so.6.20.0)
+2263 WARNING: Cannot find libwebp-8b6d8948.so.7.1.7 (needed by /usr/lib/python3.9/site-packages/PIL/../Pillow.libs/libwebpmux-b3bcb8ec.so.3.0.12)
+2274 WARNING: Cannot find libwebp-8b6d8948.so.7.1.7 (needed by /usr/lib/python3.9/site-packages/PIL/../Pillow.libs/libwebpdemux-fc93391d.so.2.0.13)
+2281 WARNING: Cannot find libsharpyuv-20f78091.so.0.0.1 (needed by /usr/lib/python3.9/site-packages/PIL/../Pillow.libs/libwebp-8b6d8948.so.7.1.7)
+2297 WARNING: Cannot find libquadmath-96973f99.so.0.0.0 (needed by /usr/lib/python3.9/site-packages/numpy/core/../../numpy.libs/libgfortran-040039e1.so.5.0.0)
+2309 WARNING: Cannot find libgfortran-040039e1.so.5.0.0 (needed by /usr/lib/python3.9/site-packages/numpy/core/../../numpy.libs/libopenblas64_p-r0-15028c96.3.21.so)
+2320 WARNING: Cannot find libXau-154567c4.so.6.0.0 (needed by /usr/lib/python3.9/site-packages/PIL/../Pillow.libs/libxcb-cd9c1006.so.1.1.0)
+2341 WARNING: Cannot find liblzma-9dd5c569.so.5.4.3 (needed by /usr/lib/python3.9/site-packages/PIL/../Pillow.libs/libtiff-189042a3.so.6.0.1)
+2341 WARNING: Cannot find libjpeg-dab02bf4.so.62.3.0 (needed by /usr/lib/python3.9/site-packages/PIL/../Pillow.libs/libtiff-189042a3.so.6.0.1)
+2359 WARNING: Cannot find libsodium-6eb86948.so.23.3.0 (needed by /usr/lib/python3.9/site-packages/zmq/backend/cython/../../../pyzmq.libs/libzmq-bf11ef0c.so.5.2.4)
+2371 WARNING: Cannot find libgfortran-040039e1.so.5.0.0 (needed by /usr/lib/python3.9/site-packages/scipy/linalg/../../scipy.libs/libopenblasp-r0-23e5df77.3.21.dev.so)
+2377 WARNING: Cannot find libkeyutils-dfe70bd6.so.1.5 (needed by /usr/lib/python3.9/site-packages/psycopg2/../psycopg2_binary.libs/libkrb5support-d0bcff84.so.0.1)
+2377 WARNING: Cannot find libselinux-0922c95c.so.1 (needed by /usr/lib/python3.9/site-packages/psycopg2/../psycopg2_binary.libs/libkrb5support-d0bcff84.so.0.1)
+2383 WARNING: Cannot find libpcre-9513aab5.so.1.2.0 (needed by /usr/lib/python3.9/site-packages/psycopg2/../psycopg2_binary.libs/libselinux-0922c95c.so.1)
+2397 WARNING: Cannot find libkrb5-fcafa220.so.3.3 (needed by /usr/lib/python3.9/site-packages/psycopg2/../psycopg2_binary.libs/libgssapi_krb5-497db0c6.so.2.2)
+2397 WARNING: Cannot find libk5crypto-b1f99d5c.so.3.1 (needed by /usr/lib/python3.9/site-packages/psycopg2/../psycopg2_binary.libs/libgssapi_krb5-497db0c6.so.2.2)
+2397 WARNING: Cannot find libcom_err-2abe824b.so.2.1 (needed by /usr/lib/python3.9/site-packages/psycopg2/../psycopg2_binary.libs/libgssapi_krb5-497db0c6.so.2.2)
+2397 WARNING: Cannot find libkrb5support-d0bcff84.so.0.1 (needed by /usr/lib/python3.9/site-packages/psycopg2/../psycopg2_binary.libs/libgssapi_krb5-497db0c6.so.2.2)
+2397 WARNING: Cannot find libkeyutils-dfe70bd6.so.1.5 (needed by /usr/lib/python3.9/site-packages/psycopg2/../psycopg2_binary.libs/libgssapi_krb5-497db0c6.so.2.2)
+2405 WARNING: Cannot find libssl-0b344cb3.so.1.1 (needed by /usr/lib/python3.9/site-packages/psycopg2/../psycopg2_binary.libs/libpq-7e710c18.so.5.15)
+2405 WARNING: Cannot find libcrypto-3d57a210.so.1.1 (needed by /usr/lib/python3.9/site-packages/psycopg2/../psycopg2_binary.libs/libpq-7e710c18.so.5.15)
+2405 WARNING: Cannot find libgssapi_krb5-497db0c6.so.2.2 (needed by /usr/lib/python3.9/site-packages/psycopg2/../psycopg2_binary.libs/libpq-7e710c18.so.5.15)
+2405 WARNING: Cannot find libldap-aa70c9db.so.2.0.200 (needed by /usr/lib/python3.9/site-packages/psycopg2/../psycopg2_binary.libs/libpq-7e710c18.so.5.15)
+2412 WARNING: Cannot find libkrb5support-d0bcff84.so.0.1 (needed by /usr/lib/python3.9/site-packages/psycopg2/../psycopg2_binary.libs/libk5crypto-b1f99d5c.so.3.1)
+2412 WARNING: Cannot find libkeyutils-dfe70bd6.so.1.5 (needed by /usr/lib/python3.9/site-packages/psycopg2/../psycopg2_binary.libs/libk5crypto-b1f99d5c.so.3.1)
+2425 WARNING: Cannot find libk5crypto-b1f99d5c.so.3.1 (needed by /usr/lib/python3.9/site-packages/psycopg2/../psycopg2_binary.libs/libkrb5-fcafa220.so.3.3)
+2425 WARNING: Cannot find libcom_err-2abe824b.so.2.1 (needed by /usr/lib/python3.9/site-packages/psycopg2/../psycopg2_binary.libs/libkrb5-fcafa220.so.3.3)
+2425 WARNING: Cannot find libkrb5support-d0bcff84.so.0.1 (needed by /usr/lib/python3.9/site-packages/psycopg2/../psycopg2_binary.libs/libkrb5-fcafa220.so.3.3)
+2425 WARNING: Cannot find libkeyutils-dfe70bd6.so.1.5 (needed by /usr/lib/python3.9/site-packages/psycopg2/../psycopg2_binary.libs/libkrb5-fcafa220.so.3.3)
+2444 WARNING: Cannot find libcrypto-3d57a210.so.1.1 (needed by /usr/lib/python3.9/site-packages/psycopg2/../psycopg2_binary.libs/libssl-0b344cb3.so.1.1)
+2451 WARNING: Cannot find liblber-c1e6a306.so.2.0.200 (needed by /usr/lib/python3.9/site-packages/psycopg2/../psycopg2_binary.libs/libldap-aa70c9db.so.2.0.200)
+2451 WARNING: Cannot find libsasl2-883649fd.so.3.0.0 (needed by /usr/lib/python3.9/site-packages/psycopg2/../psycopg2_binary.libs/libldap-aa70c9db.so.2.0.200)
+2452 WARNING: Cannot find libssl-0b344cb3.so.1.1 (needed by /usr/lib/python3.9/site-packages/psycopg2/../psycopg2_binary.libs/libldap-aa70c9db.so.2.0.200)
+2452 WARNING: Cannot find libcrypto-3d57a210.so.1.1 (needed by /usr/lib/python3.9/site-packages/psycopg2/../psycopg2_binary.libs/libldap-aa70c9db.so.2.0.200)
+
+
+131564 INFO: Warnings written to /mnt/data/Ian/current_build_7.pip-install-ubuntu/epmt.git/build/epmt/warn-epmt.txt
