@@ -153,7 +153,7 @@ release release-all release7:
 #
 clean:
 	find . -type f \( -name "core" -or -name "*~" -or -name "*.pyc" -or -name "epmt.log" \) -exec rm -f {} \;
-	rm -rf src/epmt/ui/__pycache__ __pycache__ build epmt-install epmt-install-tests .venv374ß
+	rm -rf src/epmt/ui/__pycache__ __pycache__ build epmt-install epmt-install-tests .venv374
 
 distclean: clean
 	rm -f settings.py $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(PAPIEX_RELEASE) $(EPMT_FULL_RELEASE) src/dist/*
