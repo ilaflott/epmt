@@ -14,7 +14,7 @@ PAPIEX_RELEASE=papiex-epmt-$(PAPIEX_VERSION)-$(OS_TARGET).tgz
 SHELL=/bin/bash
 CONDA_ACTIVATE = source $$(conda info --base)/etc/profile.d/conda.sh ; conda activate ; conda activate
 DOCKER_RUN:=docker -D run
-DOCKER_BUILD:=docker build -f
+DOCKER_BUILD:=docker -D build -f
 DOCKER_RUN_OPTS:=--rm -it
 PWD=$(shell pwd)
 
