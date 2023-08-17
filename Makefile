@@ -3,7 +3,7 @@
 #OS_TARGET=centos-7
 OS_TARGET=ubuntu
 PAPIEX_VERSION?=2.3.14
-PAPIEX_SRC?=../papiex
+PAPIEX_SRC?=../papiex-oss
 PYTHON_VERSION=3.9.16
 EPMT_VERSION=$(shell sed -n '/_version = /p' src/epmt/epmtlib.py | sed 's/ //g; s/,/./g; s/.*(\(.*\))/\1/')
 EPMT_RELEASE=epmt-$(EPMT_VERSION)-$(OS_TARGET).tgz
