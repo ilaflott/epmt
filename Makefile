@@ -15,8 +15,12 @@ SHELL=/bin/bash
 CONDA_ACTIVATE = source $$(conda info --base)/etc/profile.d/conda.sh ; conda activate ; conda activate
 DOCKER_RUN:=docker -D run
 DOCKER_BUILD:=docker -D build -f
-DOCKER_RUN_OPTS:=--rm -it
+DOCKER_RUN_OPTS:= -it
 PWD=$(shell pwd)
+
+#SHELL += -x
+OLD_SHELL := $(SHELL)
+SHELL = $(warning Building $@)$(OLD_SHELL)
 
 .PHONY: default \\
 	epmt-build epmt-test \\
@@ -153,11 +157,16 @@ release release-all release7:
 #
 clean:
 	find . -type f \( -name "core" -or -name "*~" -or -name "*.pyc" -or -name "epmt.log" \) -exec rm -f {} \;
-	rm -rf src/epmt/ui/__pycache__ __pycache__ build epmt-install epmt-install-tests .venv374
+	rm -rf src/epmt/ui/__pycache__ __pycache__ #build epmt-install epmt-install-tests .venv374
+	#rm -rf build epmt-install epmt-install-tests .venv374
 
 distclean: clean
+	#rm -f $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(PAPIEX_RELEASE) $(EPMT_FULL_RELEASE)
+	#rm -f src/dist/*
+	rm -rf settings.py epmtdocs/site
+
+nuke:
 	rm -f settings.py $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(PAPIEX_RELEASE) $(EPMT_FULL_RELEASE) src/dist/*
-	rm -rf epmtdocs/site
 
 # 
 # Simple python version testing with no database
