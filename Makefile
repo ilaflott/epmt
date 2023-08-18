@@ -18,9 +18,23 @@ DOCKER_BUILD:=docker -D build -f
 DOCKER_RUN_OPTS:= -it
 PWD=$(shell pwd)
 
+
+### ---- # this prints which target is being run. from percipio learning
 #SHELL += -x
 OLD_SHELL := $(SHELL)
 SHELL = $(warning Building $@)$(OLD_SHELL)
+### ----
+
+### ---- # this prints out env vars and their values, from percipio learning
+#        # I am actually not convinced it did it's job...
+ifdef TRACE
+.PHONY: _trace _value
+_trace:; @$(MAKE) --no-print-directory TRACE= \
+
+      $(TRACE)='$$(warning TRACE $(TRACE))$(shell $(MAKE) TRACE=$(TRACE) _value)'
+_value: ; @echo '$(value $(TRACE))'
+endif
+### ----
 
 .PHONY: default \\
 	epmt-build epmt-test \\
@@ -121,7 +135,8 @@ $(PAPIEX_RELEASE): $(PAPIEX_SRC)/$(PAPIEX_RELEASE)
 	cp $< $@
 
 $(PAPIEX_SRC)/$(PAPIEX_RELEASE):
-	make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) docker-dist 
+#	make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) docker-dist
+	$(MAKE) -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) docker-dist 
 
 epmt-full-release: $(EPMT_FULL_RELEASE)
 
