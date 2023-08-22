@@ -1,23 +1,24 @@
 # A useful resource:
 # https://charlesleifer.com/blog/compiling-sqlite-for-use-with-python-applications/
 
-
 # FROM centos:7
-FROM ubuntu:latest
 
+FROM ubuntu:latest
 ENV DEBIAN_FRONTEND=noninteractive
-# ARG DEBIAN_FRONTEND=noninteractive
 
 # RUN yum update -y
 RUN apt update -y
 RUN apt-get update -y
-
+RUN apt-get install -y apt-transport-https
 
 # RUN yum install -y unzip bash tcsh nc curl make git gcc postgresql-devel zlib-devel bzip2 bzip2-devel readline-devel sqlite-devel openssl-devel xz xz-devel libffi-devel
-# RUN apt install -y unzip bash tcsh netcat curl make git gcc postgresql zlib1g-dev bzip2 lbzip2 libreadline-dev libsqlite3-dev libssl-dev xz-utils liblzma-dev libffi-dev
-#RUN apt-get install -y unzip bash tcsh netcat curl make git gcc postgresql zlib1g-dev bzip2 libbz2-dev libreadline-dev libsqlite3-dev libssl-dev xz-utils liblzma-dev libffi-dev
-RUN apt-get install -y unzip bash tcsh ncat curl make git gcc postgresql       zlib1g-dev bzip2 libbz2-dev  libreadline-dev libsqlite3-dev libssl-dev    xz-utils liblzma-dev libffi-dev
-RUN apt-get install -y libtbb2 libbrotli-dev libbrotli1
+# RUN apt-get install -y unzip bash tcsh ncat curl make git gcc postgresql zlib1g-dev bzip2 libbz2-dev  libreadline-dev libsqlite3-dev libssl-dev    xz-utils liblzma-dev libffi-dev
+# RUN apt-get install -y libtbb2 libbrotli-dev libbrotli1
+RUN apt-get install -y unzip bash tcsh ncat curl make git gcc postgresql zlib1g-dev bzip2 libbz2-dev  libreadline-dev libsqlite3-dev libssl-dev    xz-utils liblzma-dev libffi-dev libtbb2 libbrotli-dev libbrotli1
+
+# RUN yum install -y gcc-c++
+RUN apt-get install -y gcc g++ gfortran
+
 
 
 # we set SQLITE_MAX_VARIABLE_NUMBER to a limit higher than 999
@@ -27,25 +28,24 @@ RUN cd /usr/src && echo "downloading sqlite3" && curl -o sqlite-amalgamation-330
 
 ARG python_version=3.9.16
 
+#RUN rm -rf /usr/local/bin/python* /usr/local/lib/*python*
 RUN cd /usr/src && echo "downloading python" && curl -o Python-${python_version}.tgz https://www.python.org/ftp/python/${python_version}/Python-${python_version}.tgz && tar xzf Python-${python_version}.tgz && cd Python-${python_version} && echo "building python3" && ./configure --prefix=/usr --enable-shared --enable-optimizations --enable-loadable-sqlite-extensions && make --silent install > /dev/null
 
 RUN ldconfig
 RUN python3 -V
 RUN pip3 install --upgrade pip
 
-# RUN yum install -y gcc-c++
-# RUN apt install -y gcc-c++
-RUN apt-get install -y gcc g++ gfortran
-
 COPY requirements.txt.py3 /tmp/
 RUN pip3 install -r /tmp/requirements.txt.py3
 
 COPY src/epmt/ui/requirements-ui.txt.py3 /tmp
-# RUN pip3 install -r /tmp/requirements-ui.txt.py3 
+RUN pip3 install -r /tmp/requirements-ui.txt.py3 
 
-RUN rm -f /tmp/requirements.txt.py3 /tmp/requirements-ui.txt.py3
+
+# RUN rm -f /tmp/requirements.txt.py3 /tmp/requirements-ui.txt.py3
 # RUN yum clean all
 # RUN rm -rf /usr/src /var/cache/yum
-RUN apt clean all
-RUN rm -rf /usr/src /var/cache/apt
+
+#RUN apt clean all
+#RUN rm -rf /usr/src /var/cache/apt
 
