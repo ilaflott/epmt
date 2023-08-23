@@ -14,8 +14,9 @@ PAPIEX_RELEASE=papiex-epmt-$(PAPIEX_VERSION)-$(OS_TARGET).tgz
 SHELL=/bin/bash
 CONDA_ACTIVATE = source $$(conda info --base)/etc/profile.d/conda.sh ; conda activate ; conda activate
 DOCKER_RUN:=docker -D run
-DOCKER_BUILD:=docker -D build -f
-DOCKER_RUN_OPTS:= -it
+DOCKER_BUILD:=docker -D build --no-cache -f
+#DOCKER_BUILD:=docker -D build -f
+DOCKER_RUN_OPTS:= -it 
 PWD=$(shell pwd)
 
 
@@ -26,15 +27,15 @@ SHELL = $(warning -------Building---------- $@)$(OLD_SHELL)
 #SHELL = $(warning Building $@)$(OLD_SHELL)
 ### ----
 
-### ---- # this prints out env vars and their values, from percipio learning
-#        # I am actually not convinced it did it's job...
-ifdef TRACE
-.PHONY: _trace _value
-_trace:; @$(MAKE) --no-print-directory TRACE= \
-      $(TRACE)='$$(warning TRACE $(TRACE))$(shell $(MAKE) TRACE=$(TRACE) _value)'
-_value: ; @echo '$(value $(TRACE))'
-endif
-### ----
+#### ---- # this prints out env vars and their values, from percipio learning
+##        # I am actually not convinced it did it's job...
+#ifdef TRACE
+#.PHONY: _trace _value
+#_trace:; @$(MAKE) --no-print-directory TRACE= \
+#      $(TRACE)='$$(warning TRACE $(TRACE))$(shell $(MAKE) TRACE=$(TRACE) _value)'
+#_value: ; @echo '$(value $(TRACE))'
+#endif
+#### ----
 
 .PHONY: default \\
 	epmt-build epmt-test \\
@@ -66,6 +67,7 @@ install-py3-conda:
 	conda create -n $(EPMT_VERSION)_py$(PYTHON_VERSION) python=$(PYTHON_VERSION) -y ; \
 	$(CONDA_ACTIVATE) $(EPMT_VERSION)_py$(PYTHON_VERSION) ; $(MAKE) install-deps ; \
 	echo ; echo "Your virtual python environment is epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION)." ;
+
 install-py3-pyenv:
 	@echo
 	@echo "(MAKE TARG: install-py3-pyenv) whoami"; whoami
@@ -75,6 +77,7 @@ install-py3-pyenv:
 	pyenv virtualenv $(PYTHON_VERSION) epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION) ; \
 	pyenv local epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION) ; $(MAKE) install-deps ; \
 	echo ; echo "Your virtual python environment is epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION)." ;
+
 install-deps:
 	@echo
 	@echo "(MAKE TARG: install-deps) whoami"; whoami
@@ -100,7 +103,7 @@ $(EPMT_RELEASE) dist:
 	@echo
 	@echo "(MAKE TARG: ${EPMT_RELEASE} dist) whoami"; whoami
 	@echo
-	rm -rf epmt-install build
+#	rm -rf epmt-install build
 	mkdir -p epmt-install/epmt/epmtdocs
 #	# activate venv if it exists, run pyinstaller in the
 #	# same shell pipeline so it uses the venv (if activated)
@@ -148,9 +151,10 @@ docker-dist:
 	@echo " - building epmt and epmt-test tarball"
 	@echo " - Dockerfile=Dockerfiles/Dockerfile.${OS_TARGET}-epmt-build"
 	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build -t $(OS_TARGET)-epmt-build --progress plain --build-arg python_version=$(PYTHON_VERSION) .
+	exit
 #       # here this enters the image (container?) build above, and calls the pyinstaller steps at the $(EPMT_RELEASE) dist target
 #	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build make OS_TARGET=$(OS_TARGET) distclean dist dist-test
-	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build make TRACE=Y OS_TARGET=$(OS_TARGET) distclean dist dist-test
+	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build make OS_TARGET=$(OS_TARGET) distclean dist dist-test
 
 docker-dist-test:
 	@echo
@@ -158,7 +162,7 @@ docker-dist-test:
 	@echo
 #	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) -it --rm --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build make OS_TARGET=$(OS_TARGET) dist-test
 #	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) -it --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build make OS_TARGET=$(OS_TARGET) dist-test
-	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) -it --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build make TRACE=Y OS_TARGET=$(OS_TARGET) dist-test
+	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) -it --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build make OS_TARGET=$(OS_TARGET) dist-test
 
 papiex-dist: $(PAPIEX_RELEASE)
 	@echo
@@ -202,9 +206,9 @@ check-release release-test-docker: $(EPMT_FULL_RELEASE)
 	if docker network ls | grep epmt-test-net > /dev/null; then docker network rm epmt-test-net; fi
 	docker network create epmt-test-net
 #	$(DOCKER_RUN) -d --rm --name postgres-test --network epmt-test-net -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -e POSTGRES_DB=EPMT-TEST postgres:latest
-	$(DOCKER_RUN) -d --rm --name postgres-test --network epmt-test-net -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -e POSTGRES_DB=EPMT-TEST postgres:latest
+	$(DOCKER_RUN) -d --name postgres-test --network epmt-test-net -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -e POSTGRES_DB=EPMT-TEST postgres:latest
 #	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged -it --rm -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; install_prefix=`epmt -h| grep install_prefix|cut -f2 -d:`; cp -fv $$install_prefix/epmt-$(EPMT_VERSION)/epmt-install/preset_settings/settings_test_pg_container.py $$install_prefix/epmt-$(EPMT_VERSION)/epmt-install/epmt/settings.py && epmt check && epmt unittest && epmt integration'
-	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged -it --rm -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; epmt -h| grep install_prefix|cut -f2 -d: ;install_prefix=`epmt -h| grep install_prefix|cut -f2 -d:`; cp -fv $$install_prefix/epmt-$(EPMT_VERSION)/epmt-install/preset_settings/settings_test_pg_container.py $$install_prefix/epmt-$(EPMT_VERSION)/epmt-install/epmt/settings.py && epmt check && epmt unittest && epmt integration'
+	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged -it -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; epmt -h| grep install_prefix|cut -f2 -d: ;install_prefix=`epmt -h| grep install_prefix|cut -f2 -d:`; cp -fv $$install_prefix/epmt-$(EPMT_VERSION)/epmt-install/preset_settings/settings_test_pg_container.py $$install_prefix/epmt-$(EPMT_VERSION)/epmt-install/epmt/settings.py && epmt check && epmt unittest && epmt integration'
 	docker stop postgres-test
 	docker network rm epmt-test-net
 
@@ -228,7 +232,7 @@ clean:
 	@echo
 	@echo "(MAKE TARG: clean) whoami"; whoami
 	@echo
-#	find . -type f \( -name "core" -or -name "*~" -or -name "*.pyc" -or -name "epmt.log" \)
+	find . -type f \( -name "core" -or -name "*~" -or -name "*.pyc" -or -name "epmt.log" \)
 	find . -type f \( -name "core" -or -name "*~" -or -name "*.pyc" -or -name "epmt.log" \) -exec rm -f {} \;
 	rm -rf build epmt-install epmt-install-tests .venv374
 	rm -rf src/epmt/ui/__pycache__ __pycache__
@@ -239,7 +243,7 @@ distclean: clean
 	@echo
 #	rm -rf src/epmt/ui/__pycache__ __pycache__
 #	rm -rf build epmt-install epmt-install-tests .venv374
-	rm -f $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(PAPIEX_RELEASE) $(EPMT_FULL_RELEASE)
+	rm -f settings.py $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(PAPIEX_RELEASE) $(EPMT_FULL_RELEASE)
 
 nuke:
 	@echo
