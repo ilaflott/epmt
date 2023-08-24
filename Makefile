@@ -14,8 +14,8 @@ PAPIEX_RELEASE=papiex-epmt-$(PAPIEX_VERSION)-$(OS_TARGET).tgz
 SHELL=/bin/bash
 CONDA_ACTIVATE = source $$(conda info --base)/etc/profile.d/conda.sh ; conda activate ; conda activate
 DOCKER_RUN:=docker -D run
-DOCKER_BUILD:=docker -D build --no-cache -f
-#DOCKER_BUILD:=docker -D build -f
+#DOCKER_BUILD:=docker -D build --no-cache -f
+DOCKER_BUILD:=docker -D build -f
 DOCKER_RUN_OPTS:= -it 
 PWD=$(shell pwd)
 
@@ -155,6 +155,7 @@ docker-dist:
 #       # here this enters the image (container?) build above, and calls the pyinstaller steps at the $(EPMT_RELEASE) dist target
 #	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build make OS_TARGET=$(OS_TARGET) distclean dist dist-test
 	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build make OS_TARGET=$(OS_TARGET) distclean dist dist-test
+#	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume $(PWD):$(PWD) "../papiex-oss":"../papiex-oss" -w $(PWD) $(OS_TARGET)-epmt-build make OS_TARGET=$(OS_TARGET) distclean dist dist-test
 
 docker-dist-test:
 	@echo
@@ -201,14 +202,17 @@ check-release release-test-docker: $(EPMT_FULL_RELEASE)
 	@echo
 	@echo "(MAKE TARG: check-release release-test-docker) whoami"; whoami
 	@echo
-	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test-release -t $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) --progress plain --build-arg epmt_version=$(EPMT_VERSION) --build-arg install_path=/opt/epmt --build-arg epmt_full_release=$(EPMT_PYTHON_FULL_RELEASE) .
+	if [ -d ./papiex-epmt-install ]; then echo "good"; else tar -zxf ./$(PAPIEX_RELEASE); fi
+	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test-release -t $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) --progress plain --build-arg epmt_version=$(EPMT_VERSION) --build-arg install_path=/opt/epmt --build-arg epmt_full_release=$(EPMT_PYTHON_FULL_RELEASE) --build-arg papiex_release=$(PAPIEX_RELEASE) .
 	if docker ps | grep postgres-test > /dev/null; then docker stop postgres-test; fi
 	if docker network ls | grep epmt-test-net > /dev/null; then docker network rm epmt-test-net; fi
 	docker network create epmt-test-net
 #	$(DOCKER_RUN) -d --rm --name postgres-test --network epmt-test-net -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -e POSTGRES_DB=EPMT-TEST postgres:latest
 	$(DOCKER_RUN) -d --name postgres-test --network epmt-test-net -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -e POSTGRES_DB=EPMT-TEST postgres:latest
 #	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged -it --rm -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; install_prefix=`epmt -h| grep install_prefix|cut -f2 -d:`; cp -fv $$install_prefix/epmt-$(EPMT_VERSION)/epmt-install/preset_settings/settings_test_pg_container.py $$install_prefix/epmt-$(EPMT_VERSION)/epmt-install/epmt/settings.py && epmt check && epmt unittest && epmt integration'
+
 	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged -it -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; epmt -h| grep install_prefix|cut -f2 -d: ;install_prefix=`epmt -h| grep install_prefix|cut -f2 -d:`; cp -fv $$install_prefix/epmt-$(EPMT_VERSION)/epmt-install/preset_settings/settings_test_pg_container.py $$install_prefix/epmt-$(EPMT_VERSION)/epmt-install/epmt/settings.py && epmt check && epmt unittest && epmt integration'
+
 	docker stop postgres-test
 	docker network rm epmt-test-net
 
@@ -232,7 +236,7 @@ clean:
 	@echo
 	@echo "(MAKE TARG: clean) whoami"; whoami
 	@echo
-	find . -type f \( -name "core" -or -name "*~" -or -name "*.pyc" -or -name "epmt.log" \)
+#	find . -type f \( -name "core" -or -name "*~" -or -name "*.pyc" -or -name "epmt.log" \)
 	find . -type f \( -name "core" -or -name "*~" -or -name "*.pyc" -or -name "epmt.log" \) -exec rm -f {} \;
 	rm -rf build epmt-install epmt-install-tests .venv374
 	rm -rf src/epmt/ui/__pycache__ __pycache__
