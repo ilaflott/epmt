@@ -44,8 +44,9 @@ ARG epmt_full_release
 ARG papiex_release
 
 WORKDIR ${install_path}
-COPY ./${papiex_release} .
-RUN tar zxf ${papiex_release}
+#COPY ./${papiex_release} .
+COPY ./papiex-epmt-install .
+#RUN tar zxf ${papiex_release}
 COPY ./src/dist/${epmt_full_release} .
 RUN python3 -m pip install ${epmt_full_release}
 
