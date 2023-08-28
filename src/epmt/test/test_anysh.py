@@ -42,14 +42,14 @@ def tearDownModule():
 class EPMTShell(unittest.TestCase):
 
     def test_run_auto(self):
-        from epmt_cmds import epmt_run
+        from epmt.epmt_cmds import epmt_run
         do_cleanup()
         with capture() as (out,err):
             results = epmt_run(['sleep 1'],wrapit=True,dry_run=False,debug=False)
             self.assertEqual(0, results)
 
     def test_monolithic(self):
-       from epmt_cmds import epmt_check, epmt_source, epmt_start_job, epmt_dump_metadata, epmt_run, epmt_stop_job, epmt_stage, epmt_submit
+       from epmt.epmt_cmds import epmt_check, epmt_source, epmt_start_job, epmt_dump_metadata, epmt_run, epmt_stop_job, epmt_stage, epmt_submit
        with capture() as (out,err):
           # Check will fail because of kernel paranoid, but we can't be
           # sure it will always fail.
@@ -66,7 +66,7 @@ class EPMTShell(unittest.TestCase):
           self.assertIn("LD_PRELOAD", results, 'epmt_source ld_preload is missing')
 
           # Start
-          from epmt_cmds import epmt_start_job
+          from epmt.epmt_cmds import epmt_start_job
           results = epmt_start_job()
           self.assertTrue(results)
 

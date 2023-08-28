@@ -4,12 +4,12 @@
 # from . import *
 import unittest
 import numpy as np
-from epmt_stat import check_dist
+from epmt.epmt_stat import check_dist
 
 class EPMTStat(unittest.TestCase):
 
     def test_outliers_iqr(self):
-        from epmt_stat import outliers_iqr, iqr
+        from epmt.epmt_stat import outliers_iqr, iqr
         vec = [100, 100, 100, 45, 100]
         r = outliers_iqr(vec)
         self.assertEqual(list(r), [0, 0, 0, 1, 0])
@@ -26,21 +26,21 @@ class EPMTStat(unittest.TestCase):
         self.assertEqual((q1_r, q3_r), (q1, q3))
 
     def test_outliers_iqr_strings(self):
-        import epmtlib as el
-        from epmt_stat import outliers_iqr
+        import epmt.epmtlib as el
+        from epmt.epmt_stat import outliers_iqr
         int_vec = el.hash_strings(['ABC', 'ABC', "ABC", 'DEF'])
         r = outliers_iqr(int_vec)
         self.assertEqual(list(r), [0, 0, 0, 1])
 
     def test_outliers_uv(self):
-        from epmt_stat import outliers_uv
+        from epmt.epmt_stat import outliers_uv
         r = outliers_uv([1,2,1,1,1,1,2,1,0,2,100,100])
         self.assertEqual(list(r), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2])
         r = outliers_uv([1,2,1,1,1,1,2,1,0,2,100])
         self.assertEqual(list(r), [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3])
 
     def test_z_score(self):
-        import epmt_stat as es
+        import epmt.epmt_stat as es
         (scores, max_score, mean_y, stdev_y) = es.z_score([1,2,3,4,5,6,7,8,9,10, 1000])
         self.assertEqual(list(scores),[0.332 , 0.3285, 0.325 , 0.3215, 0.318 , 0.3145, 0.311 , 0.3075, 0.304 , 0.3005, 3.1621])
         self.assertEqual((max_score, mean_y, stdev_y), (3.1621, 95.9091, 285.9118))
@@ -61,14 +61,14 @@ class EPMTStat(unittest.TestCase):
         self.assertTrue(failed > passed)
 
     def test_normalize(self):
-        from epmt_stat import normalize
+        from epmt.epmt_stat import normalize
         x = np.array([[0.0, 10.0], [0.13216, 12.11837], [0.25379, 42.05027], [0.30874, 13.11784]])
         norm_x = normalize(x)
         self.assertIsNone(np.testing.assert_almost_equal(norm_x, np.array([[0., 0.], [0.42806245, 0.06609523], [0.82201853, 1.], [1., 0.09727968]])))
 
     def test_dframe_append_weighted_row(self):
         import pandas as pd
-        from epmt_stat import dframe_append_weighted_row
+        from epmt.epmt_stat import dframe_append_weighted_row
         df = pd.DataFrame([[1,2,2],[2,3,4]], columns = ['A', 'B', 'C'])
         x1 = dframe_append_weighted_row(df, [1.5,0.1])
         self.assertEquals(x1.shape, (3,3))
@@ -81,7 +81,7 @@ class EPMTStat(unittest.TestCase):
         self.assertTrue(x2.iloc[-1].equals(df.iloc[0]))
     def test_modes(self):
         import numpy as np
-        from epmt_stat import get_modes
+        from epmt.epmt_stat import get_modes
         N = 100
         np.random.seed(1)
         # unimodal (normal)
@@ -101,7 +101,7 @@ class EPMTStat(unittest.TestCase):
         self.assertEqual(sorted(list(modes.round(0))), [0, 5, 10]) 
 
     def test_dict_outliers(self):
-        from epmt_stat import dict_outliers
+        from epmt.epmt_stat import dict_outliers
         dlist = [{'a': 100, 'b': 200}, {'a': 101, 'b': 201}, {'a': 100, 'b': 200}, {'a': 200, 'b': 300}]
         outl, outl_by_key = dict_outliers(dlist, threshold = 1.0)
         self.assertEqual(outl, {3})

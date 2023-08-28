@@ -89,8 +89,8 @@ class EPMTSubmit(unittest.TestCase):
 
     @db_session
     def test_unprocessed_jobs(self):
-        from orm import UnprocessedJob, orm_commit
-        from epmt_job import post_process_pending_jobs, post_process_job
+        from epmt.orm import UnprocessedJob, orm_commit
+        from epmt.epmt_job import post_process_pending_jobs, post_process_job
         with self.assertRaises(Exception):
              u = UnprocessedJob['685003']
         if settings.orm == 'sqlalchemy':
@@ -123,7 +123,7 @@ class EPMTSubmit(unittest.TestCase):
 
     @db_session
     def test_unprocessed_jobs_auto_post_process(self):
-        from orm import UnprocessedJob
+        from epmt.orm import UnprocessedJob
         saved_val = settings.post_process_job_on_ingest
         if settings.orm == 'sqlalchemy':
             # only sqla supports this setting
@@ -142,7 +142,7 @@ class EPMTSubmit(unittest.TestCase):
 
     def test_convert_csv(self):
         import tempfile
-        from epmt_convert_csv import convert_csv_in_tar
+        from epmt.epmt_convert_csv import convert_csv_in_tar
         job_dict_csv = eq.get_jobs('685000', fmt='dict', limit=1)[0]
         eq.delete_jobs('685000')
         (_, new_tar) = tempfile.mkstemp(prefix='epmt_', suffix='_collated_tsv.tgz')
@@ -202,8 +202,8 @@ class EPMTSubmit(unittest.TestCase):
         self.assertTrue(path.isfile(datafile))
 
     def check_lazy_compute(self, j, lazy_eval):
-        from epmt_job import is_process_tree_computed, mk_process_tree
-        from orm import Process
+        from epmt.epmt_job import is_process_tree_computed, mk_process_tree
+        from epmt.orm import Process
         p = eq.get_procs(j, limit=1, order=Process.start, fmt='orm')[0]
         is_pt_computed = is_process_tree_computed(j)
         if lazy_eval:

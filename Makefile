@@ -27,6 +27,7 @@ PWD=$(shell pwd)
 epmt-build compile build:
 	cd src/epmt
 	python3 -O -bb -m py_compile *.py orm/*.py orm/*/*.py test/*.py
+
 lint:
 	cd src/epmt
 	python3 -m pylint -E *.py orm/*.py orm/*/*.py test/*.py
@@ -88,7 +89,9 @@ $(EPMT_RELEASE) dist:
 	cp -Rp epmtdocs/site epmt-install/epmt/epmtdocs
 	# release
 	tar -czf $(EPMT_RELEASE) epmt-install
-	# ok enough of pyinstaller.  here's a pip-installable piece
+
+
+python-dist: $(EPMT_RELEASE)
 	cd src
 	tar zxf ../$(PAPIEX_RELEASE)
 	python3 setup.py sdist
@@ -102,9 +105,10 @@ test-$(EPMT_RELEASE) dist-test:
 	rm -rf epmt-install-tests
 
 docker-dist: 
-	@echo " - building epmt and epmt-test tarball"
+	@echo " - building epmt and epmt-test tarball via Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build"
 	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build -t $(OS_TARGET)-epmt-build --build-arg python_version=$(PYTHON_VERSION) .
-	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build make OS_TARGET=$(OS_TARGET) distclean dist dist-test
+	@echo " - running make python-dist dist-test inside $(OS_TARGET)-epmt-build"
+	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build make OS_TARGET=$(OS_TARGET)  python-dist $(EPMT_RELEASE) dist-test
 
 docker-dist-test:
 	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) -it --rm --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build make OS_TARGET=$(OS_TARGET) dist-test
@@ -127,17 +131,17 @@ $(EPMT_FULL_RELEASE): $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(PAPIEX_RELEASE)
 	@echo
 
 check-release release-test-docker: $(EPMT_FULL_RELEASE)
-	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test-release -t $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) --build-arg epmt_version=$(EPMT_VERSION) --build-arg install_path=/opt/epmt --build-arg epmt_full_release=$(EPMT_PYTHON_FULL_RELEASE) .
+	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test-release -t $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) --build-arg epmt_version=$(EPMT_VERSION) --build-arg install_path=/opt/minimalmetrics --build-arg epmt_full_release=$(EPMT_FULL_RELEASE) --build-arg epmt_python_full_release=$(EPMT_PYTHON_FULL_RELEASE)  .
 	if docker ps | grep postgres-test > /dev/null; then docker stop postgres-test; fi
 	if docker network ls | grep epmt-test-net > /dev/null; then docker network rm epmt-test-net; fi
 	docker network create epmt-test-net
 	$(DOCKER_RUN) -d --rm --name postgres-test --network epmt-test-net -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -e POSTGRES_DB=EPMT-TEST postgres:latest
-	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged -it --rm -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; install_prefix=`epmt -h| grep install_prefix|cut -f2 -d:`; cp -fv $$install_prefix/epmt-$(EPMT_VERSION)/epmt-install/preset_settings/settings_test_pg_container.py $$install_prefix/epmt-$(EPMT_VERSION)/epmt-install/epmt/settings.py && epmt check && epmt unittest && epmt integration'
+	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged -it --rm -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; install_prefix=`epmt -h| grep install_prefix|cut -f2 -d:`; cp -fv $$install_prefix/preset_settings/settings_test_pg_container.py $$install_prefix/settings.py && epmt check && epmt unittest && epmt integration'
 	docker stop postgres-test
 	docker network rm epmt-test-net
 
 release release-all release7:
-	$(MAKE) distclean
+	$(MAKE) distclean docker-clean
 	$(MAKE) docker-dist
 	$(MAKE) epmt-full-release
 	$(MAKE) check-release
@@ -145,12 +149,14 @@ release release-all release7:
 #
 #
 #
+docker-clean:
+	- docker image rm --force $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) $(OS_TARGET)-epmt-build
 clean:
 	find . -type f \( -name "core" -or -name "*~" -or -name "*.pyc" -or -name "epmt.log" \) -exec rm -f {} \;
 	rm -rf src/epmt/ui/__pycache__ __pycache__ build epmt-install epmt-install-tests .venv374ß
 
 distclean: clean
-	rm -f settings.py $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(PAPIEX_RELEASE) $(EPMT_FULL_RELEASE) src/dist/*
+	rm -f settings.py $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(EPMT_FULL_RELEASE) src/dist/*
 	rm -rf epmtdocs/site
 
 # 

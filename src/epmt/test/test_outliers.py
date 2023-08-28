@@ -3,7 +3,7 @@
 # the import below is crucial to get a sane test environment
 from . import *
 from json import loads
-import epmt_outliers as eod
+import epmt.epmt_outliers as eod
 
 
 def do_cleanup():
@@ -81,7 +81,7 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_outlier_jobs_multimode(self):
-        import epmt_stat as es
+        import epmt.epmt_stat as es
         df, parts = eod.detect_outlier_jobs(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], methods = [es.iqr, es.modified_z_score, es.z_score])
         self.assertEqual(df.shape, (4,4))
         self.assertEqual(set(zip(df.jobid.values, df.cpu_time.values, df.duration.values, df.num_procs.values)), {('kern-6656-20190614-190245', 0, 0, 0), ('kern-6656-20190614-192044-outlier', 3, 3, 0), ('kern-6656-20190614-194024', 0, 0, 0), ('kern-6656-20190614-191138', 0, 0, 0)})
@@ -134,7 +134,7 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(set(df.columns.values) & all_features, all_features)
         #
         # let's test using IQR and z-score
-        import epmt_stat as es
+        import epmt.epmt_stat as es
         for m in [es.iqr, es.z_score]:
             r = eq.create_refmodel(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024'], methods = [m])
             df, _ = eod.detect_outlier_jobs(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], methods = [m], trained_model=r['id'])
@@ -143,7 +143,7 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_outlier_jobs_trained_mvod(self):
-        from epmt_stat import mvod_classifiers
+        from epmt.epmt_stat import mvod_classifiers
         r = eq.create_refmodel(['kern-6656-20190614-190245', 'kern-6656-20190614-191138','kern-6656-20190614-194024'], methods = mvod_classifiers())
         (df, _) = eod.detect_outlier_jobs(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], trained_model = r['id'], methods = mvod_classifiers())
         df.sort_values(by=['jobid'], inplace=True)
@@ -206,7 +206,7 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_outlier_ops_trained_mvod(self):
-        from epmt_stat import mvod_classifiers
+        from epmt.epmt_stat import mvod_classifiers
         jobs = eq.get_jobs(tags='exp_name:linux_kernel', fmt='terse')
         model_jobs = [ j for j in jobs if not 'outlier' in j ]
         self.assertEqual(set(model_jobs), set(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024']))
@@ -262,7 +262,7 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_ops_refmodel_mvod(self):
-        from epmt_stat import mvod_classifiers
+        from epmt.epmt_stat import mvod_classifiers
         with capture() as (out, err):
             r = eq.create_refmodel(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024'], op_tags = [{'op': 'build'}, {'op': 'configure'}], features = ['cpu_time', 'num_procs', 'duration'], methods = mvod_classifiers())
         self.assertEqual(r['op_tags'], [{'op': 'build'}, {'op': 'configure'}])
@@ -279,7 +279,7 @@ class OutliersAPI(unittest.TestCase):
     def test_detect_outliers(self):
         import numpy as np
         import pandas as pd
-        import epmt_stat as es
+        import epmt.epmt_stat as es
         np.random.seed(0)
         data = np.random.randn(10,2)
         data[5] = [ 2 * data[:,0].max(), 2 * data[:,1].max() ]
@@ -289,7 +289,7 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_outlier_processes(self):
-        import epmt_stat as es
+        import epmt.epmt_stat as es
         p = eq.get_procs('kern-6656-20190614-190245', fmt='pandas', order=eq.desc(eq.Process.duration), limit=1)
         # clone and make 10 rows of the 1 process row
         procs = p.append([p]*9, ignore_index=True)
@@ -303,7 +303,7 @@ class OutliersAPI(unittest.TestCase):
 
     @db_session
     def test_outlier_threads(self):
-        import epmt_stat as es
+        import epmt.epmt_stat as es
         p = eq.get_procs('kern-6656-20190614-190245', fmt='orm', order=eq.desc(eq.Process.duration), limit=1)[0]
         t = eq.get_thread_metrics(p) 
         # clone and make 10 rows of the 1 thread row
@@ -438,7 +438,7 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(list(df[df.jobid == 'kern-6656-20190614-192044-outlier']['pca_01'].values), [1, 1, 1, 1, 1])
         self.assertEqual(list(df[df.jobid == 'kern-6656-20190614-192044-outlier']['pca_02'].values), [1, 1, 1, 1, 1])
         tags = list(df.tags.values)
-        from epmtlib import frozen_dict
+        from epmt.epmtlib import frozen_dict
         tags = [ frozen_dict(t) for t in tags ]
         self.assertEqual(set(tags), {frozenset({('op', 'configure'), ('op_sequence', '3'), ('op_instance', '3')}), frozenset({('op', 'download'), ('op_sequence', '1'), ('op_instance', '1')}), frozenset({('op_sequence', '4'), ('op_instance', '4'), ('op', 'build')}), frozenset({('op_sequence', '5'), ('op_instance', '5'), ('op', 'clean')}), frozenset({('op', 'extract'), ('op_sequence', '2'), ('op_instance', '2')})})
 
