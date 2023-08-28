@@ -15,6 +15,7 @@ The format can be selected using the `fmt` argument.
 from __future__ import print_function
 from datetime import datetime
 import pandas as pd
+
 from epmt.orm import *
 from json import loads, dumps
 from logging import getLogger
@@ -1326,7 +1327,7 @@ def delete_refmodels(*ref_ids):
     ref_ids = [int(r) for r in ref_ids]
     return orm_delete_refmodels(ref_ids)
 
-def retire_refmodels(ndays = settings.retire_models_ndays):
+def retire_refmodels(ndays = settings.retire_models_ndays, dry_run = False):
     """
     Retire models older than a certain number of days::Reference Models
 
@@ -1346,7 +1347,10 @@ def retire_refmodels(ndays = settings.retire_models_ndays):
     models = get_refmodels(before=-ndays, fmt='terse')
     if models:
         logger.info('Retiring following models (older than %d days): %s', ndays, str(models))
-        return delete_refmodels(models)
+        if dry_run:
+            return len(models)
+        else:
+            return delete_refmodels(models)
     else:
         logger.info('No models to retire (older than %d days)', ndays)
     return 0
@@ -1786,7 +1790,8 @@ op_duration_method: string, optional
     return all_procs
 
 @db_session
-def delete_jobs(jobs, force = False, before=None, after=None, warn = True, remove_models = False):
+def delete_jobs(jobs, force = False, before=None, after=None, warn = True, remove_models = False,
+                limit = None, offset=0, skip_unprocessed = False, dry_run = False):
     """
     Deletes one or more jobs and returns the number of jobs deleted::Jobs
 
@@ -1845,11 +1850,20 @@ remove_models : boolean, optional
     logger.debug("Jobs sent in"+str(jobs))
     jobs = orm_jobs_col(jobs)
 
-    if ((before != None) or (after != None)):
-        jobs = get_jobs(jobs, before=before, after=after, fmt='orm')
+    if any( [ before is not None, after is not None,
+              limit is not None, offset > 0 ] ):
+        logger.info('(delete_jobs) offset = {}'.format(offset))
+        jobs = get_jobs(jobs, before=before, after=after, limit=limit,
+                        offset=offset, fmt='orm',
+                        trigger_post_process=(not skip_unprocessed))
 
     num_jobs = jobs.count()
-    logger.debug("Jobs in collection: " + str(num_jobs))
+    init_num_jobs = num_jobs
+    if dry_run:
+        logger.info("(retire) # of jobs in collection: " + str(num_jobs))
+    else:
+        logger.debug("(retire) # of jobs in collection: " + str(num_jobs))
+
     if num_jobs == 0:
         if warn:
             logger.warning('No jobs matched; none deleted')
@@ -1860,53 +1874,124 @@ remove_models : boolean, optional
 
     # make sure we aren't trying to delete jobs with models associated with them
     jobs_with_models = {}
+    jobs_unprocessed =[]
     jobs_to_delete = []
     for j in jobs:
         logger.debug("Job to delete: %s",j.jobid)
-        if j.ref_models: 
+        if j.ref_models: # if a job has a model, it's processed.
             jobs_with_models[j.jobid] = [r.id for r in j.ref_models]
-        else:
+        elif (skip_unprocessed and (not is_job_post_processed(j.jobid)) ): # no model? then if skip_unprocessed, check if processed.
+            jobs_unprocessed.append(j.jobid)
+        else: # no model? processed and/or deleting unprocessed? We're gonna delete it.
             jobs_to_delete.append(j.jobid)
 
+    num_jobs_with_models_unremoved=len(jobs_with_models)
     if jobs_with_models:
-        if remove_models:
+        if remove_models: #False for epmt retire
             models_to_remove = set([])
             for (jobid, models) in jobs_with_models.items():
                 jobs_to_delete.append(jobid)
+                num_jobs_with_models_unremoved-=num_jobs_with_models_unremoved
                 models_to_remove |= set(models)
             logger.info("Deleting dependent reference models: {}".format(models_to_remove))
             delete_refmodels(*models_to_remove)
         else:
             if warn:
                 logger.warning('The following jobs have models (their IDs have been mentioned in square brackets) associated with them and these jobs will not be deleted:\n\t%s\n', str(jobs_with_models))
+
     if not jobs_to_delete:
         logger.info('No jobs match criteria to delete. Bailing..')
         return 0
+    
     jobs = orm_jobs_col(jobs_to_delete)
     num_jobs = len(jobs_to_delete)
-    logger.info('deleting %d jobs (%s), in an atomic operation..', num_jobs, str(jobs_to_delete))
+    if num_jobs != init_num_jobs:
+        logger.warning('requested to delete %d jobs, but will actually delete %d jobs.',
+                       init_num_jobs, num_jobs)
+        logger.warning('%d unprocessed jobs and %d jobs with models were targeted for deletion but will be spared instead',
+                       len(jobs_unprocessed), num_jobs_with_models_unremoved)
+
+    logger.info('deleting %d jobs, in an atomic operation..', num_jobs)
+
+    if dry_run:
+        logger.info('dry_run = True')
+        return num_jobs
+
     # if orm_delete_jobs fails then it was one atomic transaction that failed
     # so no jobs will be deleted
     return num_jobs if orm_delete_jobs(jobs) else 0
 
-
-def retire_jobs(ndays = settings.retire_jobs_ndays):
+def retire_jobs(ndays = settings.retire_jobs_ndays, skip_unprocessed = False, dry_run = False):
     """
     Retires jobs older than specified number of days::Jobs
-
     Parameters
     ----------
-      ndays : int, optional
-              Jobs older then `ndays` ago will be retired
-              `ndays` must be > 0 for any jobs to be retired. 
-              For ndays <=0, no jobs are retired.
-
+      ndays  : int, optional
+               Jobs older then `ndays` ago will be retired
+               `ndays` must be > 0 for any jobs to be retired. 
+               For ndays <=0, no jobs are retired.
+      skip_unprocessed : boolean, optional
+               If True, jobs older than `ndays` that have not been
+               post-processed will be spared.
+      dry_run: boolean, optional
+               if True, don't delete any jobs, just print to
+               screen how many WOULD be deleted with this set
+               equal to False            
     Returns
     -------
     The number of jobs retired (int)
     """
     if ndays <= 0: return 0
-    return delete_jobs([], force=True, before = -ndays, warn = False)
+    JOBS_PER_DELETE_MAX=(settings.retire_jobs_per_delete_max if settings.retire_jobs_per_delete_max>0 else 2000)
+    num_jobs=get_jobs(before=-ndays, fmt='orm', trigger_post_process = False).count()
+
+    ##uncomment me for training wheels/debug/tests
+    #JOBS_PER_DELETE_MAX=100
+    #num_jobs=get_jobs(before=-ndays, limit=400, fmt='orm', trigger_post_process = False).count()
+    if num_jobs>JOBS_PER_DELETE_MAX:
+        logger.info('number of jobs older than {0} days is {1}'.format(ndays,num_jobs))
+        logger.info('will be deleting jobs in chunks of %d', JOBS_PER_DELETE_MAX )
+
+        tot_num_deleted=0
+        num_delete_attempts=0 # keep track of num we attempt to delete
+        offset=0 # if jobs spared via ref-model-assoc, stop targeting those jobs.
+
+        while num_delete_attempts<num_jobs: 
+            logger.info('%d jobs to go', (num_jobs-num_delete_attempts))
+
+            _attempt_to_delete_max=( (num_delete_attempts + JOBS_PER_DELETE_MAX) <= num_jobs)
+            limit=0
+            if _attempt_to_delete_max:
+                limit=JOBS_PER_DELETE_MAX
+            else:
+                limit=num_jobs-num_delete_attempts
+
+            logger.info('attempting to delete %d jobs now...', limit)
+            num_deleted=delete_jobs( jobs = [], force = True, before = -ndays, warn = False,
+                                     limit = limit, offset = offset, skip_unprocessed = skip_unprocessed,
+                                     dry_run = dry_run)
+            
+            tot_num_deleted+=num_deleted
+            num_delete_attempts+=limit            
+            num_not_deleted=limit-num_deleted
+
+            if dry_run:
+                offset+=limit # dry-run delete_jobs just returns the target # of jobs
+            else:
+                if (num_not_deleted > 0):                print(f'offset was: {offset}')                
+                offset+=(limit-num_deleted)
+                if (num_not_deleted > 0):                print(f'offset is now: {offset}')
+            
+            logger.info('%d jobs out of %d deleted so far', tot_num_deleted, num_delete_attempts)
+            
+        else:
+            logger.info('done deleting jobs in chunks!')
+
+        return tot_num_deleted
+
+    else: #can delete in one swoop, when less than max.
+        return delete_jobs([], force=True, before = -ndays, warn = False,
+                           skip_unprocessed = skip_unprocessed, dry_run = dry_run)
 
 # @db_session
 # def dm_calc(jobs = [], tags = ['op:hsmput', 'op:dmget', 'op:untar', 'op:mv', 'op:dmput', 'op:hsmget', 'op:rm', 'op:cp']):
