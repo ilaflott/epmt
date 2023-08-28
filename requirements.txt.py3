@@ -66,7 +66,7 @@ more-itertools
 nbconvert
 nbformat
 nltk
-notebook
+notebook<7
 numba
 numexpr
 numpy

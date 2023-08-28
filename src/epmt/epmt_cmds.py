@@ -1637,6 +1637,7 @@ def epmt_entrypoint(args):
         if args.epmt_cmd_args:
             TEST_MODULES = args.epmt_cmd_args
         for m in TEST_MODULES:
+            m = f'epmt.{m}'
             mod = import_module(m)
             suite = unittest.TestLoader().loadTestsFromModule(mod)
             print('\n\nRunning', m)

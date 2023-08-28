@@ -48,7 +48,7 @@ def tearDownModule():
 class EPMTShell(unittest.TestCase):
     # Test epmt with run argument
     def test_run_auto(self):
-        from epmt_cmds import epmt_run
+        from epmt.epmt_cmds import epmt_run
         from os import environ
         environ['SLURM_JOB_ID'] = jobid
         remove_stale_files()
@@ -62,7 +62,7 @@ class EPMTShell(unittest.TestCase):
         remove_jobid_envs()
         from os import environ
         environ['SLURM_JOB_ID'] = jobid
-        from epmt_cmds import epmt_run
+        from epmt.epmt_cmds import epmt_run
         remove_stale_files()
         with capture() as (out,err):
             results = epmt_run(['sleep 1'],wrapit=True,dry_run=False,debug=False)
@@ -73,7 +73,7 @@ class EPMTShell(unittest.TestCase):
         remove_jobid_envs()
         from os import environ
         environ['PBS_JOB_ID'] = jobid
-        from epmt_cmds import epmt_run
+        from epmt.epmt_cmds import epmt_run
         remove_stale_files()
         with capture() as (out,err):
             results = epmt_run(['sleep 1'],wrapit=True,dry_run=False,debug=False)
@@ -82,7 +82,7 @@ class EPMTShell(unittest.TestCase):
     # Test run for missing jobid
     def test_run_no_jobid(self):
         #remove_jobid_envs()
-        from epmt_cmds import epmt_run
+        from epmt.epmt_cmds import epmt_run
         remove_stale_files()
         # quell the error messages
         epmt_logging_init(-2)
@@ -96,7 +96,7 @@ class EPMTShell(unittest.TestCase):
         remove_jobid_envs()
         from os import environ
         environ['SLURM_JOB_ID'] = jobid
-        from epmt_cmds import epmt_run
+        from epmt.epmt_cmds import epmt_run
         remove_stale_files()
         with capture() as (out,err):
             results = epmt_run(['sleep 1'],wrapit=True,dry_run=True,debug=False)
@@ -106,7 +106,7 @@ class EPMTShell(unittest.TestCase):
         remove_jobid_envs()
         #from os import environ
         #environ['SLURM_JOB_ID'] = jobid
-        from epmt_cmds import epmt_run
+        from epmt.epmt_cmds import epmt_run
         remove_stale_files()
         # quell the error messages
         epmt_logging_init(-2)
@@ -119,14 +119,14 @@ class EPMTShell(unittest.TestCase):
         remove_jobid_envs()
         from os import environ
         environ['SLURM_JOB_ID'] = jobid
-        from epmt_cmds import epmt_run
+        from epmt.epmt_cmds import epmt_run
         remove_stale_files()
         with capture() as (out,err):
             results = epmt_run(['sleep 1'], wrapit=False, dry_run=False, debug=False)
             self.assertEqual(0, results)
             
     def test_monolithic(self):
-        from epmt_cmds import epmt_check, epmt_source, epmt_start_job, epmt_dump_metadata, epmt_run
+        from epmt.epmt_cmds import epmt_check, epmt_source, epmt_start_job, epmt_dump_metadata, epmt_run
         remove_jobid_envs()
         from os import environ
         environ['SLURM_JOB_ID'] = jobid

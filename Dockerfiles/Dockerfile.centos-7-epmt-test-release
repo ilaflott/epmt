@@ -28,16 +28,25 @@ RUN rm -f /tmp/requirements.txt.py3 /tmp/requirements-ui.txt.py3
 RUN yum clean all
 RUN rm -rf /var/cache/yum
 
-ARG install_path=/opt/minimalmetrics
+ARG install_path
 ARG epmt_version
 ARG epmt_full_release
+ARG epmt_python_full_release
 
 WORKDIR ${install_path}
-COPY src/dist/${epmt_full_release} .
-RUN python3 -m pip install ${epmt_full_release}
-#COPY utils/epmt-installer .
-#RUN echo -ne "\n\n" | ./epmt-installer `basename ${epmt_full_release}`
-#ENV PATH="${install_path}/epmt-${epmt_version}/epmt-install/epmt:${PATH}"
-#RUN rm -f *.tgz epmt-installer
+COPY ${epmt_full_release} .
+COPY src/dist/${epmt_python_full_release} .
+RUN python3 -m pip install ${epmt_python_full_release}
+
+RUN mkdir /usr/lib/python3.9/site-packages/papiex-oss \
+    && tar zxf ${epmt_python_full_release}  \
+    && mv epmt-${epmt_version}/papiex-epmt-install /usr/lib/python3.9/site-packages/papiex-oss 
+#    && rm -rf *.tgz
+ 
+COPY utils/epmt-installer .
+RUN ls ${install_path}
+RUN echo -ne "\n\n" | ./epmt-installer ${install_path}
+ENV PATH="${install_path}/epmt-${epmt_version}/epmt-install/epmt:${PATH}"
+RUN rm -f *.tgz epmt-installer
 
 CMD ["/bin/bash", "-c", "sysctl kernel.perf_event_paranoid=1; epmt check; epmt unittest; epmt integration"]

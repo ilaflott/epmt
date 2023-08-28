@@ -2,7 +2,7 @@
 
 # the import below is crucial to get a sane test environment
 from . import *
-from orm import orm_in_memory
+from epmt.orm import orm_in_memory
 
 def setUpModule():
 #    print('\n' + str(settings.db_params))
@@ -14,7 +14,7 @@ MIGRATION_HEAD = '4ae9a1cac540'
 class EPMTDBMigration(unittest.TestCase):
     @unittest.skipUnless((settings.orm == 'sqlalchemy') and not(orm_in_memory()), 'requires sqlalchemy with persistent backend')
     def test_baseline_migration(self):
-        from orm import get_db_schema_version
+        from epmt.orm import get_db_schema_version
         self.assertEqual(get_db_schema_version(), MIGRATION_HEAD)
 
     @unittest.skipUnless((settings.orm == 'sqlalchemy') and not(orm_in_memory()), 'requires sqlalchemy with persistent backend')
@@ -28,7 +28,7 @@ class EPMTDBMigration(unittest.TestCase):
         s = out.getvalue()
         self.assertRegex(s, '.*{}_add_active_column_to_users_table.py .* done'.format(rev_id))
         self.assertTrue(path.isfile(migration_file))
-        from orm import migrate_db, get_db_schema_version
+        from epmt.orm import migrate_db, get_db_schema_version
         with capture() as (out,err):
             migrate_db()
         self.assertEqual(get_db_schema_version(), 'deadbeef')

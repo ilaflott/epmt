@@ -2,7 +2,7 @@
 
 # the import below is crucial to get a sane test environment
 from . import *
-import epmt_exp_explore as exp
+import epmt.epmt_exp_explore as exp
 
 
 

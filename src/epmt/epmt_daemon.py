@@ -208,7 +208,7 @@ def daemon_loop(context, niters = 0, post_process = True, analyze = True, retire
             
         # max delay in seconds; we will subtract from this processing time
         # should be in settings instead!
-        MAX_DELAY = 10
+        MAX_DELAY = 60
 
         # Locals
         tot_pp_jobs = 0

@@ -3,7 +3,7 @@
 # the import below is crucial to get a sane test environment
 #from . import *
 import unittest
-from epmtlib import get_install_root
+from epmt.epmtlib import get_install_root
 from os import path    
 
 def setUpModule():
@@ -18,7 +18,7 @@ class EPMTSettings(unittest.TestCase):
         # it's anyhow covered in the tests below
         # self.assertTrue(path.exists(default_settings_file) and (path.getsize(default_settings_file) > 0))
         try:
-            import epmt_default_settings as defaults
+            import epmt.epmt_default_settings as defaults
         except:
             self.assertTrue(False, "default settings import failed")
         self.assertEqual(defaults.orm, 'sqlalchemy')
@@ -31,15 +31,15 @@ class EPMTSettings(unittest.TestCase):
     def test_epmt_settings(self):
         self.assertTrue(path.exists(install_root+'/settings.py') and (path.getsize(install_root+'/settings.py') > 0))
         try:
-            import epmt_settings as settings
+            import epmt.epmt_settings as settings
         except:
             self.assertTrue(False, "could not load epmt_settings as settings")
 
 
     def test_settings_overrides_defaults(self):
-        import epmt_default_settings as defaults # referred to as default settings below
+        import epmt.epmt_default_settings as defaults # referred to as default settings below
         import settings as later_settings # referred to as 'later' settings below
-        import epmt_settings as settings # referred to as settings module below
+        import epmt.epmt_settings as settings # referred to as settings module below
         default_vars = vars(defaults)
         later_vars = vars(later_settings)
         settings_vars = vars(settings)

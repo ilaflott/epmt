@@ -15,7 +15,7 @@ The format can be selected using the `fmt` argument.
 from __future__ import print_function
 from datetime import datetime
 import pandas as pd
-from .orm import *
+from epmt.orm import *
 from json import loads, dumps
 from logging import getLogger
 import epmt.epmt_settings as settings
