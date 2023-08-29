@@ -919,15 +919,10 @@ def populate_process_table_from_staging(j):
         if 'permission denied' in err_str:
             logger.error('You do not have sufficient privileges for this operation')
         else:
-            # Only log the first 100 or so of errors
-            if len(err_str) > settings.max_log_statement_length:
-                logger.error('error too long to show... first {max_log_statement_length} errors in err_str list are...')
-                logger.error(''.join(err_str[:settings.max_log_statement_length]))
-            else:
-                logger.error(err_str)
+            logger.error(err_str[:1024] + '.. (error too long to show)' if len(err_str) > 1024 else err_str)
         return False
     table_copy_time = time.time() - _start_time
-    logger.warning("  copied %d processes from staging in %2.5f sec at %2.5f procs/sec", nprocs, table_copy_time, nprocs/table_copy_time)
+    logger.debug("  copied %d processes from staging in %2.5f sec at %2.5f procs/sec", nprocs, table_copy_time, nprocs/table_copy_time)
     return True
 
 @db_session

@@ -210,7 +210,6 @@ def orm_delete_jobs(jobs, use_orm = False):
                 logger.error('You do not have sufficient privileges to delete jobs')
                 return False
             logger.warning("Could not execute delete SQL: {0}".format(str(e)))
-            #return False #REMOVE ME
 
     # do a slow delete using ORM
     logger.warning("Fast-path delete did not work. Doing a slow delete using ORM..")
@@ -616,12 +615,8 @@ def get_mapper(tbl):
 # function after guarding against injection and dangerous sql commands
 def orm_raw_sql(sql, commit = False):
     # As we may get really long queries when moving processes from staging,
-    # only log the first 100 or so of long queries
-    if len(sql) > settings.max_log_statement_length:
-        logger.debug('Executing very long SQL statement(s): ... ') 
-        logger.debug(''.join(map(str,sql[:settings.max_log_statement_length])))
-    else:
-        logger.debug('Executing: {0}'.format((sql)))
+    # only log the first 1k of long queries
+    logger.debug('Executing: {0}'.format((sql[:1024] + '.. (SQL too long to show)') if len(sql) > 1024 else sql))
 
     connection = engine.connect()
     trans = connection.begin()

@@ -156,8 +156,6 @@ if (__name__ == "__main__"):
     drop_parser.add_argument('-f', '--force', action='store_true',help="Do not prompt to confirm")
     # retire
     retire_parser = subparser.add_parser('retire', help="Delete jobs/models, retention policy in settings.py")
-    retire_parser.add_argument('-n', '--dry-run', default=False, action='store_true',help="Don't touch the database, just report the number of jobs and models that will be retired")
-    retire_parser.add_argument('-u', '--skip-unproc', default=False, action='store_true',help="If retire targets a job that hasn't been processed yet, leave that job alone and skip.")
     # Submit
     submit_parser = subparser.add_parser('submit', help="Submit/ingest job into database",
         description="Submit accepts job directories and updates the database configured with \

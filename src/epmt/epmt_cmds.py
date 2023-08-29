@@ -83,6 +83,9 @@ def write_job_epilog(jobdatafile,metadata):
         return True
     return False
 
+#
+#
+#
 #db.bind(**settings.db_params)
 class bcolors:
     HEADER = '\033[95m'
@@ -1648,7 +1651,7 @@ def epmt_entrypoint(args):
 
     if args.command == 'retire':
         from epmt.epmt_cmd_retire import epmt_retire
-        epmt_retire(skip_unprocessed=args.skip_unproc, dry_run=args.dry_run)
+        epmt_retire()
         return 0
 
     if args.command == 'check':
