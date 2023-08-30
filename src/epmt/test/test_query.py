@@ -240,7 +240,7 @@ class QueryAPI(unittest.TestCase):
 
     @db_session
     def test_process_tree(self):
-        from epmt_job import mk_process_tree
+        from epmt.epmt_job import mk_process_tree
         mk_process_tree('685000')
         p = eq.get_procs('685000', fmt='orm', order=desc(Process.start), limit=1)[0]
         self.assertEqual(p.depth, 3)

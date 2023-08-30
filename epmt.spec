@@ -11,21 +11,21 @@ hidden = collect_submodules('notebook',filter=lambda name: name.endswith('handle
 uniq = set(hidden)
 hidden = list(uniq)
 # Without this, we get no tree view
-hidden.append('notebook.tree')
+# not in python3 hidden.append('notebook.tree')
 # Whats a notebook without pandas
 hidden.append('pandas')
 # Required for IPython kernel
 hidden.append('ipykernel.datapub')
 # Required for migration migrations/versions/e703296695bf_create_processes_staging_table.py
-hidden.append('orm.sqlalchemy.custom_types')
+hidden.append('epmt.orm.sqlalchemy.custom_types')
 # Required for EPMT
 hidden.append('sqlalchemy.ext.baked')
 # pyod, pca
-hidden.extend(['sklearn.neighbors._typedefs','sklearn.neighbors._quad_tree','sklearn.tree._utils','sklearn.utils', 'sklearn.utils._cython_blas', 'sklearn.utils.arrayfuncs', 'sklearn.utils.arrayfuncs.array'])
+hidden.extend(['sklearn.neighbors._quad_tree','sklearn.tree._utils','sklearn.utils', 'sklearn.utils._cython_blas', 'sklearn.utils.arrayfuncs'])
 
-hidden.append('ui.graphing')
-hidden.append('ui.components')
-hidden.append('ui')
+hidden.append('epmt.ui.graphing')
+hidden.append('epmt.ui.components')
+hidden.append('epmt.ui')
 
 print("Hidden modules: ",hidden)
 
@@ -55,7 +55,7 @@ files = glob('src/epmt/ui/assets/*')
 for f in files:
     dash_resources.append((f, './assets/'))
 
-dash_extra_datas = collect_data_files('dash_html_components') + collect_data_files('dash_core_components') + collect_data_files('dash_daq') + collect_data_files('dash_table') + collect_data_files('dash_renderer') + collect_data_files('dash_bootstrap_components')
+dash_extra_datas = collect_data_files('dash_html_components') + collect_data_files('dash_core_components') + collect_data_files('dash_daq') + collect_data_files('dash_table') + collect_data_files('dash_bootstrap_components')
 plotly_extra_datas = collect_data_files('plotly.graph_objects') + collect_data_files('plotly.express') + collect_data_files('plotly.figure_factory')
 
 extra_datas = ipe_extra_datas + dash_extra_datas + alembic_extras + dash_resources + plotly_extra_datas + collect_data_files('parso')

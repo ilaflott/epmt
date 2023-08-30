@@ -3,10 +3,10 @@
 # the import below is crucial to get a sane test environment
 from . import *
 
-from epmt_cmds import epmt_dbsize
-from epmt_cmd_delete import epmt_delete_jobs
-from epmt_cmd_list import  epmt_list_jobs, epmt_list_procs, epmt_list_job_proc_tags, epmt_list_refmodels, epmt_list_op_metrics, epmt_list_thread_metrics
-from epmt_daemon import daemon_loop
+from epmt.epmt_cmds import epmt_dbsize
+from epmt.epmt_cmd_delete import epmt_delete_jobs
+from epmt.epmt_cmd_list import  epmt_list_jobs, epmt_list_procs, epmt_list_job_proc_tags, epmt_list_refmodels, epmt_list_op_metrics, epmt_list_thread_metrics
+from epmt.epmt_daemon import daemon_loop
 
 from contextlib import nullcontext
 from os import path
@@ -36,7 +36,7 @@ def tearDownModule():
 class EPMTCmds(unittest.TestCase):
 
     def test_get_papiex_options(self):
-        from epmt_cmds import get_papiex_options
+        from epmt.epmt_cmds import get_papiex_options
         from socket import gethostname
         from cpuinfo import get_cpu_info
         cpu_info = get_cpu_info()
@@ -85,8 +85,8 @@ class EPMTCmds(unittest.TestCase):
         # and unprocessed jobs. Then we run the daemon loop once.
         # That should clear the backlog of unprocessed and 
         # unanalyzed jobs
-        from epmt_daemon import is_daemon_running, daemon_loop
-        from epmt_job import post_process_pending_jobs
+        from epmt.epmt_daemon import is_daemon_running, daemon_loop
+        from epmt.epmt_job import post_process_pending_jobs
         self.assertTrue(is_daemon_running() == (False, -1))
         settings.post_process_job_on_ingest = False
         with capture() as (out,err):
@@ -159,7 +159,7 @@ class EPMTCmds(unittest.TestCase):
 
 
     def test_dbsize_json(self):
-        from epmt_cmds import epmt_dbsize
+        from epmt.epmt_cmds import epmt_dbsize
         with capture() as (out, err):
             retval = epmt_dbsize(['database', 'table', 'index', 'tablespace'], usejson=True)
         s = out.getvalue()
@@ -176,7 +176,7 @@ class EPMTCmds(unittest.TestCase):
 
   
     def test_stage(self):
-        from epmt_cmds import epmt_stage
+        from epmt.epmt_cmds import epmt_stage
         # quell the error messages
         epmt_logging_init(-2)
         from os import remove, path
@@ -221,7 +221,7 @@ class EPMTCmds(unittest.TestCase):
         org_setting = settings.retire_jobs_ndays
 #        print(str(ndays))
         settings.retire_jobs_ndays = ndays - 1 # to make sure we retire 627919
-        from epmt_cmd_retire import epmt_retire
+        from epmt.epmt_cmd_retire import epmt_retire
         with capture() as (out,err):
             (jobs_delete_count, _) = epmt_retire()
         settings.retire_jobs_ndays = org_setting # restore original setting
@@ -233,7 +233,7 @@ class EPMTCmds(unittest.TestCase):
     def test_zz_drop_db(self):
         jobs = eq.get_jobs(fmt='terse')
         self.assertTrue(len(jobs) > 0)
-        from orm import orm_drop_db
+        from epmt.orm import orm_drop_db
         with capture() as (out,err):
             orm_drop_db()
         jobs = eq.get_jobs(fmt='terse')
