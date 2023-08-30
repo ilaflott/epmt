@@ -3,7 +3,6 @@
 # usage:
 #  epmt-installer (assumes installer is in the current directory)
 #  epmt-installer /path/to/EPMT-x.y.z.tgz
-
 usage="usage: `basename $0` [/path/to/release/tar]"
 
 
@@ -12,8 +11,14 @@ function die() {
   exit 1
 }
 
-
+echo "arg 1 is $1"
 release=${1:-"`ls $PWD/EPMT-release-*.tgz`"}
+echo "release is $release"
+if [ ! -f "$release" ] ; then
+    echo "could not find release tar ball. trying different approach."
+    release="`ls $PWD/EPMT-release-*.tgz`"
+    echo "release is now $release"
+fi
 # get the full path
 case "$release" in
   /*) ;;
@@ -26,26 +31,42 @@ release_file=$(basename $release)
 version=$(echo $release_file | sed -e 's/EPMT-release//' | cut -f2 -d-|cut -f1-3 -d.)
 
 default_install="$PWD/epmt-$version"
-echo;echo -n "Enter full path to an empty install directory [$default_install]: "
-read EPMT_PREFIX
-[ "$EPMT_PREFIX" != "" ] || EPMT_PREFIX="$default_install"
-
+echo "default install: $default_install"
+#echo;echo -n "Enter full path to an empty install directory [$default_install]: "
+#read EPMT_PREFIX
+#[ "$EPMT_PREFIX" != "" ] || EPMT_PREFIX="$default_install"
+EPMT_PREFIX="$default_install"
 echo "Install directory: $EPMT_PREFIX"
-echo -n "Press ENTER to continue, Ctrl-C to abort: "
-read discard
+#echo -n "Press ENTER to continue, Ctrl-C to abort: "
+#read discard
 
+if [ ! -d $EPMT_PREFIX ] ; then
+    mkdir -p $EPMT_PREFIX
+else
+    rm -rf $EPMT_PREFIX/
+fi
+    
 mkdir -p "$EPMT_PREFIX"
 existing_files=$(ls $EPMT_PREFIX)
 [ -z "$existing_files" ] || die "$EPMT_PREFIX is not empty. Please ensure the install directory ($EPMT_PREFIX) is empty and try again."
 
 (cd "$EPMT_PREFIX"; echo "Extracting release.."; tar xf "$release")
 (cd "$EPMT_PREFIX"; for f in *.tgz; do tar xf $f; rm -f $f; done)
+
+#ls $EPMT_PREFIX/epmt-install/epmt/
+if [ -d $EPMT_PREFIX/epmt-install/epmt/test ] ; then rm -rf $EPMT_PREFIX/epmt-install/epmt/test; fi
 (cd "$EPMT_PREFIX"; mv epmt-install-tests/* epmt-install/epmt/ ; rm -rf epmt-install-tests)
+
 echo "Installing settings.py and migrations"
-(cd "$EPMT_PREFIX"; sed -i -e "/install_prefix/ s|.*|install_prefix = \"$EPMT_PREFIX/papiex-epmt-install/\"|" epmt-install/preset_settings/*.py; cp epmt-install/preset_settings/settings_sqlite_localfile_sqlalchemy.py epmt-install/epmt/settings.py; cp epmt-install/alembic.ini epmt-install/epmt/; cp -r epmt-install/migrations epmt-install/epmt/ )
+#(cd "$EPMT_PREFIX"; sed -i -e "/install_prefix/ s|.*|install_prefix = \"$EPMT_PREFIX/papiex-epmt-install/\"|" epmt-install/preset_settings/*.py; cp epmt-install/preset_settings/settings_sqlite_localfile_sqlalchemy.py epmt-install/epmt/settings.py; cp epmt-install/alembic.ini epmt-install/epmt/; cp -r epmt-install/migrations epmt-install/epmt/ )
+(cd "$EPMT_PREFIX"; sed -i -e "/install_prefix/ s|.*|install_prefix = \"$EPMT_PREFIX/papiex-epmt-install/\"|" epmt-install/preset_settings/*.py; cp epmt-install/preset_settings/settings_sqlite_localfile_sqlalchemy.py epmt-install/epmt/settings.py; cp -r epmt-install/migrations epmt-install/epmt/ )
+
 echo "Fixing paths in slurm scripts"
 (cd "$EPMT_PREFIX"; sed -i -e "s|/opt/epmt|$EPMT_PREFIX|" epmt-install/slurm/slurm_task*.sh)
-$EPMT_PREFIX/epmt-install/epmt/epmt -V || die "Installation failed."
+
+#$EPMT_PREFIX/epmt-install/epmt/epmt -V || die "Installation failed."
+$EPMT_PREFIX/epmt-install/epmt/epmt -V 
+
 
 mkdir $EPMT_PREFIX/modulefiles
 cat > $EPMT_PREFIX/modulefiles/epmt <<EOT
