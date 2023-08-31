@@ -53,7 +53,7 @@ COPY utils/epmt-installer .
 #RUN echo -ne "\n\n" >&2
 
 RUN ls ${install_path}
-#RUN echo -ne "\n\n" | ./epmt-installer ${install_path}
+RUN echo -ne "\n\n" | ./epmt-installer ${install_path}
 #RUN ./epmt-installer ${install_path}
 
 #ENV PATH="${install_path}/epmt-${epmt_version}/epmt-install/epmt:${PATH}"

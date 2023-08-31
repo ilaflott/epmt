@@ -180,18 +180,18 @@ release release-all release7:
 	@echo "whoami: $(shell whoami)"
 	@echo " - building everything!"
 
-###      # this step is fine- just cleaning.
-##	$(MAKE) clean distclean docker-clean papiex-clean
+#      # this step is fine- just cleaning.
+	$(MAKE) clean distclean docker-clean papiex-clean
 
-##      # make the papiex tarball, this is now here because prev. the targets didn't really reflect the dependency on papiex
-#	$(MAKE) papiex-dist
+#      # make the papiex tarball, this is now here because prev. the targets didn't really reflect the dependency on papiex
+	$(MAKE) papiex-dist
 
-##	# this step is good it seems, docker-dist --> <stuff> ... docker run <blah> make <container targs>
-##      # where <container targs> = python-dist dist dist-test
-#	$(MAKE) docker-dist
+#	# this step is good it seems, docker-dist --> <stuff> ... docker run <blah> make <container targs>
+#      # where <container targs> = python-dist dist dist-test
+	$(MAKE) docker-dist
 
-##	# this should just make a tar ball. nothing else. this step seems fine with the papiex step above.
-#	$(MAKE) epmt-full-release
+#	# this should just make a tar ball. nothing else. this step seems fine with the papiex step above.
+	$(MAKE) epmt-full-release
 
 #	# moment of truth. 
 	$(MAKE) check-release
@@ -211,7 +211,7 @@ distclean:
 papiex-clean:
 	@echo "whoami: $(shell whoami)"
 	@echo " - cleaning up papiex"
-	rm -f $(PAPIEX_SRC)/$(PAPIEX-RELEASE)
+	- rm -f $(PAPIEX_SRC)/$(PAPIEX-RELEASE)
 
 docker-clean:
 	@echo "whoami: $(shell whoami)"
