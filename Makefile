@@ -89,7 +89,9 @@ $(EPMT_RELEASE) dist:
 #	# if [ -d .venv374 ]; then echo "activating virtualenv.."; source .venv374/bin/activate; fi; set -e; \
 #	# [ "`python3 -V`" == "Python 3.7.4" ] || exit 1 ; 
 	pyinstaller --clean --noconfirm --distpath=epmt-install epmt.spec
+	@echo " - making docs"
 	mkdocs build -f epmtdocs/mkdocs.yml
+	@echo " - done. making docs. moving things around..."
 #	# Rest of the commands below can be safely run outside the virtualenv
 #	# resources
 	cp -Rp preset_settings epmt-install
@@ -105,6 +107,7 @@ $(EPMT_RELEASE) dist:
 #	# docs
 	cp -Rp epmtdocs/site epmt-install/epmt/epmtdocs
 #	# release
+	@echo " - done moving things around. making epmt-install tarball"
 	tar -czf $(EPMT_RELEASE) epmt-install
 
 
@@ -112,7 +115,9 @@ python-dist: $(EPMT_RELEASE)
 	@echo "whoami: $(shell whoami)"
 	@echo " - in container, extracting papiex_release and running setuptools"
 	cd src
+	@echo " - extracting tarball: $(PAPIEX_RELEASE)"
 	tar zxf ../$(PAPIEX_RELEASE)
+	@echo " - setuptools: python3 setup.py sdist"
 	python3 setup.py sdist
 	chmod a+r dist/*
 
@@ -165,23 +170,31 @@ $(EPMT_FULL_RELEASE): $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(PAPIEX_RELEASE)
 
 check-release release-test-docker: $(EPMT_FULL_RELEASE)
 	@echo "whoami: $(shell whoami)"
+	@echo " - docker build epmt-test-release"
 	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test-release -t $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) --progress plain --build-arg epmt_version=$(EPMT_VERSION) --build-arg install_path=/opt/minimalmetrics --build-arg epmt_full_release=$(EPMT_FULL_RELEASE) --build-arg epmt_python_full_release=$(EPMT_PYTHON_FULL_RELEASE)  .
-#	if docker ps | grep postgres-test > /dev/null; then docker stop postgres-test; fi
-#	if docker network ls | grep epmt-test-net > /dev/null; then docker network rm epmt-test-net; fi
-#	docker network create epmt-test-net
-##	$(DOCKER_RUN) -d --rm --name postgres-test --network epmt-test-net -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -e POSTGRES_DB=EPMT-TEST postgres:latest
+	@echo " - removing postgres docker process, epmt-test docker network if present."
+	if docker ps | grep postgres-test > /dev/null; then docker stop postgres-test; fi
+	if docker network ls | grep epmt-test-net > /dev/null; then docker network rm epmt-test-net; fi
+	@echo " - creating epmt test network"
+	docker network create epmt-test-net
+	@echo " - running postgres-test process"
+	$(DOCKER_RUN) -d --rm --name postgres-test --network epmt-test-net -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -e POSTGRES_DB=EPMT-TEST postgres:latest
 #	$(DOCKER_RUN) -d --name postgres-test --network epmt-test-net -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -e POSTGRES_DB=EPMT-TEST postgres:latest
-##	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged -it --rm -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; install_prefix=`epmt -h| grep install_prefix|cut -f2 -d:`; cp -fv $$install_prefix/preset_settings/settings_test_pg_container.py $$install_prefix/settings.py && epmt check && epmt unittest && epmt integration'
+	@echo " - running test-release docker image now"
+#	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged -it --rm -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; install_prefix=`epmt -h| grep install_prefix|cut -f2 -d:`; cp -fv $$install_prefix/preset_settings/settings_test_pg_container.py $$install_prefix/settings.py && epmt check && epmt unittest && epmt integration'
 #	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged -it -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; install_prefix=`epmt -h| grep install_prefix|cut -f2 -d:`; cp -fv $$install_prefix/preset_settings/settings_test_pg_container.py $$install_prefix/settings.py && epmt check && epmt unittest && epmt integration'
-#	docker stop postgres-test
-#	docker network rm epmt-test-net
+	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged -it --rm -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; epmt check && epmt unittest && epmt integration'
+	@echo " - stopping postgres-test docker process and epmt-test network"
+	docker stop postgres-test
+	docker network rm epmt-test-net
 
 release release-all release7:
 	@echo "whoami: $(shell whoami)"
 	@echo " - building everything!"
 
 #      # this step is fine- just cleaning.
-	$(MAKE) clean distclean docker-clean papiex-clean
+#	$(MAKE) clean distclean docker-clean papiex-clean
+	$(MAKE) clean distclean docker-clean
 
 #      # make the papiex tarball, this is now here because prev. the targets didn't really reflect the dependency on papiex
 	$(MAKE) papiex-dist
@@ -205,7 +218,8 @@ clean:
 distclean: 
 	@echo "whoami: $(shell whoami)"
 	@echo " - cleaning up tarballs, python-related things, epmtdocs"
-	rm -f settings.py $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(EPMT_FULL_RELEASE) src/dist/*
+#	rm -f settings.py $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(EPMT_FULL_RELEASE) src/dist/*
+	rm -f $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(EPMT_FULL_RELEASE) src/dist/*
 	rm -rf epmtdocs/site
 
 papiex-clean:

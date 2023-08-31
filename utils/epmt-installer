@@ -59,7 +59,8 @@ if [ -d $EPMT_PREFIX/epmt-install/epmt/test ] ; then rm -rf $EPMT_PREFIX/epmt-in
 
 echo "Installing settings.py and migrations"
 #(cd "$EPMT_PREFIX"; sed -i -e "/install_prefix/ s|.*|install_prefix = \"$EPMT_PREFIX/papiex-epmt-install/\"|" epmt-install/preset_settings/*.py; cp epmt-install/preset_settings/settings_sqlite_localfile_sqlalchemy.py epmt-install/epmt/settings.py; cp epmt-install/alembic.ini epmt-install/epmt/; cp -r epmt-install/migrations epmt-install/epmt/ )
-(cd "$EPMT_PREFIX"; sed -i -e "/install_prefix/ s|.*|install_prefix = \"$EPMT_PREFIX/papiex-epmt-install/\"|" epmt-install/preset_settings/*.py; cp epmt-install/preset_settings/settings_sqlite_localfile_sqlalchemy.py epmt-install/epmt/settings.py; cp -r epmt-install/migrations epmt-install/epmt/ )
+#(cd "$EPMT_PREFIX"; sed -i -e "/install_prefix/ s|.*|install_prefix = \"$EPMT_PREFIX/papiex-epmt-install/\"|" epmt-install/preset_settings/*.py; cp epmt-install/preset_settings/settings_sqlite_localfile_sqlalchemy.py epmt-install/epmt/settings.py; cp -r epmt-install/migrations epmt-install/epmt/ )
+(cd "$EPMT_PREFIX"; sed -i -e "/install_prefix/ s|.*|install_prefix = \"$EPMT_PREFIX/papiex-epmt-install/\"|" epmt-install/preset_settings/*.py; cp epmt-install/preset_settings/settings_test_pg_container.py epmt-install/epmt/settings.py; cp -r epmt-install/migrations epmt-install/epmt/ )
 
 echo "Fixing paths in slurm scripts"
 (cd "$EPMT_PREFIX"; sed -i -e "s|/opt/epmt|$EPMT_PREFIX|" epmt-install/slurm/slurm_task*.sh)

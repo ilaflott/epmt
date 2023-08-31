@@ -1,0 +1,257 @@
+Makefile:81: ------- TARGET is --  -- 
+Makefile:114: ------- TARGET is --  -- 
+Makefile:124: ------- TARGET is --  -- 
+Makefile:160: ------- TARGET is --  -- 
+Makefile:163: ------- TARGET is --  -- 
+Makefile:163: ------- TARGET is --  -- 
+Makefile:163: ------- TARGET is --  -- 
+Makefile:171: ------- TARGET is --  -- 
+Makefile:172: ------- TARGET is -- check-release -- 
+Makefile:172: ------- TARGET is -- check-release -- 
+Makefile:172: ------- TARGET is -- check-release -- 
+Makefile:172: ------- TARGET is -- check-release -- 
+Makefile:172: ------- TARGET is -- check-release -- 
+Makefile:172: ------- TARGET is -- check-release -- 
+Makefile:172: ------- TARGET is -- check-release -- 
+Makefile:172: ------- TARGET is -- check-release -- 
+Makefile:20: ------- TARGET is -- check-release -- 
+whoami: ilaflott
+Makefile:172: ------- TARGET is -- check-release -- 
+ - docker build epmt-test-release
+Makefile:172: ------- TARGET is -- check-release -- 
+docker -D build -f Dockerfiles/Dockerfile.ubuntu-epmt-test-release -t ubuntu-epmt-test-release:4.10.0 --progress plain --build-arg epmt_version=4.10.0 --build-arg install_path=/opt/minimalmetrics --build-arg epmt_full_release=EPMT-release-4.10.0-ubuntu.tgz --build-arg epmt_python_full_release=epmt-4.10.0.tar.gz  .
+time="2023-08-31T15:29:15-04:00" level=debug msg="serving grpc connection"
+#1 [internal] load build definition from Dockerfile.ubuntu-epmt-test-release
+#1 sha256:81fde7c8c6e22eb202984285efb2aba3d30eb86e43cc9677da630ceafe356150
+#1 transferring dockerfile: 60B 0.0s
+#1 transferring dockerfile: 62B 0.0s done
+#1 DONE 0.2s
+
+#2 [internal] load .dockerignore
+#2 sha256:9fac0837c4669eec96baa6f7184f379a724fa3c8ad9cdd4bfc7dd4abf3cbd2ba
+#2 transferring context: 34B 0.0s done
+#2 DONE 0.1s
+
+#3 [internal] load metadata for docker.io/library/ubuntu:latest
+#3 sha256:8c6bdfb121a69744f11ffa1fedfc68ec20085c2dcce567aac97a3ff72e53502d
+#3 ...
+
+#4 [auth] library/ubuntu:pull token for registry-1.docker.io
+#4 sha256:712e07ca159761f2b0273d10f2905161896b22666ddfa9c12487051f2decee74
+#4 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/ubuntu:latest
+#3 sha256:8c6bdfb121a69744f11ffa1fedfc68ec20085c2dcce567aac97a3ff72e53502d
+#3 DONE 3.1s
+
+#5 [ 1/26] FROM docker.io/library/ubuntu:latest@sha256:ec050c32e4a6085b423d36ecd025c0d3ff00c38ab93a3d71a460ff1c44fa6d77
+#5 sha256:06c2ce46cbbdef058f93845b1ee20092050b43ba667c92837cacd3234de29bf7
+#5 DONE 0.0s
+
+#17 [internal] load build context
+#17 sha256:258f3a9742be725385df904dcac6e6a74b113d208e805bac7a25745321c6cd9b
+#17 transferring context: 448B 0.0s done
+#17 DONE 0.1s
+
+#23 [18/26] RUN rm -rf /var/cache/apt
+#23 sha256:12d7a649b3c86653d70650f6a766826929a5f364e808a678e27afb54dc3f4ad6
+#23 CACHED
+
+#18 [13/26] COPY requirements.txt.py3 /tmp/
+#18 sha256:8caa357ebd591e47df9a734d6f587f31e309756855dcc4f6790f6c0daad76ee2
+#18 CACHED
+
+#30 [25/26] RUN ls /opt/minimalmetrics
+#30 sha256:51f93cfeb4640e3aaa7db9e11afe8ae9727013b9ec645380cf11ea76c8cb5a46
+#30 CACHED
+
+#19 [14/26] RUN pip3 install -r /tmp/requirements.txt.py3
+#19 sha256:b3985a842ae8acadc0a0b10fd7b9b399a8c8a77d7b42aafa1835ed52e54bde76
+#19 CACHED
+
+#11 [ 7/26] RUN rm -rf /usr/local/bin/python* /usr/local/lib/*python*
+#11 sha256:2082b680ea91132ac9b21c176f579c62059e6a7beefd6b263fe64833efc65d45
+#11 CACHED
+
+#7 [ 3/26] RUN apt-get install -y apt-transport-https
+#7 sha256:39b49839708ec4d852cd69b52a663d08701dcabc6735a70cdc5e893d27be31b5
+#7 CACHED
+
+#8 [ 4/26] RUN apt-get install -y tcsh environment-modules
+#8 sha256:06f9f6c4124564840a151edeb3a7a41c0ed110ed54176d94725f56d956f93f7e
+#8 CACHED
+
+#10 [ 6/26] RUN cd /usr/src && echo "downloading sqlite3" && curl -o sqlite-amalgamation-3300100.zip https://www.sqlite.org/2019/sqlite-amalgamation-3300100.zip && unzip sqlite-amalgamation-3300100.zip && echo "building libsqlite3 with json1 and other useful extensions" && cd sqlite-amalgamation-3300100 && gcc -shared -fPIC -O2  -DSQLITE_ENABLE_JSON1 -DSQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_MAX_VARIABLE_NUMBER=9999 sqlite3.c -o /usr/lib64/libsqlite3.so
+#10 sha256:f2a1687f68a16ce6dbc004f8e1a4df9f2c588ce341ee0b5cfe44036ea04593ca
+#10 CACHED
+
+#13 [ 9/26] RUN ldconfig
+#13 sha256:d2e354093a143df91cb94853f57c77ac77db8e76f3df6b0a5ab39d904244e1c9
+#13 CACHED
+
+#14 [10/26] RUN python3 -V
+#14 sha256:459f144b71df5df69bf233c78bfa07445290728f7aba59956737b812fd15297c
+#14 CACHED
+
+#29 [24/26] COPY utils/epmt-installer .
+#29 sha256:d2c75bd78852b99f7c4ded03916a6ded07f6657ed6464eeb421079ea9c7e3f45
+#29 CACHED
+
+#25 [20/26] COPY EPMT-release-4.10.0-ubuntu.tgz .
+#25 sha256:bf4326b9c3991ee0dc906df23964ea4c07ada6ec3a5439522a2f79074ea9ee12
+#25 CACHED
+
+#9 [ 5/26] RUN apt-get install -y unzip bash tcsh ncat curl make git gcc postgresql zlib1g-dev bzip2 libbz2-dev  libreadline-dev libsqlite3-dev libssl-dev    xz-utils liblzma-dev libffi-dev libtbb2 libbrotli-dev libbrotli1
+#9 sha256:c7a6137b6edfc186022389123767ac393ee62fecc2cf7a028f12e086afd10ac3
+#9 CACHED
+
+#27 [22/26] RUN python3 -m pip install epmt-4.10.0.tar.gz
+#27 sha256:22e89afede04d335b60086573fc7d376a5be3bd89cfa8a5d445d4afbe71e480d
+#27 CACHED
+
+#16 [12/26] RUN apt-get install -y gcc g++
+#16 sha256:a46c259a794026d761af988177e3b7548e2e0f657466d0817d1208348ba94933
+#16 CACHED
+
+#28 [23/26] RUN mkdir /usr/lib/python3.9/site-packages/papiex-oss     && tar zxf epmt-4.10.0.tar.gz      && mv epmt-4.10.0/papiex-epmt-install /usr/lib/python3.9/site-packages/papiex-oss
+#28 sha256:5c62533fc6ae96cc6d553cc8b8e3a7912e1ab36233d4c19e43327f33604caae5
+#28 CACHED
+
+#24 [19/26] WORKDIR /opt/minimalmetrics
+#24 sha256:552864d32d794e57845b3b77b73bce19bf3697cc56155bdc91cd070bff69edbc
+#24 CACHED
+
+#26 [21/26] COPY src/dist/epmt-4.10.0.tar.gz .
+#26 sha256:4629bd790f2370bf446232185c27ff289efa14dbf1afea87a905a01838ac88bd
+#26 CACHED
+
+#22 [17/26] RUN apt-get clean
+#22 sha256:cd1753f878a66353ff12166c97f19f7bc5ba4e3eecd7d694dda2666354d79b5a
+#22 CACHED
+
+#6 [ 2/26] RUN apt-get update -y
+#6 sha256:330a3e786ca3765c0d774e7444635a5568f93d4c7adb72992d9638311256b51c
+#6 CACHED
+
+#15 [11/26] RUN pip3 install --upgrade pip
+#15 sha256:64a72b7d024717ca3a9fb78cc4390278dbe4d518c5e36b82b0e279aafbc1533b
+#15 CACHED
+
+#20 [15/26] COPY src/epmt/ui/requirements-ui.txt.py3 /tmp
+#20 sha256:d137bbfe2a24c597dd61d165c0df5dfc13b9ee43855842eef80bbfb295ca402f
+#20 CACHED
+
+#21 [16/26] RUN rm -f /tmp/requirements.txt.py3 /tmp/requirements-ui.txt.py3
+#21 sha256:4956611a12864185a97ad58f70d76742569765449ae6bfa65b85866f37576561
+#21 CACHED
+
+#12 [ 8/26] RUN cd /usr/src && echo "downloading python" && curl -o Python-3.9.16.tgz https://www.python.org/ftp/python/3.9.16/Python-3.9.16.tgz && tar xzf Python-3.9.16.tgz && cd Python-3.9.16 && echo "building python3" && ./configure --prefix=/usr --enable-shared --enable-optimizations --enable-loadable-sqlite-extensions && make --silent install > /dev/null
+#12 sha256:3e4d0b12357b8649c25f9d0d0c1816761051b6322781032c3bbacf4ce22d51bb
+#12 CACHED
+
+#31 [26/26] RUN echo -ne "\n\n" | ./epmt-installer /opt/minimalmetrics
+#31 sha256:3d740ae27b50288fcf38e1ca7091e071cbe0ce66f882fc2cda93d0741717ee6a
+#31 CACHED
+
+#32 exporting to image
+#32 sha256:e8c613e07b0b7ff33893b694f7759a10d42e180f2b4dc349fb57dc6b71dcab00
+#32 exporting layers done
+#32 writing image sha256:19ecf84bb617b50b067f1383939adab740e6e8e92b5e32f822300dccc06aaa6d 0.0s done
+#32 naming to docker.io/library/ubuntu-epmt-test-release:4.10.0
+#32 naming to docker.io/library/ubuntu-epmt-test-release:4.10.0 done
+#32 DONE 0.2s
+Makefile:172: ------- TARGET is -- check-release -- 
+ - removing postgres docker process, epmt-test docker network if present.
+Makefile:172: ------- TARGET is -- check-release -- 
+if docker ps | grep postgres-test > /dev/null; then docker stop postgres-test; fi
+Makefile:172: ------- TARGET is -- check-release -- 
+if docker network ls | grep epmt-test-net > /dev/null; then docker network rm epmt-test-net; fi
+epmt-test-net
+Makefile:172: ------- TARGET is -- check-release -- 
+ - creating epmt test network
+Makefile:172: ------- TARGET is -- check-release -- 
+docker network create epmt-test-net
+762d46e68b0ae59795fd7d6a3ce0faa686846ab693cdd2c779c2d2dda2cdd6fa
+Makefile:172: ------- TARGET is -- check-release -- 
+ - running postgres-test process
+Makefile:172: ------- TARGET is -- check-release -- 
+docker -D run -d --rm --name postgres-test --network epmt-test-net -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -e POSTGRES_DB=EPMT-TEST postgres:latest
+Unable to find image 'postgres:latest' locally
+latest: Pulling from library/postgres
+52d2b7f179e3: Pulling fs layer
+d9c06b35c8a5: Pulling fs layer
+ec0d4c36c7f4: Pulling fs layer
+aa8e32a16a69: Pulling fs layer
+8950a67e90d4: Pulling fs layer
+1b47429b7c5f: Pulling fs layer
+a773f7da97bb: Pulling fs layer
+7bddc9bbcf13: Pulling fs layer
+60829730fa39: Pulling fs layer
+f3d9c845d2f3: Pulling fs layer
+cfcd43fe346d: Pulling fs layer
+576335d55cdb: Pulling fs layer
+caad4144446c: Pulling fs layer
+aa8e32a16a69: Waiting
+8950a67e90d4: Waiting
+1b47429b7c5f: Waiting
+a773f7da97bb: Waiting
+7bddc9bbcf13: Waiting
+60829730fa39: Waiting
+f3d9c845d2f3: Waiting
+cfcd43fe346d: Waiting
+576335d55cdb: Waiting
+caad4144446c: Waiting
+d9c06b35c8a5: Verifying Checksum
+d9c06b35c8a5: Download complete
+ec0d4c36c7f4: Verifying Checksum
+ec0d4c36c7f4: Download complete
+aa8e32a16a69: Verifying Checksum
+aa8e32a16a69: Download complete
+1b47429b7c5f: Verifying Checksum
+1b47429b7c5f: Download complete
+8950a67e90d4: Verifying Checksum
+8950a67e90d4: Download complete
+7bddc9bbcf13: Verifying Checksum
+7bddc9bbcf13: Download complete
+52d2b7f179e3: Download complete
+f3d9c845d2f3: Verifying Checksum
+f3d9c845d2f3: Download complete
+a773f7da97bb: Verifying Checksum
+a773f7da97bb: Download complete
+cfcd43fe346d: Verifying Checksum
+cfcd43fe346d: Download complete
+576335d55cdb: Verifying Checksum
+576335d55cdb: Download complete
+caad4144446c: Verifying Checksum
+caad4144446c: Download complete
+60829730fa39: Verifying Checksum
+60829730fa39: Download complete
+52d2b7f179e3: Pull complete
+d9c06b35c8a5: Pull complete
+ec0d4c36c7f4: Pull complete
+aa8e32a16a69: Pull complete
+8950a67e90d4: Pull complete
+1b47429b7c5f: Pull complete
+a773f7da97bb: Pull complete
+7bddc9bbcf13: Pull complete
+60829730fa39: Pull complete
+f3d9c845d2f3: Pull complete
+cfcd43fe346d: Pull complete
+576335d55cdb: Pull complete
+caad4144446c: Pull complete
+Digest: sha256:a5e89e5f2679863bedef929c4a7ec5d1a2cb3c045f13b47680d86f8701144ed7
+Status: Downloaded newer image for postgres:latest
+93c8d3f9ba6e9214742e1d63e691babb1f9125a9af74d293f6431489c5ce5eef
+Makefile:172: ------- TARGET is -- check-release -- 
+ - running test-release docker image now
+Makefile:172: ------- TARGET is -- check-release -- 
+docker -D run --name ubuntu-epmt-4.10.0-test-release --network epmt-test-net --privileged -it -h slurmctl ubuntu-epmt-test-release:4.10.0 bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; install_prefix=`epmt -h| grep install_prefix|cut -f2 -d:`; cp -fv $install_prefix/preset_settings/settings_test_pg_container.py $install_prefix/settings.py && epmt check && epmt unittest && epmt integration'
+Traceback (most recent call last):
+  File "/usr/bin/epmt", line 13, in <module>
+    from epmt.epmt_cmds import epmt_entrypoint, dump_config
+  File "/usr/lib/python3.9/site-packages/epmt/epmt_cmds.py", line 15, in <module>
+    from epmt.orm import db_session
+ModuleNotFoundError: No module named 'epmt.orm'
+cp: cannot stat '/preset_settings/settings_test_pg_container.py': No such file or directory
+time="2023-08-31T15:30:44-04:00" level=debug msg="[hijack] End of stdout"
+make: *** [check-release] Error 1
