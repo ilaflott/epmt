@@ -1,5 +1,6 @@
-FROM ubuntu:latest
-ENV DEBIAN_FRONTEND=noninteractive
+FROM phusion/baseimage:0.10.2
+# FROM ubuntu:latest
+# ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update -y
 RUN apt-get install -y apt-transport-https
