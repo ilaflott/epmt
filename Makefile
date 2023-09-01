@@ -2,7 +2,10 @@
 
 OS_TARGET=centos-7
 PAPIEX_VERSION?=2.3.14
-PAPIEX_SRC?=../papiex
+PAPIEX_SRC?=papiex
+PAPIEX_SRC_BRANCH=epmt
+PAPIEX_SRC_TARBALL=papiex-${PAPIEX_SRC_BRANCH}.tar.gz
+PAPIEX_SRC_URL=https://gitlab.com/minimal-metrics-llc/epmt/papiex/-/archive/master/${PAPIEX_SRC_TARBALL}
 PYTHON_VERSION=3.9.16
 EPMT_VERSION=$(shell sed -n '/_version = /p' src/epmt/epmtlib.py | sed 's/ //g; s/,/./g; s/.*(\(.*\))/\1/')
 EPMT_RELEASE=epmt-$(EPMT_VERSION)-$(OS_TARGET).tgz
@@ -119,6 +122,11 @@ $(PAPIEX_RELEASE): $(PAPIEX_SRC)/$(PAPIEX_RELEASE)
 	cp $< $@
 
 $(PAPIEX_SRC)/$(PAPIEX_RELEASE):
+	if [ ! -d $(PAPIEX_SRC) ]; then \
+	curl -O ${PAPIEX_SRC_URL}; \
+	tar zxf ${PAPIEX_SRC_TARBALL}; \
+	mv `tar ztf ${PAPIEX_SRC_TARBALL} | head -1` $(PAPIEX_SRC); \
+	fi
 	make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) docker-dist 
 
 epmt-full-release: $(EPMT_FULL_RELEASE)
