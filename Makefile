@@ -49,17 +49,7 @@ install-py3-pyenv:
 	pyenv local epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION) ; $(MAKE) install-deps ; \
 	echo ; echo "Your virtual python environment is epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION)." ;
 install-deps:
-	set -e ; pip install --upgrade pip ; pip install -r requirements.txt.py3 ; pip install -r src/epmt/ui/requirements-ui.txt.py3
-
-#rm -rf .venv374 ; \
-#	if python3 -m epmt_query 2>&1| grep ModuleNotFound > /dev/null; then \
-#		set -e; echo "Setting up a virtual environment (in .venv374).." ; \
-#		[ -d .venv374 ] || python3 -m venv .venv374 ; \
-#		source .venv374/bin/activate; set -e ; \
-#		pip3 install --upgrade pip ; \
-#		pip3 install -r requirements.txt.py3 ; \
-#		pip3 install -r ui/requirements-ui.txt.py3 ; \
-#	fi
+	set -e ; pip3 install --upgrade pip3 ; pip3 install -r requirements.txt.py3 ; pip3 install -r src/epmt/ui/requirements-ui.txt.py3
 
 # This target runs pyinstaller to produce an epmt tarball that
 # has all the dpeendencies included.
