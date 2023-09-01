@@ -33,8 +33,8 @@ build:python3:
     - pip3 install pyinstaller mkdocs mkdocs-theme-bootstrap4 ipython
     - make OUTSIDE_DOCKER=YUP papiex-dist dist python-dist && python3 -m pip install src/dist/epmt*gz
     - cp -f  preset_settings/settings_sqlite_localfile_sqlalchemy.py $(python3 -c 'import epmt;print (epmt.__file__.rsplit("/", 1)[0])')/settings.py
-    - echo \"install_prefix = $(python3 -c 'import epmt;print (epmt.__file__.rsplit("/", 1)[0])')/\" >> $(python3 -c 'import epmt;print (epmt.__file__.rsplit("/", 1)[0])')/settings.py
     - pip3 install src/dist/epmt*gz
+    - echo \"install_prefix = $(python3 -c 'import epmt;print (epmt.__file__.rsplit("/", 1)[0])')/\" >> $(python3 -c 'import epmt;print (epmt.__file__.rsplit("/", 1)[0])')/settings.py
     - make check
 
 
