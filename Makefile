@@ -49,7 +49,7 @@ install-py3-pyenv:
 	pyenv local epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION) ; $(MAKE) install-deps ; \
 	echo ; echo "Your virtual python environment is epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION)." ;
 install-deps:
-	set -e ; pip3 install --upgrade pip3 ; pip3 install -r requirements.txt.py3 ; pip3 install -r src/epmt/ui/requirements-ui.txt.py3
+	set -e ; pip3 install --upgrade pip ; pip3 install -r requirements.txt.py3 ; pip3 install -r src/epmt/ui/requirements-ui.txt.py3
 
 # This target runs pyinstaller to produce an epmt tarball that
 # has all the dpeendencies included.
