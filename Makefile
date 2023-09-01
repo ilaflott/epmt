@@ -59,15 +59,8 @@ install-deps:
 $(EPMT_RELEASE) dist:
 	rm -rf epmt-install build
 	mkdir -p epmt-install/epmt/epmtdocs
-	# activate venv if it exists, run pyinstaller in the
-	# same shell pipeline so it uses the venv (if activated)
-	# mkdocs also needs the same virtualenv, so includde it in the pipeline
-	# if [ -d .venv374 ]; then echo "activating virtualenv.."; source .venv374/bin/activate; fi; set -e; \
-	# [ "`python3 -V`" == "Python 3.7.4" ] || exit 1 ; 
 	pyinstaller --clean --noconfirm --distpath=epmt-install epmt.spec
 	mkdocs build -f epmtdocs/mkdocs.yml
-	# Rest of the commands below can be safely run outside the virtualenv
-	# resources
 	cp -Rp preset_settings epmt-install
 	cp -Rp notebooks epmt-install
 	cp -Rp src/epmt/epmt_migrations epmt-install/migrations
@@ -117,7 +110,10 @@ $(PAPIEX_SRC)/$(PAPIEX_RELEASE):
 	tar zxf ${PAPIEX_SRC_TARBALL}; \
 	mv `tar ztf ${PAPIEX_SRC_TARBALL} | head -1` $(PAPIEX_SRC); \
 	fi
-	make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) docker-dist 
+	if [ -n "${OUTSIDE_DOCKER}" ]; \
+	then make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) distclean install dist; \
+	else make docker-dist; \
+	fi
 
 epmt-full-release: $(EPMT_FULL_RELEASE)
 
