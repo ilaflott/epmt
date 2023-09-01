@@ -30,7 +30,7 @@ build:python3:
     - (cd /usr/src && echo "downloading sqlite3" && curl -o sqlite-amalgamation-3300100.zip https://www.sqlite.org/2019/sqlite-amalgamation-3300100.zip && unzip sqlite-amalgamation-3300100.zip && echo "building libsqlite3 with json1 and other useful extensions" && cd sqlite-amalgamation-3300100 && gcc -shared -fPIC -O2  -DSQLITE_ENABLE_JSON1 -DSQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_MAX_VARIABLE_NUMBER=9999 sqlite3.c -o /usr/lib64/libsqlite3.so)
     - (cd /usr/src && echo "downloading python" && curl -o Python-3.9.16.tgz https://www.python.org/ftp/python/3.9.16/Python-3.9.16.tgz && tar xzf Python-3.9.16.tgz && cd Python-3.9.16 && echo "building python3" && ./configure --quiet --prefix=/usr --enable-shared --enable-optimizations --enable-loadable-sqlite-extensions && make --silent install > /dev/null)
     - ldconfig && yum clean all && rm -rf /usr/src /var/cache/yum
-    - pip3 install pyinstaller mkdocs
+    - make install-deps
     - make dist python-dist && python3 -m pip install src/dist/epmt*gz
     - cp -f  preset_settings/settings_sqlite_localfile_sqlalchemy.py $(python3 -c 'import epmt;print (epmt.__file__.rsplit("/", 1)[0])')/settings.py
     - echo \"install_prefix = $(python3 -c 'import epmt;print (epmt.__file__.rsplit("/", 1)[0])')/\" >> $(python3 -c 'import epmt;print (epmt.__file__.rsplit("/", 1)[0])')/settings.py
