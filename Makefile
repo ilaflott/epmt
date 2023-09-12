@@ -15,8 +15,8 @@ CONDA_ACTIVATE = source $$(conda info --base)/etc/profile.d/conda.sh ; conda act
 DOCKER_RUN:=docker -D run
 #DOCKER_RUN_OPTS:=--rm -it
 DOCKER_RUN_OPTS:= -it
-#DOCKER_BUILD:=docker -D build --no-cache -f
-DOCKER_BUILD:=docker -D build -f
+DOCKER_BUILD:=docker -D build --no-cache -f
+#DOCKER_BUILD:=docker -D build -f
 PWD=$(shell pwd)
 
 #### ---- # this prints which target is being run. from percipio learning
@@ -250,3 +250,4 @@ docker-clean:
 #check-integration-tests:
 #	@echo "whoami: $(shell whoami)"
 #	@env -i TERM=ansi PATH=${PWD}:${PATH} epmt integration
+
