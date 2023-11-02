@@ -9,11 +9,13 @@ RUN yum install -y unzip bash tcsh nc curl make git gcc postgresql-devel zlib-de
 # we set SQLITE_MAX_VARIABLE_NUMBER to a limit higher than 999
 # to avoid the sqlite OperationalError: Too many variables
 # https://stackoverflow.com/questions/7106016/too-many-sql-variables-error-in-django-witih-sqlite3
-RUN cd /usr/src && echo "downloading sqlite3" && curl -o sqlite-amalgamation-3300100.zip https://www.sqlite.org/2019/sqlite-amalgamation-3300100.zip && unzip sqlite-amalgamation-3300100.zip && echo "building libsqlite3 with json1 and other useful extensions" && cd sqlite-amalgamation-3300100 && gcc -shared -fPIC -O2  -DSQLITE_ENABLE_JSON1 -DSQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_MAX_VARIABLE_NUMBER=9999 sqlite3.c -o /usr/lib64/libsqlite3.so
+# 20231005 caw: sqlalchemy.exc.NotSupportedError: (sqlite3.NotSupportedError) deterministic=True requires SQLite 3.8.3 or higher
+# so lets try 3.43.1    https://www.sqlite.org/2023/sqlite-amalgamation-3430100.zip
+ARG SQLITE_VERSION=3430100
+RUN cd /usr/src && echo "downloading sqlite3 ${SQLITE_VERSION}" && curl -o sqlite-amalgamation-${SQLITE_VERSION}.zip https://www.sqlite.org/2023/sqlite-amalgamation-${SQLITE_VERSION}.zip && unzip sqlite-amalgamation-${SQLITE_VERSION}.zip && echo "building libsqlite3 ${SQLITE_VERSION} with json1 and other useful extensions" && cd sqlite-amalgamation-${SQLITE_VERSION} && gcc -shared -fPIC -O2  -DSQLITE_ENABLE_JSON1 -DSQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_MAX_VARIABLE_NUMBER=9999 sqlite3.c -o /usr/lib64/libsqlite3.so
 
 ARG python_version=3.9.16
-
-RUN cd /usr/src && echo "downloading python" && curl -o Python-${python_version}.tgz https://www.python.org/ftp/python/${python_version}/Python-${python_version}.tgz && tar xzf Python-${python_version}.tgz && cd Python-${python_version} && echo "building python3" && ./configure --prefix=/usr --enable-shared --enable-optimizations --enable-loadable-sqlite-extensions && make --silent install > /dev/null
+RUN cd /usr/src && echo "downloading python ${python_version}" && curl -o Python-${python_version}.tgz https://www.python.org/ftp/python/${python_version}/Python-${python_version}.tgz && tar xzf Python-${python_version}.tgz && cd Python-${python_version} && echo "building python3" && ./configure --prefix=/usr --enable-shared --enable-optimizations --enable-loadable-sqlite-extensions && make --silent install > /dev/null
 
 RUN ldconfig
 RUN python3 -V

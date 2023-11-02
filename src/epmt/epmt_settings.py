@@ -5,7 +5,7 @@ from sys import exit
 
 # now load the user-specific settings.py so they override the defaults
 try:
-    from epmt.settings import *
+    from settings import *
 except Exception as e:
     basicConfig(level=ERROR)
     logger = getLogger(__name__)

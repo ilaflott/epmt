@@ -55,10 +55,17 @@ files = glob('src/epmt/ui/assets/*')
 for f in files:
     dash_resources.append((f, './assets/'))
 
-dash_extra_datas = collect_data_files('dash_html_components') + collect_data_files('dash_core_components') + collect_data_files('dash_daq') + collect_data_files('dash_table') + collect_data_files('dash_bootstrap_components')
+# Make sure 'test' assets get copied in as well
+files = glob('src/epmt/test/*')
+for f in files:
+    dash_resources.append((f, './test/'))
+
+#dash_extra_datas = collect_data_files('dash_html_components') + collect_data_files('dash_core_components') + collect_data_files('dash_daq') + collect_data_files('dash_table') + collect_data_files('dash_bootstrap_components')
+
 plotly_extra_datas = collect_data_files('plotly.graph_objects') + collect_data_files('plotly.express') + collect_data_files('plotly.figure_factory')
 
-extra_datas = ipe_extra_datas + dash_extra_datas + alembic_extras + dash_resources + plotly_extra_datas + collect_data_files('parso')
+#extra_datas = ipe_extra_datas + dash_extra_datas + alembic_extras + dash_resources + plotly_extra_datas + collect_data_files('parso')
+extra_datas = ipe_extra_datas + alembic_extras + dash_resources + plotly_extra_datas + collect_data_files('parso')
 
 print("Extra data: ",extra_datas)
 

@@ -4,7 +4,10 @@ RUN yum update -y
 RUN yum install -y tcsh environment-modules
 RUN yum install -y unzip bash tcsh nc curl make git gcc postgresql-devel zlib-devel bzip2 bzip2-devel readline-devel sqlite-devel openssl-devel xz xz-devel libffi-devel
 
-RUN cd /usr/src && echo "downloading sqlite3" && curl -o sqlite-amalgamation-3300100.zip https://www.sqlite.org/2019/sqlite-amalgamation-3300100.zip && unzip sqlite-amalgamation-3300100.zip && echo "building libsqlite3 with json1 and other useful extensions" && cd sqlite-amalgamation-3300100 && gcc -shared -fPIC -O2  -DSQLITE_ENABLE_JSON1 -DSQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_MAX_VARIABLE_NUMBER=9999 sqlite3.c -o /usr/lib64/libsqlite3.so
+# 20231005 caw: sqlalchemy.exc.NotSupportedError: (sqlite3.NotSupportedError) deterministic=True requires SQLite 3.8.3 or higher
+# so lets try 3.43.1    https://www.sqlite.org/2023/sqlite-amalgamation-3430100.zip
+ARG SQLITE_VERSION=3430100
+RUN cd /usr/src && echo "downloading sqlite3 ${SQLITE_VERSION}" && curl -o sqlite-amalgamation-${SQLITE_VERSION}.zip https://www.sqlite.org/2023/sqlite-amalgamation-${SQLITE_VERSION}.zip && unzip sqlite-amalgamation-${SQLITE_VERSION}.zip && echo "building libsqlite3 ${SQLITE_VERSION} with json1 and other useful extensions" && cd sqlite-amalgamation-${SQLITE_VERSION} && gcc -shared -fPIC -O2  -DSQLITE_ENABLE_JSON1 -DSQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_MAX_VARIABLE_NUMBER=9999 sqlite3.c -o /usr/lib64/libsqlite3.so
 
 ARG python_version=3.9.16
 # oh gawd only knows what slurm things this may break, but epmt @ gfdl wants the latest python.
@@ -33,7 +36,7 @@ ARG epmt_version
 ARG epmt_full_release
 ARG epmt_python_full_release
 
-WORKDIR ${install_path}
+WORKDIR ${install_path}_archive
 COPY ${epmt_full_release} .
 COPY src/dist/${epmt_python_full_release} .
 RUN python3 -m pip install ${epmt_python_full_release}
@@ -44,8 +47,9 @@ RUN mkdir /usr/lib/python3.9/site-packages/papiex-oss \
 #    && rm -rf *.tgz
  
 COPY utils/epmt-installer .
+WORKDIR ${install_path}
 RUN ls ${install_path}
-RUN echo -ne "\n\n" | ./epmt-installer ${install_path}
+RUN echo -ne "\n\n" | ${install_path}_archive/epmt-installer ${install_path}_archive/EPMT*tgz
 ENV PATH="${install_path}/epmt-${epmt_version}/epmt-install/epmt:${PATH}"
 RUN rm -f *.tgz epmt-installer
 
