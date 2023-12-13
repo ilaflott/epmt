@@ -10,7 +10,8 @@ CONDA_ACTIVATE = source $$(conda info --base)/etc/profile.d/conda.sh ; conda act
 # docker commands
 #DOCKER_RUN:=docker run
 DOCKER_RUN:=docker -D run
-DOCKER_RUN_OPTS:=--rm -it
+#DOCKER_RUN_OPTS:=--rm -it
+DOCKER_RUN_OPTS:=-it
 #DOCKER_BUILD:=docker build -f
 DOCKER_BUILD:=docker -D build -f
 #DOCKER_BUILD:=docker -D build --no-cache -f
@@ -33,8 +34,8 @@ EPMT_PYTHON_FULL_RELEASE=epmt-$(EPMT_VERSION).tar.gz
 SHELL=/bin/bash
 PWD=$(shell pwd)
 # uncomment below two for helpful output
-OLD_SHELL:=$(SHELL)
-SHELL=$(warning ------- TARGET is -- $@ -- )$(OLD_SHELL)
+#OLD_SHELL:=$(SHELL)
+#SHELL=$(warning ------- TARGET is -- $@ -- )$(OLD_SHELL)
 
 
 .PHONY: default \\
@@ -79,12 +80,16 @@ install-deps:
 # Otherwise, assume the environment is already ready to run
 # pyinstaller.
 $(EPMT_RELEASE) dist:
-	@echo "(STEP 6... STEP 7 if i'm root) whoami: $(shell whoami)"
-	rm -rf epmt-install build
-	mkdir -p epmt-install/epmt/epmtdocs
+	@echo "(STEP 6) whoami: $(shell whoami)"
+#	rm -rf epmt-install build
+#	mkdir -p epmt-install/epmt/epmtdocs
 	pyinstaller --version
-	pyinstaller --clean --noconfirm --distpath=epmt-install epmt.spec
-	mkdocs build -f epmtdocs/mkdocs.yml
+#	remove the --clean flag to use the cache in builds, helps speed things up
+	pyinstaller --noconfirm --distpath=epmt-install epmt.spec
+#	pyinstaller --clean --noconfirm --distpath=epmt-install epmt.spec
+#       mkdocs sooooo slow
+#	mkdocs build -f epmtdocs/mkdocs.yml
+	mkdocs build --dirty -f epmtdocs/mkdocs.yml
 	cp -Rp preset_settings epmt-install
 	cp -Rp notebooks epmt-install
 	cp -Rp src/epmt/epmt_migrations epmt-install/migrations
@@ -101,34 +106,36 @@ $(EPMT_RELEASE) dist:
 	tar -czf $(EPMT_RELEASE) epmt-install
 
 
-python-dist: $(EPMT_RELEASE)
-	@echo "(STEP 8 i think) whoami: $(shell whoami)"
+#python-dist: $(EPMT_RELEASE)
+python-dist: $(EPMT_RELEASE) $(PAPIEX_RELEASE)
+	@echo "(STEP 7 i think) whoami: $(shell whoami)"
 	cd src
 	tar zxf ../$(PAPIEX_RELEASE)
 	python3 setup.py sdist
 	chmod a+r dist/*
 
 test-$(EPMT_RELEASE) dist-test:
-	@echo "(STEP 9 i think) whoami: $(shell whoami)"
+	@echo "(STEP 8) whoami: $(shell whoami)"
 # final location of tarfile
-	rm -rf epmt-install-tests && mkdir epmt-install-tests
+#	rm -rf epmt-install-tests && mkdir epmt-install-tests
 	cp -Rp src/epmt/test epmt-install-tests
 	tar -czf test-$(EPMT_RELEASE) epmt-install-tests
-	rm -rf epmt-install-tests
+#	rm -rf epmt-install-tests
 
 docker-dist:
 	@echo "(STEP 5) whoami: $(shell whoami)"
 	@echo " - building epmt and epmt-test tarball via Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build"
-	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build -t $(OS_TARGET)-epmt-build:$(EPMT_VERSION) --build-arg python_version=$(PYTHON_VERSION) .
+#	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build -t $(OS_TARGET)-epmt-build:$(EPMT_VERSION) --build-arg python_version=$(PYTHON_VERSION) .
 #	@echo " - running make dist python-dist dist-test inside $(OS_TARGET)-epmt-build"
-#	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build:$(EPMT_VERSION) make OS_TARGET=$(OS_TARGET)  dist python-dist $(EPMT_RELEASE) dist-test
+	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build:$(EPMT_VERSION) make OS_TARGET=$(OS_TARGET)  dist python-dist $(EPMT_RELEASE) dist-test
 	@echo " - running make papiex-dist python-dist dist-test inside $(OS_TARGET)-epmt-build"
-	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build:$(EPMT_VERSION) make OS_TARGET=$(OS_TARGET)  papiex-dist python-dist $(EPMT_RELEASE) dist-test
+#	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build:$(EPMT_VERSION) make OS_TARGET=$(OS_TARGET)  papiex-dist python-dist $(EPMT_RELEASE) dist-test
 
 
 docker-dist-test:
 	@echo "(STEP  ) whoami: $(shell whoami)"
-	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) -it --rm --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build:$(EPMT_VERSION)  make OS_TARGET=$(OS_TARGET) dist-test
+#	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) -it --rm --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build:$(EPMT_VERSION)  make OS_TARGET=$(OS_TARGET) dist-test
+	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build:$(EPMT_VERSION)  make OS_TARGET=$(OS_TARGET) dist-test
 
 papiex-dist: $(PAPIEX_RELEASE)
 	@echo "(STEP 12 i think) whoami: $(shell whoami)"
@@ -139,21 +146,26 @@ $(PAPIEX_RELEASE): $(PAPIEX_SRC)/$(PAPIEX_RELEASE)
 
 $(PAPIEX_SRC)/$(PAPIEX_RELEASE):
 	@echo "(STEP 10 i think) whoami: $(shell whoami)"
+	@echo "PAPIEX_SRC         is ${PAPIEX_SRC}"
+	@echo "PAPIEX_SRC_URL     is ${PAPIEX_SRC_URL}"
+	@echo "PAPIEX_SRC_TARBALL is ${PAPIEX_SRC_TARBALL}"
 	if [ ! -d $(PAPIEX_SRC) ]; then \
 	echo "grabbing papiex via curl"; \
 	curl -O ${PAPIEX_SRC_URL}; \
+	ls $(PAPIEX_SRC_TARBALL); \
+	echo "tar zxf PAPIEX_SRC_TARBALL=${PAPIEX_SRC_TARBALL}... listing below this line"; \
 	tar zxf ${PAPIEX_SRC_TARBALL}; \
 	mv `tar ztf ${PAPIEX_SRC_TARBALL} | head -1` $(PAPIEX_SRC); \
-	ls $(PAPIEX_SRC_TARBALL); \
+	echo "listing contents of PAPIEX_SRC_TARBALL=${PAPIEX_SRC_TARBALL}..."; \
+	echo "aka... top dir contents of PAPIEX_SRC=${PAPIEX_SRC}..."; \
 	ls $(PAPIEX_SRC); \
 	fi
 	if [ -n "${OUTSIDE_DOCKER}" ]; \
 	then make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) distclean install dist; \
+	else \
+	echo "making docker-dist within PAPIEX_SRC/PAPIEX_RELEASE target"; \
+	make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) docker-dist; \
 	fi
-#	else \
-#	echo "making docker-dist within PAPIEX_SRC/PAPIEX_RELEASE target"; \
-#	make docker-dist; \
-#	fi
 
 epmt-full-release: $(EPMT_FULL_RELEASE)
 	@echo "(STEP 14) whoami: $(shell whoami)"
@@ -177,7 +189,9 @@ check-release release-test-docker: $(EPMT_FULL_RELEASE)
 	@echo "running postgres-test container"
 	$(DOCKER_RUN) -d --rm --name postgres-test --network epmt-test-net -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -e POSTGRES_DB=EPMT-TEST postgres:latest
 	@echo "running epmt-test-release container"
-	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged -it --rm -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; install_prefix=`epmt -h| grep install_prefix|cut -f2 -d:|sed 's/papiex-//'`; cp -fv $$install_prefix/preset_settings/settings_test_pg_container.py $$install_prefix/settings.py && epmt check && epmt unittest && epmt integration'
+#	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged -it --rm -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; install_prefix=`epmt -h| grep install_prefix|cut -f2 -d:|sed 's/papiex-//'`; cp -fv $$install_prefix/preset_settings/settings_test_pg_container.py $$install_prefix/settings.py && epmt check && epmt unittest && epmt integration'
+#	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged $(DOCKER_RUN_OPTS) -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; install_prefix=`epmt -h| grep install_prefix|cut -f2 -d:|sed 's/papiex-//'`; cp -fv $$install_prefix/preset_settings/settings_test_pg_container.py $$install_prefix/settings.py && epmt check && epmt unittest && epmt integration'
+	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged $(DOCKER_RUN_OPTS) -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; install_prefix=`epmt -h| grep install_prefix|cut -f2 -d:|sed 's/papiex-epmt-install/epmt-install/'`; ls $${install_prefix}preset_settings/settings_test_pg_container.py; cp -fv $${install_prefix}preset_settings/settings_test_pg_container.py $${install_prefix}epmt/settings.py; ls $${install_prefix}epmt/settings.py; epmt check && epmt unittest && epmt integration'
 	@echo "shutting down docker networks, postgres test container, epmt-test-net"
 	docker stop postgres-test
 	docker network rm epmt-test-net
@@ -185,26 +199,32 @@ check-release release-test-docker: $(EPMT_FULL_RELEASE)
 
 # release building
 release release-all release7:
-	@echo "(STEP 1) whoami: $(shell whoami)"
-	@echo " ------ MAJOR STEP 1: clean-all ------- "
-	$(MAKE) clean-all
-	@echo " ------ MAJOR STEP 2: docker-dist ------- "
-	$(MAKE) docker-dist
-	@echo " ------ MAJOR STEP 1: epmt-full-release ------- "
-	$(MAKE) epmt-full-release
-	@echo " ------ MAJOR STEP 1: check-release ------- "
+#	@echo "(STEP 1) whoami: $(shell whoami)"
+#	@echo " ------ MAJOR STEP 1: clean-all ------- "
+#	$(MAKE) clean-all
+#	@echo " ------ MAJOR STEP 2: papiex-dist ------- "
+#	$(MAKE) papiex-dist
+#	@echo " ------ MAJOR STEP 3: docker-dist ------- "
+#	$(MAKE) docker-dist
+#	@echo " ------ MAJOR STEP 4: epmt-full-release ------- "
+#	$(MAKE) epmt-full-release
+	@echo " ------ MAJOR STEP 5: check-release ------- "
 	$(MAKE) check-release
 
 
 
 # CLEANING
-clean-all:
-	$(MAKE) clean distclean docker-clean
+clean-all: clean distclean docker-clean papiexclean
+#clean-all: papiexclean
 
 clean:
 	@echo "(STEP 2) whoami: $(shell whoami)"
 	find . -type f \( -name "core" -or -name "*~" -or -name "*.pyc" -or -name "epmt.log" \) -exec rm -f {} \;
 	rm -rf src/epmt/ui/__pycache__ __pycache__ build epmt-install epmt-install-tests .venv374
+
+papiexclean:
+	rm -fr $(PAPIEX_SRC)
+	rm -f $(PAPIEX_SRC_TARBALL) $(PAPIEX_RELEASE)
 
 distclean:
 	@echo "(STEP 3) whoami: $(shell whoami)"

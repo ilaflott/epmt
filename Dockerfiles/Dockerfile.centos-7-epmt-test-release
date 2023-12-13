@@ -53,4 +53,4 @@ RUN echo -ne "\n\n" | ${install_path}_archive/epmt-installer ${install_path}_arc
 ENV PATH="${install_path}/epmt-${epmt_version}/epmt-install/epmt:${PATH}"
 RUN rm -f *.tgz epmt-installer
 
-CMD ["/bin/bash", "-c", "sysctl kernel.perf_event_paranoid=1; epmt check; epmt unittest; epmt integration"]
+#CMD ["/bin/bash", "-c", "sysctl kernel.perf_event_paranoid=1; epmt check; epmt unittest; epmt integration"]
