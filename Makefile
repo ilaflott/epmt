@@ -82,7 +82,7 @@ install-deps:
 $(EPMT_RELEASE) dist:
 	@echo "(STEP 6) whoami: $(shell whoami)"
 #	rm -rf epmt-install build
-#	mkdir -p epmt-install/epmt/epmtdocs
+	mkdir -p epmt-install/epmt/epmtdocs
 	pyinstaller --version
 #	remove the --clean flag to use the cache in builds, helps speed things up
 	pyinstaller --noconfirm --distpath=epmt-install epmt.spec
@@ -125,8 +125,8 @@ test-$(EPMT_RELEASE) dist-test:
 docker-dist:
 	@echo "(STEP 5) whoami: $(shell whoami)"
 	@echo " - building epmt and epmt-test tarball via Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build"
-#	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build -t $(OS_TARGET)-epmt-build:$(EPMT_VERSION) --build-arg python_version=$(PYTHON_VERSION) .
-#	@echo " - running make dist python-dist dist-test inside $(OS_TARGET)-epmt-build"
+	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build -t $(OS_TARGET)-epmt-build:$(EPMT_VERSION) --build-arg python_version=$(PYTHON_VERSION) .
+	@echo " - running make dist python-dist dist-test inside $(OS_TARGET)-epmt-build"
 	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build:$(EPMT_VERSION) make OS_TARGET=$(OS_TARGET)  dist python-dist $(EPMT_RELEASE) dist-test
 	@echo " - running make papiex-dist python-dist dist-test inside $(OS_TARGET)-epmt-build"
 #	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build:$(EPMT_VERSION) make OS_TARGET=$(OS_TARGET)  papiex-dist python-dist $(EPMT_RELEASE) dist-test
@@ -202,20 +202,23 @@ release release-all release7:
 #	@echo "(STEP 1) whoami: $(shell whoami)"
 #	@echo " ------ MAJOR STEP 1: clean-all ------- "
 #	$(MAKE) clean-all
-#	@echo " ------ MAJOR STEP 2: papiex-dist ------- "
-#	$(MAKE) papiex-dist
-#	@echo " ------ MAJOR STEP 3: docker-dist ------- "
-#	$(MAKE) docker-dist
-#	@echo " ------ MAJOR STEP 4: epmt-full-release ------- "
-#	$(MAKE) epmt-full-release
+	@echo " ------ MAJOR STEP 2: papiex-dist ------- "
+	$(MAKE) papiex-dist
+	@echo " ------ MAJOR STEP 3: docker-dist ------- "
+	$(MAKE) docker-dist
+	@echo " ------ MAJOR STEP 4: epmt-full-release ------- "
+	$(MAKE) epmt-full-release
 	@echo " ------ MAJOR STEP 5: check-release ------- "
 	$(MAKE) check-release
 
 
 
 # CLEANING
-clean-all: clean distclean docker-clean papiexclean
-#clean-all: papiexclean
+#clean-all: clean distclean docker-clean papiexclean
+clean-all: clean distclean docker-clean
+	@echo "(STEP 2) whoami: $(shell whoami)"
+clean-papiex: papiexclean
+	@echo "(STEP ?) whoami: $(shell whoami)"
 
 clean:
 	@echo "(STEP 2) whoami: $(shell whoami)"
