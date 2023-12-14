@@ -13,8 +13,8 @@ DOCKER_RUN:=docker -D run
 #DOCKER_RUN_OPTS:=--rm -it
 DOCKER_RUN_OPTS:=-it
 #DOCKER_BUILD:=docker build -f
-DOCKER_BUILD:=docker -D build -f
-#DOCKER_BUILD:=docker -D build --no-cache -f
+#DOCKER_BUILD:=docker -D build -f
+DOCKER_BUILD:=docker -D build --no-cache -f
 
 # papiex details
 PAPIEX_VERSION?=2.3.14
@@ -81,15 +81,15 @@ install-deps:
 # pyinstaller.
 $(EPMT_RELEASE) dist:
 	@echo "(STEP 6) whoami: $(shell whoami)"
-#	rm -rf epmt-install build
+	rm -rf epmt-install build
 	mkdir -p epmt-install/epmt/epmtdocs
 	pyinstaller --version
 #	remove the --clean flag to use the cache in builds, helps speed things up
-	pyinstaller --noconfirm --distpath=epmt-install epmt.spec
-#	pyinstaller --clean --noconfirm --distpath=epmt-install epmt.spec
+#	pyinstaller --noconfirm --distpath=epmt-install epmt.spec
+	pyinstaller --clean --noconfirm --distpath=epmt-install epmt.spec
 #       mkdocs sooooo slow
-#	mkdocs build -f epmtdocs/mkdocs.yml
-	mkdocs build --dirty -f epmtdocs/mkdocs.yml
+	mkdocs build -f epmtdocs/mkdocs.yml
+#	mkdocs build --dirty -f epmtdocs/mkdocs.yml
 	cp -Rp preset_settings epmt-install
 	cp -Rp notebooks epmt-install
 	cp -Rp src/epmt/epmt_migrations epmt-install/migrations
@@ -117,10 +117,10 @@ python-dist: $(EPMT_RELEASE) $(PAPIEX_RELEASE)
 test-$(EPMT_RELEASE) dist-test:
 	@echo "(STEP 8) whoami: $(shell whoami)"
 # final location of tarfile
-#	rm -rf epmt-install-tests && mkdir epmt-install-tests
+	rm -rf epmt-install-tests && mkdir epmt-install-tests
 	cp -Rp src/epmt/test epmt-install-tests
 	tar -czf test-$(EPMT_RELEASE) epmt-install-tests
-#	rm -rf epmt-install-tests
+	rm -rf epmt-install-tests
 
 docker-dist:
 	@echo "(STEP 5) whoami: $(shell whoami)"
@@ -128,7 +128,7 @@ docker-dist:
 	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build -t $(OS_TARGET)-epmt-build:$(EPMT_VERSION) --build-arg python_version=$(PYTHON_VERSION) .
 	@echo " - running make dist python-dist dist-test inside $(OS_TARGET)-epmt-build"
 	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build:$(EPMT_VERSION) make OS_TARGET=$(OS_TARGET)  dist python-dist $(EPMT_RELEASE) dist-test
-	@echo " - running make papiex-dist python-dist dist-test inside $(OS_TARGET)-epmt-build"
+#	@echo " - running make papiex-dist python-dist dist-test inside $(OS_TARGET)-epmt-build"
 #	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build:$(EPMT_VERSION) make OS_TARGET=$(OS_TARGET)  papiex-dist python-dist $(EPMT_RELEASE) dist-test
 
 
