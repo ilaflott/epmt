@@ -166,7 +166,9 @@ def verify_epmt_output_prefix():
 
 def verify_papiex_options():
     s = get_papiex_options(settings)
-    print("papiex_options =",s, end='')
+    #print("papiex_options =",s, end='')
+    logger.info(f'papiex_options = {s}')
+    logger.info(f'settings.install_prefix = {settings.install_prefix}')
     retval = True
 # Check for any components
     cmd = settings.install_prefix+"bin/papi_component_avail 2>&1 "+"| sed -n -e '/Active/,$p' | grep perf_event >/dev/null 2>&1"
@@ -292,18 +294,25 @@ def verify_papiex():
 
 def epmt_check():
     retval = True
+    logger.info('checking: verify_db_params()...')
     if verify_db_params() == False:
         retval = False
+    logger.info('checking: verify_install_prefix()...')
     if verify_install_prefix() == False:
         retval = False
+    logger.info('checking: verify_epmt_output_prefix()...')
     if verify_epmt_output_prefix() == False:
         retval = False
+    logger.info('checking: verify_perf()...')
     if verify_perf() == False:
         retval = False
+    logger.info('checking: verify_papiex_options()...')
     if verify_papiex_options() == False:
         retval = False
+    logger.info('checking: verify_stage_command()...')
     if verify_stage_command() == False:
         retval = False
+    logger.info('checking: verify_papiex()...')
     if verify_papiex() == False:
         retval = False
     return retval
@@ -1633,15 +1642,20 @@ def epmt_entrypoint(args):
         TEST_MODULES = ['test.test_lib','test.test_settings','test.test_anysh','test.test_submit','test.test_run','test.test_cmds','test.test_query','test.test_outliers','test.test_db_schema' ]
         if args.epmt_cmd_args:
             TEST_MODULES = args.epmt_cmd_args
+        success_list=[]
         for m in TEST_MODULES:
-            m = f'epmt.{m}'
+            ## i could import test in epmt shell, but not epmt.test
+            #m = f'epmt.{m}'
             mod = import_module(m)
             suite = unittest.TestLoader().loadTestsFromModule(mod)
             print('\n\nRunning', m)
             result = unittest.TextTestRunner(verbosity=2).run(suite)
+            success_list.append(result.wasSuccessful())
             if not result.wasSuccessful():
                 from sys import stderr
                 print('\n\nOne (or more) unit tests FAILED', file=stderr)
+                #return -1
+            if not any(success_list):
                 return -1
         print('All tests successfully PASSED')
         return 0

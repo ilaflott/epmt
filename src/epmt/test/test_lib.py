@@ -88,9 +88,7 @@ class EPMTLib(unittest.TestCase):
 
     def test_logfn(self):
         from epmt.epmtlib import logfn, epmt_logging_init, capture
-        @logfn
-        def double(x):
-            return x*2
+
         # enable debug logging and,
         # remove all handlers and add our StringIO handler
         import logging
@@ -102,21 +100,26 @@ class EPMTLib(unittest.TestCase):
         for handler in logger.handlers: 
             logger.removeHandler(handler)
         logger.handlers = [] 
-
         log_stream = StringIO()    
         stream_handler = logging.StreamHandler(log_stream)
         streamFormatter = logging.Formatter("%(levelname)7.7s: %(name)s: %(message)s")
         stream_handler.setFormatter(streamFormatter)
         logger.addHandler(stream_handler)
-        # now call our function. It should generate a debug log message
+
+        # now define+call our function. It should generate a debug log message
+        @logfn
+        def double(x):
+            return x*2
         y = double(25)
+
         # remove the StringIO handler
         logger.removeHandler(stream_handler)
+
         # restore logging to sanity
         epmt_logging_init(-1)
         s = log_stream.getvalue()
         self.assertEqual(y, 50)
-        self.assertIn('DEBUG: epmt.test.test_lib: double(25)', s)
+        self.assertIn('DEBUG: test.test_lib: double(25)', s)
         
 
 if __name__ == '__main__':

@@ -23,6 +23,7 @@ ingest_remove_on_success=True
 ingest_failed_dir="/tmp/"
 
 verbose = 0
+max_log_statement_length = pow(2,9) # max number of list elements to print for long sql queries
 # gather profiling information or not
 profile = False
 # input pattern must match both csv v1 and v2 filenames
@@ -55,6 +56,7 @@ outlier_features_blacklist = ['env_dict', 'tags', 'info_dict', 'env_changes_dict
 # Remember, jobs that have dependent trained models will not be retired
 retire_jobs_ndays = 0   # specify in number of days; set to 0 to not retire jobs
 retire_models_ndays = 0 # specify in number of days; set to 0 to not retire models
+retire_jobs_per_delete_max = 2000 # specify the chunk-size to delete jobs in 
 
 # we expect the settings below to be overriden in settings.py
 # depending on the template of your choice

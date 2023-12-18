@@ -921,7 +921,7 @@ def populate_process_table_from_staging(j):
         else:
             # Only log the first 100 or so of errors
             if len(err_str) > settings.max_log_statement_length:
-                logger.error('error too long to show... first {max_log_statement_length} errors in err_str list are...')
+                logger.error('error too long to show... first {settings.max_log_statement_length} errors in err_str list are...')
                 logger.error(''.join(err_str[:settings.max_log_statement_length]))
             else:
                 logger.error(err_str)

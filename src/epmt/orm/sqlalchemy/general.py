@@ -2,6 +2,7 @@ from __future__ import print_function
 from sqlalchemy import *
 #from sqlalchemy.event import listens_for
 #from sqlalchemy.pool import Pool
+from sqlalchemy import sql as sqla_sql
 from sqlalchemy.orm import backref, relationship, sessionmaker, scoped_session, mapperlib
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.query import Query
@@ -629,7 +630,7 @@ def orm_raw_sql(sql, commit = False):
         sql = [sql]
     try:
         for s in sql:
-            res = connection.execute(s)
+            res = connection.execute( sqla_sql.text(s) )
         if commit:
             trans.commit()
             return True
