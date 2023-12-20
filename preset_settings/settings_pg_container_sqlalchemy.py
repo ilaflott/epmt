@@ -8,7 +8,6 @@ orm = 'sqlalchemy'
 db_params = { 'url': 'postgresql://postgres:example@postgres:5432/EPMT', 'echo': False }
 bulk_insert = True
 
-
 # You can alter the settings below to override defaults
 #
 # jobid_env_list = [ "SLURM_JOB_ID", "SLURM_JOBID", "PBS_JOB_ID" ]

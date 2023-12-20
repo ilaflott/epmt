@@ -898,20 +898,31 @@ def populate_process_table_from_staging(j):
 
         insert_sql += prefix_insert_sql + """('{jobid}',{duration},{tags},'{host_id}','{threads_df}','{threads_sums}',{numtids},{cpu_time},'{exename}','{path}',{args},{pid},{ppid},{pgid},{sid},{gen},{exitcode},'{start}','{end}');\n""".format(jobid=jobid, start=start, end=end, duration=duration, tags=tags, host_id=host_id, threads_df=threads_df, threads_sums=threads_sums, numtids=numtids, cpu_time=cpu_time, exename=exename, path=path, args=args, pid=pid, ppid=ppid, pgid=pgid, sid=sid, gen=gen, exitcode=exitcode)
 
+    
     # sql to delete the rows from the staging table
     delete_sql = "DELETE FROM processes_staging WHERE id BETWEEN {} AND {};\n".format(first_proc_id, last_proc_id)
 
     job_info_dict['procs_in_process_table'] = 1
+
     # these fields are meaningless after procs have been moved to the processes table
     # so we remove them from the job info_dict
     del job_info_dict['procs_staging_ids']
+    
     # We want to retain the metric_names in the job info_dict, so don't remove
     # it below, anymore
     # del job_info_dict['metric_names']
+    
     update_job_sql = "UPDATE jobs SET info_dict = '{}' WHERE jobid = '{}'".format(dumps(job_info_dict), jobid)
+
     # now do a transaction
     try:
-        orm_raw_sql(insert_sql+delete_sql+update_job_sql, commit=True)
+        #orm_raw_sql(insert_sql+delete_sql+update_job_sql, commit=True)
+        logger.debug('executing: orm_raw_sql(insert_sql,commit=True)')
+        orm_raw_sql(insert_sql, commit=True)
+        logger.debug('executing: orm_raw_sql(delete_sql,commit=True)')
+        orm_raw_sql(delete_sql, commit=True)
+        logger.debug('executing: orm_raw_sql(update_job_sql,commit=True)')
+        orm_raw_sql(update_job_sql, commit=True)
     except Exception as e:
         err_str = str(e)
         msg = 'Error copying from staging to process table for job ' + jobid
@@ -919,9 +930,15 @@ def populate_process_table_from_staging(j):
         if 'permission denied' in err_str:
             logger.error('You do not have sufficient privileges for this operation')
         else:
+
+            logger.error(f'related to error? .... insert_sql = {insert_sql}')
+            logger.error(f'related to error? .... delete_sql = {delete_sql}')
+            logger.error(f'related to error? .... update_job_sql = {update_job_sql}')
+
             # Only log the first 100 or so of errors
             if len(err_str) > settings.max_log_statement_length:
-                logger.error('error too long to show... first {settings.max_log_statement_length} errors in err_str list are...')
+                logger.error(f'error (type is {type(err_str)}) too long to show ({len(err_str)})... ')
+                logger.error(f'first {settings.max_log_statement_length} errors in err_str list are...')
                 logger.error(''.join(err_str[:settings.max_log_statement_length]))
             else:
                 logger.error(err_str)
