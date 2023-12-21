@@ -1643,6 +1643,7 @@ def epmt_entrypoint(args):
         if args.epmt_cmd_args:
             TEST_MODULES = args.epmt_cmd_args
         success_list=[]
+        print(f'\n\nverbosity for tests set by epmt_logging_init')
         for m in TEST_MODULES:
             ## i could import test in epmt shell, but not epmt.test
             #m = f'epmt.{m}'

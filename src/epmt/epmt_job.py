@@ -931,7 +931,7 @@ def populate_process_table_from_staging(j):
             logger.error('You do not have sufficient privileges for this operation')
         else:
 
-            logger.error(f'related to error? .... insert_sql = {insert_sql}')
+            logger.error(f'related to error? .... insert_sql[:{settings.max_log_statement_length}] = {insert_sql[:settings.max_log_statement_length]}')
             logger.error(f'related to error? .... delete_sql = {delete_sql}')
             logger.error(f'related to error? .... update_job_sql = {update_job_sql}')
 

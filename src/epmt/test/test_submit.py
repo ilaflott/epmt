@@ -8,15 +8,16 @@ def do_cleanup():
 
 @timing
 def setUpModule():
-#    print('\n' + str(settings.db_params))
-    setup_db(settings)
-    do_cleanup()
-    datafiles='{}/test/data/misc/685000.tgz'.format(install_root)
-#    print('setUpModule: importing {0}'.format(datafiles))
+    datafiles='{}/test/data/misc/685000.tgz'.format(install_root) 
     settings.post_process_job_on_ingest = True
+    settings.verbose=2
+    setup_db(settings)
+#    print('\n' + str(settings.db_params))
+#    print('setUpModule: importing {0}'.format(datafiles))
+    do_cleanup()
     with capture() as (out,err):
         epmt_submit(glob(datafiles), dry_run=False, remove_on_success=False, move_on_failure=False)
-    
+        
 def tearDownModule():
     do_cleanup()
 
@@ -140,15 +141,19 @@ class EPMTSubmit(unittest.TestCase):
         self.assertTrue(list(df.rssmax.values))
         self.assertTrue(eq.is_job_post_processed('685016'))
 
+    @db_session
     def test_convert_csv(self):
         import tempfile
         from epmt.epmt_convert_csv import convert_csv_in_tar
-        job_dict_csv = eq.get_jobs('685000', fmt='dict', limit=1)[0]
+        job_dict_csv = eq.get_jobs('685000', fmt='dict', limit=1, trigger_post_process=True)[0]
         eq.delete_jobs('685000')
+        
         (_, new_tar) = tempfile.mkstemp(prefix='epmt_', suffix='_collated_tsv.tgz')
-        self.assertTrue(convert_csv_in_tar('{}/test/data/query/685000.tgz'.format(install_root), new_tar))
+#        self.assertTrue(convert_csv_in_tar('{}/test/data/query/685000.tgz'.format(install_root), new_tar))
+        self.assertTrue(convert_csv_in_tar('{}/test/data/misc/685000.tgz'.format(install_root), new_tar))
         with capture() as (out,err):
-            epmt_submit([new_tar], dry_run=False, remove_on_success = True, move_on_failure=False)
+            epmt_submit(glob(new_tar), dry_run=False, remove_on_success = True, move_on_failure=False)
+            
         job_dict_tsv = eq.get_jobs('685000', fmt='dict', limit=1)[0]
         self.assertEqual(set(job_dict_csv), set(job_dict_tsv))
 

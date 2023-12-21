@@ -199,10 +199,10 @@ check-release release-test-docker: $(EPMT_FULL_RELEASE)
 	ls $${install_prefix}epmt/settings.py; \
 	$${install_prefix}epmt/test/integration/libs/bats/install.sh /usr/local; \
 	export PATH=$${PATH}:/usr/local/bin:/usr/local/libexec; \
-	echo "" && echo "------ epmt -v -v unittest ------" && epmt -v -v unittest'
-#	#echo "" && echo "------ epmt -v check ------" && epmt -v check; \
-#	#echo "" && echo "------ epmt -v unittest ------" && epmt -v unittest; \
-#	#echo "" && echo "------ epmt -v integration ------" && epmt -v integration'
+	echo "" && echo "------ epmt -v check ------" && epmt -v -v check; \
+	echo "" && echo "------ epmt -v unittest ------" && epmt -v -v unittest; \
+	echo "" && echo "------ epmt -v integration ------" && epmt -v -v integration'
+#	#echo "" && echo "------ epmt -v -v unittest ------" && epmt -v -v unittest'
 	@echo
 	@echo "shutting down docker networks, postgres test container, epmt-test-net"
 	docker stop postgres-test

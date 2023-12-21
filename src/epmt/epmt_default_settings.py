@@ -22,7 +22,7 @@ stage_command_dest = "./"
 ingest_remove_on_success=True
 ingest_failed_dir="/tmp/"
 
-verbose = 0
+verbose = 2
 max_log_statement_length = pow(2,11) # max number of list elements to print for long sql queries
 # gather profiling information or not
 profile = False

@@ -619,7 +619,7 @@ def orm_raw_sql(sql, commit = False):
     # As we may get really long queries when moving processes from staging,
     # only log the first 100 or so of long queries
     if len(sql) > settings.max_log_statement_length:
-        logger.debug('Executing very long SQL statement(s): ... ') 
+        logger.debug(f'Executing very long (length={len(sql)} SQL statement(s): ... ') 
         logger.debug(''.join(map(str,sql[:settings.max_log_statement_length])))
     else:
         logger.debug('Executing: {0}'.format((sql)))
