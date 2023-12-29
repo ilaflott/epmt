@@ -46,7 +46,24 @@ COPY utils/epmt-installer .
 WORKDIR ${install_path}
 RUN ls ${install_path}
 RUN echo -ne "\n\n" | ${install_path}_archive/epmt-installer ${install_path}_archive/EPMT*tgz
-ENV PATH="${install_path}/epmt-${epmt_version}/epmt-install/epmt:${PATH}"
+ENV PATH="${install_path}/epmt-${epmt_version}/epmt-install/epmt:${PATH}:/usr/local/bin:/usr/local/libexec"
 RUN rm -f *.tgz epmt-installer
 
+
+
+
+
+#
+# ian attempting smth here
+#
+##won't work, read-only file system, even sudo won't do it
+#RUN sudo -n echo 2 > /proc/sys/kernel/perf_event_paranoid
+
+ARG install_prefix
+ENV EPMT_INSTALL_PREFIX=${install_prefix}
+RUN cp -fv ${install_prefix}/preset_settings/settings_test_pg_container.py ${install_prefix}/epmt/settings.py
+
+RUN ${install_prefix}/epmt/test/integration/libs/bats/install.sh /usr/local
+
+# get rid of this? prefer to do this with docker run explicitly in makefile. 
 #CMD ["/bin/bash", "-c", "sysctl kernel.perf_event_paranoid=1; epmt check; epmt unittest; epmt integration"]
