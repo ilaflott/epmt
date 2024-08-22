@@ -13,9 +13,7 @@ import pandas as pd
 
 from epmt.epmtlib import epmt_logging_init, capture
 # we only want to emit errors or higher
-#epmt_logging_init(-1)
-# ... says you! give me fucking everything right goddamned now
-epmt_logging_init(2)
+epmt_logging_init(-1)
 
 import epmt.epmt_settings as settings
 import epmt.epmt_query as eq
