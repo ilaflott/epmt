@@ -2,7 +2,7 @@
 
 # OS and python
 PYTHON_VERSION=3.9.16
-OS_TARGET=centos-7
+OS_TARGET=rocky-8
 
 # conda
 CONDA_ACTIVATE = source $$(conda info --base)/etc/profile.d/conda.sh ; conda activate ; conda activate
@@ -22,7 +22,8 @@ PAPIEX_VERSION?=2.3.14
 PAPIEX_SRC?=papiex
 PAPIEX_SRC_TARBALL=papiex-epmt.tar.gz
 #PAPIEX_SRC_BRANCH=master
-PAPIEX_SRC_BRANCH=centos7_yum_fix
+#PAPIEX_SRC_BRANCH=centos7_yum_fix
+PAPIEX_SRC_BRANCH=rocky8_docker
 PAPIEX_SRC_URL=https://gitlab.com/minimal-metrics-llc/epmt/papiex/-/archive/${PAPIEX_SRC_BRANCH}/${PAPIEX_SRC_TARBALL}
 PAPIEX_RELEASE=papiex-epmt-$(PAPIEX_VERSION)-$(OS_TARGET).tgz
 
