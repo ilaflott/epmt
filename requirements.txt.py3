@@ -89,7 +89,7 @@ pycparser
 PyGithub
 Pygments
 pyinstaller==5.7.0
-pyinstaller-hooks-contrib
+pyinstaller-hooks-contrib==2023.11
 PyJWT
 PyNaCl
 pyod
@@ -112,6 +112,7 @@ scikit-learn
 scipy
 seaborn
 Send2Trash
+setuptools==69.0.2
 six
 SQLAlchemy
 statsmodels

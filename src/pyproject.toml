@@ -1,6 +1,7 @@
 [build-system]
+# i expect this to work with setuptools ~68 or 69, at worst
 requires	= [
-		"setuptools >= 61, <72",
+		"setuptools >= 61, <69",
 		"setuptools_scm[toml] >= 4, <6",
 		"wheel >= 0.29.0"
 ]
