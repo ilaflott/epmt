@@ -1,4 +1,0 @@
-[submodule "ui"]
-    path = src/epmt/ui
-    url = ../epmt-dash.git
-    branch = multi_page
