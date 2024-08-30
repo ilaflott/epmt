@@ -1,26 +1,44 @@
 FROM centos:7
 
+# work-around the EOL of centOS7, if you must
 RUN sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
 RUN sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
 
 RUN yum update -y
-RUN yum install -y unzip bash tcsh nc curl make git gcc postgresql-devel zlib-devel bzip2 bzip2-devel \
-    readline-devel sqlite-devel openssl-devel xz xz-devel libffi-devel
+RUN yum install -y \
+    unzip \
+    bash \
+    tcsh \
+    nc \
+    curl \
+    make \
+    git \
+    gcc \
+    postgresql-devel \
+    zlib-devel \
+    bzip2 \
+    bzip2-devel \
+    readline-devel \
+    sqlite-devel \
+    openssl-devel \
+    xz \
+    xz-devel \
+    libffi-devel
 
 ARG SQLITE_VERSION=3430100
-RUN cd /usr/src && echo "downloading sqlite3 ${SQLITE_VERSION}" && \
-    curl -o sqlite-amalgamation-${SQLITE_VERSION}.zip https://www.sqlite.org/2023/sqlite-amalgamation-${SQLITE_VERSION}.zip && \
-    unzip sqlite-amalgamation-${SQLITE_VERSION}.zip && echo "building libsqlite3 ${SQLITE_VERSION} w/ json1 and more" && \
-    cd sqlite-amalgamation-${SQLITE_VERSION} && \
-    gcc -shared -fPIC -O2  -DSQLITE_ENABLE_JSON1 -DSQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_MAX_VARIABLE_NUMBER=9999 sqlite3.c -o /usr/lib64/libsqlite3.so
+RUN cd /usr/src && echo "downloading sqlite3 ${SQLITE_VERSION}" \
+    && curl -o sqlite-amalgamation-${SQLITE_VERSION}.zip https://www.sqlite.org/2023/sqlite-amalgamation-${SQLITE_VERSION}.zip \
+    && unzip sqlite-amalgamation-${SQLITE_VERSION}.zip && echo "building libsqlite3 ${SQLITE_VERSION} w/ json1 and more" \
+    && cd sqlite-amalgamation-${SQLITE_VERSION} \
+    && gcc -shared -fPIC -O2  -DSQLITE_ENABLE_JSON1 -DSQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_MAX_VARIABLE_NUMBER=9999 sqlite3.c -o /usr/lib64/libsqlite3.so
 
 ARG python_version=3.9.16
-RUN cd /usr/src && echo "downloading python ${python_version}" && \
-    curl -o Python-${python_version}.tgz https://www.python.org/ftp/python/${python_version}/Python-${python_version}.tgz && \
-    tar xzf Python-${python_version}.tgz && \
-    cd Python-${python_version} && echo "building python3" && \
-    ./configure --prefix=/usr --enable-shared --enable-optimizations --enable-loadable-sqlite-extensions && \
-    make --silent install > /dev/null
+RUN cd /usr/src && echo "downloading python ${python_version}" \
+    && curl -o Python-${python_version}.tgz https://www.python.org/ftp/python/${python_version}/Python-${python_version}.tgz \
+    && tar xzf Python-${python_version}.tgz \
+    && cd Python-${python_version} && echo "building python3" \
+    && ./configure --prefix=/usr --enable-shared --enable-optimizations --enable-loadable-sqlite-extensions \
+    && make --silent install > /dev/null
 
 RUN ldconfig
 RUN python3 -V

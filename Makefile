@@ -14,9 +14,9 @@ DOCKER_RUN:=docker -D run
 #DOCKER_RUN_OPTS:=--rm -it
 DOCKER_RUN_OPTS:=-it
 #DOCKER_BUILD:=docker build -f
+DOCKER_BUILD:=docker -D build -f
 #DOCKER_BUILD:=docker -D build --pull=false -f 
-#DOCKER_BUILD:=docker -D build -f
-DOCKER_BUILD:=docker -D build --no-cache -f
+#DOCKER_BUILD:=docker -D build --no-cache -f
 
 # papiex details
 PAPIEX_VERSION?=2.3.14
@@ -40,14 +40,14 @@ EPMT_INSTALL_PREFIX=$(EPMT_INSTALL_PATH)/epmt-$(EPMT_VERSION)/epmt-install
 SHELL=/bin/bash
 PWD=$(shell pwd)
 
-.PHONY: default \\
-	epmt-build epmt-test \\
-	clean distclean \\
-	check check-python-native check-python-driver \\
-	check-python-2.6 check-python-2.7 \\
-	check-python-3 check-integration-tests \\
-	dist build compile lint \\
-	release release6 release7 release-all \\
+.PHONY: default \
+	epmt-build epmt-test \
+	clean distclean \
+	check check-python-native check-python-driver \
+	check-python-2.6 check-python-2.7 \
+	check-python-3 check-integration-tests \
+	dist build compile lint \
+	release release6 release7 release-all \
 	install-py3-pyenv install-py3deps-pyenv
 
 epmt-build compile build:
@@ -79,14 +79,11 @@ install-deps:
 	set -e ; pip3 install --upgrade pip ; pip3 install -r requirements.txt.py3 ; \
 	pip3 install -r src/epmt/ui/requirements-ui.txt.py3
 
-# This target runs pyinstaller to produce an epmt tarball that
-# has all the dpeendencies included.
-# If a virtual environment is found in .venv374 then use it
-# Otherwise, assume the environment is already ready to run
-# pyinstaller.
+# This target runs pyinstaller, outputs a tarball with
+# epmt + all dependencies included
 $(EPMT_RELEASE) dist:
 	@echo "(EPMT_RELEASE dist) whoami: $(shell whoami)"
-	rm -rf epmt-install build
+#	rm -rf epmt-install build
 	mkdir -p epmt-install/epmt/epmtdocs
 	@echo
 	@echo
@@ -95,16 +92,13 @@ $(EPMT_RELEASE) dist:
 	@echo "**********************************************************"
 	pyinstaller --version
 #	remove the --clean flag to use the cache in builds, helps speed things up
-#	pyinstaller --noconfirm --distpath=epmt-install epmt.spec
 	pyinstaller --clean --noconfirm --distpath=epmt-install epmt.spec
 	@echo
 	@echo
 	@echo "**********************************************************"
 	@echo "****************** calling mkdocs ************************"
 	@echo "**********************************************************"
-#       mkdocs sooooo slow
 	mkdocs build -f epmtdocs/mkdocs.yml
-#	mkdocs build --dirty -f epmtdocs/mkdocs.yml
 	@echo
 	@echo
 	cp -Rp preset_settings epmt-install
@@ -132,16 +126,17 @@ python-dist: $(EPMT_RELEASE) $(PAPIEX_RELEASE)
 	@echo "**********************************************************"
 	@echo "************** python3 setup.py sdist ********************"
 	@echo "**********************************************************"	
-	cd src; \
-	tar zxf ../$(PAPIEX_RELEASE); \
-	python3 setup.py sdist; \
-	chmod a+r dist/*
+	cd src \
+	&& tar zxf ../$(PAPIEX_RELEASE) \
+	&& python3 setup.py sdist \
+	&& chmod a+r dist/*
 
 test-$(EPMT_RELEASE) dist-test:
 	@echo "(test-EPMT_RELEASE dist-test) whoami: $(shell whoami)"
-#       final location of tarfile
-	rm -rf epmt-install-tests && mkdir epmt-install-tests
+#	rm -rf epmt-install-tests
+	mkdir epmt-install-tests
 	cp -Rp src/epmt/test epmt-install-tests
+	@echo "creating tarball in final location: test-${EPMT_RELEASE}"
 	tar -czf test-$(EPMT_RELEASE) epmt-install-tests
 	rm -rf epmt-install-tests
 
@@ -150,20 +145,20 @@ docker-dist:
 	@echo
 	@echo
 	@echo " - building epmt and epmt-test tarball via Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build"
-	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build -t $(OS_TARGET)-epmt-build:$(EPMT_VERSION) \
-	--build-arg python_version=$(PYTHON_VERSION) .
+	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build \
+	-t $(OS_TARGET)-epmt-build:$(EPMT_VERSION) --build-arg python_version=$(PYTHON_VERSION) .
 	@echo
 	@echo
 	@echo " - running make dist python-dist dist-test inside $(OS_TARGET)-epmt-build"
-#	below this is ONE LINE, NOT a sep make command!!!
-	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build:$(EPMT_VERSION) \
+	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume=$(PWD):$(PWD) -w $(PWD) \
+	$(OS_TARGET)-epmt-build:$(EPMT_VERSION) \
 	make OS_TARGET=$(OS_TARGET) dist python-dist $(EPMT_RELEASE) dist-test
 
 
 docker-dist-test:
 	@echo "(docker-dist-test) whoami: $(shell whoami)"
-#	below this is ONE LINE, NOT a sep make command!!!
-	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build:$(EPMT_VERSION) \
+	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume=$(PWD):$(PWD) -w $(PWD) \
+	$(OS_TARGET)-epmt-build:$(EPMT_VERSION) \
 	make OS_TARGET=$(OS_TARGET) dist-test
 
 papiex-dist: $(PAPIEX_RELEASE)
@@ -177,16 +172,15 @@ $(PAPIEX_SRC)/$(PAPIEX_RELEASE):
 	@echo "(PAPIEX_SRC/PAPIEX_RELEASE) whoami: $(shell whoami)"
 	@echo
 	@echo
-	if [ ! -d $(PAPIEX_SRC) ]; then \
-	echo "grabbing papiex via curl"; \
-	curl -O ${PAPIEX_SRC_URL}; \
-	ls $(PAPIEX_SRC_TARBALL); \
-	echo "tar zxf PAPIEX_SRC_TARBALL=${PAPIEX_SRC_TARBALL}... listing below this line"; \
-	tar zxf ${PAPIEX_SRC_TARBALL}; \
-	mv `tar ztf ${PAPIEX_SRC_TARBALL} | head -1` $(PAPIEX_SRC); \
-	echo "listing contents of PAPIEX_SRC_TARBALL=${PAPIEX_SRC_TARBALL}..."; \
-	echo "aka... top dir contents of PAPIEX_SRC=${PAPIEX_SRC}..."; \
-	ls $(PAPIEX_SRC); \
+	if [ ! -d $(PAPIEX_SRC) ]; \
+	then echo "grabbing papiex via curl" \
+	&& curl -O ${PAPIEX_SRC_URL} \
+	&& ls $(PAPIEX_SRC_TARBALL) \
+	&& echo "tar zxf ${PAPIEX_SRC_TARBALL}" \
+	&& tar zxf ${PAPIEX_SRC_TARBALL} \
+	&& mv `tar ztf ${PAPIEX_SRC_TARBALL} | head -1` $(PAPIEX_SRC) \
+	&& echo "top-level dir contents of PAPIEX_SRC=${PAPIEX_SRC}..." \
+	&& ls $(PAPIEX_SRC); \
 	fi
 	@echo
 	@echo
@@ -194,8 +188,8 @@ $(PAPIEX_SRC)/$(PAPIEX_RELEASE):
 	if [ -n "${OUTSIDE_DOCKER}" ]; \
 	then make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) distclean install dist; \
 	else \
-	echo "making docker-dist within PAPIEX_SRC/PAPIEX_RELEASE target"; \
-	make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) docker-dist; \
+	echo "making docker-dist within PAPIEX_SRC/PAPIEX_RELEASE target" \
+	&& make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) docker-dist; \
 	fi
 
 epmt-full-release: $(EPMT_FULL_RELEASE)
@@ -211,10 +205,12 @@ $(EPMT_FULL_RELEASE): $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(PAPIEX_RELEASE)
 
 check-release release-test-docker: $(EPMT_FULL_RELEASE)
 	@echo "(check-release release-test-docker) whoami: $(shell whoami)"
-	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test-release -t $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) \
+	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test-release \
+	-t $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) \
 	--build-arg epmt_version=$(EPMT_VERSION) --build-arg install_path=$(EPMT_INSTALL_PATH) \
 	--build-arg install_prefix=$(EPMT_INSTALL_PREFIX) --build-arg epmt_full_release=$(EPMT_FULL_RELEASE) \
-	--build-arg epmt_python_full_release=$(EPMT_PYTHON_FULL_RELEASE) --build-arg python_version=$(PYTHON_VERSION) .
+	--build-arg epmt_python_full_release=$(EPMT_PYTHON_FULL_RELEASE) \
+	--build-arg python_version=$(PYTHON_VERSION) .
 	@echo
 	@echo
 	@echo "looking for postgres-test and epmt-test-net docker networks"
@@ -236,13 +232,13 @@ check-release release-test-docker: $(EPMT_FULL_RELEASE)
 	@echo
 	@echo
 	@echo "running epmt-test-release container"
-	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net --privileged $(DOCKER_RUN_OPTS) \
-	-h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) \
-	bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; \
-	epmt -v -V; \
+	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net \
+	--privileged $(DOCKER_RUN_OPTS) -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) \
+	bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; epmt -v -V; \
 	echo "" && echo "------ epmt -v check ------" && epmt -v -v check; \
 	echo "" && echo "------ epmt -v unittest ------" && epmt -v -v unittest; \
-	echo "" && echo "------ epmt -v integration ------" && epmt -v -v integration'
+	echo "" && echo "------ epmt -v integration ------" && epmt -v -v integration; \
+	echo "" && echo "------ DONE WITH EPMT CHECKS ------"'
 	@echo
 	@echo
 	@echo "shutting down docker networks, postgres test container, epmt-test-net"
@@ -252,29 +248,29 @@ check-release release-test-docker: $(EPMT_FULL_RELEASE)
 
 # release building
 release release-all release7:
-#	@echo "(release release-all release7) whoami: $(shell whoami)"
-#	@echo
-#	@echo
-#	@echo " ------ CLEAN UP : clean-all ------- "
-#	$(MAKE) clean-all
-#	@echo
-#	@echo
-#	@echo " ------ CREATE PAPIEX TARBALL : papiex-dist ------- "
-#	- @echo "PAPIEX_VERSION     = ${PAPIEX_VERSION}"
-#	- @echo "PAPIEX_SRC         = ${PAPIEX_SRC}"
-#	@echo   "PAPIEX_SRC_TARBALL = ${PAPIEX_SRC_TARBALL}"
-#	@echo   "PAPIEX_SRC_BRANCH  = ${PAPIEX_SRC_BRANCH}"
-#	@echo   "PAPIEX_SRC_URL     = ${PAPIEX_SRC_URL}"
-#	- @echo   "PAPIEX_RELEASE     = ${PAPIEX_RELEASE}"
-#	$(MAKE) papiex-dist
-#	@echo
-#	@echo
-#	@echo " ------ CREATE EPMT TARBALL: docker-dist ------- "
-#	@echo "docker build command = ${DOCKER_BUILD}"
-#	@echo "docker run   command = ${DOCKER_RUN}"
-#	@echo "docker run   options = ${DOCKER_RUN_OPTS}"
-#	$(MAKE) docker-dist
-#	@echo
+	@echo "(release release-all release7) whoami: $(shell whoami)"
+	@echo
+	@echo
+	@echo " ------ CLEAN UP : clean-all ------- "
+	$(MAKE) clean-all
+	@echo
+	@echo
+	@echo " ------ CREATE PAPIEX TARBALL : papiex-dist ------- "
+	- @echo "PAPIEX_VERSION     = ${PAPIEX_VERSION}"
+	- @echo "PAPIEX_SRC         = ${PAPIEX_SRC}"
+	@echo   "PAPIEX_SRC_TARBALL = ${PAPIEX_SRC_TARBALL}"
+	@echo   "PAPIEX_SRC_BRANCH  = ${PAPIEX_SRC_BRANCH}"
+	@echo   "PAPIEX_SRC_URL     = ${PAPIEX_SRC_URL}"
+	- @echo   "PAPIEX_RELEASE     = ${PAPIEX_RELEASE}"
+	$(MAKE) papiex-dist
+	@echo
+	@echo
+	@echo " ------ CREATE EPMT TARBALL: docker-dist ------- "
+	@echo "docker build command = ${DOCKER_BUILD}"
+	@echo "docker run   command = ${DOCKER_RUN}"
+	@echo "docker run   options = ${DOCKER_RUN_OPTS}"
+	$(MAKE) docker-dist
+	@echo
 	@echo
 	@echo " ------ CREATE EPMT+PAPIEX TARBALL: epmt-full-release ------- "
 	@echo " epmt_install_path        = ${EPMT_INSTALL_PATH}"
@@ -294,8 +290,8 @@ release release-all release7:
 
 
 # CLEANING
-#clean-all: clean distclean docker-clean
-clean-all: clean distclean docker-clean papiexclean
+#clean-all: clean distclean docker-clean papiexclean
+clean-all: clean distclean docker-clean
 	@echo "(clean-all) whoami: $(shell whoami)"
 
 clean:
@@ -331,10 +327,11 @@ check: check-unittests check-integration-tests
 # Why not test all of them?
 check-unittests:
 	@echo "(check-unittests) whoami: $(shell whoami)"
-	@env -i TERM=ansi PATH=${PWD}:${PATH} epmt -v -v unittest
-#	@env -i TERM=ansi PATH=${PWD}:${PATH} python3 -m unittest -v -f test.test_lib test.test_stat test.test_settings \
-#	test.test_anysh test.test_submit test.test_run test.test_cmds test.test_query test.test_explore test.test_outliers \
-#	test.test_db_schema test.test_db_migration
+	@env -i TERM=ansi PATH=${PWD}:${PATH} python3 -m unittest -v -f \
+    test.test_lib test.test_stat test.test_settings \
+	test.test_anysh test.test_submit test.test_run \
+	test.test_cmds test.test_query test.test_explore \
+	test.test_outliers test.test_db_schema test.test_db_migration
 
 check-integration-tests:
 	@echo "(check-integration-tests) whoami: $(shell whoami)"
