@@ -1,1 +1,0 @@
-This directory holds generated notebooks from the EPMT Workflow GUI.
