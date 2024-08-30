@@ -147,6 +147,10 @@ test-$(EPMT_RELEASE) dist-test:
 	rm -rf epmt-install-tests
 
 docker-dist:
+	@echo " ------ CREATE EPMT TARBALL: docker-dist ------- "
+	@echo "docker build command = ${DOCKER_BUILD}"
+	@echo "docker run   command = ${DOCKER_RUN}"
+	@echo "docker run   options = ${DOCKER_RUN_OPTS}"
 	@echo "(docker-dist) whoami: $(shell whoami)"
 	@echo
 	@echo
@@ -172,6 +176,12 @@ epmt-dash: $(EPMT_DASH_SRC)
 
 $(EPMT_DASH_SRC):
 	@echo "(src/epmt/ui) whoami: $(shell whoami)"
+	@echo " ------ GRAB EPMT-DASH SUBODULE (UI) ------- "
+	@echo   "EPMT_DASH_SRC_TARBALL = ${EPMT_DASH_SRC_TARBALL}"
+	@echo   "EPMT_DASH_SRC_BRANCH  = ${EPMT_DASH_SRC_BRANCH}"
+	@echo   "EPMT_DASH_SRC_URL     = ${EPMT_DASH_SRC_URL}"
+	@echo
+	@echo
 	if [ ! -d $(EPMT_DASH_SRC) ]; \
 	then echo "grabbing epmt-dash via curl" \
 	&& curl -O ${EPMT_DASH_SRC_URL} \
@@ -180,7 +190,7 @@ $(EPMT_DASH_SRC):
 	&& tar zxf ${EPMT_SRC_TARBALL} \
 	&& mv `tar ztf ${EPMT_SRC_TARBALL} | head -1` ${EPMT_DASH_SRC} \
 	&& echo "top-level dir contents of EPMT_DASH_SRC=${EPMT_DASH_SRC}..." \
-	&& ls src/epmt/ui; \
+	&& ls $(EPMT_DASH_SRC); \
 	fi
 
 papiex-dist: $(PAPIEX_RELEASE)
@@ -192,6 +202,13 @@ $(PAPIEX_RELEASE): $(PAPIEX_SRC)/$(PAPIEX_RELEASE)
 
 $(PAPIEX_SRC)/$(PAPIEX_RELEASE):
 	@echo "(PAPIEX_SRC/PAPIEX_RELEASE) whoami: $(shell whoami)"
+	@echo " ------ CREATE PAPIEX TARBALL : papiex-dist ------- "
+	- @echo "PAPIEX_VERSION     = ${PAPIEX_VERSION}"
+	- @echo "PAPIEX_SRC         = ${PAPIEX_SRC}"
+	@echo   "PAPIEX_SRC_TARBALL = ${PAPIEX_SRC_TARBALL}"
+	@echo   "PAPIEX_SRC_BRANCH  = ${PAPIEX_SRC_BRANCH}"
+	@echo   "PAPIEX_SRC_URL     = ${PAPIEX_SRC_URL}"
+	- @echo   "PAPIEX_RELEASE     = ${PAPIEX_RELEASE}"
 	@echo
 	@echo
 	if [ ! -d $(PAPIEX_SRC) ]; \
@@ -277,37 +294,15 @@ release release-all release7:
 	$(MAKE) clean-all
 	@echo
 	@echo
-	@echo " ------ CREATE PAPIEX TARBALL : papiex-dist ------- "
-	- @echo "PAPIEX_VERSION     = ${PAPIEX_VERSION}"
-	- @echo "PAPIEX_SRC         = ${PAPIEX_SRC}"
-	@echo   "PAPIEX_SRC_TARBALL = ${PAPIEX_SRC_TARBALL}"
-	@echo   "PAPIEX_SRC_BRANCH  = ${PAPIEX_SRC_BRANCH}"
-	@echo   "PAPIEX_SRC_URL     = ${PAPIEX_SRC_URL}"
-	- @echo   "PAPIEX_RELEASE     = ${PAPIEX_RELEASE}"
 	$(MAKE) papiex-dist
 	@echo
 	@echo
-	@echo " ------ GRAB EPMT-DASH SUBODULE (UI) ------- "
-	@echo   "EPMT_DASH_SRC_TARBALL = ${EPMT_DASH_SRC_TARBALL}"
-	@echo   "EPMT_DASH_SRC_BRANCH  = ${EPMT_DASH_SRC_BRANCH}"
-	@echo   "EPMT_DASH_SRC_URL     = ${EPMT_DASH_SRC_URL}"
 	$(MAKE) epmt-dash
 	@echo
 	@echo
-	@echo " ------ CREATE EPMT TARBALL: docker-dist ------- "
-	@echo "docker build command = ${DOCKER_BUILD}"
-	@echo "docker run   command = ${DOCKER_RUN}"
-	@echo "docker run   options = ${DOCKER_RUN_OPTS}"
 	$(MAKE) docker-dist
 	@echo
 	@echo
-	@echo " ------ CREATE EPMT+PAPIEX TARBALL: epmt-full-release ------- "
-	@echo " epmt_install_path        = ${EPMT_INSTALL_PATH}"
-	@echo " epmt_install_prefix      = ${EPMT_INSTALL_PREFIX}"
-	@echo " epmt_version             = ${EPMT_VERSION}"
-	@echo " epmt_release             = ${EPMT_RELEASE}"
-	@echo " epmt_full_release        = ${EPMT_FULL_RELEASE}"
-	@echo " epmt_python_full_release = ${EPMT_PYTHON_FULL_RELEASE}"
 	$(MAKE) epmt-full-release
 	@echo
 	@echo
@@ -337,7 +332,8 @@ distclean:
 
 dashclean:
 	@echo "(distclean) whoami: $(shell whoami)"
-	rm -rf src/epmt/ui/*
+	- rm -rf $(EPMT_DASH_SRC)
+	- rm -f $(EPMT_DASH_SRC_TARBALL)
 
 docker-clean:
 	@echo "(docker-clean) whoami: $(shell whoami)"
