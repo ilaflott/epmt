@@ -327,8 +327,8 @@ clean:
 
 distclean:
 	@echo "(distclean) whoami: $(shell whoami)"
-	rm -f settings.py $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(EPMT_FULL_RELEASE) src/dist/*
-	rm -rf epmtdocs/site
+	rm -f settings.py $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(EPMT_FULL_RELEASE) 
+	rm -rf epmtdocs/site src/dist src/epmt.egg-info
 
 dashclean:
 	@echo "(distclean) whoami: $(shell whoami)"
@@ -345,7 +345,7 @@ clean-papiex: papiexclean
 
 papiexclean:
 	@echo "(papiexclean) whoami: $(shell whoami)"
-	rm -fr $(PAPIEX_SRC)
+	rm -fr $(PAPIEX_SRC) src/papiex-epmt-install
 	rm -f $(PAPIEX_SRC_TARBALL) $(PAPIEX_RELEASE)
 
 
