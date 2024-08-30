@@ -184,11 +184,11 @@ $(EPMT_DASH_SRC):
 	@echo
 	if [ ! -d $(EPMT_DASH_SRC) ]; \
 	then echo "grabbing epmt-dash via curl" \
-	&& curl -O ${EPMT_DASH_SRC_URL} \
+	&& curl -O $(EPMT_DASH_SRC_URL) \
 	&& ls $(EPMT_DASH_SRC_TARBALL) \
 	&& echo "tar zxf ${EPMT_DASH_SRC_TARBALL}" \
-	&& tar zxf ${EPMT_SRC_TARBALL} \
-	&& mv `tar ztf ${EPMT_SRC_TARBALL} | head -1` ${EPMT_DASH_SRC} \
+	&& tar zxf $(EPMT_DASH_SRC_TARBALL) \
+	&& mv `tar ztf ${EPMT_DASH_SRC_TARBALL} | head -1` $(EPMT_DASH_SRC) \
 	&& echo "top-level dir contents of EPMT_DASH_SRC=${EPMT_DASH_SRC}..." \
 	&& ls $(EPMT_DASH_SRC); \
 	fi
@@ -213,10 +213,10 @@ $(PAPIEX_SRC)/$(PAPIEX_RELEASE):
 	@echo
 	if [ ! -d $(PAPIEX_SRC) ]; \
 	then echo "grabbing papiex via curl" \
-	&& curl -O ${PAPIEX_SRC_URL} \
+	&& curl -O $(PAPIEX_SRC_URL) \
 	&& ls $(PAPIEX_SRC_TARBALL) \
 	&& echo "tar zxf ${PAPIEX_SRC_TARBALL}" \
-	&& tar zxf ${PAPIEX_SRC_TARBALL} \
+	&& tar zxf $(PAPIEX_SRC_TARBALL) \
 	&& mv `tar ztf ${PAPIEX_SRC_TARBALL} | head -1` $(PAPIEX_SRC) \
 	&& echo "top-level dir contents of PAPIEX_SRC=${PAPIEX_SRC}..." \
 	&& ls $(PAPIEX_SRC); \
