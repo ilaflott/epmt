@@ -36,6 +36,12 @@ EPMT_PYTHON_FULL_RELEASE=epmt-$(EPMT_VERSION).tar.gz
 EPMT_INSTALL_PATH=/opt/minimalmetrics
 EPMT_INSTALL_PREFIX=$(EPMT_INSTALL_PATH)/epmt-$(EPMT_VERSION)/epmt-install
 
+# <root>/src/epmt/ui submodule details
+EPMT_DASH_SRC_TARBALL=epmt-dash.tar.gz
+EPMT_DASH_SRC_BRANCH=multi_page
+EPMT_DASH_SRC_URL=https://gitlab.com/minimal-metrics-llc/epmt/epmt-dash/-/archive/${EPMT_DASH_SRC_BRANCH}/${EPMT_DASH_SRC_TARBALL}
+EPMT_DASH_SRC=src/epmt/ui
+
 # shell
 SHELL=/bin/bash
 PWD=$(shell pwd)
@@ -161,6 +167,22 @@ docker-dist-test:
 	$(OS_TARGET)-epmt-build:$(EPMT_VERSION) \
 	make OS_TARGET=$(OS_TARGET) dist-test
 
+epmt-dash: $(EPMT_DASH_SRC)
+	@echo "(epmt-dash) whoami: $(shell whoami)"
+
+$(EPMT_DASH_SRC):
+	@echo "(src/epmt/ui) whoami: $(shell whoami)"
+	if [ ! -d $(EPMT_DASH_SRC) ]; \
+	then echo "grabbing epmt-dash via curl" \
+	&& curl -O ${EPMT_DASH_SRC_URL} \
+	&& ls $(EPMT_DASH_SRC_TARBALL) \
+	&& echo "tar zxf ${EPMT_DASH_SRC_TARBALL}" \
+	&& tar zxf ${EPMT_SRC_TARBALL} \
+	&& mv `tar ztf ${EPMT_SRC_TARBALL} | head -1` ${EPMT_DASH_SRC} \
+	&& echo "top-level dir contents of EPMT_DASH_SRC=${EPMT_DASH_SRC}..." \
+	&& ls src/epmt/ui; \
+	fi
+
 papiex-dist: $(PAPIEX_RELEASE)
 	@echo "(papiex-dist) whoami: $(shell whoami)"
 
@@ -265,6 +287,13 @@ release release-all release7:
 	$(MAKE) papiex-dist
 	@echo
 	@echo
+	@echo " ------ GRAB EPMT-DASH SUBODULE (UI) ------- "
+	@echo   "EPMT_DASH_SRC_TARBALL = ${EPMT_DASH_SRC_TARBALL}"
+	@echo   "EPMT_DASH_SRC_BRANCH  = ${EPMT_DASH_SRC_BRANCH}"
+	@echo   "EPMT_DASH_SRC_URL     = ${EPMT_DASH_SRC_URL}"
+	$(MAKE) epmt-dash
+	@echo
+	@echo
 	@echo " ------ CREATE EPMT TARBALL: docker-dist ------- "
 	@echo "docker build command = ${DOCKER_BUILD}"
 	@echo "docker run   command = ${DOCKER_RUN}"
@@ -290,8 +319,10 @@ release release-all release7:
 
 
 # CLEANING
-#clean-all: clean distclean docker-clean papiexclean
-clean-all: clean distclean docker-clean
+extra-clean: clean-all papiexclean dashclean
+	@echo "(extra-clean) whoami: $(shell whoami)"
+
+clean-all: clean distclean docker-clean 
 	@echo "(clean-all) whoami: $(shell whoami)"
 
 clean:
@@ -303,6 +334,10 @@ distclean:
 	@echo "(distclean) whoami: $(shell whoami)"
 	rm -f settings.py $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(EPMT_FULL_RELEASE) src/dist/*
 	rm -rf epmtdocs/site
+
+dashclean:
+	@echo "(distclean) whoami: $(shell whoami)"
+	rm -rf src/epmt/ui/*
 
 docker-clean:
 	@echo "(docker-clean) whoami: $(shell whoami)"
