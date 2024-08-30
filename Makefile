@@ -14,9 +14,9 @@ DOCKER_RUN:=docker -D run
 #DOCKER_RUN_OPTS:=--rm -it
 DOCKER_RUN_OPTS:=-it
 #DOCKER_BUILD:=docker build -f
-DOCKER_BUILD:=docker -D build -f
+#DOCKER_BUILD:=docker -D build -f
 #DOCKER_BUILD:=docker -D build --pull=false -f 
-#DOCKER_BUILD:=docker -D build --no-cache -f
+DOCKER_BUILD:=docker -D build --no-cache -f
 
 # papiex details
 PAPIEX_VERSION?=2.3.14
