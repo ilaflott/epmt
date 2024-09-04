@@ -2,21 +2,22 @@
 
 # OS and python
 PYTHON_VERSION=3.9.16
-#OS_TARGET=centos-7
-OS_TARGET=rocky-8
+#OS_TARGET=rocky-8
+OS_TARGET=centos-7
 
 # conda
 CONDA_ACTIVATE = source $$(conda info --base)/etc/profile.d/conda.sh ; conda activate ; conda activate
 
 # docker commands
-#DOCKER_RUN:=docker run
-DOCKER_RUN:=docker -D run
+DOCKER_RUN:=docker run
+
 #DOCKER_RUN_OPTS:=--rm -it
 DOCKER_RUN_OPTS:=-it
+
 #DOCKER_BUILD:=docker build -f
-#DOCKER_BUILD:=docker -D build -f
-#DOCKER_BUILD:=docker -D build --pull=false -f 
-DOCKER_BUILD:=docker -D build --no-cache -f
+#DOCKER_BUILD:=docker build -f
+#DOCKER_BUILD:=docker build --pull=false -f 
+DOCKER_BUILD:=docker build --no-cache -f
 
 # minimal-metrics src url
 MM_SRC_URL_BASE=https://gitlab.com/minimal-metrics-llc/epmt
@@ -26,8 +27,8 @@ PAPIEX_VERSION?=2.3.14
 PAPIEX_SRC?=papiex
 PAPIEX_SRC_TARBALL=papiex-epmt.tar.gz
 #PAPIEX_SRC_BRANCH=master
-#PAPIEX_SRC_BRANCH=centos7_yum_fix
-PAPIEX_SRC_BRANCH=rocky8_docker
+#PAPIEX_SRC_BRANCH=rocky8_docker
+PAPIEX_SRC_BRANCH=centos7_yum_fix
 PAPIEX_SRC_URL=$(MM_SRC_URL_BASE)/papiex/-/archive/$(PAPIEX_SRC_BRANCH)/$(PAPIEX_SRC_TARBALL)
 PAPIEX_RELEASE=papiex-epmt-$(PAPIEX_VERSION)-$(OS_TARGET).tgz
 
@@ -172,20 +173,20 @@ docker-dist:
 	@echo
 	@echo
 	@echo " - running make dist python-dist dist-test inside $(OS_TARGET)-epmt-build"
-	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build:$(EPMT_VERSION) \
-	make OS_TARGET=$(OS_TARGET) dist python-dist $(EPMT_RELEASE) dist-test
+	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --privileged --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build:$(EPMT_VERSION) \
+	make --debug OS_TARGET=$(OS_TARGET) dist python-dist $(EPMT_RELEASE) dist-test
 
 
 docker-dist-test:
 	@echo "(docker-dist-test) whoami: $(shell whoami)"
-	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build:$(EPMT_VERSION) \
-	make OS_TARGET=$(OS_TARGET) dist-test
+	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --privileged --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build:$(EPMT_VERSION) \
+	make --debug OS_TARGET=$(OS_TARGET) dist-test
 
 epmt-dash: $(EPMT_DASH_SRC)
 	@echo "(epmt-dash) whoami: $(shell whoami)"
 
 $(EPMT_DASH_SRC):
-	@echo "(src/epmt/ui) whoami: $(shell whoami)"
+	@echo "(EPMT_DASH_SRC) whoami: $(shell whoami)"
 	@echo " ------ GRAB EPMT-DASH SUBODULE (UI) ------- "
 	@echo   "EPMT_DASH_SRC_TARBALL = ${EPMT_DASH_SRC_TARBALL}"
 	@echo   "EPMT_DASH_SRC_BRANCH  = ${EPMT_DASH_SRC_BRANCH}"
@@ -268,7 +269,7 @@ check-release release-test-docker: $(EPMT_FULL_RELEASE)
 	@echo
 	@echo
 	if docker network ls | grep epmt-test-net > /dev/null; \
-	then docker network rm epmt-test-net; fi
+	then docker network rm -f epmt-test-net; fi
 	@echo
 	@echo
 	@echo "creating epmt-test-net docker network"
@@ -292,7 +293,7 @@ check-release release-test-docker: $(EPMT_FULL_RELEASE)
 	@echo
 	@echo "shutting down docker networks, postgres test container, epmt-test-net"
 	docker stop postgres-test
-	docker network rm epmt-test-net
+	docker network rm -f epmt-test-net
 
 
 # release building
