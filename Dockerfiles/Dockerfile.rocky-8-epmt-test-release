@@ -1,5 +1,8 @@
-# link to gitlab.gfdl.noaa.gov here? thank you Josh E.!
-FROM docker.io/library/slurm-cluster:21.08.6
+FROM localhost/slurm-cluster:21.08.6
+
+# this wasn't good for podman
+## link to gitlab.gfdl.noaa.gov here? thank you Josh E.!
+#FROM docker.io/library/slurm-cluster:21.08.6
 
 # the image on dockerhub in actually centOS7 based, despite what the
 # dockerfile for the image says
@@ -82,10 +85,11 @@ RUN mkdir /usr/lib/python3.9/site-packages/papiex-oss \
 COPY utils/epmt-installer .
 WORKDIR ${install_path}
 RUN ls ${install_path}
+
+
 RUN echo -ne "\n\n" | ${install_path}_archive/epmt-installer ${install_path}_archive/EPMT*tgz
 ENV PATH="${install_path}/epmt-${epmt_version}/epmt-install/epmt:${PATH}:/usr/local/bin:/usr/local/libexec"
 RUN rm -f *.tgz epmt-installer
-
 
 
 

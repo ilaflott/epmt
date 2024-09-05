@@ -2,21 +2,21 @@
 
 # OS and python
 PYTHON_VERSION=3.9.16
-#OS_TARGET=rocky-8
-OS_TARGET=centos-7
+#OS_TARGET=centos-7
+OS_TARGET=rocky-8
 
 # conda
 CONDA_ACTIVATE = source $$(conda info --base)/etc/profile.d/conda.sh ; conda activate ; conda activate
 
 # docker commands
-DOCKER_RUN:=docker run
+DOCKER_RUN:=docker run -D
 
 #DOCKER_RUN_OPTS:=--rm -it
 DOCKER_RUN_OPTS:=-it
 
-#DOCKER_BUILD:=docker build -f
+DOCKER_BUILD:=docker -D build -f
 #DOCKER_BUILD:=docker build --pull=false -f 
-DOCKER_BUILD:=docker build --no-cache -f
+#DOCKER_BUILD:=docker build --no-cache -f
 
 # minimal-metrics src url
 MM_SRC_URL_BASE=https://gitlab.com/minimal-metrics-llc/epmt
@@ -26,8 +26,8 @@ PAPIEX_VERSION?=2.3.14
 PAPIEX_SRC?=papiex
 PAPIEX_SRC_TARBALL=papiex-epmt.tar.gz
 #PAPIEX_SRC_BRANCH=master
-#PAPIEX_SRC_BRANCH=rocky8_docker
-PAPIEX_SRC_BRANCH=centos7_yum_fix
+#PAPIEX_SRC_BRANCH=centos7_yum_fix
+PAPIEX_SRC_BRANCH=rocky8_docker
 PAPIEX_SRC_URL=$(MM_SRC_URL_BASE)/papiex/-/archive/$(PAPIEX_SRC_BRANCH)/$(PAPIEX_SRC_TARBALL)
 PAPIEX_RELEASE=papiex-epmt-$(PAPIEX_VERSION)-$(OS_TARGET).tgz
 
@@ -279,7 +279,7 @@ check-release release-test-docker: $(EPMT_FULL_RELEASE)
 	@echo
 	@echo "running postgres-test container"
 	$(DOCKER_RUN) -d --rm --name postgres-test --network epmt-test-net \
-	-e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -e POSTGRES_DB=EPMT-TEST postgres:latest
+	--privileged -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -e POSTGRES_DB=EPMT-TEST postgres:latest
 	@echo
 	@echo
 	@echo "running epmt-test-release container"
