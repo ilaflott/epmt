@@ -201,6 +201,11 @@ $(EPMT_DASH_SRC):
 	mv `tar ztf ${EPMT_DASH_SRC_TARBALL} | head -1` $(EPMT_DASH_SRC); \
 	echo "top-level dir contents of EPMT_DASH_SRC=${EPMT_DASH_SRC}..."; \
 	ls $(EPMT_DASH_SRC); \
+	echo "making symbolic link to epmt/ui/docs/index.md"; \
+	cd epmtdocs/docs && \
+	ln -s ../../src/epmt/ui/docs/index.md index.md \
+	|| echo "symbolic link creation failed."; \
+	cd -; \
 	fi
 
 papiex-dist: $(PAPIEX_RELEASE)
