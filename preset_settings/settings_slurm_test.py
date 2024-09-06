@@ -1,5 +1,5 @@
 def test_settings_import():
-    print('settings.py imported!')
+    pass
 
 orm = 'sqlalchemy'
 db_params = { 'url': 'sqlite:///:memory:', 'echo': False }

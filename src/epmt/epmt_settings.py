@@ -4,8 +4,6 @@ from logging import getLogger, basicConfig, ERROR
 import sys
 
 
-
-# now load the user-specific settings.py so they override the defaults
 basicConfig(level=ERROR)
 logger = getLogger(__name__)
 logger.info("attempting import of user settings")
@@ -13,17 +11,20 @@ logger.info("sys.path entries are:")
 for path in sys.path:
     logger.info(f"path={path}")
 
-try:
-    import settings
-    from settings import *
+# now load the user-specific settings.py so they override the defaults
+try: 
+    import epmt.settings
+    from epmt.settings import *
 except Exception as e:
     if e.__class__ == ModuleNotFoundError:
-        logger.error(str(e)+": attempting epmt.settings import instead.")
-        import epmt.settings
-        from epmt.settings import *
-    else:
-        raise Exception('an exception other than ModuleNotFoundError?')
-finally:
-    logger.error('ModuleNotFoundError, damn it!')    
+        try:
+            import settings
+            from settings import *
+            logger.error(str(e)+": attempting settings import instead.")
+        except Exception as e2
+            logger.error('ModuleNotFoundError, damn it!')    
+            raise
+else:
+    logger.info('epmt_settings imported successfully! yay!!!')    
 
 
