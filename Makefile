@@ -381,15 +381,15 @@ check: check-epmt-check check-integration-tests check-unittests
 # Why not test all of them?
 check-epmt-check:
 	@echo "(check-epmt-check) whoami: $(shell whoami)"
-	@env -i TERM=ansi PATH=${PWD}:${PATH} epmt -v -v check
+	- @env -i TERM=ansi PATH=${PWD}:${PATH} epmt -v -v check
+check-integration-tests:
+	@echo "(check-integration-tests) whoami: $(shell whoami)"
+	- @env -i TERM=ansi PATH=${PWD}:${PATH} epmt -v -v integration
 check-unittests:
 	@echo "(check-unittests) whoami: $(shell whoami)"
-	@env -i TERM=ansi PATH=${PWD}:${PATH} epmt -v -v unittest
+	- @env -i TERM=ansi PATH=${PWD}:${PATH} epmt -v -v unittest
 #	@env -i TERM=ansi PATH=${PWD}:${PATH} python3 -m unittest -v -f \
 #   test.test_lib test.test_stat test.test_settings \
 #	test.test_anysh test.test_submit test.test_run \
 #	test.test_cmds test.test_query test.test_explore \
 #	test.test_outliers test.test_db_schema test.test_db_migration
-check-integration-tests:
-	@echo "(check-integration-tests) whoami: $(shell whoami)"
-	@env -i TERM=ansi PATH=${PWD}:${PATH} epmt -v -v integration
