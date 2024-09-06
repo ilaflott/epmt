@@ -36,6 +36,8 @@ build:python3:
     - cp -f  preset_settings/settings_sqlite_localfile_sqlalchemy.py $(python3 -c 'import epmt;print (epmt.__file__.rsplit("/", 1)[0])')/settings.py
     - pip3 install src/dist/epmt*gz
     - python3 -c 'import epmt;print (epmt.__file__);'
+    - python3 -c 'import epmt;print (epmt.__file__.rsplit("/", 1)[0]);'
+    - echo \"install_prefix = $(python3 -c 'import epmt;print (epmt.__file__.rsplit("/", 1)[0])')/\"
     - echo \"install_prefix = $(python3 -c 'import epmt;print (epmt.__file__.rsplit("/", 1)[0])')/\" >> $(python3 -c 'import epmt;print (epmt.__file__.rsplit("/", 1)[0])')/settings.py
     - mkdir -p /usr/lib/python3.9/site-packages/epmt/../papiex-oss/papiex-epmt-install
     - ln -s  /usr/lib/python3.9/site-packages/epmt/lib /usr/lib/python3.9/site-packages/epmt/../papiex-oss/papiex-epmt-install/
