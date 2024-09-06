@@ -375,10 +375,13 @@ papiexclean:
 
 # Simple python version testing with no database
 # We should get rid of this in favor of a sequence of epmt commands.
-check: check-unittests check-integration-tests
+check: check-epmt-check check-integration-tests check-unittests
 	@echo "(check) whoami: $(shell whoami)"
 
 # Why not test all of them?
+check-epmt-check:
+	@echo "(check-epmt-check) whoami: $(shell whoami)"
+	@env -i TERM=ansi PATH=${PWD}:${PATH} epmt -v -v check
 check-unittests:
 	@echo "(check-unittests) whoami: $(shell whoami)"
 	@env -i TERM=ansi PATH=${PWD}:${PATH} epmt -v -v unittest
@@ -387,7 +390,6 @@ check-unittests:
 #	test.test_anysh test.test_submit test.test_run \
 #	test.test_cmds test.test_query test.test_explore \
 #	test.test_outliers test.test_db_schema test.test_db_migration
-
 check-integration-tests:
 	@echo "(check-integration-tests) whoami: $(shell whoami)"
 	@env -i TERM=ansi PATH=${PWD}:${PATH} epmt -v -v integration
