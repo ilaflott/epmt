@@ -1,12 +1,13 @@
-FROM localhost/slurm-cluster:21.08.6
+## this works for podman, but not for docker
+#FROM localhost/slurm-cluster:21.08.6
 
-# this wasn't good for podman
-## link to gitlab.gfdl.noaa.gov here? thank you Josh E.!
-#FROM docker.io/library/slurm-cluster:21.08.6
+# this works for docker but not for podman
+# link to gitlab.gfdl.noaa.gov here? thank you Josh E.!
+FROM docker.io/library/slurm-cluster:21.08.6
 
 # the image on dockerhub in actually centOS7 based, despite what the
 # dockerfile for the image says
-# FROM giovtorres/docker-slurm-cluster:latest
+#FROM giovtorres/docker-slurm-cluster:latest
 
 RUN yum update -y
 RUN yum install -y \

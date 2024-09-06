@@ -9,25 +9,27 @@ OS_TARGET=rocky-8
 CONDA_ACTIVATE = source $$(conda info --base)/etc/profile.d/conda.sh ; conda activate ; conda activate
 
 # docker commands
-DOCKER_RUN:=docker run -D
+#DOCKER_RUN:=docker -D run
+DOCKER_RUN:=docker run
 
 #DOCKER_RUN_OPTS:=--rm -it
 DOCKER_RUN_OPTS:=-it
 
-DOCKER_BUILD:=docker -D build -f
+#DOCKER_BUILD:=docker -D build -f
 #DOCKER_BUILD:=docker build --pull=false -f 
 #DOCKER_BUILD:=docker build --no-cache -f
+DOCKER_BUILD:=docker build -f
 
 # minimal-metrics src url
 MM_SRC_URL_BASE=https://gitlab.com/minimal-metrics-llc/epmt
 
 # papiex details
-PAPIEX_VERSION?=2.3.14
-PAPIEX_SRC?=papiex
-PAPIEX_SRC_TARBALL=papiex-epmt.tar.gz
 #PAPIEX_SRC_BRANCH=master
 #PAPIEX_SRC_BRANCH=centos7_yum_fix
 PAPIEX_SRC_BRANCH=rocky8_docker
+PAPIEX_VERSION?=2.3.14
+PAPIEX_SRC?=papiex
+PAPIEX_SRC_TARBALL=papiex-epmt.tar.gz
 PAPIEX_SRC_URL=$(MM_SRC_URL_BASE)/papiex/-/archive/$(PAPIEX_SRC_BRANCH)/$(PAPIEX_SRC_TARBALL)
 PAPIEX_RELEASE=papiex-epmt-$(PAPIEX_VERSION)-$(OS_TARGET).tgz
 
@@ -351,6 +353,7 @@ dashclean:
 	@echo "(distclean) whoami: $(shell whoami)"
 	rm -rf $(EPMT_DASH_SRC)
 	rm -f $(EPMT_DASH_SRC_TARBALL)
+	- rm -f epmtdocs/docs/index.md
 
 docker-clean:
 	@echo "(docker-clean) whoami: $(shell whoami)"
