@@ -10,8 +10,11 @@ except Exception as e:
     basicConfig(level=ERROR)
     logger = getLogger(__name__)
     if e.__class__ == ModuleNotFoundError:
-        logger.error(str(e)+":install one from preset_settings?")
+        logger.error(str(e)+": attempting relative import instead.")
+        from .settings import *
     else:
-        logger.error(str(e))
+        raise Exception(f'an exception other than ModuleNotFoundError?? e={e}')
+finally:
+    logger.error(str(e))    
     raise
-    #exit(1) # this breaks pyinstaller, don't do it
+
