@@ -29,7 +29,8 @@ hidden.append('epmt.ui')
 
 print("Hidden modules: ",hidden)
 
-exclude = ['settings','matplotlib']
+#exclude = ['settings','matplotlib']
+exclude = ['matplotlib']
 print("Excluded modules: ",exclude)
 
 ipe_extra_datas = []

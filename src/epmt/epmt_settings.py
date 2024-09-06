@@ -13,8 +13,8 @@ except Exception as e:
         logger.error(str(e)+": attempting relative import instead.")
         from .settings import *
     else:
-        raise Exception(f'an exception other than ModuleNotFoundError?? e={e}')
+        raise Exception('an exception other than ModuleNotFoundError?')
 finally:
-    logger.error(str(e))    
+    logger.error('ModuleNotFoundError, damn it!')    
     raise
 

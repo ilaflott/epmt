@@ -1,3 +1,6 @@
+def test_settings_import():
+    print('settings.py imported!')
+
 # Copy this file and edit it as follows:
 # cp preset_settings/settings_xxxxxxx.py settings.py
 # Then feel free to edit the file to suit you.
