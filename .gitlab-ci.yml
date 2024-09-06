@@ -3,7 +3,7 @@ variables:
   POSTGRES_USER: "postgres"
   POSTGRES_PASSWORD: "example"
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
-  GIT_SUBMODULE_STRATEGY: recursive
+
 
 cache:
   paths:
@@ -14,14 +14,6 @@ services:
 
 
 build:python3:
-  # image: python:3.9.16
-  # script: # Modify the commands below to build your repository.
-  #   - python3 -V
-  #   - pip3 install -r requirements.txt.py3
-  #   - apt-get update && apt-get install -y csh tcsh
-  #   - python3 -m py_compile epmt *.py orm/*/*.py		# Compile everything
-  #   - test/run --no-compose
-#    - git submodule update --init --recursive --remote
   image: rockylinux:8
   script:
     - cat /proc/cpuinfo
