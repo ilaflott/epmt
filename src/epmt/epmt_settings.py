@@ -1,8 +1,9 @@
 # load defaults
 from epmt.epmt_default_settings import *
 from logging import getLogger, basicConfig, ERROR
+import sys
 from sys import exit
-import sys.path
+
 
 # now load the user-specific settings.py so they override the defaults
 basicConfig(level=ERROR)
