@@ -41,8 +41,8 @@ build:python3:
     - ln -s  /usr/lib/python3.9/site-packages/epmt/lib /usr/lib/python3.9/site-packages/epmt/../papiex-oss/papiex-epmt-install/
     - ln -s  /usr/lib/python3.9/site-packages/epmt/bin /usr/lib/python3.9/site-packages/epmt/../papiex-oss/papiex-epmt-install/
     - ls /usr/lib/python3.9/site-packages/epmt/../papiex-oss/papiex-epmt-install/
-	- export PATH="${PATH}:/usr/local/bin:/usr/local/libexec"
-	- src/epmt/test/integration/libs/bats/install.sh /usr/local
+    - export PATH="${PATH}:/usr/local/bin:/usr/local/libexec"
+    - src/epmt/test/integration/libs/bats/install.sh /usr/local
     - make check-epmt-check && echo 'epmt check, success' || echo 'epmt check, failed and guarding against sudden exit' 
     - make check-integration-tests && echo 'epmt integration, success' || echo 'epmt integration, failed and guarding against sudden exit' 
     - make check-unittests&& echo 'epmt unittests, success' || echo 'epmt unittests, failed and guarding against sudden exit' 
