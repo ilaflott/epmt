@@ -241,14 +241,17 @@ $(PAPIEX_SRC)/$(PAPIEX_RELEASE):
 	@echo
 	@echo
 	@echo
+	@echo "################### BEGIN MAKE PAPIEX TARBALL : papiex-dist ########################################"
 	if [ -n "${OUTSIDE_DOCKER}" ]; \
-	then make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) distclean install dist; \
+	then echo "making distclean install dist within PAPIEX_SRC/PAPIEX_RELEASE target"; \
+    make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) distclean install dist; \
+	echo "################# DONE making docker-dist within PAPIEX_SRC/PAPIEX_RELEASE target ########################"; \
 	else \
 	echo "making docker-dist within PAPIEX_SRC/PAPIEX_RELEASE target"; \
 	make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) docker-dist; \
 	echo "################# DONE making docker-dist within PAPIEX_SRC/PAPIEX_RELEASE target ########################"; \
 	fi
-	@echo "################### DONE CREATE PAPIEX TARBALL : papiex-dist ########################################"
+	@echo "################### DONE MAKE PAPIEX TARBALL : papiex-dist ########################################"
 
 epmt-full-release: $(EPMT_FULL_RELEASE)
 	@echo "(epmt-full-release) whoami: $(shell whoami)"
