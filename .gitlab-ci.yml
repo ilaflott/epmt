@@ -47,6 +47,8 @@ build:python3:
     - ls $(python3 -c 'import epmt;print (epmt.__file__.rsplit("/", 1)[0])')
     - mkdir -p /usr/lib/python3.9/site-packages/epmt/../papiex-oss/papiex-epmt-install
     - ln -s  /usr/lib/python3.9/site-packages/epmt/lib /usr/lib/python3.9/site-packages/epmt/../papiex-oss/papiex-epmt-install/
+    - ln -s  /usr/lib/python3.9/site-packages/epmt/bin /usr/lib/python3.9/site-packages/epmt/../papiex-oss/papiex-epmt-install/
+    - ls /usr/lib/python3.9/site-packages/epmt/../papiex-oss/papiex-epmt-install/
     - make check
 
 
