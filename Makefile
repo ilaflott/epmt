@@ -313,14 +313,14 @@ release release-all release7:
 	@echo
 	@echo
 	@echo " ------ CLEAN UP : clean-all ------- "
-	$(MAKE) clean-all
-	@echo
-	@echo
-	$(MAKE) epmt-dash
-	@echo
-	@echo
-	$(MAKE) papiex-dist
-	@echo
+#	$(MAKE) clean-all
+#	@echo
+#	@echo
+#	$(MAKE) epmt-dash
+#	@echo
+#	@echo
+#	$(MAKE) papiex-dist
+#	@echo
 	@echo
 	$(MAKE) docker-dist
 	@echo
