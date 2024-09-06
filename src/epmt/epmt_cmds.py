@@ -1645,8 +1645,9 @@ def epmt_entrypoint(args):
         success_list=[]
         print(f'\n\nverbosity for tests set by epmt_logging_init')
         for m in TEST_MODULES:
-            ## i could import test in epmt shell, but not epmt.test
-            #m = f'epmt.{m}'
+            # i could import test in epmt shell, but not epmt.test
+            m = f'epmt.{m}'
+            # comment-out line above for use in epmt shell
             mod = import_module(m)
             suite = unittest.TestLoader().loadTestsFromModule(mod)
             print('\n\nRunning', m)
