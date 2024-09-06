@@ -21,7 +21,7 @@ except Exception as e:
             import settings
             from settings import *
             logger.error(str(e)+": attempting settings import instead.")
-        except Exception as e2
+        except Exception as e2:
             logger.error('ModuleNotFoundError, damn it!')    
             raise
 else:
