@@ -124,7 +124,7 @@ $(EPMT_RELEASE) dist:
 	cp src/epmt/test/shell/epmt-example.*sh epmt-install/examples
 #	slurm
 	mkdir epmt-install/slurm 
-	cp SLURM/slurm_task_*log_epmt.sh epmt-install/slurm 
+	cp utils/SLURM/slurm_task_*log_epmt.sh epmt-install/slurm 
 #	docs
 	cp -Rp epmtdocs/site epmt-install/epmt/epmtdocs
 	@echo
@@ -313,14 +313,14 @@ release release-all release7:
 	@echo
 	@echo
 	@echo " ------ CLEAN UP : clean-all ------- "
-#	$(MAKE) clean-all
-#	@echo
-#	@echo
-#	$(MAKE) epmt-dash
-#	@echo
-#	@echo
-#	$(MAKE) papiex-dist
-#	@echo
+	$(MAKE) clean-all
+	@echo
+	@echo
+	$(MAKE) epmt-dash
+	@echo
+	@echo
+	$(MAKE) papiex-dist
+	@echo
 	@echo
 	$(MAKE) docker-dist
 	@echo
