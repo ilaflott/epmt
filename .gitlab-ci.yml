@@ -22,17 +22,23 @@ build:python3:
     - (cd /usr/src && echo "downloading python" && curl -o Python-3.9.16.tgz https://www.python.org/ftp/python/3.9.16/Python-3.9.16.tgz && tar xzf Python-3.9.16.tgz && cd Python-3.9.16 && echo "building python3" && ./configure --quiet --prefix=/usr --enable-shared --enable-optimizations --enable-loadable-sqlite-extensions && make --silent install > /dev/null)
     - ldconfig && yum clean all && rm -rf /usr/src /var/cache/yum
     - pip3 install pyinstaller mkdocs mkdocs-theme-bootstrap4 ipython
+
     - make OUTSIDE_DOCKER=YUP epmt-dash papiex-dist dist python-dist && python3 -m pip install src/dist/epmt*gz
     - cp -f  preset_settings/settings_sqlite_localfile_sqlalchemy.py $(python3 -c 'import epmt;print (epmt.__file__.rsplit("/", 1)[0])')/settings.py
+    - pip3 install src/dist/epmt*gz   
     - echo \"install_prefix = $(python3 -c 'import epmt;print (epmt.__file__.rsplit("/", 1)[0])')/\"
     - echo \"install_prefix = $(python3 -c 'import epmt;print (epmt.__file__.rsplit("/", 1)[0])')/\" >> $(python3 -c 'import epmt;print (epmt.__file__.rsplit("/", 1)[0])')/settings.py
-    - pip3 install src/dist/epmt*gz
+    #- pip3 install src/dist/epmt*gz
+
     - mkdir -p /usr/lib/python3.9/site-packages/epmt/../papiex-oss/papiex-epmt-install
     - ln -s  /usr/lib/python3.9/site-packages/epmt/lib /usr/lib/python3.9/site-packages/epmt/../papiex-oss/papiex-epmt-install/
     - ln -s  /usr/lib/python3.9/site-packages/epmt/bin /usr/lib/python3.9/site-packages/epmt/../papiex-oss/papiex-epmt-install/
+
     - export PATH='${PATH}:/usr/local/bin:/usr/local/libexec'
-    - src/epmt/test/integration/libs/bats/install.sh /usr/local
+    #- src/epmt/test/integration/libs/bats/install.sh /usr/local
+
     - make check-epmt-check && echo 'epmt check, success' || echo 'epmt check, failed and guarding against sudden exit' 
     - make check-integration-tests && echo 'epmt integration, success' || echo 'epmt integration, failed and guarding against sudden exit' 
     - make check-unittests && echo 'epmt unittests, success' || echo 'epmt unittests, failed and guarding against sudden exit'
+    
     - pip3 install pylint && pylint && echo 'pylint, success' || echo 'pylint, failed and guarding against suddent exit'
