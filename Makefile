@@ -1,34 +1,40 @@
 .ONESHELL:
 
 # OS and python
+#PYTHON_VERSION=3.9.21
 PYTHON_VERSION=3.9.16
+
 #OS_TARGET=centos-7
 OS_TARGET=rocky-8
 
 # conda
 CONDA_ACTIVATE = source $$(conda info --base)/etc/profile.d/conda.sh ; conda activate ; conda activate
 
-# docker commands
-#DOCKER_RUN:=docker -D run
-DOCKER_RUN:=docker run
+# docker run command
+DOCKER_RUN:=docker -D run
+#DOCKER_RUN:=docker run
 
+# docker run opts
 #DOCKER_RUN_OPTS:=--rm -it
 DOCKER_RUN_OPTS:=-it
 
-#DOCKER_BUILD:=docker -D build -f
+# docker build opts
 #DOCKER_BUILD:=docker build --pull=false -f 
+#DOCKER_BUILD:=docker -D build --pull=false -f 
+#DOCKER_BUILD:=docker build -f 
+#DOCKER_BUILD:=docker -D build -f
 #DOCKER_BUILD:=docker build --no-cache -f
-DOCKER_BUILD:=docker build -f
+DOCKER_BUILD:=docker -D build --no-cache -f
 
-# minimal-metrics src url
+# minimal-metrics src url for the epmt project- includes this repo, papiex, and epmt-dash (aka ui)
 MM_SRC_URL_BASE=https://gitlab.com/minimal-metrics-llc/epmt
 
 # papiex details
+PAPIEX_VERSION?=2.3.14
+PAPIEX_SRC?=papiex
 #PAPIEX_SRC_BRANCH=master
 #PAPIEX_SRC_BRANCH=centos7_yum_fix
 PAPIEX_SRC_BRANCH=rocky8_docker
-PAPIEX_VERSION?=2.3.14
-PAPIEX_SRC?=papiex
 PAPIEX_SRC_TARBALL=papiex-epmt.tar.gz
 PAPIEX_SRC_URL=$(MM_SRC_URL_BASE)/papiex/-/archive/$(PAPIEX_SRC_BRANCH)/$(PAPIEX_SRC_TARBALL)
 PAPIEX_RELEASE=papiex-epmt-$(PAPIEX_VERSION)-$(OS_TARGET).tgz
@@ -162,9 +168,9 @@ test-$(EPMT_RELEASE) dist-test:
 
 docker-dist:
 	@echo " ------ CREATE EPMT TARBALL: docker-dist ------- "
-	@echo "docker build command = ${DOCKER_BUILD}"
-	@echo "docker run   command = ${DOCKER_RUN}"
-	@echo "docker run   options = ${DOCKER_RUN_OPTS}"
+	@echo "       build command = ${DOCKER_BUILD}"
+	@echo "       run   command = ${DOCKER_RUN}"
+	@echo "       run   options = ${DOCKER_RUN_OPTS}"
 	@echo "(docker-dist) whoami: $(shell whoami)"
 	@echo
 	@echo
@@ -186,7 +192,7 @@ docker-dist-test:
 epmt-dash: $(EPMT_DASH_SRC)
 	@echo "(epmt-dash) whoami: $(shell whoami)"
 
-$(EPMT_DASH_SRC):
+$(EPMT_DASH_SRC): $(EPMT_DASH_SRC_TARBALL)
 	@echo "(EPMT_DASH_SRC) whoami: $(shell whoami)"
 	@echo " ------ GRAB EPMT-DASH SUBODULE (UI) ------- "
 	@echo   "EPMT_DASH_SRC_TARBALL = ${EPMT_DASH_SRC_TARBALL}"
@@ -194,21 +200,24 @@ $(EPMT_DASH_SRC):
 	@echo   "EPMT_DASH_SRC_URL     = ${EPMT_DASH_SRC_URL}"
 	@echo
 	@echo
-	if [ ! -d $(EPMT_DASH_SRC) ]; then \
-	echo "grabbing epmt-dash via curl"; \
-	curl -O $(EPMT_DASH_SRC_URL); \
-	ls $(EPMT_DASH_SRC_TARBALL); \
-	echo "tar zxf ${EPMT_DASH_SRC_TARBALL}"; \
+	echo "untarring ${EPMT_DASH_SRC_TARBALL}"; \
 	tar zxf $(EPMT_DASH_SRC_TARBALL); \
 	mv `tar ztf ${EPMT_DASH_SRC_TARBALL} | head -1` $(EPMT_DASH_SRC); \
 	echo "top-level dir contents of EPMT_DASH_SRC=${EPMT_DASH_SRC}..."; \
 	ls $(EPMT_DASH_SRC); \
 	echo "making symbolic link to epmt/ui/docs/index.md"; \
 	cd epmtdocs/docs && \
-	ln -s ../../src/epmt/ui/docs/index.md index.md \
-	|| echo "symbolic link creation failed."; \
-	cd -; \
-	fi
+	ln -s ../../src/epmt/ui/docs/index.md index.md || \
+	echo "symbolic link creation failed."; \
+	cd -
+
+$(EPMT_DASH_SRC_TARBALL):
+	@echo "(EPMT_DASH_SRC_TARBALL) whoami: $(shell whoami)"
+	echo "grabbing epmt-dash via curl"; \
+	curl -O $(EPMT_DASH_SRC_URL); \
+	ls $(EPMT_DASH_SRC_TARBALL); \
+
+
 
 papiex-dist: $(PAPIEX_RELEASE)
 	@echo "(papiex-dist) whoami: $(shell whoami)"
@@ -217,7 +226,7 @@ $(PAPIEX_RELEASE): $(PAPIEX_SRC)/$(PAPIEX_RELEASE)
 	@echo "(PAPIEX_RELEASE) whoami: $(shell whoami)"
 	cp $< $@
 
-$(PAPIEX_SRC)/$(PAPIEX_RELEASE):
+$(PAPIEX_SRC)/$(PAPIEX_RELEASE): $(PAPIEX_SRC)
 	@echo "(PAPIEX_SRC/PAPIEX_RELEASE) whoami: $(shell whoami)"
 	@echo " ------ CREATE PAPIEX TARBALL : papiex-dist ------- "
 	- @echo "PAPIEX_VERSION     = ${PAPIEX_VERSION}"
@@ -228,23 +237,10 @@ $(PAPIEX_SRC)/$(PAPIEX_RELEASE):
 	- @echo   "PAPIEX_RELEASE     = ${PAPIEX_RELEASE}"
 	@echo
 	@echo
-	if [ ! -d $(PAPIEX_SRC) ]; then \
-	echo "grabbing papiex via curl"; \
-	curl -O $(PAPIEX_SRC_URL); \
-	ls $(PAPIEX_SRC_TARBALL); \
-	echo "tar zxf ${PAPIEX_SRC_TARBALL}"; \
-	tar zxf $(PAPIEX_SRC_TARBALL); \
-	mv `tar ztf ${PAPIEX_SRC_TARBALL} | head -1` $(PAPIEX_SRC); \
-	echo "top-level dir contents of PAPIEX_SRC=${PAPIEX_SRC}..."; \
-	ls $(PAPIEX_SRC); \
-	fi
-	@echo
-	@echo
-	@echo
 	@echo "################### BEGIN MAKE PAPIEX TARBALL : papiex-dist ########################################"
-	if [ -n "${OUTSIDE_DOCKER}" ]; \
-	then echo "making distclean install dist within PAPIEX_SRC/PAPIEX_RELEASE target"; \
-    make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) distclean install dist; \
+	if [ -n "${OUTSIDE_DOCKER}" ]; then \
+	echo "making distclean install dist within PAPIEX_SRC/PAPIEX_RELEASE target"; \
+	make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) distclean install dist; \
 	echo "################# DONE making docker-dist within PAPIEX_SRC/PAPIEX_RELEASE target ########################"; \
 	else \
 	echo "making docker-dist within PAPIEX_SRC/PAPIEX_RELEASE target"; \
@@ -252,6 +248,20 @@ $(PAPIEX_SRC)/$(PAPIEX_RELEASE):
 	echo "################# DONE making docker-dist within PAPIEX_SRC/PAPIEX_RELEASE target ########################"; \
 	fi
 	@echo "################### DONE MAKE PAPIEX TARBALL : papiex-dist ########################################"
+
+$(PAPIEX_SRC): $(PAPIEX_SRC_TARBALL)
+	@echo "(PAPIEX_SRC) whoami: $(shell whoami)"
+	ls $(PAPIEX_SRC_TARBALL); \
+	echo "tar zxf ${PAPIEX_SRC_TARBALL}"; \
+	tar zxf $(PAPIEX_SRC_TARBALL); \
+	mv `tar ztf ${PAPIEX_SRC_TARBALL} | head -1` $(PAPIEX_SRC); \
+	echo "top-level dir contents of PAPIEX_SRC=${PAPIEX_SRC}..."; \
+	ls $(PAPIEX_SRC); \
+
+$(PAPIEX_SRC_TARBALL):
+	@echo "(PAPIEX_SRC_TARBALL) whoami: $(shell whoami)"
+	curl -O $(PAPIEX_SRC_URL); \
+	ls $(PAPIEX_SRC_TARBALL)
 
 epmt-full-release: $(EPMT_FULL_RELEASE)
 	@echo "(epmt-full-release) whoami: $(shell whoami)"
@@ -312,26 +322,30 @@ release release-all release7:
 	@echo "(release release-all release7) whoami: $(shell whoami)"
 	@echo
 	@echo
-	@echo " ------ CLEAN UP : clean-all ------- "
+	@echo " ------ MAKE : clean-all / CLEAN ------- "
 	$(MAKE) clean-all
 	@echo
 	@echo
+	@echo " ------ MAKE : epmt-dash / DASH ------- "
 	$(MAKE) epmt-dash
 	@echo
 	@echo
+	@echo " ------ MAKE : papiex-dist / PAPIEX ------- "
 	$(MAKE) papiex-dist
 	@echo
-	@echo
-	$(MAKE) docker-dist
-	@echo
-	@echo
-	$(MAKE) epmt-full-release
-	@echo
-	@echo
-	@echo " ------ CHECK EPMT+PAPIEX TARBALL check-release ------- "
-	$(MAKE) check-release
-	@echo
-	@echo "done building epmt"
+#	@echo
+#	@echo " ------ MAKE : docker-dist / DIST ------- "
+#	$(MAKE) docker-dist
+#	@echo
+#	@echo
+#	@echo " ------ MAKE : epmt-full-release / FULL-RELEASE ------- "
+#	$(MAKE) epmt-full-release
+#	@echo
+# 	@echo
+#	@echo " ------ MAKE : check-release / CHECK-RELEASE ------- "
+#	$(MAKE) check-release
+#	@echo
+#	@echo "done building epmt"
 
 
 
@@ -344,18 +358,18 @@ clean-all: clean distclean docker-clean
 
 clean:
 	@echo "(clean) whoami: $(shell whoami)"
-	find . -type f \( -name "core" -or -name "*~" -or -name "*.pyc" -or -name "epmt.log" \) -exec rm -f {} \;
-	rm -rf src/epmt/ui/__pycache__ __pycache__ build epmt-install epmt-install-tests .venv374
+	- find . -type f \( -name "core" -or -name "*~" -or -name "*.pyc" -or -name "epmt.log" \) -exec rm -f {} \;
+	- rm -rf src/epmt/ui/__pycache__ __pycache__ build epmt-install epmt-install-tests .venv374
 
 distclean:
 	@echo "(distclean) whoami: $(shell whoami)"
-	rm -f settings.py $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(EPMT_FULL_RELEASE) src/dist/*
-	rm -rf epmtdocs/site 
+	- rm -f settings.py $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(EPMT_FULL_RELEASE) src/dist/*
+	- rm -rf epmtdocs/site 
 
 dashclean:
 	@echo "(distclean) whoami: $(shell whoami)"
-	rm -rf $(EPMT_DASH_SRC)
-	rm -f $(EPMT_DASH_SRC_TARBALL)
+	- rm -rf $(EPMT_DASH_SRC)
+	- rm -f $(EPMT_DASH_SRC_TARBALL)
 	- rm -f epmtdocs/docs/index.md
 
 docker-clean:
@@ -363,13 +377,14 @@ docker-clean:
 	- docker image rm --force \
 	$(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) $(OS_TARGET)-epmt-build:$(EPMT_VERSION)
 
+
 clean-papiex: papiexclean
 	@echo "(clean-papiex) whoami: $(shell whoami)"
 
 papiexclean:
 	@echo "(papiexclean) whoami: $(shell whoami)"
-	rm -fr $(PAPIEX_SRC) 
-	rm -f $(PAPIEX_SRC_TARBALL) $(PAPIEX_RELEASE)
+	- rm -fr $(PAPIEX_SRC) 
+	- rm -f $(PAPIEX_SRC_TARBALL) $(PAPIEX_RELEASE)
 
 
 
