@@ -16,8 +16,8 @@ build:python3:
   script:
     - cat /proc/cpuinfo
     - yum install -y findutils unzip bash tcsh nc curl make git gcc \
-        postgresql-devel zlib-devel bzip2 bzip2-devel readline-devel \
-        sqlite-devel openssl-devel xz xz-devel libffi-devel
+      postgresql-devel zlib-devel bzip2 bzip2-devel readline-devel \
+      sqlite-devel openssl-devel xz xz-devel libffi-devel
 
     # Download and install SQLite3
     - |
