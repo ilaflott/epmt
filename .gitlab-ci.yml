@@ -4,7 +4,6 @@ variables:
   POSTGRES_PASSWORD: "example"
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
 
-
 cache:
   paths:
     - .cache/pip
@@ -12,33 +11,70 @@ cache:
 services:
   - postgres:latest
 
-
 build:python3:
   image: rockylinux:8
   script:
     - cat /proc/cpuinfo
-    - yum install -y findutils unzip bash tcsh nc curl make git gcc postgresql-devel zlib-devel bzip2 bzip2-devel readline-devel sqlite-devel openssl-devel xz xz-devel libffi-devel
-    - (cd /usr/src && echo "downloading sqlite3" && curl -o sqlite-amalgamation-3300100.zip https://www.sqlite.org/2019/sqlite-amalgamation-3300100.zip && unzip sqlite-amalgamation-3300100.zip && echo "building libsqlite3 with json1 and other useful extensions" && cd sqlite-amalgamation-3300100 && gcc -shared -fPIC -O2  -DSQLITE_ENABLE_JSON1 -DSQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_MAX_VARIABLE_NUMBER=9999 sqlite3.c -o /usr/lib64/libsqlite3.so)
-    - (cd /usr/src && echo "downloading python" && curl -o Python-3.9.16.tgz https://www.python.org/ftp/python/3.9.16/Python-3.9.16.tgz && tar xzf Python-3.9.16.tgz && cd Python-3.9.16 && echo "building python3" && ./configure --quiet --prefix=/usr --enable-shared --enable-optimizations --enable-loadable-sqlite-extensions && make --silent install > /dev/null)
+    - yum install -y findutils unzip bash tcsh nc curl make git gcc \
+        postgresql-devel zlib-devel bzip2 bzip2-devel readline-devel \
+        sqlite-devel openssl-devel xz xz-devel libffi-devel
+
+    # Download and install SQLite3
+    - |
+      cd /usr/src && \
+      echo "downloading sqlite3" && \
+      curl -o sqlite-amalgamation-3300100.zip https://www.sqlite.org/2019/sqlite-amalgamation-3300100.zip && \
+      unzip sqlite-amalgamation-3300100.zip && \
+      cd sqlite-amalgamation-3300100 && \
+      gcc -o sqlite3 *.c -ldl -lpthread -lm && \
+      mv sqlite3 /usr/bin/
+
+    # Download and install Python 3.9.16
+    - |
+      cd /usr/src && \
+      echo "downloading python" && \
+      curl -o Python-3.9.16.tgz https://www.python.org/ftp/python/3.9.16/Python-3.9.16.tgz && \
+      tar xzf Python-3.9.16.tgz && \
+      cd Python-3.9.16 && \
+      echo "building python" && \
+      ./configure --enable-optimizations && \
+      make --silent install
+
     - ldconfig && yum clean all && rm -rf /usr/src /var/cache/yum
+
+    # Install Python packages
     - pip3 install pyinstaller mkdocs mkdocs-theme-bootstrap4 ipython
 
-    - make OUTSIDE_DOCKER=YUP epmt-dash papiex-dist dist python-dist && python3 -m pip install src/dist/epmt*gz
-    - cp -f  preset_settings/settings_sqlite_localfile_sqlalchemy.py $(python3 -c 'import epmt;print (epmt.__file__.rsplit("/", 1)[0])')/settings.py
-    - pip3 install src/dist/epmt*gz   
-    - echo \"install_prefix = $(python3 -c 'import epmt;print (epmt.__file__.rsplit("/", 1)[0])')/\"
-    - echo \"install_prefix = $(python3 -c 'import epmt;print (epmt.__file__.rsplit("/", 1)[0])')/\" >> $(python3 -c 'import epmt;print (epmt.__file__.rsplit("/", 1)[0])')/settings.py
-    #- pip3 install src/dist/epmt*gz
+    # Build and install EPMT
+    - |
+      make OUTSIDE_DOCKER=YUP epmt-dash papiex-dist dist python-dist && \
+      python3 -m pip install src/dist/epmt*gz
 
-    - mkdir -p /usr/lib/python3.9/site-packages/epmt/../papiex-oss/papiex-epmt-install
-    - ln -s  /usr/lib/python3.9/site-packages/epmt/lib /usr/lib/python3.9/site-packages/epmt/../papiex-oss/papiex-epmt-install/
-    - ln -s  /usr/lib/python3.9/site-packages/epmt/bin /usr/lib/python3.9/site-packages/epmt/../papiex-oss/papiex-epmt-install/
+    # Copy and configure settings
+    - |
+      cp -f preset_settings/settings_sqlite_localfile_sqlalchemy.py \
+      $(python3 -c 'import epmt; print(epmt.__file__.rsplit("/", 1)[0])')/settings.py && \
+      pip3 install src/dist/epmt*gz
+
+    - |
+      echo "install_prefix = $(python3 -c 'import epmt; print(epmt.__file__.rsplit("/", 1)[0])')/" && \
+      echo "install_prefix = $(python3 -c 'import epmt; print(epmt.__file__.rsplit("/", 1)[0])')/" >> \
+      $(python3 -c 'import epmt; print(epmt.__file__.rsplit("/", 1)[0])')/settings.py
+
+    # Create directories and symbolic links
+    - |
+      EPMT_SITE_PACKAGES=/usr/lib/python3.9/site-packages/epmt
+      mkdir -p ${EPMT_SITE_PACKAGES}/../papiex-oss/papiex-epmt-install && \
+      ln -s ${EPMT_SITE_PACKAGES}/lib ${EPMT_SITE_PACKAGES}/../papiex-oss/papiex-epmt-install/ && \
+      ln -s ${EPMT_SITE_PACKAGES}/bin ${EPMT_SITE_PACKAGES}/../papiex-oss/papiex-epmt-install/
 
     - export PATH='${PATH}:/usr/local/bin:/usr/local/libexec'
-    #- src/epmt/test/integration/libs/bats/install.sh /usr/local
 
-    - make check-epmt-check && echo 'epmt check, success' || echo 'epmt check, failed and guarding against sudden exit' 
-    - make check-integration-tests && echo 'epmt integration, success' || echo 'epmt integration, failed and guarding against sudden exit' 
-    - make check-unittests && echo 'epmt unittests, success' || echo 'epmt unittests, failed and guarding against sudden exit'
-    
-    - pip3 install pylint && pylint && echo 'pylint, success' || echo 'pylint, failed and guarding against suddent exit'
+    # Run tests and linting
+    - |
+      yum install make; \
+      make check-epmt-check && echo 'epmt check, success' || echo 'epmt check, failed and guarding against sudden exit'; \
+      make check-integration-tests && echo 'epmt integration, success' || echo 'epmt integration, failed and guarding against sudden exit'; \
+      make check-unittests && echo 'epmt unittests, success' || echo 'epmt unittests, failed and guarding against sudden exit'
+
+    - pip3 install pylint && pylint && echo 'pylint, success' || echo 'pylint, failed and guarding against sudden exit'
