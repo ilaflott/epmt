@@ -1,11 +1,13 @@
 .ONESHELL:
 
-# OS and python
+# OS / python / SQLITE_VERSION
+#OS_TARGET=centos-7
+OS_TARGET=rocky-8
+
 #PYTHON_VERSION=3.9.21
 PYTHON_VERSION=3.9.16
 
-#OS_TARGET=centos-7
-OS_TARGET=rocky-8
+SQLITE_VERSION=3430100
 
 # conda
 CONDA_ACTIVATE = source $$(conda info --base)/etc/profile.d/conda.sh ; conda activate ; conda activate
@@ -22,9 +24,9 @@ DOCKER_RUN_OPTS:=-it
 #DOCKER_BUILD:=docker build --pull=false -f 
 #DOCKER_BUILD:=docker -D build --pull=false -f 
 #DOCKER_BUILD:=docker build -f 
-#DOCKER_BUILD:=docker -D build -f
+DOCKER_BUILD:=docker -D build -f
 #DOCKER_BUILD:=docker build --no-cache -f
-DOCKER_BUILD:=docker -D build --no-cache -f
+#DOCKER_BUILD:=docker -D build --no-cache -f
 
 # minimal-metrics src url for the epmt project- includes this repo, papiex, and epmt-dash (aka ui)
 MM_SRC_URL_BASE=https://gitlab.com/minimal-metrics-llc/epmt
@@ -57,7 +59,6 @@ EPMT_DASH_SRC=src/epmt/ui
 SHELL=/bin/bash
 PWD=$(shell pwd)
 
-# currently, these phony targets are not actually used.
 .PHONY: default \\
 	epmt-build compile build lint \\
 	install-py3-conda install-py3-pyenv install-deps \\
@@ -116,13 +117,16 @@ $(EPMT_RELEASE) dist:
 	@echo "**********************************************************"
 	pyinstaller --version
 #	remove the --clean flag to use the cache in builds, helps speed things up
-	pyinstaller --clean --noconfirm --distpath=epmt-install epmt.spec
+#	pyinstaller --clean --noconfirm --distpath=epmt-install epmt.spec
+	pyinstaller --noconfirm --distpath=epmt-install epmt.spec
 	@echo
 	@echo
 	@echo "**********************************************************"
 	@echo "****************** calling mkdocs ************************"
 	@echo "**********************************************************"
-	mkdocs build -f epmtdocs/mkdocs.yml
+#   add --dirty to the build call to utilize the cache when building docs
+	mkdocs build --dirty -f epmtdocs/mkdocs.yml
+#	mkdocs build -f epmtdocs/mkdocs.yml
 	@echo
 	@echo
 	cp -Rp preset_settings epmt-install
@@ -144,8 +148,11 @@ $(EPMT_RELEASE) dist:
 	@echo "**********************************************************"
 	tar -czf $(EPMT_RELEASE) epmt-install
 
-# runs setuptools... am i potentially clobbering exit codes with the && and ||?
-python-dist: $(EPMT_RELEASE) $(PAPIEX_RELEASE)
+# runs setuptools
+# note that this step requires EPMT_RELEASE and PAPIEX_RELEASE, but we don't explicitly state it here, b.c.
+# when we go in the docker container, the time-zone changes and therefore thet timestamp comparison triggers re-making
+# targets that do not need to be remade
+python-dist: 
 	@echo "(python-dist) whoami: $(shell whoami)"
 	@echo "**********************************************************"
 	@echo "************** python3 setup.py sdist ********************"
@@ -159,35 +166,36 @@ python-dist: $(EPMT_RELEASE) $(PAPIEX_RELEASE)
 test-$(EPMT_RELEASE) dist-test:
 	@echo "(test-EPMT_RELEASE dist-test) whoami: $(shell whoami)"
 	@echo
-	@echo "WARNING recreating directories: rm -rf epmt-install-tests"
+	@echo "WARNING recreating directories: epmt-install-tests"
 	rm -rf epmt-install-tests && mkdir epmt-install-tests
 	@echo "DONE recreating directories: rm -rf epmt-install-tests"
 	@echo
 	cp -Rp src/epmt/test epmt-install-tests
-	@echo "creating tarball in final location: test-${EPMT_RELEASE}"
+	@echo "creating test-tarball in final location: test-${EPMT_RELEASE}"
 	tar -czf test-$(EPMT_RELEASE) epmt-install-tests
 	@echo
-	@echo "WARNING removing directory: rm -rf epmt-install-tests"
+	@echo "WARNING removing directory to clean up: rm -rf epmt-install-tests"
 	rm -rf epmt-install-tests
-	@echo "WARNING recreating directories: rm -rf epmt-install-tests"
 
 # needs a real build product defined as a target i think...
-docker-dist:
+# creating test-epmt-
+docker-dist:	
+	@echo "(docker-dist) whoami: $(shell whoami)"
 	@echo " ------ CREATE EPMT TARBALL: docker-dist ------- "
 	@echo "       build command = ${DOCKER_BUILD}"
 	@echo "       run   command = ${DOCKER_RUN}"
 	@echo "       run   options = ${DOCKER_RUN_OPTS}"
-	@echo "(docker-dist) whoami: $(shell whoami)"
 	@echo
 	@echo
 	@echo " - building epmt and epmt-test tarball via Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build"
 	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build -t $(OS_TARGET)-epmt-build:$(EPMT_VERSION) \
-	--build-arg python_version=$(PYTHON_VERSION) .
+	--build-arg sqlite_version=$(SQLITE_VERSION) --build-arg python_version=$(PYTHON_VERSION) .
 	@echo
 	@echo
 	@echo " - running make dist python-dist dist-test inside $(OS_TARGET)-epmt-build"
 	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --privileged --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build:$(EPMT_VERSION) \
-	make --debug OS_TARGET=$(OS_TARGET) dist python-dist $(EPMT_RELEASE) dist-test
+	make --debug OS_TARGET=$(OS_TARGET) dist python-dist dist-test
+#	make --debug OS_TARGET=$(OS_TARGET) dist python-dist $(EPMT_RELEASE) dist-test
 
 
 # tests distribution within a container
@@ -287,16 +295,19 @@ $(EPMT_FULL_RELEASE): $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(PAPIEX_RELEASE)
 	@echo "$(EPMT_FULL_RELEASE) build complete!"
 	@echo
 
-check-release: $(EPMT_FULL_RELEASE)
-	@echo "(check-release) whoami: $(shell whoami)"
+build-check-release: $(EPMT_FULL_RELEASE)
+	@echo "(build-check-release) whoami: $(shell whoami)"
+	@echo "(build-check-release) creating an all-included testing environment / delivery tarball"
 	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test-release \
 	-t $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) \
 	--build-arg epmt_version=$(EPMT_VERSION) --build-arg install_path=$(EPMT_INSTALL_PATH) \
 	--build-arg install_prefix=$(EPMT_INSTALL_PREFIX) --build-arg epmt_full_release=$(EPMT_FULL_RELEASE) \
 	--build-arg epmt_python_full_release=$(EPMT_PYTHON_FULL_RELEASE) \
-	--build-arg python_version=$(PYTHON_VERSION) .
-	@echo
-	@echo
+	--build-arg sqlite_version=$(SQLITE_VERSION) --build-arg python_version=$(PYTHON_VERSION) .
+	@echo 
+
+check-release:
+	@echo "(check-release) whoami: $(shell whoami)"
 	@echo "looking for postgres-test and epmt-test-net docker networks"
 	if docker ps | grep postgres-test > /dev/null; \
 	then docker stop postgres-test; fi
@@ -356,8 +367,13 @@ release:
 	$(MAKE) epmt-full-release
 	@echo
 	@echo
+	@echo " ------ MAKE : build-check-release / CHECK-RELEASE ------- "
+	$(MAKE) build-check-release
+	@echo
+	@echo
 	@echo " ------ MAKE : check-release / CHECK-RELEASE ------- "
 	$(MAKE) check-release
+	@echo
 	@echo
 	@echo "done building epmt"
 # ----------- \end release targets ---------- #
