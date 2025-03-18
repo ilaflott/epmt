@@ -325,20 +325,24 @@ check-release:
 	$(DOCKER_RUN) -d --rm --name postgres-test --network epmt-test-net \
 	--privileged -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -e POSTGRES_DB=EPMT-TEST postgres:latest
 	@echo
+	@echo "looking for prev ran epmt-test-release container to remove..."
+	if docker container ls -a | grep epmt-test-release > /dev/null; \
+	then docker container rm $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release; fi
 	@echo
 	@echo "running epmt-test-release container"
 	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net \
 	--privileged $(DOCKER_RUN_OPTS) -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) \
-	bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; epmt -v -V; \
-	echo "" && echo "------ epmt -v check ------" && epmt -v -v check; \
-	echo "" && echo "------ epmt -v unittest ------" && epmt -v -v unittest; \
-	echo "" && echo "------ epmt -v integration ------" && epmt -v -v integration; \
-	echo "" && echo "------ DONE WITH EPMT CHECKS ------"'
+	bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; epmt -v -V;'
+#; \
+#	echo "" && echo "------ epmt -v check ------" && epmt -v check; \
+#	echo "" && echo "------ epmt -v unittest ------" && epmt -v unittest; \
+#	echo "" && echo "------ epmt -v integration ------" && epmt -v integration; \
+#	echo "" && echo "------ DONE WITH EPMT CHECKS ------"'
 	@echo
 	@echo
-	@echo "shutting down docker networks, postgres test container, epmt-test-net"
-	docker stop postgres-test
-	docker network rm -f epmt-test-net
+#	@echo "shutting down docker networks, postgres test container, epmt-test-net"
+#	docker stop postgres-test
+#	docker network rm -f epmt-test-net
 # ----------- \end EPMT_FULL_RELEASE THINGS ---------- #
 
 

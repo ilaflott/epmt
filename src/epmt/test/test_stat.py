@@ -79,6 +79,7 @@ class EPMTStat(unittest.TestCase):
         self.assertTrue(x2.iloc[0].equals(df.iloc[0]))
         self.assertTrue(x2.iloc[1].equals(df.iloc[1]))
         self.assertTrue(x2.iloc[-1].equals(df.iloc[0]))
+
     def test_modes(self):
         import numpy as np
         from epmt.epmt_stat import get_modes

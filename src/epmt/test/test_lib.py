@@ -119,7 +119,7 @@ class EPMTLib(unittest.TestCase):
         epmt_logging_init(-1)
         s = log_stream.getvalue()
         self.assertEqual(y, 50)
-        self.assertIn('DEBUG: test.test_lib: double(25)', s)
+        self.assertIn('DEBUG: epmt.test.test_lib: double(25)', s)
         
 
 if __name__ == '__main__':
