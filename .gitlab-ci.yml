@@ -18,7 +18,7 @@ build:python3:
   script:
     - cat /proc/cpuinfo
     - yum install -y findutils unzip bash tcsh nc curl make git gcc postgresql-devel zlib-devel bzip2 bzip2-devel readline-devel sqlite-devel openssl-devel xz xz-devel libffi-devel
-    - (cd /usr/src && echo "downloading sqlite3" && curl -o sqlite-amalgamation-3300100.zip https://www.sqlite.org/2019/sqlite-amalgamation-3300100.zip && unzip sqlite-amalgamation-3300100.zip && echo "building libsqlite3 with json1 and other useful extensions" && cd sqlite-amalgamation-3300100 && gcc -shared -fPIC -O2  -DSQLITE_ENABLE_JSON1 -DSQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_MAX_VARIABLE_NUMBER=9999 sqlite3.c -o /usr/lib64/libsqlite3.so)
+    - (cd /usr/src && echo "downloading sqlite3" && curl -o sqlite-amalgamation-3430100.zip https://www.sqlite.org/2019/sqlite-amalgamation-3430100.zip && unzip sqlite-amalgamation-3430100.zip && echo "building libsqlite3 with json1 and other useful extensions" && cd sqlite-amalgamation-3430100 && gcc -shared -fPIC -O2  -DSQLITE_ENABLE_JSON1 -DSQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_MAX_VARIABLE_NUMBER=9999 sqlite3.c -o /usr/lib64/libsqlite3.so)
     - (cd /usr/src && echo "downloading python" && curl -o Python-3.9.16.tgz https://www.python.org/ftp/python/3.9.16/Python-3.9.16.tgz && tar xzf Python-3.9.16.tgz && cd Python-3.9.16 && echo "building python3" && ./configure --quiet --prefix=/usr --enable-shared --enable-optimizations --enable-loadable-sqlite-extensions && make --silent install > /dev/null)
     - ldconfig && yum clean all && rm -rf /usr/src /var/cache/yum
     - pip3 install pyinstaller mkdocs mkdocs-theme-bootstrap4 ipython
@@ -37,20 +37,20 @@ build:python3:
     - export PATH='${PATH}:/usr/local/bin:/usr/local/libexec'
     #- src/epmt/test/integration/libs/bats/install.sh /usr/local
 
-	- python3 -m unittest -v epmt.test.test_lib
-	- python3 -m unittest -v epmt.test.test_stat
-	- python3 -m unittest -v epmt.test.test_settings
-	- python3 -m unittest -v epmt.test.test_anysh
-	- python3 -m unittest -v epmt.test.test_submit
-	- python3 -m unittest -v epmt.test.test_run
-	- python3 -m unittest -v epmt.test.test_cmds
-	- python3 -m unittest -v epmt.test.test_query
-	- python3 -m unittest -v epmt.test.test_explore
-	- python3 -m unittest -v epmt.test.test_outliers
-	- python3 -m unittest -v epmt.test.test_db_schema
-	- python3 -m unittest -v epmt.test.test_db_migration
-
-	#- make check-epmt-check && echo 'epmt check, success' || echo 'epmt check, failed and guarding against sudden exit' 
-	#- make check-integration-tests && echo 'epmt integration, success' || echo 'epmt integration, failed and guarding against sudden exit' 
-	#- make check-unittests && echo 'epmt unittests, success' || echo 'epmt unittests, failed and guarding against sudden exit'    
+    - python3 -m unittest -v epmt.test.test_lib
+    - python3 -m unittest -v epmt.test.test_stat
+    - python3 -m unittest -v epmt.test.test_settings
+    - python3 -m unittest -v epmt.test.test_anysh
+    - python3 -m unittest -v epmt.test.test_submit
+    - python3 -m unittest -v epmt.test.test_run
+    - python3 -m unittest -v epmt.test.test_cmds
+    - python3 -m unittest -v epmt.test.test_query
+    - python3 -m unittest -v epmt.test.test_explore
+    - python3 -m unittest -v epmt.test.test_outliers
+    - python3 -m unittest -v epmt.test.test_db_schema
+    - python3 -m unittest -v epmt.test.test_db_migration
+    
+    #- make check-epmt-check && echo 'epmt check, success' || echo 'epmt check, failed and guarding against sudden exit' 
+    #- make check-integration-tests && echo 'epmt integration, success' || echo 'epmt integration, failed and guarding against sudden exit' 
+    #- make check-unittests && echo 'epmt unittests, success' || echo 'epmt unittests, failed and guarding against sudden exit'    
     #- pip3 install pylint && pylint && echo 'pylint, success' || echo 'pylint, failed and guarding against suddent exit'

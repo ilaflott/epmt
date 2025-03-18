@@ -4,10 +4,12 @@
 #OS_TARGET=centos-7
 OS_TARGET=rocky-8
 
-#PYTHON_VERSION=3.9.21
 PYTHON_VERSION=3.9.16
+#PYTHON_VERSION=3.9.21
 
 SQLITE_VERSION=3430100
+#SQLITE_VERSION=3490100
+
 
 # conda
 CONDA_ACTIVATE = source $$(conda info --base)/etc/profile.d/conda.sh ; conda activate ; conda activate
