@@ -38,7 +38,7 @@ class EPMTSettings(unittest.TestCase):
 
     def test_settings_overrides_defaults(self):
         import epmt.epmt_default_settings as defaults # referred to as default settings below
-        import settings as later_settings # referred to as 'later' settings below
+        import epmt.settings as later_settings # referred to as 'later' settings below
         import epmt.epmt_settings as settings # referred to as settings module below
         default_vars = vars(defaults)
         later_vars = vars(later_settings)
