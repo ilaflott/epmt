@@ -114,7 +114,7 @@ seaborn
 Send2Trash
 setuptools==69.0.2
 six
-SQLAlchemy
+SQLAlchemy==1.4.54
 statsmodels
 suod
 terminado
