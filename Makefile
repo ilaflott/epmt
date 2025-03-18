@@ -59,15 +59,17 @@ PWD=$(shell pwd)
 
 # currently, these phony targets are not actually used.
 .PHONY: default \\
-	epmt-build epmt-test \\
-	clean distclean \\
-	check check-python-native check-python-driver \\
-	check-python-2.6 check-python-2.7 \\
-	check-python-3 check-integration-tests \\
-	dist build compile lint \\
-	release release6 release7 release-all \\
-	install-py3-pyenv install-py3deps-pyenv
+	epmt-build compile build lint \\
+	install-py3-conda install-py3-pyenv install-deps \\
+	dist python-dist dist-test docker-dist docker-dist-test \\
+	epmt-dash \\
+	papiex-dist \\
+	epmt-full-release check-release \\
+	release \\
+	clean-extra clean-all clean distclean dashclean dockerclean papiexclean \\
+	check check-epmt-check check-integration-tests check-unittests
 
+# general things? 
 epmt-build compile build:
 	@echo "(epmt-build compile build) whoami: $(shell whoami)"
 	cd src/epmt
@@ -85,6 +87,7 @@ install-py3-conda:
 	conda create -n $(EPMT_VERSION)_py$(PYTHON_VERSION) python=$(PYTHON_VERSION) -y ; \
 	$(CONDA_ACTIVATE) $(EPMT_VERSION)_py$(PYTHON_VERSION) ; $(MAKE) install-deps ; \
 	echo ; echo "Your virtual python environment is epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION)." ;
+
 install-py3-pyenv:
 	@echo "(install-py3-pyenv) whoami: $(shell whoami)"
 	set -e; echo "Installing Python $(PYTHON_VERSION) using pyenv"  
@@ -92,6 +95,7 @@ install-py3-pyenv:
 	pyenv virtualenv $(PYTHON_VERSION) epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION) ; \
 	pyenv local epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION) ; $(MAKE) install-deps ; \
 	echo ; echo "Your virtual python environment is epmt-$(EPMT_VERSION)_py$(PYTHON_VERSION)." ;
+
 install-deps:
 	@echo "(install-deps) whoami: $(shell whoami)"
 	set -e ; pip3 install --upgrade pip ; pip3 install -r requirements.txt.py3 ; \
@@ -140,7 +144,7 @@ $(EPMT_RELEASE) dist:
 	@echo "**********************************************************"
 	tar -czf $(EPMT_RELEASE) epmt-install
 
-
+# runs setuptools... am i potentially clobbering exit codes with the && and ||?
 python-dist: $(EPMT_RELEASE) $(PAPIEX_RELEASE)
 	@echo "(python-dist) whoami: $(shell whoami)"
 	@echo "**********************************************************"
@@ -151,6 +155,7 @@ python-dist: $(EPMT_RELEASE) $(PAPIEX_RELEASE)
 	python3 setup.py sdist && echo "GOOD: python3 setup.py sdist" || echo "I FAILED: python3 setup.py sdist"; \
 	chmod a+r dist/* && echo "GOOD: chmod a+r dist/*" || echo "I FAILED: chmod a+r dist/*"
 
+# creates a test tarball i think
 test-$(EPMT_RELEASE) dist-test:
 	@echo "(test-EPMT_RELEASE dist-test) whoami: $(shell whoami)"
 	@echo
@@ -166,6 +171,7 @@ test-$(EPMT_RELEASE) dist-test:
 	rm -rf epmt-install-tests
 	@echo "WARNING recreating directories: rm -rf epmt-install-tests"
 
+# needs a real build product defined as a target i think...
 docker-dist:
 	@echo " ------ CREATE EPMT TARBALL: docker-dist ------- "
 	@echo "       build command = ${DOCKER_BUILD}"
@@ -184,11 +190,14 @@ docker-dist:
 	make --debug OS_TARGET=$(OS_TARGET) dist python-dist $(EPMT_RELEASE) dist-test
 
 
+# tests distribution within a container
 docker-dist-test:
 	@echo "(docker-dist-test) whoami: $(shell whoami)"
 	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --privileged --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build:$(EPMT_VERSION) \
 	make --debug OS_TARGET=$(OS_TARGET) dist-test
 
+
+# ----------- EPMT_DASH THINGS ---------- #
 epmt-dash: $(EPMT_DASH_SRC)
 	@echo "(epmt-dash) whoami: $(shell whoami)"
 
@@ -216,9 +225,10 @@ $(EPMT_DASH_SRC_TARBALL):
 	echo "grabbing epmt-dash via curl"; \
 	curl -O $(EPMT_DASH_SRC_URL); \
 	ls $(EPMT_DASH_SRC_TARBALL); \
+# ----------- \end EPMT_DASH THINGS ---------- #
 
 
-
+# ----------- PAPIEX THINGS ---------- #
 papiex-dist: $(PAPIEX_RELEASE)
 	@echo "(papiex-dist) whoami: $(shell whoami)"
 
@@ -262,7 +272,10 @@ $(PAPIEX_SRC_TARBALL):
 	@echo "(PAPIEX_SRC_TARBALL) whoami: $(shell whoami)"
 	curl -O $(PAPIEX_SRC_URL); \
 	ls $(PAPIEX_SRC_TARBALL)
+# ----------- \end PAPIEX THINGS ---------- #
 
+
+# ----------- EPMT_FULL_RELEASE THINGS ---------- #
 epmt-full-release: $(EPMT_FULL_RELEASE)
 	@echo "(epmt-full-release) whoami: $(shell whoami)"
 
@@ -274,8 +287,8 @@ $(EPMT_FULL_RELEASE): $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(PAPIEX_RELEASE)
 	@echo "$(EPMT_FULL_RELEASE) build complete!"
 	@echo
 
-check-release release-test-docker: $(EPMT_FULL_RELEASE)
-	@echo "(check-release release-test-docker) whoami: $(shell whoami)"
+check-release: $(EPMT_FULL_RELEASE)
+	@echo "(check-release) whoami: $(shell whoami)"
 	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test-release \
 	-t $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) \
 	--build-arg epmt_version=$(EPMT_VERSION) --build-arg install_path=$(EPMT_INSTALL_PATH) \
@@ -315,11 +328,12 @@ check-release release-test-docker: $(EPMT_FULL_RELEASE)
 	@echo "shutting down docker networks, postgres test container, epmt-test-net"
 	docker stop postgres-test
 	docker network rm -f epmt-test-net
+# ----------- \end EPMT_FULL_RELEASE THINGS ---------- #
 
 
-# release building
-release release-all release7:
-	@echo "(release release-all release7) whoami: $(shell whoami)"
+# ----------- release targets ---------- #
+release:
+	@echo "(release) whoami: $(shell whoami)"
 	@echo
 	@echo
 	@echo " ------ MAKE : clean-all / CLEAN ------- "
@@ -333,27 +347,27 @@ release release-all release7:
 	@echo " ------ MAKE : papiex-dist / PAPIEX ------- "
 	$(MAKE) papiex-dist
 	@echo
-#	@echo
-#	@echo " ------ MAKE : docker-dist / DIST ------- "
-#	$(MAKE) docker-dist
-#	@echo
-#	@echo
-#	@echo " ------ MAKE : epmt-full-release / FULL-RELEASE ------- "
-#	$(MAKE) epmt-full-release
-#	@echo
-# 	@echo
-#	@echo " ------ MAKE : check-release / CHECK-RELEASE ------- "
-#	$(MAKE) check-release
-#	@echo
-#	@echo "done building epmt"
+	@echo
+	@echo " ------ MAKE : docker-dist / DIST ------- "
+	$(MAKE) docker-dist
+	@echo
+	@echo
+	@echo " ------ MAKE : epmt-full-release / FULL-RELEASE ------- "
+	$(MAKE) epmt-full-release
+	@echo
+	@echo
+	@echo " ------ MAKE : check-release / CHECK-RELEASE ------- "
+	$(MAKE) check-release
+	@echo
+	@echo "done building epmt"
+# ----------- \end release targets ---------- #
 
 
+# ----------- CLEANING ---------- #
+clean-extra: clean-all papiexclean dashclean
+	@echo "(clean-extra) whoami: $(shell whoami)"
 
-# CLEANING
-extra-clean: clean-all papiexclean dashclean
-	@echo "(extra-clean) whoami: $(shell whoami)"
-
-clean-all: clean distclean docker-clean 
+clean-all: clean distclean dockerclean 
 	@echo "(clean-all) whoami: $(shell whoami)"
 
 clean:
@@ -367,39 +381,35 @@ distclean:
 	- rm -rf epmtdocs/site 
 
 dashclean:
-	@echo "(distclean) whoami: $(shell whoami)"
+	@echo "(dashclean) whoami: $(shell whoami)"
 	- rm -rf $(EPMT_DASH_SRC)
 	- rm -f $(EPMT_DASH_SRC_TARBALL)
 	- rm -f epmtdocs/docs/index.md
 
-docker-clean:
-	@echo "(docker-clean) whoami: $(shell whoami)"
+dockerclean:
+	@echo "(dockerclean) whoami: $(shell whoami)"
 	- docker image rm --force \
 	$(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) $(OS_TARGET)-epmt-build:$(EPMT_VERSION)
-
-
-clean-papiex: papiexclean
-	@echo "(clean-papiex) whoami: $(shell whoami)"
 
 papiexclean:
 	@echo "(papiexclean) whoami: $(shell whoami)"
 	- rm -fr $(PAPIEX_SRC) 
 	- rm -f $(PAPIEX_SRC_TARBALL) $(PAPIEX_RELEASE)
+# ----------- \end CLEANING ---------- #
 
 
-
-# Simple python version testing with no database
-# We should get rid of this in favor of a sequence of epmt commands.
+# ----------- CHECKING/TESTING ---------- #
 check: check-epmt-check check-integration-tests check-unittests
 	@echo "(check) whoami: $(shell whoami)"
 
-# Why not test all of them?
 check-epmt-check:
 	@echo "(check-epmt-check) whoami: $(shell whoami)"
 	- @env -i TERM=ansi PATH=${PWD}:${PATH} epmt -v -v check
+
 check-integration-tests:
 	@echo "(check-integration-tests) whoami: $(shell whoami)"
 	- @env -i TERM=ansi PATH=${PWD}:${PATH} epmt -v -v integration
+
 check-unittests:
 	@echo "(check-unittests) whoami: $(shell whoami)"
 	- @env -i TERM=ansi PATH=${PWD}:${PATH} epmt -v -v unittest
@@ -408,3 +418,4 @@ check-unittests:
 #	test.test_anysh test.test_submit test.test_run \
 #	test.test_cmds test.test_query test.test_explore \
 #	test.test_outliers test.test_db_schema test.test_db_migration
+# ----------- \end CHECKING (not used?) ---------- #
