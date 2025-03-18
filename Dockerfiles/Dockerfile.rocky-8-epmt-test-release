@@ -33,16 +33,16 @@ RUN yum install -y \
     xz-devel \
     libffi-devel
 
-ARG SQLITE_VERSION=3430100
+ARG sqlite_version
 RUN cd /usr/src \
-    && echo "downloading sqlite3 ${SQLITE_VERSION}" \
-    && curl -o sqlite-amalgamation-${SQLITE_VERSION}.zip https://www.sqlite.org/2023/sqlite-amalgamation-${SQLITE_VERSION}.zip \
-    && unzip sqlite-amalgamation-${SQLITE_VERSION}.zip \
-    && echo "building libsqlite3 ${SQLITE_VERSION} w/ json1 and more" \
-    && cd sqlite-amalgamation-${SQLITE_VERSION} \
+    && echo "downloading sqlite3 ${sqlite_version}" \
+    && curl -o sqlite-amalgamation-${sqlite_version}.zip https://www.sqlite.org/2023/sqlite-amalgamation-${sqlite_version}.zip \
+    && unzip sqlite-amalgamation-${sqlite_version}.zip \
+    && echo "building libsqlite3 ${sqlite_version} w/ json1 and more" \
+    && cd sqlite-amalgamation-${sqlite_version} \
     && gcc -shared -fPIC -O2  -DSQLITE_ENABLE_JSON1 -DSQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_MAX_VARIABLE_NUMBER=9999 sqlite3.c -o /usr/lib64/libsqlite3.so
 
-ARG python_version=3.9.16
+ARG python_version
 RUN rm -rf /usr/local/bin/python* /usr/local/lib/*python*
 RUN cd /usr/src \
     && echo "downloading python" \
