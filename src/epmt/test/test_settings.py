@@ -16,7 +16,8 @@ class EPMTSettings(unittest.TestCase):
         default_settings_file = 'epmt_default_settings.py'
         # the test below will fail when we use pyinstaller so let's skip it
         # it's anyhow covered in the tests below
-        # self.assertTrue(path.exists(default_settings_file) and (path.getsize(default_settings_file) > 0))
+        # self.assertTrue(path.exists(default_settings_file)
+        # and (path.getsize(default_settings_file) > 0))
         try:
             import epmt.epmt_default_settings as defaults
         except:
@@ -29,7 +30,8 @@ class EPMTSettings(unittest.TestCase):
         self.assertEqual(defaults.db_params, { 'url': 'sqlite:///:memory:', 'echo': False })
 
     def test_epmt_settings(self):
-        self.assertTrue(path.exists(install_root+'/settings.py') and (path.getsize(install_root+'/settings.py') > 0))
+        self.assertTrue( path.exists(install_root+'/settings.py') and
+                         (path.getsize(install_root+'/settings.py') > 0))
         try:
             import epmt.epmt_settings as settings
         except:
@@ -37,22 +39,29 @@ class EPMTSettings(unittest.TestCase):
 
 
     def test_settings_overrides_defaults(self):
-        import epmt.epmt_default_settings as defaults # referred to as default settings below
-        import epmt.settings as later_settings # referred to as 'later' settings below
-        import epmt.epmt_settings as settings # referred to as settings module below
+        
+        import epmt.epmt_default_settings as defaults 
         default_vars = vars(defaults)
+
+        import epmt.settings as later_settings 
         later_vars = vars(later_settings)
+
+        import epmt.epmt_settings as settings 
         settings_vars = vars(settings)
+
         # Hack for the extra functions in the module. I'm confused yet I wrote this. -Pjm
-        for n in ['basicConfig','getLogger','exit','ERROR']:
+        #for n in ['basicConfig','getLogger','exit','ERROR']:
+        for n in ['basicConfig','getLogger','ERROR']:
             del settings_vars[n]
         
         # the settings module keys are a union of the defaults and the later settings
         self.assertEqual(set(default_vars) | set(later_vars), set(settings_vars))
+        
         # the values of the later settings take precedence over defaults
         for k in later_vars.keys():
             if k.startswith('_'): continue  # skip keys like __name__, __loader__
             self.assertEqual(settings_vars[k], later_vars[k], k)
+            
         # for the keys in defaults but not in 'later', the settings will use the defaults
         for k in default_vars.keys():
             if k not in later_vars:
