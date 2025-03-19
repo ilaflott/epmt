@@ -26,9 +26,9 @@ DOCKER_RUN_OPTS:=-it
 #DOCKER_BUILD:=docker build --pull=false -f 
 #DOCKER_BUILD:=docker -D build --pull=false -f 
 #DOCKER_BUILD:=docker build -f 
-DOCKER_BUILD:=docker -D build -f
+#DOCKER_BUILD:=docker -D build -f
 #DOCKER_BUILD:=docker build --no-cache -f
-#DOCKER_BUILD:=docker -D build --no-cache -f
+DOCKER_BUILD:=docker -D build --no-cache -f
 
 # minimal-metrics src url for the epmt project- includes this repo, papiex, and epmt-dash (aka ui)
 MM_SRC_URL_BASE=https://gitlab.com/minimal-metrics-llc/epmt
@@ -310,11 +310,12 @@ build-check-release: $(EPMT_FULL_RELEASE)
 
 check-release:
 	@echo "(check-release) whoami: $(shell whoami)"
-	@echo "looking for postgres-test and epmt-test-net docker networks"
+	@echo "looking for postgres-test container"
 	if docker ps | grep postgres-test > /dev/null; \
 	then docker stop postgres-test; fi
 	@echo
 	@echo
+	@echo "looking for epmt-test-net docker networks"
 	if docker network ls | grep epmt-test-net > /dev/null; \
 	then docker network rm -f epmt-test-net; fi
 	@echo
@@ -436,8 +437,8 @@ check-unittests:
 	@echo "(check-unittests) whoami: $(shell whoami)"
 	- @env -i TERM=ansi PATH=${PWD}:${PATH} epmt -v -v unittest
 #	@env -i TERM=ansi PATH=${PWD}:${PATH} python3 -m unittest -v -f \
-#   test.test_lib test.test_stat test.test_settings \
-#	test.test_anysh test.test_submit test.test_run \
-#	test.test_cmds test.test_query test.test_explore \
-#	test.test_outliers test.test_db_schema test.test_db_migration
+#   epmt.test.test_lib epmt.test.test_stat epmt.test.test_settings \
+#	epmt.test.test_anysh epmt.test.test_submit epmt.test.test_run \
+#	epmt.test.test_cmds epmt.test.test_query epmt.test.test_explore \
+#	epmt.test.test_outliers epmt.test.test_db_schema epmt.test.test_db_migration
 # ----------- \end CHECKING (not used?) ---------- #
