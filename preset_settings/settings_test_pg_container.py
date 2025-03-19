@@ -4,8 +4,8 @@ def test_settings_import():
 # Copy this file and edit it as follows:
 # cp preset_settings/settings_xxxxxxx.py settings.py
 # Then feel free to edit the file to suit you.
-from os import path
-from getpass import getuser
+#from os import path
+#from getpass import getuser
 
 orm = 'sqlalchemy'
 db_params = { 'url': 'postgresql://postgres:example@postgres-test:5432/EPMT-TEST', 'echo': False }
@@ -59,4 +59,4 @@ bulk_insert = True
 # lazy_compute_process_tree = True
 
 # METADATA INTERNAL USE ONLY
-_epmt_settings_kind = 'test_pg_container'
+epmt_settings_kind = 'test_pg_container'

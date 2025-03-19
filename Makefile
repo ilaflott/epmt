@@ -26,9 +26,9 @@ DOCKER_RUN_OPTS:=-it
 #DOCKER_BUILD:=docker build --pull=false -f 
 #DOCKER_BUILD:=docker -D build --pull=false -f 
 #DOCKER_BUILD:=docker build -f 
-#DOCKER_BUILD:=docker -D build -f
+DOCKER_BUILD:=docker -D build -f
 #DOCKER_BUILD:=docker build --no-cache -f
-DOCKER_BUILD:=docker -D build --no-cache -f
+#DOCKER_BUILD:=docker -D build --no-cache -f
 
 # minimal-metrics src url for the epmt project- includes this repo, papiex, and epmt-dash (aka ui)
 MM_SRC_URL_BASE=https://gitlab.com/minimal-metrics-llc/epmt
@@ -48,8 +48,11 @@ EPMT_VERSION=$(shell sed -n '/_version = /p' src/epmt/epmtlib.py | sed 's/ //g; 
 EPMT_RELEASE=epmt-$(EPMT_VERSION)-$(OS_TARGET).tgz
 EPMT_FULL_RELEASE=EPMT-release-$(EPMT_VERSION)-$(OS_TARGET).tgz
 EPMT_PYTHON_FULL_RELEASE=epmt-$(EPMT_VERSION).tar.gz
+
+## TODO: this doesn't seem to be propagating through the build like i expect
 EPMT_INSTALL_PATH=/opt/minimalmetrics
 EPMT_INSTALL_PREFIX=$(EPMT_INSTALL_PATH)/epmt-$(EPMT_VERSION)/epmt-install
+## ---------------------------------------------------------------------------
 
 # <root>/src/epmt/ui submodule details
 EPMT_DASH_SRC_TARBALL=epmt-dash.tar.gz
@@ -441,4 +444,5 @@ check-unittests:
 #	epmt.test.test_anysh epmt.test.test_submit epmt.test.test_run \
 #	epmt.test.test_cmds epmt.test.test_query epmt.test.test_explore \
 #	epmt.test.test_outliers epmt.test.test_db_schema epmt.test.test_db_migration
+#   epmt.test.test_shell
 # ----------- \end CHECKING (not used?) ---------- #

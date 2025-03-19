@@ -189,6 +189,9 @@ def init_settings(settings):
     if not hasattr(settings, 'lazy_compute_process_tree'):
         logger.warning("missing settings.lazy_compute_process_tree")
         settings.lazy_compute_process_tree = True
+    if not hasattr(settings, ''):
+        logger.warning('settings missing _epmt_settings_kind field. filling in ourselves.')
+        settings._epmt_setttings_kind = 'filled_by_epmtlib_init_settings'
     if not hasattr(settings, 'db_params'):
         err_msg += "\n - missing settings.db_params"
     if err_msg:
@@ -424,14 +427,17 @@ def group_dicts_by_key(dicts, key = 'tags', exclude = []):
 
 def isString(s):
     return isinstance(s, ("".__class__, u"".__class__))
+
 def check_int(s):
     if s[0] in ('-', '+'):
         return s[1:].isdigit()
     return s.isdigit()
+
 def check_boolean(s):
     if s.upper() in ('TRUE', 'FALSE'):
         return True
     return False
+
 def check_none(s):
     if s.upper() in ('NONE'):
         return True
@@ -1011,11 +1017,9 @@ def get_install_root():
     ['/abc/def', 'ghi.py']
     '''
     install_root = (__file__.rsplit('/', 2)[0])
-
-    # handle pip packaging here -- even when "manually" installed ala 4.9.6, our install_dir should always end in /epmt.
-    # XXX THIS IS STILL HOKEY and i'm not sure how to make it work for all possible installations.
     if not install_root.endswith('/epmt'):
         install_root = install_root + '/epmt'
+    logger.debug('install root is {}'.format(install_root)
     return install_root
 
 def logfn(func):
@@ -1030,7 +1034,10 @@ def logfn(func):
         #  FUNC_NAME(arg1, arg2..., kwarg1=xyz, kwarg2=abc, ...)
         # the module is prepended automatically by our logging format
         # as we use getLogger with the module name
-        logger.debug('{}({}{}{})'.format(func.__name__, ", ".join([str(x) for x in func_args]), "," if func_kwargs else "", ",".join(["{}={}".format(k, v) for (k,v) in func_kwargs.items()])))
+        logger.debug('{}({}{}{})'.format(func.__name__,
+                                         ", ".join([str(x) for x in func_args]),
+                                         "," if func_kwargs else "",
+                                         ",".join(["{}={}".format(k, v) for (k,v) in func_kwargs.items()])))
         # now call the actual function with its arguments (if any)
         return func(*func_args, **func_kwargs)
     return log_func

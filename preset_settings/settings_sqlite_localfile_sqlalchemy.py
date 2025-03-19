@@ -5,8 +5,8 @@ def test_settings_import():
 # cp preset_settings/settings_xxxxxxx.py settings.py
 # Then feel free to edit the file to suit you.
 from pathlib import Path
-from os import path
-from getpass import getuser
+#from os import path
+#from getpass import getuser
 
 orm = 'sqlalchemy'
 db_params = { 'url': 'sqlite:///{HOME}/EPMT_DB.sqlite'.format(HOME=str(Path.home())), 'echo': False }
@@ -61,4 +61,4 @@ bulk_insert = True
 # lazy_compute_process_tree = True
 
 # METADATA INTERNAL USE ONLY
-_epmt_settings_kind = 'sqlite_localfile_sqlalchemy'
+epmt_settings_kind = 'sqlite_localfile_sqlalchemy'

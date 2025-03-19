@@ -6,7 +6,7 @@ def test_settings_import():
 # Then feel free to edit the file to suit you.
 from pathlib import Path
 from os import path
-from getpass import getuser
+#from getpass import getuser
 
 orm = 'sqlalchemy'
 db_params = { 'url': 'sqlite:///{HOME}/EPMT_DB.sqlite'.format(HOME=str(Path.home())), 'echo': False }
@@ -64,4 +64,4 @@ install_prefix = "/home/Jeffrey.Durachta/workflowDB/EPMT/epmt-2.1.0-centos-6/pap
 # lazy_compute_process_tree = True
 
 # METADATA INTERNAL USE ONLY
-_epmt_settings_kind = 'sqlite_gfdl'
+epmt_settings_kind = 'sqlite_gfdl'
