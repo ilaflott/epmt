@@ -1,11 +1,12 @@
 # load defaults
 from epmt.epmt_default_settings import *
+
 from logging import getLogger, basicConfig, ERROR
-import sys
-
-
 basicConfig(level=ERROR)
 logger = getLogger(__name__)
+
+import sys
+
 logger.info("attempting import of user settings")
 logger.info("sys.path entries are:")
 for path in sys.path:
@@ -23,7 +24,7 @@ except Exception as e:
             logger.error(str(e)+": attempting settings import instead.")
         except Exception as e2:
             logger.error('ModuleNotFoundError, damn it!')    
-            raise
+            raise ModuleImportError('alternate epmt.settings import approach did not work and neither did the first attempt!') from e2
 else:
     logger.info('epmt_settings imported successfully! yay!!!')    
 
