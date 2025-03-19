@@ -58,3 +58,6 @@ bulk_insert = True
 # when first needed. This also means the the process.inclusive_cpu_time
 # will be unavailable until the process tree is computed.
 # lazy_compute_process_tree = True
+
+# METADATA INTERNAL USE ONLY
+_epmt_settings_kind = 'sqlite_inmem_sqlalchemy'

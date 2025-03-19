@@ -24,14 +24,20 @@ ingest_failed_dir="/tmp/"
 
 verbose = 2
 max_log_statement_length = pow(2,11) # max number of list elements to print for long sql queries
+
+
+
 # gather profiling information or not
 profile = False
+
 # input pattern must match both csv v1 and v2 filenames
 input_pattern = "*-papiex*.[ct]sv"
-this_file_path=path.abspath(__file__)
-this_file_dir=path.dirname(this_file_path)
+this_file_path=path.abspath(__file__) # sometimes, locked up in a binary file with internal structure
+this_file_dir=path.dirname(path.dirname(this_file_path)) # i hate this, but only way to get around the thingy above there
+
 #install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-epmt-install/"
-install_prefix = this_file_dir + "/../../papiex-epmt-install/"
+install_prefix = path.abspath(this_file_dir + "/../../papiex-epmt-install/")
+
 # place for error'd CSV files
 error_dest = "/tmp"
 # when we are not attached to a terminal we log to the file below
@@ -78,3 +84,7 @@ post_process_job_on_ingest = False
 # when first needed. This also means the the process.inclusive_cpu_time
 # will be unavailable until the process tree is computed.
 lazy_compute_process_tree = True
+
+# METADATA INTERNAL USE ONLY
+_epmt_settings_kind = 'default'
+
