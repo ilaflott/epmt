@@ -28,7 +28,10 @@ max_log_statement_length = pow(2,11) # max number of list elements to print for 
 profile = False
 # input pattern must match both csv v1 and v2 filenames
 input_pattern = "*-papiex*.[ct]sv"
-install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-epmt-install/"
+this_file_path=path.abspath(__file__)
+this_file_dir=path.dirname(this_file_path)
+#install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-epmt-install/"
+install_prefix = this_file_dir + "/../../papiex-epmt-install/"
 # place for error'd CSV files
 error_dest = "/tmp"
 # when we are not attached to a terminal we log to the file below
