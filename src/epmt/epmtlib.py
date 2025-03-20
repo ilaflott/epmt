@@ -975,7 +975,8 @@ def docs_module_index(mod, fmt=None):
     # We skip functions whose names start with underscore (_)
     # and also functions that are not actually defined in the module, but
     # merely imported from some other module
-    funcs = sorted([o[1] for o in getmembers(mod) if isfunction(o[1]) and (not o[1].__name__.startswith('_')) and (o[1].__module__ == mod.__name__)], key = lambda f: f.__name__)
+    funcs = sorted( [
+        o[1] for o in getmembers(mod) if isfunction(o[1]) and (not o[1].__name__.startswith('_')) and (o[1].__module__ == mod.__name__)], key = lambda f: f.__name__)
 
     # prepare a list of tuples; the first tuple number is the 
     # function name, and the second item is it's one-line summary extracted
@@ -1018,7 +1019,11 @@ def get_install_root():
     '''
     install_root = (__file__.rsplit('/', 2)[0])
     if not install_root.endswith('/epmt'):
+        logger.warning('WARNING: install_root = {}'.format(install_root) )
+        logger.warning('WARNING: install_root does not end with \"/epmt\"...')
+        logger.warning('WARNING: adding it to the install root...')
         install_root = install_root + '/epmt'
+        logger.warning('WARNING: install_root changed to {}'.format(install_root))
     logger.debug('install root is {}'.format(install_root)
     return install_root
 

@@ -24,7 +24,8 @@ profile = False
 # input pattern must match both csv v1 and v2 filenames
 input_pattern = "*-papiex*.[ct]sv"
 this_file_path=path.abspath(__file__) # sometimes, locked up in a binary file with internal structure
-this_file_dir=path.dirname(path.dirname(this_file_path)) # i hate this, but only way to get around the thingy above there
+this_file_dir=path.dirname(this_file_path) # i hate this, but only way to get around the thingy above there
+#this_file_dir=path.dirname(path.dirname(this_file_path)) # i hate this, but only way to get around the thingy above there
 
 #install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-epmt-install/"
 install_prefix = path.abspath(this_file_dir + "/../../papiex-epmt-install/")

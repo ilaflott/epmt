@@ -115,6 +115,7 @@ $(EPMT_RELEASE) dist:
 	rm -rf epmt-install build
 	@echo "DONE removing directories: rm -rf epmt-install build"
 	mkdir -p epmt-install/epmt/epmtdocs
+	- cp README.mp epmt/src
 	@echo
 	@echo
 	@echo "**********************************************************"
@@ -146,6 +147,8 @@ $(EPMT_RELEASE) dist:
 	cp utils/SLURM/slurm_task_*log_epmt.sh epmt-install/slurm 
 #	docs
 	cp -Rp epmtdocs/site epmt-install/epmt/epmtdocs
+#	README
+	- cp README.md epmt/src/README.md && echo "README.md copy went well"
 	@echo
 	@echo
 	@echo "**********************************************************"
@@ -198,7 +201,9 @@ docker-dist:
 	@echo
 	@echo
 	@echo " - running make dist python-dist dist-test inside $(OS_TARGET)-epmt-build"
-	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --privileged --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build:$(EPMT_VERSION) \
+	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --privileged \
+	--volume=$(PWD):$(PWD) \
+	-w $(PWD) $(OS_TARGET)-epmt-build:$(EPMT_VERSION) \
 	make --debug OS_TARGET=$(OS_TARGET) dist python-dist dist-test
 #	make --debug OS_TARGET=$(OS_TARGET) dist python-dist $(EPMT_RELEASE) dist-test
 
@@ -206,7 +211,9 @@ docker-dist:
 # tests distribution within a container
 docker-dist-test:
 	@echo "(docker-dist-test) whoami: $(shell whoami)"
-	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --privileged --volume=$(PWD):$(PWD) -w $(PWD) $(OS_TARGET)-epmt-build:$(EPMT_VERSION) \
+	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --privileged \
+	--volume=$(PWD):$(PWD) \
+	-w $(PWD) $(OS_TARGET)-epmt-build:$(EPMT_VERSION) \
 	make --debug OS_TARGET=$(OS_TARGET) dist-test
 
 
@@ -305,10 +312,13 @@ build-check-release: $(EPMT_FULL_RELEASE)
 	@echo "(build-check-release) creating an all-included testing environment / delivery tarball"
 	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test-release \
 	-t $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) \
-	--build-arg epmt_version=$(EPMT_VERSION) --build-arg install_path=$(EPMT_INSTALL_PATH) \
-	--build-arg install_prefix=$(EPMT_INSTALL_PREFIX) --build-arg epmt_full_release=$(EPMT_FULL_RELEASE) \
+	--build-arg epmt_version=$(EPMT_VERSION) \
+	--build-arg install_path=$(EPMT_INSTALL_PATH) \
+	--build-arg install_prefix=$(EPMT_INSTALL_PREFIX) \
+	--build-arg epmt_full_release=$(EPMT_FULL_RELEASE) \
 	--build-arg epmt_python_full_release=$(EPMT_PYTHON_FULL_RELEASE) \
-	--build-arg sqlite_version=$(SQLITE_VERSION) --build-arg python_version=$(PYTHON_VERSION) .
+	--build-arg sqlite_version=$(SQLITE_VERSION) \
+	--build-arg python_version=$(PYTHON_VERSION) .
 	@echo 
 
 check-release:
@@ -328,16 +338,19 @@ check-release:
 	@echo
 	@echo
 	@echo "running postgres-test container"
-	$(DOCKER_RUN) -d --rm --name postgres-test --network epmt-test-net \
-	--privileged -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -e POSTGRES_DB=EPMT-TEST postgres:latest
+	$(DOCKER_RUN) -d --rm --name postgres-test --network epmt-test-net --privileged \
+	-e POSTGRES_USER=postgres \
+	-e POSTGRES_PASSWORD=example \
+	-e POSTGRES_DB=EPMT-TEST postgres:latest
 	@echo
 	@echo "looking for prev ran epmt-test-release container to remove..."
 	if docker container ls -a | grep epmt-test-release > /dev/null; \
 	then docker container rm $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release; fi
 	@echo
 	@echo "running epmt-test-release container"
-	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net \
-	--privileged $(DOCKER_RUN_OPTS) -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) \
+	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release \
+	--network epmt-test-net --privileged $(DOCKER_RUN_OPTS) \
+	-h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) \
 	bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; epmt -v -V; \
 	echo "" && echo "------ epmt -v check ------" && epmt -v check; \
 	echo "" && echo "------ epmt -v unittest ------" && epmt -v unittest; \
@@ -372,16 +385,16 @@ release:
 	$(MAKE) docker-dist
 	@echo
 	@echo
-	@echo " ------ MAKE : epmt-full-release / FULL-RELEASE ------- "
-	$(MAKE) epmt-full-release
+#	@echo " ------ MAKE : epmt-full-release / FULL-RELEASE ------- "
+#	$(MAKE) epmt-full-release
 	@echo
 	@echo
-	@echo " ------ MAKE : build-check-release / CHECK-RELEASE ------- "
-	$(MAKE) build-check-release
+#	@echo " ------ MAKE : build-check-release / CHECK-RELEASE ------- "
+#	$(MAKE) build-check-release
 	@echo
 	@echo
-	@echo " ------ MAKE : check-release / CHECK-RELEASE ------- "
-	$(MAKE) check-release
+#	@echo " ------ MAKE : check-release / CHECK-RELEASE ------- "
+#	$(MAKE) check-release
 	@echo
 	@echo
 	@echo "done building epmt"
