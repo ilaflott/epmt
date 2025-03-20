@@ -189,9 +189,9 @@ def init_settings(settings):
     if not hasattr(settings, 'lazy_compute_process_tree'):
         logger.warning("missing settings.lazy_compute_process_tree")
         settings.lazy_compute_process_tree = True
-    if not hasattr(settings, ''):
-        logger.warning('settings missing _epmt_settings_kind field. filling in ourselves.')
-        settings._epmt_setttings_kind = 'filled_by_epmtlib_init_settings'
+    if not hasattr(settings, 'epmt_settings_kind'):
+        logger.warning('settings missing epmt_settings_kind field. filling in ourselves.')
+        settings.epmt_setttings_kind = 'filled_by_epmtlib_init_settings'
     if not hasattr(settings, 'db_params'):
         err_msg += "\n - missing settings.db_params"
     if err_msg:
