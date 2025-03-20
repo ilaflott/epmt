@@ -12,7 +12,7 @@ SQLITE_VERSION=3430100
 
 
 # conda
-CONDA_ACTIVATE = source $$(conda info --base)/etc/profile.d/conda.sh ; conda activate ; conda activate
+CONDA_ACTIVATE = source $$(conda info --base)/etc/profile.d/conda.sh ; conda activate ; conda activate ;
 
 # docker run command
 DOCKER_RUN:=docker -D run
@@ -338,12 +338,11 @@ check-release:
 	@echo "running epmt-test-release container"
 	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release --network epmt-test-net \
 	--privileged $(DOCKER_RUN_OPTS) -h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) \
-	bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; epmt -v -V;'
-#; \
-#	echo "" && echo "------ epmt -v check ------" && epmt -v check; \
-#	echo "" && echo "------ epmt -v unittest ------" && epmt -v unittest; \
-#	echo "" && echo "------ epmt -v integration ------" && epmt -v integration; \
-#	echo "" && echo "------ DONE WITH EPMT CHECKS ------"'
+	bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; epmt -v -V; \
+	echo "" && echo "------ epmt -v check ------" && epmt -v check; \
+	echo "" && echo "------ epmt -v unittest ------" && epmt -v unittest; \
+	echo "" && echo "------ epmt -v integration ------" && epmt -v integration; \
+	echo ""'
 	@echo
 	@echo
 #	@echo "shutting down docker networks, postgres test container, epmt-test-net"
