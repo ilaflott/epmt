@@ -1,0 +1,115 @@
+#!/bin/bash -eE
+
+# This script is only there to run the tests manually before committing.
+# usage:
+#   tests/run [---no-compose]
+# 
+# container is started up.
+# You need to fire the above command from the top-level EPMT directory
+# The test uses python3 in PATH, so make sure you already have the
+# right virtualenv loaded. The script will use docker-compose and
+# docker to run tests. However, if --no-compose is specified then
+# it's assumed that you want to run all the commands directly
+# and not under docker/compose.
+# Hence, --no-compose is essentially used when running in an external
+# CI environment such as Gitlab
+#
+#
+usage="test/run [--no-compose]"
+
+settings_backup="settings.py.`whoami`.$$"
+epmt_tmpdir="/tmp/epmt"
+no_compose=0
+compose_args="-f docker-compose-test.yml"
+pg_sqla_settings_file="settings_pg_container_sqlalchemy.py"
+pg_pony_settings_file="settings_pg_container_pony.py"
+
+echo ""
+echo "*** This script is broken and will be deprecated! ***"
+echo ""
+echo "Use 'make check' to run tests in development tree."
+echo "Use 'epmt unittest && epmt integration' to ru tests on production install."
+echo ""
+exit 1
+
+case "$1" in
+  --no-compose) no_compose=1;;
+  "");;
+  *) echo $usage >&2; exit 0;;
+esac
+
+if [ $no_compose -eq 0 ]; then
+    echo "This script requires you to pass --no-compose to it, as docker support is broken."
+    exit 1
+fi
+
+function finish {
+  # Your cleanup code here
+  if [ $no_compose -eq 0 ]; then
+      echo "stopping docker-based service (might take a minute).."
+      docker-compose $compose_args down
+  fi
+  if [ -f $settings_backup ]; then
+    echo "Restoring settings.py (from $settings_backup)"
+    mv -vf $settings_backup settings.py
+  else
+    rm -f settings.py settings.pyc
+  fi
+  rm -rf $epmt_tmpdir
+}
+
+function cleandb {
+    echo -n "Emptying database.. "
+    if [ $no_compose -eq 1 ]; then
+        # utils/drop_pg_tables
+        ./epmt drop --force
+    else
+        # docker-compose $compose_args run test bash -c 'cd /epmt && utils/drop_pg_tables'
+        docker-compose $compose_args run test bash -c 'cd /epmt && ./epmt drop --force'
+    fi
+    echo "done"
+}
+
+rm -f settings.pyc # remove stale stuff
+trap finish EXIT INT QUIT HUP TERM
+
+if [ -f settings.py ]; then
+    echo "Found an existing settings.py. Saving it to $settings_backup"
+    mv -v settings.py $settings_backup
+fi
+
+# echo "Checking code with pylint.."
+# python3 -m pylint -E *.py orm/*.py orm/*/*.py test/*.py
+
+if [ $no_compose -eq 0 ]; then
+    echo "Starting postgres service.."
+    docker-compose $compose_args up -d postgres
+    docker-compose $compose_args build
+    #docker run --rm  --name pg-docker -e POSTGRES_DB=EPMT -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=example -d -p 5432:5432  postgres:9.5
+fi
+
+start_ts=$(date +%s)
+for settings_file in preset_settings/{settings_sqlite_localfile_sqlalchemy.py,settings_sqlite_localfile_pony.py,$pg_sqla_settings_file,$pg_pony_settings_file}; do
+    echo "------------------------"
+    echo "using settings_file"
+    cp -v $settings_file settings.py
+    chmod 0644 settings.py
+
+    # remove stale stuff left behind
+    rm -rf /tmp/epmt
+
+    if [ $no_compose -eq 1 ]; then
+        make check
+    else
+        docker-compose $compose_args run test
+    fi
+    # restore pg db to pristine state
+    case $settings_file in
+        *pg*) cleandb;;
+    esac
+done
+fini_ts=$(date +%s)
+duration=$((fini_ts-start_ts))
+echo
+echo "Test suite took $duration seconds"
+echo "All tests successfully PASSED"
