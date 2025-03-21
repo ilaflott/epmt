@@ -27,7 +27,7 @@ except ImportError:
 # third element is the patch or bugfix number
 # Since we are saving as a tuple you can do a simple
 # compare of two version tuples and python will do the right thing
-_version = (4,10,0)
+_version = (4,11,0)
 
 def version():
     return _version
@@ -46,18 +46,18 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
 
     if check and hasattr(epmt_logging_init, 'initialized'): return
     epmt_logging_init.initialized = True
-    if intlvl == None:
+    if intlvl is None:
         intlvl = 0 
     intlvl = int(intlvl)
     if intlvl < -1:
         level = CRITICAL # 50
-    if intlvl == -1:
+    elif intlvl == -1:
         level = ERROR # 40
-    if intlvl == 0:
+    elif intlvl == 0:
         level = WARNING # 30
-    if intlvl == 1:
+    elif intlvl == 1:
         level = INFO # 20
-    elif intlvl >= 2:
+    else #intlvl >= 2:
         level = DEBUG # 10
 
     # Set level and remove all existing handlers 

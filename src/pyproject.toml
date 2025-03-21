@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name		= "epmt"
-version		= "4.10.0"
+version		= "4.11.0"
 authors		= [ { name = "Minimal Metrics, LLC", email = "some.where@over.there" } ]
 description	= "Experiment Performance Metrics Toolkit"
 readme		= "README.md"
