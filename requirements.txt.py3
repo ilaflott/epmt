@@ -60,6 +60,7 @@ matplotlib
 mccabe
 mistune
 mkdocs
+mkdocs-bootstrap4
 mkdocs-theme-bootstrap4
 mkdocs-git-committers-plugin
 more-itertools
@@ -92,6 +93,7 @@ pyinstaller==5.7.0
 pyinstaller-hooks-contrib==2023.11
 PyJWT
 PyNaCl
+pylint
 pyod
 pyparsing
 pyrsistent
@@ -104,6 +106,7 @@ python-editor
 pytz
 PyYAML
 pyzmq
+py-cpuinfo
 qtconsole
 regex
 requests
