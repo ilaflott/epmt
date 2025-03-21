@@ -32,12 +32,11 @@ profile = False
 
 # input pattern must match both csv v1 and v2 filenames
 input_pattern = "*-papiex*.[ct]sv"
-this_file_path=path.abspath(__file__) # sometimes, locked up in a binary file with internal structure
-this_file_dir=path.dirname(this_file_path) # i hate this, but only way to get around the thingy above there
-#this_file_dir=path.dirname(path.dirname(this_file_path)) # i hate this, but only way to get around the thingy above there
 
+from epmt.epmtlib import get_install_root
+install_prefix = get_install_root() + "/../papiex-oss/papiex-epmt-install/"
 #install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-epmt-install/"
-install_prefix = path.abspath(this_file_dir + "/../../papiex-epmt-install/")
+#install_prefix = path.abspath(this_file_dir + "/../../papiex-epmt-install/")
 
 # place for error'd CSV files
 error_dest = "/tmp"
@@ -87,5 +86,5 @@ post_process_job_on_ingest = False
 lazy_compute_process_tree = True
 
 # METADATA INTERNAL USE ONLY
-_epmt_settings_kind = 'default'
+epmt_settings_kind = 'default'
 

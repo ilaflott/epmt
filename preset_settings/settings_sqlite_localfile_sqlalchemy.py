@@ -61,4 +61,4 @@ bulk_insert = True
 # lazy_compute_process_tree = True
 
 # METADATA INTERNAL USE ONLY
-_epmt_settings_kind = 'sqlite_localfile_sqlalchemy'
+epmt_settings_kind = 'sqlite_localfile_sqlalchemy'

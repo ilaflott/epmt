@@ -58,4 +58,4 @@ post_process_job_on_ingest = True
 # will be unavailable until the process tree is computed.
 lazy_compute_process_tree = True
 
-_epmt_settings_kind = 'pg_container_sqlalchemy'
+epmt_settings_kind = 'pg_container_sqlalchemy'

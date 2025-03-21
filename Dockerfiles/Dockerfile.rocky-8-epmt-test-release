@@ -87,13 +87,12 @@ COPY utils/epmt-installer .
 
 WORKDIR ${install_path}
 RUN ls ${install_path}
+
 RUN echo -ne "\n\n" | ${install_path}_archive/epmt-installer ${install_path}_archive/EPMT*tgz
-
-ENV PATH="${install_path}/epmt-${epmt_version}/epmt-install/epmt:${PATH}:/usr/local/bin:/usr/local/libexec"
-
-
 RUN rm -f *.tgz epmt-installer
 
+#ENV PATH="${install_path}/epmt-${epmt_version}/epmt-install/epmt:${PATH}:/usr/local/bin:/usr/local/libexec"
+ENV PATH="/usr/bin:${PATH}:/usr/local/bin:/usr/local/libexec"
 
 
 # unsure if the all-caps env var is needed? 

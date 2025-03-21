@@ -24,7 +24,9 @@ stage_command_dest = "/nbhome/" + getuser()
 # verbose = 0
 # input pattern must match both csv v1 and v2 filenames
 #input_pattern = "*-papiex*.[ct]sv"
-install_prefix = "/home/Jeffrey.Durachta/workflowDB/EPMT/epmt-2.1.0-centos-6/papiex-epmt-install/"
+
+
+#install_prefix = "/home/Jeffrey.Durachta/workflowDB/EPMT/epmt-2.1.0-centos-6/papiex-epmt-install/"
 
 # when we are not attached to a terminal we log to the file below
 # logfile = path.expandvars("/tmp/epmt_{}.log".format(getuser() or "unknown"))
@@ -64,4 +66,4 @@ install_prefix = "/home/Jeffrey.Durachta/workflowDB/EPMT/epmt-2.1.0-centos-6/pap
 # lazy_compute_process_tree = True
 
 # METADATA INTERNAL USE ONLY
-_epmt_settings_kind = 'sqlite_gfdl'
+epmt_settings_kind = 'sqlite_gfdl'

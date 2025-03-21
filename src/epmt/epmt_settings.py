@@ -29,3 +29,4 @@ else:
     logger.info('epmt_settings imported successfully! yay!!!')    
 
 
+epmt_settings_kind='user'

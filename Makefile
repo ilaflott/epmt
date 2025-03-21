@@ -15,8 +15,8 @@ SQLITE_VERSION=3430100
 CONDA_ACTIVATE = source $$(conda info --base)/etc/profile.d/conda.sh ; conda activate ; conda activate ;
 
 # docker run command
-DOCKER_RUN:=docker -D run
-#DOCKER_RUN:=docker run
+#DOCKER_RUN:=docker -D run
+DOCKER_RUN:=docker run
 
 # docker run opts
 #DOCKER_RUN_OPTS:=--rm -it
@@ -25,10 +25,10 @@ DOCKER_RUN_OPTS:=-it
 # docker build opts
 #DOCKER_BUILD:=docker build --pull=false -f 
 #DOCKER_BUILD:=docker -D build --pull=false -f 
-#DOCKER_BUILD:=docker build -f 
+DOCKER_BUILD:=docker build -f 
 #DOCKER_BUILD:=docker -D build -f
 #DOCKER_BUILD:=docker build --no-cache -f
-DOCKER_BUILD:=docker -D build --no-cache -f
+#DOCKER_BUILD:=docker -D build --no-cache -f
 
 # minimal-metrics src url for the epmt project- includes this repo, papiex, and epmt-dash (aka ui)
 MM_SRC_URL_BASE=https://gitlab.com/minimal-metrics-llc/epmt
@@ -56,6 +56,10 @@ EPMT_DASH_SRC_TARBALL=epmt-dash.tar.gz
 EPMT_DASH_SRC_BRANCH=multi_page
 EPMT_DASH_SRC_URL=$(MM_SRC_URL_BASE)/epmt-dash/-/archive/$(EPMT_DASH_SRC_BRANCH)/$(EPMT_DASH_SRC_TARBALL)
 EPMT_DASH_SRC=src/epmt/ui
+#EPMT_DASH_SRC=ui
+
+## other details
+#PYINSTALLER_DIST_DIR=epmt-install # does this make sense???
 
 # shell
 SHELL=/bin/bash
@@ -102,25 +106,27 @@ install-py3-pyenv:
 install-deps:
 	@echo "(install-deps) whoami: $(shell whoami)"
 	set -e ; pip3 install --upgrade pip ; pip3 install -r requirements.txt.py3 ; \
-	pip3 install -r src/epmt/ui/requirements-ui.txt.py3
+	pip3 install -r $(EPMT_DASH_SRC)/requirements-ui.txt.py3
+#	pip3 install -r src/epmt/ui/requirements-ui.txt.py3
 
 # This target runs pyinstaller, outputs a tarball with
 # epmt + all dependencies included
 $(EPMT_RELEASE) dist:
 	@echo "(EPMT_RELEASE dist) whoami: $(shell whoami)"
 	@echo "WARNING removing directories: rm -rf epmt-install build"
-	rm -rf epmt-install build
-	@echo "DONE removing directories: rm -rf epmt-install build"
-	mkdir -p epmt-install/epmt/epmtdocs
-	- cp README.mp epmt/src
+	rm -rf epmt-install build && mkdir -p epmt-install/epmt/epmtdocs
+	@echo "DONE removing epmt-install/ build/ and recreating epmt-install/epmt/epmt-docs"
+#	README
+	cp README.md src/README.md && echo "README.md copy went well"
 	@echo
 	@echo
 	@echo "**********************************************************"
 	@echo "*************** calling pyinstaller **********************"
 	@echo "**********************************************************"
+
 	pyinstaller --version
 #	remove the --clean flag to use the cache in builds, helps speed things up
-#	pyinstaller --clean --noconfirm --distpath=epmt-install epmt.spec
+	@echo "pyinstaller --clean --noconfirm --distpath=epmt-install epmt.spec"
 	pyinstaller --noconfirm --distpath=epmt-install epmt.spec
 	@echo
 	@echo
@@ -144,8 +150,6 @@ $(EPMT_RELEASE) dist:
 	cp utils/SLURM/slurm_task_*log_epmt.sh epmt-install/slurm 
 #	docs
 	cp -Rp epmtdocs/site epmt-install/epmt/epmtdocs
-#	README
-	- cp README.md epmt/src/README.md && echo "README.md copy went well"
 	@echo
 	@echo
 	@echo "**********************************************************"
@@ -167,7 +171,7 @@ python-dist:
 	python3 setup.py sdist && echo "GOOD: python3 setup.py sdist" || echo "I FAILED: python3 setup.py sdist"; \
 	chmod a+r dist/* && echo "GOOD: chmod a+r dist/*" || echo "I FAILED: chmod a+r dist/*"
 
-# creates a test tarball i think
+# creates a tarball containing test directories. If the test directory exists, clobber and re-create
 test-$(EPMT_RELEASE) dist-test:
 	@echo "(test-EPMT_RELEASE dist-test) whoami: $(shell whoami)"
 	@echo
@@ -182,8 +186,9 @@ test-$(EPMT_RELEASE) dist-test:
 	@echo "WARNING removing directory to clean up: rm -rf epmt-install-tests"
 	rm -rf epmt-install-tests
 
-# needs a real build product defined as a target i think...
-# creating test-epmt-
+# this target 1) builds an image with an environment inwhich we'd like to build our applicaiton
+# 2) builds that application within a running container of that image
+# NOTE: bind mounts to current working directory, usually the repository directory
 docker-dist:	
 	@echo "(docker-dist) whoami: $(shell whoami)"
 	@echo " ------ CREATE EPMT TARBALL: docker-dist ------- "
@@ -192,16 +197,20 @@ docker-dist:
 	@echo "       run   options = ${DOCKER_RUN_OPTS}"
 	@echo
 	@echo
-	@echo " - building epmt and epmt-test tarball via Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build"
+	@echo " - docker build <STUFF> Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build"
+	@echo "       we are creating a container environment inwhich to build the python distribution"
 	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build -t $(OS_TARGET)-epmt-build:$(EPMT_VERSION) \
 	--build-arg sqlite_version=$(SQLITE_VERSION) --build-arg python_version=$(PYTHON_VERSION) .
 	@echo
 	@echo
-	@echo " - running make dist python-dist dist-test inside $(OS_TARGET)-epmt-build"
+	@echo " - docker run <STUFF> <use image built from Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build>"
+	@echo "       within a running contianer of the image we just built, now build the python application."
+	@echo "       i.e. running make dist python-dist dist-test inside $(OS_TARGET)-epmt-build"
 	$(DOCKER_RUN) $(DOCKER_RUN_OPTS) --privileged \
 	--volume=$(PWD):$(PWD) \
 	-w $(PWD) $(OS_TARGET)-epmt-build:$(EPMT_VERSION) \
 	make --debug OS_TARGET=$(OS_TARGET) dist python-dist dist-test
+#   wait.... is this one of those ... "pip install it twice deals? commenting out for now..."
 #	make --debug OS_TARGET=$(OS_TARGET) dist python-dist $(EPMT_RELEASE) dist-test
 
 
@@ -233,9 +242,10 @@ $(EPMT_DASH_SRC): $(EPMT_DASH_SRC_TARBALL)
 	ls $(EPMT_DASH_SRC); \
 	echo "making symbolic link to epmt/ui/docs/index.md"; \
 	cd epmtdocs/docs && \
-	ln -s ../../src/epmt/ui/docs/index.md index.md || \
+	ln -s ../../$(EPMT_DASH_SRC)/docs/index.md index.md || \
 	echo "symbolic link creation failed."; \
 	cd -
+#	ln -s ../../src/epmt/ui/docs/index.md index.md || \
 
 $(EPMT_DASH_SRC_TARBALL):
 	@echo "(EPMT_DASH_SRC_TARBALL) whoami: $(shell whoami)"
@@ -382,16 +392,16 @@ release:
 	$(MAKE) docker-dist
 	@echo
 	@echo
-#	@echo " ------ MAKE : epmt-full-release / FULL-RELEASE ------- "
-#	$(MAKE) epmt-full-release
+	@echo " ------ MAKE : epmt-full-release / FULL-RELEASE ------- "
+	$(MAKE) epmt-full-release
 	@echo
 	@echo
-#	@echo " ------ MAKE : build-check-release / CHECK-RELEASE ------- "
-#	$(MAKE) build-check-release
+	@echo " ------ MAKE : build-check-release / CHECK-RELEASE ------- "
+	$(MAKE) build-check-release
 	@echo
 	@echo
-#	@echo " ------ MAKE : check-release / CHECK-RELEASE ------- "
-#	$(MAKE) check-release
+	@echo " ------ MAKE : check-release / CHECK-RELEASE ------- "
+	$(MAKE) check-release
 	@echo
 	@echo
 	@echo "done building epmt"
@@ -408,7 +418,7 @@ clean-all: clean distclean dockerclean
 clean:
 	@echo "(clean) whoami: $(shell whoami)"
 	- find . -type f \( -name "core" -or -name "*~" -or -name "*.pyc" -or -name "epmt.log" \) -exec rm -f {} \;
-	- rm -rf src/epmt/ui/__pycache__ __pycache__ build epmt-install epmt-install-tests .venv374
+	- rm -rf $(EPMT_DASH_SRC)/__pycache__ __pycache__ build epmt-install epmt-install-tests .venv374
 
 distclean:
 	@echo "(distclean) whoami: $(shell whoami)"

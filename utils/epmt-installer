@@ -39,18 +39,19 @@ existing_files=$(ls $EPMT_PREFIX)
 [ -z "$existing_files" ] || die "$EPMT_PREFIX is not empty. Please ensure the install directory ($EPMT_PREFIX) is empty and try again."
 
 (cd "$EPMT_PREFIX"; echo "Extracting release.."; tar xf "$release")
-(cd "$EPMT_PREFIX"; for f in *.tgz; do tar xf $f; rm -f $f; done)
+(cd "$EPMT_PREFIX"; for f in *.tgz; do tar xf $f; echo "tar xf ${f}; then rm -f..."; rm -f $f; done)
+
 # 20230926 caw: tests are part of the pip package now... (cd "$EPMT_PREFIX"; mv epmt-install-tests/* epmt-install/epmt/ ; rm -rf epmt-install-tests)
-echo "Installing settings.py and migrations"
-(cd "$EPMT_PREFIX";
- sed -i -e "/install_prefix/ s|.*|install_prefix = \"$EPMT_PREFIX/papiex-epmt-install/\"|" epmt-install/preset_settings/*.py;
- cp epmt-install/preset_settings/settings_sqlite_localfile_sqlalchemy.py epmt-install/epmt/settings.py;
+#echo "Installing settings.py and migrations"
+#(cd "$EPMT_PREFIX";
+# sed -i -e "/install_prefix/ s|.*|install_prefix = \"$EPMT_PREFIX/papiex-epmt-install/\"|" epmt-install/preset_settings/*.py;
+# cp epmt-install/preset_settings/settings_sqlite_localfile_sqlalchemy.py epmt-install/epmt/settings.py;
 # cp epmt-install/alembic.ini epmt-install/epmt/;
 # cp -r epmt-install/migrations epmt-install/epmt/
-)
-echo "Fixing paths in slurm scripts"
-(cd "$EPMT_PREFIX"; sed -i -e "s|/opt/epmt|$EPMT_PREFIX|" epmt-install/slurm/slurm_task*.sh)
-$EPMT_PREFIX/epmt-install/epmt/epmt -V || die "Installation failed."
+#)
+#echo "Fixing paths in slurm scripts"
+#(cd "$EPMT_PREFIX"; sed -i -e "s|/opt/epmt|$EPMT_PREFIX|" epmt-install/slurm/slurm_task*.sh)
+#$EPMT_PREFIX/epmt-install/epmt/epmt -V || die "Installation failed."
 
 mkdir $EPMT_PREFIX/modulefiles
 cat > $EPMT_PREFIX/modulefiles/epmt <<EOT

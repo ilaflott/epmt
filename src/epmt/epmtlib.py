@@ -79,7 +79,8 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
         rootLogger.addHandler(fileHandler)
 
     consoleHandler = logging.StreamHandler()
-    consoleFormatter = logging.Formatter("[%(asctime)-19.19s, %(process)d] %(levelname)7.7s: %(name)s: %(message)s" if log_pid else "%(asctime)-19.19s %(levelname)7.7s: %(name)s: %(message)s")
+    consoleFormatter = logging.Formatter(
+        "[%(asctime)-19.19s, %(process)d] %(levelname)7.7s: %(name)s: %(message)s" if log_pid else "%(asctime)-19.19s %(levelname)7.7s: %(name)s: %(message)s")
     consoleHandler.setFormatter(consoleFormatter)
     rootLogger.addHandler(consoleHandler)
 
@@ -1014,8 +1015,8 @@ def get_install_root():
     >>> '/abc/def/ghi.py'.rsplit('/',1)
     ['/abc/def', 'ghi.py']
     '''
+    logger = getLogger(__name__)
     install_root = (__file__.rsplit('/', 2)[0])
-
     # handle pip packaging here -- even when "manually" installed ala 4.9.6, our install_dir should always end in /epmt.
     # XXX THIS IS STILL HOKEY and i'm not sure how to make it work for all possible installations.
     if not install_root.endswith('/epmt'):
@@ -1023,11 +1024,8 @@ def get_install_root():
         logger.warning('WARNING: install_root does not end with \"/epmt\"...')
         logger.warning('WARNING: adding it to the install root...')
         install_root = install_root + '/epmt'
-<<<<<<< HEAD
         logger.warning('WARNING: install_root changed to {}'.format(install_root))
-    logger.debug('install root is {}'.format(install_root)
-=======
->>>>>>> parent of 4187dd5b (adjust setting files to not have a "hidden" property so they actually get printed to screen with epmt help. comment out unused imports just in case. sheepishly adjust something in epmt.spec to remove a dir i know isnt there but lets see what happens...)
+    logger.debug('install root is {}'.format(install_root) )
     return install_root
 
 def logfn(func):
@@ -1042,7 +1040,10 @@ def logfn(func):
         #  FUNC_NAME(arg1, arg2..., kwarg1=xyz, kwarg2=abc, ...)
         # the module is prepended automatically by our logging format
         # as we use getLogger with the module name
-        logger.debug('{}({}{}{})'.format(func.__name__, ", ".join([str(x) for x in func_args]), "," if func_kwargs else "", ",".join(["{}={}".format(k, v) for (k,v) in func_kwargs.items()])))
+        logger.debug('{}({}{}{})'.format(func.__name__,
+                                         ", ".join( [ str(x) for x in func_args] ),
+                                         "," if func_kwargs else "",
+                                         ",".join( ["{}={}".format(k, v) for (k,v) in func_kwargs.items()] ) ))
         # now call the actual function with its arguments (if any)
         return func(*func_args, **func_kwargs)
     return log_func
