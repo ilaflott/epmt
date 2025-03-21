@@ -72,8 +72,7 @@ print("Extra data: ",extra_datas)
 
 # see we add the ui directory to 
 a = Analysis(['epmt','src/epmt/ui/index.py'],
-#             pathex=['./ui'],
-             pathex=['./src/epmt/ui'], # SMALL LEAP OF FAITH / MAY BREAK THINGS / MAY WANT TO SWITCH BACK IMMEDIATELY FYI!!!
+             pathex=['./ui'],
              binaries=[],
              datas=extra_datas,
              hiddenimports=hidden,

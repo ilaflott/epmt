@@ -4,8 +4,8 @@ def test_settings_import():
 # Copy this file and edit it as follows:
 # cp preset_settings/settings_xxxxxxx.py settings.py
 # Then feel free to edit the file to suit you.
-#from os import path
-#from getpass import getuser
+from os import path
+from getpass import getuser
 
 orm = 'sqlalchemy'
 db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
@@ -60,4 +60,4 @@ bulk_insert = True
 # lazy_compute_process_tree = True
 
 # METADATA INTERNAL USE ONLY
-epmt_settings_kind = 'sqlite_inmem_sqlalchemy'
+_epmt_settings_kind = 'sqlite_inmem_sqlalchemy'
