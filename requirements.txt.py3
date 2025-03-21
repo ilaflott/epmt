@@ -48,6 +48,7 @@ kiwisolver
 kmodes
 kneed
 lazy-object-proxy
+line-profiler
 livereload
 llvmlite
 lockfile
