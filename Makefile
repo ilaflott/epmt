@@ -351,8 +351,8 @@ check-release:
 	-e POSTGRES_DB=EPMT-TEST postgres:latest
 	@echo
 	@echo "looking for prev ran epmt-test-release container to remove..."
-	if docker container ls -a | grep epmt-test-release > /dev/null; \
-	then docker container rm $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release; fi
+	if docker container ls -a | grep epmt-$(EPMT_VERSION)-test-release > /dev/null; \
+	then docker container rm $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release; sleep 2; fi
 	@echo
 	@echo "running epmt-test-release container"
 	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release \
