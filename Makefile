@@ -26,9 +26,9 @@ DOCKER_RUN_OPTS:=-it
 #DOCKER_BUILD:=docker build --pull=false -f 
 #DOCKER_BUILD:=docker -D build --pull=false -f 
 #DOCKER_BUILD:=docker build -f 
-#DOCKER_BUILD:=docker -D build -f
+DOCKER_BUILD:=docker -D build -f
 #DOCKER_BUILD:=docker build --no-cache -f
-DOCKER_BUILD:=docker -D build --no-cache -f
+#DOCKER_BUILD:=docker -D build --no-cache -f
 
 # minimal-metrics src url for the epmt project- includes this repo, papiex, and epmt-dash (aka ui)
 MM_SRC_URL_BASE=https://gitlab.com/minimal-metrics-llc/epmt

@@ -1,7 +1,7 @@
 from setuptools import setup
 #setup()
 setup(name              = "epmt",
-      version           = "4.10.0",
+      version           = "4.11.0",
       url               = "https://some.where",
       author_email      = "some@where.com",
      packages          = [ 'epmt', 'epmt.orm', 'epmt.orm.sqlalchemy', 'epmt.test'],
