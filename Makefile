@@ -4,19 +4,19 @@
 #OS_TARGET=centos-7
 OS_TARGET=rocky-8
 
-#PYTHON_VERSION=3.9.16
-PYTHON_VERSION=3.9.21
+PYTHON_VERSION=3.9.16
+#PYTHON_VERSION=3.9.21
 
-#SQLITE_VERSION=3430100
-SQLITE_VERSION=3490100
+SQLITE_VERSION=3430100
+#SQLITE_VERSION=3490100
 
 
 # conda
 CONDA_ACTIVATE = source $$(conda info --base)/etc/profile.d/conda.sh ; conda activate ; conda activate ;
 
 # docker run command
-DOCKER_RUN:=docker -D run
-#DOCKER_RUN:=docker run
+#DOCKER_RUN:=docker -D run
+DOCKER_RUN:=docker run
 
 # docker run opts
 #DOCKER_RUN_OPTS:=--rm -it
@@ -25,8 +25,10 @@ DOCKER_RUN_OPTS:=-it
 # docker build opts
 #DOCKER_BUILD:=docker build --pull=false -f 
 #DOCKER_BUILD:=docker -D build --pull=false -f 
-#DOCKER_BUILD:=docker build -f 
-DOCKER_BUILD:=docker -D build -f
+
+DOCKER_BUILD:=docker build -f 
+#DOCKER_BUILD:=docker -D build -f
+
 #DOCKER_BUILD:=docker build --no-cache -f
 #DOCKER_BUILD:=docker -D build --no-cache -f
 
