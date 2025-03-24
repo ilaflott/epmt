@@ -7,7 +7,9 @@ OS_TARGET=rocky-8
 PYTHON_VERSION=3.9.16
 #PYTHON_VERSION=3.9.21
 
+SQLITE_YEAR=2023
 SQLITE_VERSION=3430100
+#SQLITE_YEAR=2025
 #SQLITE_VERSION=3490100
 
 
@@ -202,7 +204,9 @@ docker-dist:
 	@echo " - docker build <STUFF> Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build"
 	@echo "       we are creating a container environment inwhich to build the python distribution"
 	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build -t $(OS_TARGET)-epmt-build:$(EPMT_VERSION) \
-	--build-arg sqlite_version=$(SQLITE_VERSION) --build-arg python_version=$(PYTHON_VERSION) .
+	--build-arg sqlite_version=$(SQLITE_VERSION) \
+	--build-arg sqlite_year=$(SQLITE_YEAR) \
+	--build-arg python_version=$(PYTHON_VERSION) .
 	@echo
 	@echo
 	@echo " - docker run <STUFF> <use image built from Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-build>"
@@ -327,6 +331,7 @@ build-check-release: $(EPMT_FULL_RELEASE)
 	--build-arg epmt_full_release=$(EPMT_FULL_RELEASE) \
 	--build-arg epmt_python_full_release=$(EPMT_PYTHON_FULL_RELEASE) \
 	--build-arg sqlite_version=$(SQLITE_VERSION) \
+	--build-arg sqlite_year=$(SQLITE_YEAR) \
 	--build-arg python_version=$(PYTHON_VERSION) .
 	@echo 
 
@@ -336,7 +341,6 @@ check-release:
 	if docker ps | grep postgres-test > /dev/null; \
 	then docker stop postgres-test; fi
 	@echo
-	@echo
 	@echo "looking for epmt-test-net docker networks"
 	if docker network ls | grep epmt-test-net > /dev/null; \
 	then docker network rm -f epmt-test-net; fi
@@ -345,12 +349,12 @@ check-release:
 	@echo "creating epmt-test-net docker network"
 	docker network create epmt-test-net
 	@echo
-	@echo
 	@echo "running postgres-test container"
 	$(DOCKER_RUN) -d --rm --name postgres-test --network epmt-test-net --privileged \
 	-e POSTGRES_USER=postgres \
 	-e POSTGRES_PASSWORD=example \
 	-e POSTGRES_DB=EPMT-TEST postgres:latest
+	@echo
 	@echo
 	@echo "looking for prev ran epmt-test-release container to remove..."
 	if docker container ls -a | grep epmt-$(EPMT_VERSION)-test-release > /dev/null; \
@@ -358,7 +362,8 @@ check-release:
 	@echo
 	@echo "running epmt-test-release container"
 	$(DOCKER_RUN) --name $(OS_TARGET)-epmt-$(EPMT_VERSION)-test-release \
-	--network epmt-test-net --privileged $(DOCKER_RUN_OPTS) \
+	--network epmt-test-net \
+	--privileged $(DOCKER_RUN_OPTS) \
 	-h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) \
 	bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; epmt -v -V; \
 	echo "" && echo "------ epmt -v check ------" && epmt -v check; \
@@ -367,9 +372,6 @@ check-release:
 	echo ""'
 	@echo
 	@echo
-#	@echo "shutting down docker networks, postgres test container, epmt-test-net"
-#	docker stop postgres-test
-#	docker network rm -f epmt-test-net
 # ----------- \end EPMT_FULL_RELEASE THINGS ---------- #
 
 
