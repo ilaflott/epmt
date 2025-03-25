@@ -33,7 +33,7 @@ RUN yum install -y \
     xz-devel \
     libffi-devel
 
-ARG sqlite_year=2025
+ARG sqlite_year
 ARG sqlite_version
 RUN cd /usr/src \
     && echo "downloading sqlite3 ${sqlite_version}" \
@@ -78,6 +78,8 @@ ARG epmt_python_full_release
 WORKDIR ${install_path}_archive
 COPY ${epmt_full_release} .
 COPY src/dist/${epmt_python_full_release} .
+
+
 RUN python3 -m pip install ${epmt_python_full_release}
 
 RUN mkdir /usr/lib/python3.9/site-packages/papiex-oss \

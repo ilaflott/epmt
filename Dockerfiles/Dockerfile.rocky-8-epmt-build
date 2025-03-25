@@ -21,7 +21,7 @@ RUN yum install -y \
     xz-devel \
     libffi-devel
 
-ARG sqlite_year=2025
+ARG sqlite_year
 ARG sqlite_version
 RUN cd /usr/src && echo "downloading sqlite3 ${sqlite_version}. The year for the URL is ${sqlite_year}" \
     && curl -o sqlite-amalgamation-${sqlite_version}.zip https://www.sqlite.org/${sqlite_year}/sqlite-amalgamation-${sqlite_version}.zip \
@@ -51,6 +51,7 @@ COPY src/epmt/ui/requirements-ui.txt.py3 /tmp
 # RUN pip3 install -r /tmp/requirements-ui.txt.py3 
 
 RUN rm -f /tmp/requirements.txt.py3 /tmp/requirements-ui.txt.py3
+
 RUN yum clean all
 RUN rm -rf /usr/src /var/cache/yum
 

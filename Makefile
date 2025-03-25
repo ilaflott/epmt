@@ -26,10 +26,10 @@ DOCKER_RUN_OPTS:=-it
 
 # docker build opts
 #DOCKER_BUILD:=docker build --pull=false -f 
-#DOCKER_BUILD:=docker -D build --pull=false -f 
+#DOCKER_BUILD:=docker -D build --pull=false -f
 
-DOCKER_BUILD:=docker build -f 
-#DOCKER_BUILD:=docker -D build -f
+#DOCKER_BUILD:=docker build -f 
+DOCKER_BUILD:=docker -D build -f
 
 #DOCKER_BUILD:=docker build --no-cache -f
 #DOCKER_BUILD:=docker -D build --no-cache -f
@@ -131,7 +131,7 @@ $(EPMT_RELEASE) dist:
 	pyinstaller --version
 #	remove the --clean flag to use the cache in builds, helps speed things up
 	@echo "pyinstaller --clean --noconfirm --distpath=epmt-install epmt.spec"
-	pyinstaller --noconfirm --distpath=epmt-install epmt.spec
+	pyinstaller --clean --noconfirm --distpath=epmt-install epmt.spec
 	@echo
 	@echo
 	@echo "**********************************************************"
@@ -165,7 +165,7 @@ $(EPMT_RELEASE) dist:
 # note that this step requires EPMT_RELEASE and PAPIEX_RELEASE, but we don't explicitly state it here, b.c.
 # when we go in the docker container, the time-zone changes and therefore thet timestamp comparison triggers re-making
 # targets that do not need to be remade
-python-dist: 
+python-dist:
 	@echo "(python-dist) whoami: $(shell whoami)"
 	@echo "**********************************************************"
 	@echo "************** python3 setup.py sdist ********************"
@@ -193,7 +193,7 @@ test-$(EPMT_RELEASE) dist-test:
 # this target 1) builds an image with an environment inwhich we'd like to build our applicaiton
 # 2) builds that application within a running container of that image
 # NOTE: bind mounts to current working directory, usually the repository directory
-docker-dist:	
+docker-dist:
 	@echo "(docker-dist) whoami: $(shell whoami)"
 	@echo " ------ CREATE EPMT TARBALL: docker-dist ------- "
 	@echo "       build command = ${DOCKER_BUILD}"
@@ -251,7 +251,6 @@ $(EPMT_DASH_SRC): $(EPMT_DASH_SRC_TARBALL)
 	ln -s ../../$(EPMT_DASH_SRC)/docs/index.md index.md || \
 	echo "symbolic link creation failed."; \
 	cd -
-#	ln -s ../../src/epmt/ui/docs/index.md index.md || \
 
 $(EPMT_DASH_SRC_TARBALL):
 	@echo "(EPMT_DASH_SRC_TARBALL) whoami: $(shell whoami)"
@@ -284,13 +283,10 @@ $(PAPIEX_SRC)/$(PAPIEX_RELEASE): $(PAPIEX_SRC)
 	if [ -n "${OUTSIDE_DOCKER}" ]; then \
 	echo "making distclean install dist within PAPIEX_SRC/PAPIEX_RELEASE target"; \
 	make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) distclean install dist; \
-	echo "################# DONE making docker-dist within PAPIEX_SRC/PAPIEX_RELEASE target ########################"; \
 	else \
 	echo "making docker-dist within PAPIEX_SRC/PAPIEX_RELEASE target"; \
 	make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) docker-dist; \
-	echo "################# DONE making docker-dist within PAPIEX_SRC/PAPIEX_RELEASE target ########################"; \
 	fi
-	@echo "################### DONE MAKE PAPIEX TARBALL : papiex-dist ########################################"
 
 $(PAPIEX_SRC): $(PAPIEX_SRC_TARBALL)
 	@echo "(PAPIEX_SRC) whoami: $(shell whoami)"
@@ -322,7 +318,7 @@ $(EPMT_FULL_RELEASE): $(EPMT_RELEASE) test-$(EPMT_RELEASE) $(PAPIEX_RELEASE)
 
 build-check-release: $(EPMT_FULL_RELEASE)
 	@echo "(build-check-release) whoami: $(shell whoami)"
-	@echo "(build-check-release) creating an all-included testing environment / delivery tarball"
+	@echo "creating an all-included testing environment / delivery tarball"
 	$(DOCKER_BUILD) Dockerfiles/Dockerfile.$(OS_TARGET)-epmt-test-release \
 	-t $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) \
 	--build-arg epmt_version=$(EPMT_VERSION) \
