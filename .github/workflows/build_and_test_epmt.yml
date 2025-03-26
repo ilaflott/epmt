@@ -70,7 +70,7 @@ jobs:
           mkdir -p /usr/lib/python3.9/site-packages/papiex-epmt-install
           ln -s  /usr/lib/python3.9/site-packages/epmt/lib /usr/lib/python3.9/site-packages/papiex-epmt-install/
           ln -s  /usr/lib/python3.9/site-packages/epmt/bin /usr/lib/python3.9/site-packages/papiex-epmt-install/
-          export PATH='/usr/bin:${PATH}:/usr/local/bin:/usr/local/libexec'
+          export PATH='/usr/bin:${PATH}:/usr/local/libexec:/usr/local/bin'
           
       - name: epmt version call and check
         run: |
