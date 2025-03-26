@@ -47,7 +47,7 @@ build:python3:
     - epmt -v -V && echo "success! :-)" || echo "fail! but keep going..."
     - epmt -v check && echo "success! :-)" || echo "fail! but keep going..."
     #- make check-epmt-check && echo 'epmt check, success' || echo 'epmt check, failed and guarding against sudden exit' 
-    - epmt -v unittests && echo "success! :-)" || echo "fail! but keep going..."
+    - epmt -v unittest && echo "success! :-)" || echo "fail! but keep going..."
     #- make check-unittests && echo 'epmt unittests, success' || echo 'epmt unittests, failed and guarding against sudden exit'
     - epmt -v integration && echo "success! :-)" || echo "fail! but keep going..."
     #- make check-integration-tests && echo 'epmt integration, success' || echo 'epmt integration, failed and guarding against sudden exit' 
