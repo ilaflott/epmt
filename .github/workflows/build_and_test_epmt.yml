@@ -22,24 +22,33 @@ env:
 jobs:
   build-linux:
     runs-on: ubuntu-latest 
-    #runs-on: rockylinux:8
+
     container:
       image: rockylinux:8 
-      #image: postgres:latest
+
     steps:
       - uses: actions/checkout@v4
-      - name: install and configure python, sqlite, and requirements
+      - name: yum install and update
         run: |
           yum update -y
           yum install -y findutils unzip bash tcsh nc curl make git gcc postgresql-devel zlib-devel bzip2 bzip2-devel readline-devel sqlite-devel openssl-devel xz xz-devel libffi-devel
 
+      - name: install and configure sqlite3
+        run: |
           (cd /usr/src && echo "downloading sqlite3" && curl -o sqlite-amalgamation-3490100.zip https://www.sqlite.org/2025/sqlite-amalgamation-3490100.zip && unzip sqlite-amalgamation-3490100.zip && echo "building libsqlite3 with json1 and other useful extensions" && cd sqlite-amalgamation-3490100 && gcc -shared -fPIC -O2  -DSQLITE_ENABLE_JSON1 -DSQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_MAX_VARIABLE_NUMBER=9999 sqlite3.c -o /usr/lib64/libsqlite3.so)
+
+      - name: install python3
+        run: |
           (cd /usr/src && echo "downloading python" && curl -o Python-3.9.21.tgz https://www.python.org/ftp/python/3.9.21/Python-3.9.21.tgz && tar xzf Python-3.9.21.tgz && cd Python-3.9.21 && echo "building python3" && ./configure --quiet --prefix=/usr --enable-shared --enable-optimizations --enable-loadable-sqlite-extensions && make --silent install > /dev/null)
 
+      - name: configure python3
+        run: |
           ldconfig
           python3 -V
           pip3 install --upgrade pip
 
+      - name: install requirements
+        run: |
           yum install -y gcc-c++
           pip3 install -r requirements.txt.py3
           
@@ -55,14 +64,13 @@ jobs:
       - name: pip install epmt pip-package
         run: |
           pip3 install src/dist/epmt*gz
+          
+      - name: create links to papiex executables, adjust path
+        run: |
           mkdir -p /usr/lib/python3.9/site-packages/papiex-epmt-install
           ln -s  /usr/lib/python3.9/site-packages/epmt/lib /usr/lib/python3.9/site-packages/papiex-epmt-install/
           ln -s  /usr/lib/python3.9/site-packages/epmt/bin /usr/lib/python3.9/site-packages/papiex-epmt-install/
-          
-      - name: setup path and attempt to setup bats
-        run: |
           export PATH='/usr/bin:${PATH}:/usr/local/bin:/usr/local/libexec'
-          /usr/lib/python3.9/site-packages/epmt/test/integration/libs/bats/install.sh /usr/local || echo "tried to install bats from within epmt but failed. keep going!"
           
       - name: epmt version call and check
         run: |
@@ -78,5 +86,5 @@ jobs:
           
       - name: epmt integration call and check
         run: |
+          /usr/lib/python3.9/site-packages/epmt/test/integration/libs/bats/install.sh /usr/local || echo "tried to install bats from within epmt but failed. keep going!"		
           epmt -v integration && echo "success! :-)" || echo "fail! but keep going..."
-          

@@ -44,7 +44,9 @@ setup(name              = "epmt",
                              'test/data/tsv/collated-tsv-2220.tgz',
 
                              'test/data/tsv/12340/*',
+                             
                              'test/integration/*.bats',
+                             'test/integration/epmt-annotate.sh',
 
                              'test/integration/libs/bats/CONDUCT.md',
                              'test/integration/libs/bats/LICENSE',
@@ -52,8 +54,14 @@ setup(name              = "epmt",
                              'test/integration/libs/bats/install.sh',
                              'test/integration/libs/bats/package.json',
 
-                             'test/integration/libs/bats/bin/*',
-                             'test/integration/libs/bats/libexec/*',
+                             'test/integration/libs/bats/bin/bats',
+                             
+                             'test/integration/libs/bats/libexec/bats',
+                             'test/integration/libs/bats/libexec/bats-exec-suite',
+                             'test/integration/libs/bats/libexec/bats-exec-test',
+                             'test/integration/libs/bats/libexec/bats-format-tap-stream',
+                             'test/integration/libs/bats/libexec/bats-preprocess',
+
                              'test/integration/libs/bats/man/*',
 
                              'test/integration/libs/bats/test/bats.bats',
