@@ -14,6 +14,7 @@ from os import path
 
 def do_cleanup():
     eq.delete_jobs(['685000', '627919', '691201', '692544'], force=True, remove_models = True)
+#    eq.delete_jobs(['685000', '685016', '627919', '691201', '692544'], force=True, remove_models = True)
 
 @timing
 def setUpModule():
@@ -21,12 +22,14 @@ def setUpModule():
     setup_db(settings)
     do_cleanup()
     datafiles='{}/test/data/misc/685000.tgz'.format(install_root)
-#    print('setUpModule: importing {0}'.format(datafiles))
+#    datafiles='{}/test/data/misc/685???.tgz'.format(install_root)
+    print('setUpModule: importing {0}'.format(datafiles))
     settings.post_process_job_on_ingest = True
     with capture() as (out,err):
         epmt_submit(glob(datafiles), dry_run=False)
     settings.post_process_job_on_ingest = False
     assert eq.get_jobs(['685000'], fmt='terse') == ['685000']
+#    assert eq.get_jobs(['685016'], fmt='terse') == ['685016']
     assert eq.get_unprocessed_jobs() == []
     
 def tearDownModule():
@@ -272,8 +275,15 @@ class EPMTCmds(unittest.TestCase):
         print(f'jobs = {jobs}')
         self.assertFalse('685000' in jobs)
 
-    @unittest.skipUnless(orm_in_memory(), 'skip on persistent database')
+    @unittest.skipUnless( orm_in_memory(), 'skip on persistent database')
     def test_zz_drop_db(self):
+#        # submit a job to the db we just cleaned out... oops!
+#        datafiles='{}/test/data/misc/685000.tgz'.format(install_root)
+#        settings.post_process_job_on_ingest = True
+#        with capture() as (out,err):
+#            epmt_submit(glob(datafiles), dry_run=False)
+#        settings.post_process_job_on_ingest = False
+        
         # check that we get a list job nums as strs in a list
         jobs = eq.get_jobs(fmt='terse')
         self.assertTrue(len(jobs) > 0)

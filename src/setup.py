@@ -6,26 +6,88 @@ setup(name              = "epmt",
       author_email      = "some@where.com",
       packages          = [ 'epmt', 'epmt.orm', 'epmt.orm.sqlalchemy', 'epmt.test'],
       package_data      = {'epmt' :
-                           [ 'preset_settings/*.py', 'alembic.ini',
-                             'epmt_migrations/*',
-                             'epmt_migrations/*',
+                           [ 'alembic.ini',
+
+                             'preset_settings/*.py',
+
+                             'epmt_migrations/README',
+
+                             'epmt_migrations/env.py',
+                             'epmt_migrations/script.py.mako',
+
+                             'epmt_migrations/docker-entrypoint-initdb.d/init-user-db.sh',
+
                              'epmt_migrations/versions/*',
-                             'test/shell/*', #rocky-8
-                             'test/integration/*', #rocky-8
+
+                             'test/run',
+                             'test/test_run.sh',
+                             'test/test_source.csh',
+
                              'test/data/corrupted_csv/*',
                              'test/data/csv/*',
-                             'test/data/daemon/*',
+
+                             'test/data/daemon/627919.tgz',
+
                              'test/data/daemon/ingest/*',
+
                              'test/data/misc/*',
                              'test/data/outliers/*',
                              'test/data/outliers_nb/*',
                              'test/data/query/*',
                              'test/data/query_notebook/*',
-                             'test/data/submit/*',
+
+                             'test/data/submit/692500.tgz',
+                             'test/data/submit/804268.tgz',
+                             'test/data/submit/804280.tgz',
                              'test/data/submit/3455/*',
-                             'test/data/tsv/*',
+
+                             'test/data/tsv/collated-tsv-2220.tgz',
+
                              'test/data/tsv/12340/*',
-                            ] },
+                             'test/integration/*.bats',
+
+                             'test/integration/libs/bats/CONDUCT.md',
+                             'test/integration/libs/bats/LICENSE',
+                             'test/integration/libs/bats/README.md',
+                             'test/integration/libs/bats/install.sh',
+                             'test/integration/libs/bats/package.json',
+
+                             'test/integration/libs/bats/bin/*',
+                             'test/integration/libs/bats/libexec/*',
+                             'test/integration/libs/bats/man/*',
+
+                             'test/integration/libs/bats/test/bats.bats',
+                             'test/integration/libs/bats/test/suite.bats',
+                             'test/integration/libs/bats/test/test_helper.bash',
+
+                             'test/integration/libs/bats/test/fixtures/bats/*',
+                             'test/integration/libs/bats/test/fixtures/suite/empty/*',
+                             'test/integration/libs/bats/test/fixtures/suite/multiple/*',
+                             'test/integration/libs/bats/test/fixtures/suite/single/*',
+
+                             'test/integration/libs/bats-assert/CHANGELOG.md',
+                             'test/integration/libs/bats-assert/LICENSE',
+                             'test/integration/libs/bats-assert/README.md',
+                             'test/integration/libs/bats-assert/load.bash',
+                             'test/integration/libs/bats-assert/package.json',
+
+                             'test/integration/libs/bats-assert/script/*',
+                             'test/integration/libs/bats-assert/src/*',
+                             'test/integration/libs/bats-assert/test/*',
+
+                             'test/integration/libs/bats-support/CHANGELOG.md',
+                             'test/integration/libs/bats-support/LICENSE',
+                             'test/integration/libs/bats-support/README.md',
+                             'test/integration/libs/bats-support/load.bash',
+                             'test/integration/libs/bats-support/package.json',
+
+                             'test/integration/libs/bats-support/script/*',
+                             'test/integration/libs/bats-support/src/*',
+                             'test/integration/libs/bats-support/test/*',
+
+                             'test/shell/*',
+                            ]
+                           },
       data_files        = [ ('lib/python3.9/site-packages/epmt/lib',
                              [ 'papiex-epmt-install/lib/libmonitor.so',
                                'papiex-epmt-install/lib/libmonitor.so.0.0.0',
@@ -56,3 +118,34 @@ setup(name              = "epmt",
                               ] ) ],
       scripts           = [ 'scripts/epmt' ],
       )
+
+
+
+
+
+
+
+
+#[
+# 'alembic.ini',
+# 'preset_settings/*.py',
+# 'epmt_migrations/*',
+# 'epmt_migrations/*',
+# 'epmt_migrations/versions/*',
+# 'test/shell/*', #rocky-8
+# 'test/integration/*', #rocky-8
+# 'test/integration/libs/', #rocky-8
+# 'test/data/corrupted_csv/*',
+# 'test/data/csv/*',
+# 'test/data/daemon/*',
+# 'test/data/daemon/ingest/*',
+# 'test/data/misc/*',
+# 'test/data/outliers/*',
+# 'test/data/outliers_nb/*',
+# 'test/data/query/*',
+# 'test/data/query_notebook/*',
+# 'test/data/submit/*',
+# 'test/data/submit/3455/*',
+# 'test/data/tsv/*',
+# 'test/data/tsv/12340/*',
+#]
