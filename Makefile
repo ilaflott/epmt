@@ -374,8 +374,8 @@ check-release:
 	|| echo "epmt -vv unittest failure guard, keep going"; \
 	echo ""; \
 	echo ""; \
-	echo "" && echo "------ epmt -vv integration ------" && epmt -vv integration \
-	|| echo "epmt -vv integration failure guard, keep going"; \
+	echo "" && echo "------ epmt integration ------" && epmt integration \
+	|| echo "epmt integration failure guard, keep going"; \
 	echo ""'
 	@echo
 	@echo

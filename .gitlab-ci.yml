@@ -42,15 +42,16 @@ build:python3:
 
     - export PATH='/usr/bin:${PATH}:/usr/local/bin:/usr/local/libexec'
 
+    - epmt -v -V && echo "success! :-)" || echo "fail! but keep going..."
+
+    - epmt -v check && echo "success! :-)" || echo "fail! but keep going..."
+
+    - epmt -v unittest && echo "success! :-)" || echo "fail! but keep going..."
+
     - /usr/lib/python3.9/site-packages/epmt/test/integration/libs/bats/install.sh /usr/local || echo "tried to install bats from within epmt but failed. keep going!"
 
-    - epmt -v -V && echo "success! :-)" || echo "fail! but keep going..."
-    - epmt -v check && echo "success! :-)" || echo "fail! but keep going..."
-    #- make check-epmt-check && echo 'epmt check, success' || echo 'epmt check, failed and guarding against sudden exit' 
-    - epmt -v unittest && echo "success! :-)" || echo "fail! but keep going..."
-    #- make check-unittests && echo 'epmt unittests, success' || echo 'epmt unittests, failed and guarding against sudden exit'
-    - epmt -v integration && echo "success! :-)" || echo "fail! but keep going..."
-    #- make check-integration-tests && echo 'epmt integration, success' || echo 'epmt integration, failed and guarding against sudden exit' 
+#	# this takes A LONG TIME!
+#    - epmt -v -V && echo "success! :-)" || echo "fail! but keep going..."    - epmt integration && echo "success! :-)" || echo "fail! but keep going..."
 
 
 

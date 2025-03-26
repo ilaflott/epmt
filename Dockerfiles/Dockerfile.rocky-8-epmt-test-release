@@ -85,10 +85,6 @@ RUN python3 -m pip install ${epmt_python_full_release}
 RUN tar zxf ${epmt_python_full_release}  \
     && mv epmt-${epmt_version}/papiex-epmt-install /usr/lib/python3.9/site-packages/
 #    && rm -rf *.tgz 
-#RUN mkdir /usr/lib/python3.9/site-packages/papiex-oss \
-#    && tar zxf ${epmt_python_full_release}  \
-#    && mv epmt-${epmt_version}/papiex-epmt-install /usr/lib/python3.9/site-packages/papiex-oss 
-##    && rm -rf *.tgz 
 COPY utils/epmt-installer .
 
 WORKDIR ${install_path}
@@ -97,13 +93,10 @@ RUN ls ${install_path}
 RUN echo -ne "\n\n" | ${install_path}_archive/epmt-installer ${install_path}_archive/EPMT*tgz
 RUN rm -f *.tgz epmt-installer
 
-#ENV PATH="${install_path}/epmt-${epmt_version}/epmt-install/epmt:${PATH}:/usr/local/bin:/usr/local/libexec"
 ENV PATH="/usr/bin:${PATH}:/usr/local/bin:/usr/local/libexec"
 
+RUN /usr/lib/python3.9/site-packages/epmt/test/integration/libs/bats/install.sh /usr/local
+#RUN ${install_prefix}/epmt/test/integration/libs/bats/install.sh /usr/local
 
-# unsure if the all-caps env var is needed? 
-ARG install_prefix
-ENV EPMT_INSTALL_PREFIX=${install_prefix}
 
-# put bats in the container- needed for integration tests
-RUN ${install_prefix}/epmt/test/integration/libs/bats/install.sh /usr/local
+

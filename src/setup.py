@@ -118,34 +118,3 @@ setup(name              = "epmt",
                               ] ) ],
       scripts           = [ 'scripts/epmt' ],
       )
-
-
-
-
-
-
-
-
-#[
-# 'alembic.ini',
-# 'preset_settings/*.py',
-# 'epmt_migrations/*',
-# 'epmt_migrations/*',
-# 'epmt_migrations/versions/*',
-# 'test/shell/*', #rocky-8
-# 'test/integration/*', #rocky-8
-# 'test/integration/libs/', #rocky-8
-# 'test/data/corrupted_csv/*',
-# 'test/data/csv/*',
-# 'test/data/daemon/*',
-# 'test/data/daemon/ingest/*',
-# 'test/data/misc/*',
-# 'test/data/outliers/*',
-# 'test/data/outliers_nb/*',
-# 'test/data/query/*',
-# 'test/data/query_notebook/*',
-# 'test/data/submit/*',
-# 'test/data/submit/3455/*',
-# 'test/data/tsv/*',
-# 'test/data/tsv/12340/*',
-#]
