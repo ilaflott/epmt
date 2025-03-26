@@ -57,7 +57,7 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
         level = WARNING # 30
     elif intlvl == 1:
         level = INFO # 20
-    else #intlvl >= 2:
+    else: #intlvl >= 2:
         level = DEBUG # 10
 
     # Set level and remove all existing handlers 

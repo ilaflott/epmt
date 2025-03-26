@@ -110,8 +110,8 @@ def verify_install_prefix():
         logger.error("Found wildcards in install_prefix: {}".format(install_prefix))
         PrintFail()
         return False
-    for e in [ "lib/libpapiex.so","lib/libmonitor.so",
-               "lib/libpapi.so","lib/libpfm.so","bin/papi_command_line" ]:
+    for e in [ "/lib/libpapiex.so","/lib/libmonitor.so",
+               "/lib/libpapi.so","/lib/libpfm.so","/bin/papi_command_line" ]:
         cmd = "ls -l "+install_prefix+e+">/dev/null 2>&1"
         logger.info("\t"+cmd)
         return_code = run(cmd, shell=True).returncode
@@ -171,7 +171,8 @@ def verify_papiex_options():
     logger.info(f'settings.install_prefix = {settings.install_prefix}')
     retval = True
 # Check for any components
-    cmd = settings.install_prefix+"bin/papi_component_avail 2>&1 "+"| sed -n -e '/Active/,$p' | grep perf_event >/dev/null 2>&1"
+#    cmd = settings.install_prefix+"/bin/papi_component_avail 2>&1 "+"| sed -n -e '/Active/,$p' | grep perf_event >/dev/null 2>&1"
+    cmd = settings.install_prefix+"/bin/papi_component_avail 2>&1 "+"| sed -e '/Active/,$p' | grep perf_event >/dev/null 2>&1"
     logger.info("\t"+cmd)
     return_code = run(cmd, shell=True).returncode
     if return_code != 0:
@@ -182,7 +183,8 @@ def verify_papiex_options():
     for e in eventlist:
         if e in [ 'COLLATED_TSV', 'DEBUG' ]:
             continue
-        cmd = settings.install_prefix+"bin/papi_command_line 2>&1 "+e+"| sed -n -e '/PERF_COUNT_SW_CPU_CLOCK\ :/,$p' | grep PERF_COUNT_SW_CPU_CLOCK > /dev/null 2>&1"
+#        cmd = settings.install_prefix+"/bin/papi_command_line 2>&1 "+e+"| sed -n -e '/PERF_COUNT_SW_CPU_CLOCK\ :/,$p' | grep PERF_COUNT_SW_CPU_CLOCK > /dev/null 2>&1" # does not work for rocky-8. 
+        cmd = settings.install_prefix+"/bin/papi_command_line 2>&1 "+e+"| sed -e '/PERF_COUNT_SW_CPU_CLOCK\ :/,$p' | grep PERF_COUNT_SW_CPU_CLOCK > /dev/null 2>&1" # guessing... NOT TRIED YET TODO: TRY THIS INSTEAD OF ABOVE LINE
         logger.info("\t"+cmd)
         return_code = run(cmd, shell=True).returncode
         if return_code != 0:
@@ -294,25 +296,25 @@ def verify_papiex():
 
 def epmt_check():
     retval = True
-    logger.info('checking: verify_db_params()...')
+    logger.warning('CHECKING verify_db_params()...')
     if verify_db_params() == False:
         retval = False
-    logger.info('checking: verify_install_prefix()...')
+    logger.warning('CHECKING verify_install_prefix()...')
     if verify_install_prefix() == False:
         retval = False
-    logger.info('checking: verify_epmt_output_prefix()...')
+    logger.warning('CHECKING verify_epmt_output_prefix()...')
     if verify_epmt_output_prefix() == False:
         retval = False
-    logger.info('checking: verify_perf()...')
+    logger.warning('CHECKING verify_perf()...')
     if verify_perf() == False:
         retval = False
-    logger.info('checking: verify_papiex_options()...')
+    logger.warning('CHECKING verify_papiex_options()...')
     if verify_papiex_options() == False:
         retval = False
-    logger.info('checking: verify_stage_command()...')
+    logger.warning('CHECKING verify_stage_command()...')
     if verify_stage_command() == False:
         retval = False
-    logger.info('checking: verify_papiex()...')
+    logger.warning('CHECKING verify_papiex()...')
     if verify_papiex() == False:
         retval = False
     return retval
@@ -582,7 +584,8 @@ def annotate_metadata(metadatafile, annotations, replace = False):
 # case existing annotations are wiped clean first.
  
 def epmt_annotate(argslist, replace = False):
-    if not argslist: return False # nothing to do
+    if not argslist:
+        return False # nothing to do
 
     from epmt.epmtlib import kwargify
     staged_file = job_dir = jobid = running_job = False  # initialize
@@ -799,7 +802,7 @@ def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run
     cmd = add_var(cmd,"PAPIEX_OUTPUT"+equals+global_datadir) 
     cmd = add_var(cmd,"PAPIEX_OPTIONS"+equals+get_papiex_options(settings))
     old_pl_libs = environ.get("LD_PRELOAD","")
-    papiex_pl_libs = settings.install_prefix+"lib/libpapiex.so:"+settings.install_prefix+"lib/libmonitor.so:"+settings.install_prefix+"lib/libpapi.so:"+settings.install_prefix+"lib/libpfm.so"
+    papiex_pl_libs = settings.install_prefix+"/lib/libpapiex.so:"+settings.install_prefix+"/lib/libmonitor.so:"+settings.install_prefix+"/lib/libpapi.so:"+settings.install_prefix+"/lib/libpfm.so"
     if run_cmd:
         cmd = add_var(cmd,"LD_PRELOAD"+equals+papiex_pl_libs+":"+old_pl_libs)
     else:

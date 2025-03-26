@@ -60,7 +60,6 @@ matplotlib
 mccabe
 mistune
 mkdocs
-mkdocs-bootstrap4
 mkdocs-theme-bootstrap4
 mkdocs-git-committers-plugin
 more-itertools

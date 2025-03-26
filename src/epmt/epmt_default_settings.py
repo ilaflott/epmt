@@ -34,7 +34,7 @@ profile = False
 input_pattern = "*-papiex*.[ct]sv"
 
 from epmt.epmtlib import get_install_root
-install_prefix = get_install_root() + "/../papiex-oss/papiex-epmt-install/"
+install_prefix = path.abspath(get_install_root() + "/../papiex-epmt-install/")
 #install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-epmt-install/"
 #install_prefix = path.abspath(this_file_dir + "/../../papiex-epmt-install/")
 
