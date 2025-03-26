@@ -34,6 +34,9 @@ build:python3:
     - make epmt-dash
     - make OUTSIDE_DOCKER="YUP" papiex-dist
     - make dist python-dist dist-test
+    - make epmt-full-release
+    - make build-check-release
+    - make check-release
 
 
 
