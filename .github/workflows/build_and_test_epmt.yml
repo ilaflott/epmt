@@ -21,9 +21,11 @@ env:
 
 jobs:
   build-linux:
-    runs-on: rockylinux:8
+    runs-on: ubuntu-latest 
+    #runs-on: rockylinux:8
     container:
-      image: postgres:latest
+      image: rockylinux:8 
+      #image: postgres:latest
     steps:
       - uses: actions/checkout@v4
       - name: install and configure python, sqlite, and requirements
