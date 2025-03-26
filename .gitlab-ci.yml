@@ -40,7 +40,9 @@ build:python3:
     - ln -s  /usr/lib/python3.9/site-packages/epmt/lib /usr/lib/python3.9/site-packages/papiex-epmt-install/
     - ln -s  /usr/lib/python3.9/site-packages/epmt/bin /usr/lib/python3.9/site-packages/papiex-epmt-install/
 
-    - export PATH='${PATH}:/usr/local/bin:/usr/local/libexec'
+    - export PATH='/usr/bin:${PATH}:/usr/local/bin:/usr/local/libexec'
+
+    - /usr/lib/python3.9/site-packages/epmt/test/integration/libs/bats/install.sh /usr/local || echo "tried to install bats from within epmt but failed. keep going!"
 
     - epmt -v -V && echo "success! :-)" || echo "fail! but keep going..."
     - epmt -v check && echo "success! :-)" || echo "fail! but keep going..."
