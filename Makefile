@@ -28,10 +28,10 @@ DOCKER_RUN_OPTS:=-it
 #DOCKER_BUILD:=docker build --pull=false -f 
 #DOCKER_BUILD:=docker -D build --pull=false -f
 
-DOCKER_BUILD:=docker build -f 
+#DOCKER_BUILD:=docker build -f 
 #DOCKER_BUILD:=docker -D build -f
 
-#DOCKER_BUILD:=docker build --no-cache -f
+DOCKER_BUILD:=docker build --no-cache -f
 #DOCKER_BUILD:=docker -D build --no-cache -f
 
 # minimal-metrics src url for the epmt project- includes this repo, papiex, and epmt-dash (aka ui)
@@ -128,18 +128,18 @@ $(EPMT_RELEASE) dist:
 	@echo "*************** calling pyinstaller **********************"
 	@echo "**********************************************************"
 	pyinstaller --version
-#	@echo "pyinstaller --clean --noconfirm --distpath=epmt-install epmt.spec"
-#	pyinstaller --clean --noconfirm --distpath=epmt-install epmt.spec
-	@echo "pyinstaller --noconfirm --distpath=epmt-install epmt.spec"
-	pyinstaller --noconfirm --distpath=epmt-install epmt.spec
+	@echo "pyinstaller --clean --noconfirm --distpath=epmt-install epmt.spec"
+	pyinstaller --clean --noconfirm --distpath=epmt-install epmt.spec
+#	@echo "WARNING NOT CLEAN: pyinstaller --noconfirm --distpath=epmt-install epmt.spec"
+#	pyinstaller --noconfirm --distpath=epmt-install epmt.spec
 	@echo
 	@echo
 	@echo "**********************************************************"
 	@echo "****************** calling mkdocs ************************"
 	@echo "**********************************************************"
 #   add --dirty to the build call to utilize the cache when building docs
-	mkdocs build --dirty -f epmtdocs/mkdocs.yml
-#	mkdocs build -f epmtdocs/mkdocs.yml
+#	mkdocs build --dirty -f epmtdocs/mkdocs.yml
+	mkdocs build -f epmtdocs/mkdocs.yml
 	@echo
 	@echo
 	cp -Rp preset_settings epmt-install
@@ -361,11 +361,19 @@ check-release:
 	--network epmt-test-net \
 	--privileged $(DOCKER_RUN_OPTS) \
 	-h slurmctl $(OS_TARGET)-epmt-test-release:$(EPMT_VERSION) \
-	bash
-#-c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; epmt -v -V; \
-	echo "" && echo "------ epmt -v check ------" && epmt -v check; \
-	echo "" && echo "------ epmt -v unittest ------" && epmt -v unittest; \
-	echo "" && echo "------ epmt -v integration ------" && epmt -v integration; \
+	bash -c 'echo 2 > /proc/sys/kernel/perf_event_paranoid; epmt -v -V; \
+	echo ""; \
+	echo ""; \
+	echo "" && echo "------ epmt -v check ------" && epmt -v check \
+	|| echo "epmt -v check failure guard, keep going"; \
+	echo ""; \
+	echo ""; \
+	echo "" && echo "------ epmt -v unittest ------" && epmt -v unittest \
+	|| echo "epmt -v unittest failure guard, keep going"; \
+	echo ""; \
+	echo ""; \
+	echo "" && echo "------ epmt -v integration ------" && epmt -v integration \
+	|| echo "epmt -v integration failure guard, keep going"; \
 	echo ""'
 	@echo
 	@echo
