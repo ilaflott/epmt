@@ -21,10 +21,10 @@ env:
 
 jobs:
   build-linux:
-    runs-on: ubuntu-latest 
+    runs-on: ubuntu-latest
 
     container:
-      image: rockylinux:8 
+      image: rockylinux:8
 
     steps:
       - uses: actions/checkout@v4
@@ -51,7 +51,7 @@ jobs:
       - name: install requirements
         run: |
           pip3 install -r requirements.txt.py3
-          
+
       - name: make dash tarball
         run: |
           make epmt-dash
@@ -59,7 +59,7 @@ jobs:
       - name: make papiex tarball
         run: |
           make OUTSIDE_DOCKER="YUP" papiex-dist
-          
+
       - name: make epmt pip-packaging
         run: |
           make dist python-dist dist-test
@@ -68,28 +68,28 @@ jobs:
         run: |
           ls src/dist/epmt*gz
           pip3 install src/dist/epmt*gz
-          
+
       - name: create links to papiex executables, adjust path, install bats for integration tests
         run: |
           mkdir -p /usr/lib/python3.9/site-packages/papiex-epmt-install
           ln -s  /usr/lib/python3.9/site-packages/epmt/lib /usr/lib/python3.9/site-packages/papiex-epmt-install/
           ln -s  /usr/lib/python3.9/site-packages/epmt/bin /usr/lib/python3.9/site-packages/papiex-epmt-install/
-          export PATH='/usr/bin:${PATH}:/usr/local/libexec:/usr/local/bin' 
+          export PATH='/usr/bin:${PATH}:/usr/local/libexec:/usr/local/bin'
           /usr/lib/python3.9/site-packages/epmt/test/integration/libs/bats/install.sh /usr/local || echo "tried to install bats from within epmt but failed. keep going!"
-         
+
       - name: epmt version call and check
         run: |
           epmt -v -V && echo "success! :-)" || echo "fail! but keep going..."
-          
+
       - name: epmt check call and check
         run: |
-		  echo 2 > /proc/sys/kernel/perf_event_paranoid && echo "perf_event_paranoid set to 2 instead of 4: success!" || echo "setting perf_event_paranoid didn't work.. moving on."
+          echo 2 > /proc/sys/kernel/perf_event_paranoid && echo "perf_event_paranoid set to 2 instead of 4: success!" || echo "setting perf_event_paranoid didn't work.. moving on."
           epmt -v check && echo "success! :-)" || echo "fail! but keep going..."
-          
+
       - name: epmt unittest call and check
-        run: |      
+        run: |
           epmt -v unittest && echo "success! :-)" || echo "fail! but keep going..."
-          
+
       - name: epmt integration call and check
         run: |
           epmt integration && echo "success! :-)" || echo "fail! but keep going..."
