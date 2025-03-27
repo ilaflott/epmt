@@ -41,43 +41,49 @@ jobs:
         run: |
           (cd /usr/src && echo "downloading python" && curl -o Python-3.9.21.tgz https://www.python.org/ftp/python/3.9.21/Python-3.9.21.tgz && tar xzf Python-3.9.21.tgz && cd Python-3.9.21 && echo "building python3" && ./configure --quiet --prefix=/usr --enable-shared --enable-optimizations --enable-loadable-sqlite-extensions && make --silent install > /dev/null)
 
-      - name: configure python3
+      - name: configure python3 and upgrade pip and grab gcc-c++
         run: |
           ldconfig
           python3 -V
           pip3 install --upgrade pip
+          yum install -y gcc-c++
 
       - name: install requirements
         run: |
-          yum install -y gcc-c++
           pip3 install -r requirements.txt.py3
           
-      - name: make dash and papiex
+      - name: make dash tarball
         run: |
           make epmt-dash
+
+      - name: make papiex tarball
+        run: |
           make OUTSIDE_DOCKER="YUP" papiex-dist
           
       - name: make epmt pip-packaging
         run: |
           make dist python-dist dist-test
-          
+
       - name: pip install epmt pip-package
         run: |
+          ls src/dist/epmt*gz
           pip3 install src/dist/epmt*gz
           
-      - name: create links to papiex executables, adjust path
+      - name: create links to papiex executables, adjust path, install bats for integration tests
         run: |
           mkdir -p /usr/lib/python3.9/site-packages/papiex-epmt-install
           ln -s  /usr/lib/python3.9/site-packages/epmt/lib /usr/lib/python3.9/site-packages/papiex-epmt-install/
           ln -s  /usr/lib/python3.9/site-packages/epmt/bin /usr/lib/python3.9/site-packages/papiex-epmt-install/
-          export PATH='/usr/bin:${PATH}:/usr/local/libexec:/usr/local/bin'
-          
+          export PATH='/usr/bin:${PATH}:/usr/local/libexec:/usr/local/bin' 
+          /usr/lib/python3.9/site-packages/epmt/test/integration/libs/bats/install.sh /usr/local || echo "tried to install bats from within epmt but failed. keep going!"
+         
       - name: epmt version call and check
         run: |
           epmt -v -V && echo "success! :-)" || echo "fail! but keep going..."
           
       - name: epmt check call and check
         run: |
+		  echo 2 > /proc/sys/kernel/perf_event_paranoid && echo "perf_event_paranoid set to 2 instead of 4: success!" || echo "setting perf_event_paranoid didn't work.. moving on."
           epmt -v check && echo "success! :-)" || echo "fail! but keep going..."
           
       - name: epmt unittest call and check
@@ -86,5 +92,10 @@ jobs:
           
       - name: epmt integration call and check
         run: |
-          /usr/lib/python3.9/site-packages/epmt/test/integration/libs/bats/install.sh /usr/local || echo "tried to install bats from within epmt but failed. keep going!"		
-          epmt -v integration && echo "success! :-)" || echo "fail! but keep going..."
+          epmt integration && echo "success! :-)" || echo "fail! but keep going..."
+
+      - name: upload pip installable
+        uses: actions/upload-artifact@v4
+        with:
+          name: epmt-pip-install-TEST
+          path: src/dist/epmt*gz
