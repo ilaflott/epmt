@@ -6,7 +6,6 @@ basicConfig(level=ERROR)
 logger = getLogger(__name__)
 
 import sys
-
 logger.debug("attempting import of user settings")
 logger.debug("sys.path entries are:")
 for path in sys.path:
@@ -17,14 +16,7 @@ try:
     import epmt.settings
     from epmt.settings import *
 except Exception as e:
-    if e.__class__ == ModuleNotFoundError:
-        try:
-            import settings
-            from settings import *
-            logger.error(str(e)+": attempting settings import instead.")
-        except Exception as e2:
-            logger.error('ModuleNotFoundError, damn it!')    
-            raise ModuleImportError('alternate epmt.settings import approach did not work and neither did the first attempt!') from e2
+    raise ModuleImportError('alternate epmt.settings import approach did not work and neither did the first attempt!') from e
 else:
     logger.debug('epmt_settings imported successfully! yay!!!')    
 

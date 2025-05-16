@@ -3,6 +3,30 @@
 # the import below is crucial to get a sane test environment
 from . import *
 
+#import unittest
+##from sys import stderr
+#from glob import glob
+##from os import environ
+#from datetime import datetime
+##import pandas as pd
+#
+#import epmt.epmt_settings as settings
+#import epmt.epmt_query as eq
+#from epmt.epmt_cmds import epmt_submit
+#
+#from epmt.epmtlib import timing, get_install_root, capture, epmt_logging_init
+#from epmt.orm import db_session, setup_db, orm_db_provider
+#from epmt.orm.sqlalchemy.models import Job
+#from epmt.orm.sqlalchemy.general import orm_get
+#
+## this will be used repeatedly in the tests, so let's store it 
+## in a variable instead of repeatedly calling the function
+#install_root = get_install_root()
+
+
+# the import below is crucial to get a sane test environment
+
+
 def do_cleanup():
     eq.delete_jobs(['685000', '685003', '685016', '2220', 'corrupted-csv', '804268', '692500', '3455'], force=True, remove_models=True)
 

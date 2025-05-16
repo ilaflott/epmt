@@ -3,6 +3,8 @@
 # the import below is crucial to get a sane test environment
 from . import *
 
+from epmt.orm.sqlalchemy.general import orm_dump_schema
+
 
 @timing
 def setUpModule():

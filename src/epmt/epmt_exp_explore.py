@@ -11,7 +11,7 @@ It's a higher-level API than EPMT Query and EPMT Outliers
 API, which it uses underneath.
 """
 
-from orm import db_session
+from .orm import db_session
 import epmt.epmt_query as eq
 import numpy as np
 import epmt.epmt_stat as es

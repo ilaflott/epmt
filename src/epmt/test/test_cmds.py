@@ -9,6 +9,8 @@ from epmt.epmt_cmd_list import ( epmt_list_jobs, epmt_list_procs, epmt_list_job_
                                  epmt_list_refmodels, epmt_list_op_metrics, epmt_list_thread_metrics )
 from epmt.epmt_daemon import daemon_loop
 
+from epmt.orm.sqlalchemy.models import UnprocessedJob
+
 from contextlib import nullcontext
 from os import path
 

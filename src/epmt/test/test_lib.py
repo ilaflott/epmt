@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # the import below is crucial to get a sane test environment
-# from . import *
+from . import *
 import unittest
 
 
@@ -112,14 +112,17 @@ class EPMTLib(unittest.TestCase):
             return x*2
         y = double(25)
 
-        # remove the StringIO handler
-        logger.removeHandler(stream_handler)
-
-        # restore logging to sanity
-        epmt_logging_init(-1)
         s = log_stream.getvalue()
         self.assertEqual(y, 50)
         self.assertIn('DEBUG: epmt.test.test_lib: double(25)', s)
+
+        # remove the StringIO handler
+        logger.removeHandler(stream_handler)
+        assert logger.handlers == []
+
+        # restore logging to sanity
+        epmt_logging_init(-1)
+
         
 
 if __name__ == '__main__':

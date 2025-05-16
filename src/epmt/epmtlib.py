@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 EPMT Misc. Library
 ==================
@@ -112,7 +111,7 @@ def init_settings(settings):
     if hasattr(init_settings, 'initialized'): return
     init_settings.initialized = True
 
-    #logger = getLogger('init_settings')
+    logger = getLogger('init_settings')
     err_msg = ""
 
     if environ.get("PAPIEX_OUTPUT"):
@@ -1019,11 +1018,11 @@ def get_install_root():
     # handle pip packaging here -- even when "manually" installed ala 4.9.6, our install_dir should always end in /epmt.
     # XXX THIS IS STILL HOKEY and i'm not sure how to make it work for all possible installations.
     if not install_root.endswith('/epmt'):
-        logger.warning('WARNING: install_root = {}'.format(install_root) )
-        logger.warning('WARNING: install_root does not end with \"/epmt\"...')
-        logger.warning('WARNING: adding it to the install root...')
+        #logger.warning('WARNING: install_root = {}'.format(install_root) )
+        #logger.warning('WARNING: install_root does not end with \"/epmt\"...')
+        #logger.warning('WARNING: adding it to the install root...')
         install_root = install_root + '/epmt'
-        logger.warning('WARNING: install_root changed to {}'.format(install_root))
+        #logger.warning('WARNING: install_root changed to {}'.format(install_root))
     logger.debug('install root is {}'.format(install_root) )
     return install_root
 
