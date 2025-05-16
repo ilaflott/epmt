@@ -61,7 +61,7 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
         level = DEBUG # 10
 
     # Set level and remove all existing handlers 
-    rootLogger = getLogger()
+    rootLogger = getLogger(__name__)
     rootLogger.debug("epmt_logging_init(%d,%s,%s): %d handlers",intlvl,check,log_pid,len(rootLogger.handlers))
     for handler in rootLogger.handlers:
         rootLogger.removeHandler(handler)
@@ -112,7 +112,7 @@ def init_settings(settings):
     if hasattr(init_settings, 'initialized'): return
     init_settings.initialized = True
 
-    logger = getLogger('init_settings')
+    #logger = getLogger('init_settings')
     err_msg = ""
 
     if environ.get("PAPIEX_OUTPUT"):
@@ -233,8 +233,7 @@ def timing(f):
     return wrap
 
 # This function has a bug because it does not work with subprocess.run().
-# Needs to be fixed
-
+# Needs to be fixed #TODO
 @contextmanager
 def capture():
     import sys

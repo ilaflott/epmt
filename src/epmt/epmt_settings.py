@@ -7,8 +7,8 @@ logger = getLogger(__name__)
 
 import sys
 
-logger.info("attempting import of user settings")
-logger.info("sys.path entries are:")
+logger.debug("attempting import of user settings")
+logger.debug("sys.path entries are:")
 for path in sys.path:
     logger.info(f"path={path}")
 
@@ -26,7 +26,9 @@ except Exception as e:
             logger.error('ModuleNotFoundError, damn it!')    
             raise ModuleImportError('alternate epmt.settings import approach did not work and neither did the first attempt!') from e2
 else:
-    logger.info('epmt_settings imported successfully! yay!!!')    
+    logger.debug('epmt_settings imported successfully! yay!!!')    
 
 
-epmt_settings_kind='user'
+epmt_settings_kind='userHELLO'
+#db_params = {'url': 'sqlite:///:memory:', 'echo': False}
+db_params = {'url': 'postgresql://epmt:Goal2020@workflow1:5432/epmt', 'echo': False}

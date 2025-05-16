@@ -22,7 +22,7 @@ stage_command_dest = "./"
 ingest_remove_on_success=True
 ingest_failed_dir="/tmp/"
 
-verbose = 2
+verbose = 1
 max_log_statement_length = pow(2,11) # max number of list elements to print for long sql queries
 
 
@@ -63,9 +63,10 @@ outlier_features_blacklist = ['env_dict', 'tags', 'info_dict', 'env_changes_dict
 # data retention
 # You will need to run `epmt retire` in a cron job for this to happen
 # Remember, jobs that have dependent trained models will not be retired
-retire_jobs_ndays = 0   # specify in number of days; set to 0 to not retire jobs
+#retire_jobs_ndays = 40   # specify in number of days; set to 0 to not retire jobs
+retire_jobs_ndays = 20   # specify in number of days; set to 0 to not retire jobs
 retire_models_ndays = 0 # specify in number of days; set to 0 to not retire models
-retire_jobs_per_delete_max = 2000 # specify the chunk-size to delete jobs in 
+retire_jobs_per_delete_max = 20 # specify the chunk-size to delete jobs in 
 
 # we expect the settings below to be overriden in settings.py
 # depending on the template of your choice

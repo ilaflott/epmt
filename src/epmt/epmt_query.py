@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 EPMT Query API
 ==============
@@ -12,7 +11,7 @@ pandas dataframe, list of python dictionaries, a terse
 list of database IDs, and a powerful ORM object collection.
 The format can be selected using the `fmt` argument.
 """
-from __future__ import print_function
+
 from datetime import datetime
 import pandas as pd
 
@@ -25,13 +24,13 @@ import epmt.epmt_settings as settings
 # using epmt_logging_init, other than import epmt_logging_init
 from epmt.epmtlib import epmt_logging_init, version
 logger = getLogger(__name__)  # you can use other name
-epmt_logging_init(settings.verbose if hasattr(settings, 'verbose') else 0, check=True)
+#epmt_logging_init(settings.verbose if hasattr(settings, 'verbose') else 0, check=True)
 
 ### Put EPMT imports below, after logging is set up
 from epmt.epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key, conv_to_datetime
 from epmt.epmt_stat import get_classifier_name, is_classifier_mv, mvod_scores, uvod_classifiers
 
-init_settings(settings) # type: ignore
+#init_settings(settings) # type: ignore
 setup_db(settings) # type: ignore
 
 PROC_SUMS_FIELD_IN_JOB='proc_sums'
@@ -1860,9 +1859,9 @@ remove_models : boolean, optional
     num_jobs = jobs.count()
     init_num_jobs = num_jobs
     if dry_run:
-        logger.info("(retire) # of jobs in collection: " + str(num_jobs))
+        logger.info("(delete_jobs) # of jobs in collection: " + str(num_jobs))
     else:
-        logger.debug("(retire) # of jobs in collection: " + str(num_jobs))
+        logger.debug("(delete_jobs) # of jobs in collection: " + str(num_jobs))
 
     if num_jobs == 0:
         if warn:
@@ -1943,14 +1942,16 @@ def retire_jobs(ndays = settings.retire_jobs_ndays, skip_unprocessed = False, dr
     """
     if ndays <= 0: return 0
     JOBS_PER_DELETE_MAX=(settings.retire_jobs_per_delete_max if settings.retire_jobs_per_delete_max>0 else 2000)
+    db_num_jobs=get_jobs(fmt='orm', trigger_post_process = False).count()
+    logger.info('(retire_jobs) number of jobs in DB is {0}'.format(db_num_jobs))
     num_jobs=get_jobs(before=-ndays, fmt='orm', trigger_post_process = False).count()
 
     ##uncomment me for training wheels/debug/tests
     #JOBS_PER_DELETE_MAX=100
     #num_jobs=get_jobs(before=-ndays, limit=400, fmt='orm', trigger_post_process = False).count()
     if num_jobs>JOBS_PER_DELETE_MAX:
-        logger.info('number of jobs older than {0} days is {1}'.format(ndays,num_jobs))
-        logger.info('will be deleting jobs in chunks of %d', JOBS_PER_DELETE_MAX )
+        logger.warning('(retire_jobs) number of jobs older than {0} days is {1}'.format(ndays,num_jobs))
+        logger.warning('(retire_jobs) will be deleting jobs in chunks of %d', JOBS_PER_DELETE_MAX )
 
         tot_num_deleted=0
         num_delete_attempts=0 # keep track of num we attempt to delete
@@ -1978,9 +1979,9 @@ def retire_jobs(ndays = settings.retire_jobs_ndays, skip_unprocessed = False, dr
             if dry_run:
                 offset+=limit # dry-run delete_jobs just returns the target # of jobs
             else:
-                if (num_not_deleted > 0):                print(f'offset was: {offset}')                
+                if (num_not_deleted > 0):                logger.debug(f'offset was: {offset}')                
                 offset+=(limit-num_deleted)
-                if (num_not_deleted > 0):                print(f'offset is now: {offset}')
+                if (num_not_deleted > 0):                logger.debug(f'offset is now: {offset}')
             
             logger.info('%d jobs out of %d deleted so far', tot_num_deleted, num_delete_attempts)
             
@@ -2594,9 +2595,11 @@ def _warn_incomparable_jobs(jobs):
         msg = 'The jobs do not share identical tag values for "exp_name" and "exp_component"'
         from sys import stderr
         logger.warning(msg)
-        print('WARNING:', msg, file=stderr)
+        #print('WARNING:', msg, file=stderr)
         for j in jobs:
-            print('   ',j.jobid, j.tags.get('exp_name'), j.tags.get('exp_component'), file=stderr)
+            jmsg='   '.join[j.jobid, j.tags.get('exp_name'), j.tags.get('exp_component')]# file=stderr
+            logger.warning(jmsg)
+            #print('   ',j.jobid, j.tags.get('exp_name'), j.tags.get('exp_component'), file=stderr)
 
 
 def _empty_collection_check(col):
