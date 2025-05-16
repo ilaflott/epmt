@@ -3,18 +3,11 @@ on:
 
 
 env:
-  POSTGRES_DB: "EPMT"
-  POSTGRES_USER: "postgres"
-  POSTGRES_PASSWORD: "example"
-  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  POSTGRES_DB: 'EPMT'
+  POSTGRES_USER: 'postgres'
+  POSTGRES_PASSWORD: 'example'
+  PIP_CACHE_DIR: '$CI_PROJECT_DIR/.cache/pip'
 
-
-# cache:
-#  paths:
-#    - .cache/pip
-
-#services:
-#concurrency:
 #service:
 #  - postgres:latest
 
@@ -36,21 +29,21 @@ jobs:
       - name: install and configure sqlite3
         run: |
           cd /usr/src
-          echo "downloading sqlite3"
+          echo 'downloading sqlite3'
           curl -o sqlite-amalgamation-3490100.zip https://www.sqlite.org/2025/sqlite-amalgamation-3490100.zip
           unzip sqlite-amalgamation-3490100.zip
-          echo "building libsqlite3 with json1 and other useful extensions"
+          echo 'building libsqlite3 with json1 and other useful extensions'
           cd sqlite-amalgamation-3490100
           gcc -shared -fPIC -O2  -DSQLITE_ENABLE_JSON1 -DSQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_MAX_VARIABLE_NUMBER=9999 sqlite3.c -o /usr/lib64/libsqlite3.so
 
       - name: install python3
         run: |
           cd /usr/src
-          echo "downloading python"
+          echo 'downloading python'
           curl -o Python-3.9.21.tgz https://www.python.org/ftp/python/3.9.21/Python-3.9.21.tgz
           tar xzf Python-3.9.21.tgz
           cd Python-3.9.21
-          echo "building python3"
+          echo 'building python3'
           ./configure --quiet --prefix=/usr --enable-shared --enable-optimizations --enable-loadable-sqlite-extensions
           make --silent install > /dev/null
 
@@ -71,7 +64,7 @@ jobs:
 
       - name: make papiex tarball
         run: |
-          make OUTSIDE_DOCKER="YUP" papiex-dist
+          make OUTSIDE_DOCKER='YUP' papiex-dist
 
       - name: make epmt pip-packaging
         run: |
@@ -83,29 +76,40 @@ jobs:
           pip3 install src/dist/epmt*gz
 
       - name: create links to papiex executables, adjust path, install bats for integration tests
+        continue-on-error: true
         run: |
           mkdir -p /usr/lib/python3.9/site-packages/papiex-epmt-install
           ln -s  /usr/lib/python3.9/site-packages/epmt/lib /usr/lib/python3.9/site-packages/papiex-epmt-install/
           ln -s  /usr/lib/python3.9/site-packages/epmt/bin /usr/lib/python3.9/site-packages/papiex-epmt-install/
           export PATH='/usr/bin:${PATH}:/usr/local/libexec:/usr/local/bin'
-          /usr/lib/python3.9/site-packages/epmt/test/integration/libs/bats/install.sh /usr/local || echo "tried to install bats from within epmt but failed. keep going!"
+          /usr/lib/python3.9/site-packages/epmt/test/integration/libs/bats/install.sh /usr/local
 
       - name: epmt version call and check
+        continue-on-error: true
         run: |
-          epmt -v -V && echo "success! :-)" || echo "fail! but keep going..."
+          epmt -v -V
 
       - name: epmt check call and check
+        continue-on-error: true
         run: |
-          echo 2 > /proc/sys/kernel/perf_event_paranoid && echo "perf_event_paranoid set to 2 instead of 4: success!" || echo "setting perf_event_paranoid didn't work.. moving on."
-          epmt -v check && echo "success! :-)" || echo "fail! but keep going..."
+          echo 2 > /proc/sys/kernel/perf_event_paranoid
+          epmt -v check
 
       - name: epmt unittest call and check
+        continue-on-error: true
         run: |
-          epmt -v unittest && echo "success! :-)" || echo "fail! but keep going..."
+          epmt -v unittest
 
       - name: epmt integration call and check
+        continue-on-error: true
         run: |
-          epmt integration && echo "success! :-)" || echo "fail! but keep going..."
+          epmt integration
+
+      - name: install and run pylint
+        continue-on-error: true
+        run: |
+          pip install pylint
+          pylint --max-line-length 120 --max-args 6 -ry epmt
 
       - name: upload pip installable
         uses: actions/upload-artifact@v4
