@@ -30,5 +30,5 @@ else:
 
 
 epmt_settings_kind='userHELLO'
-#db_params = {'url': 'sqlite:///:memory:', 'echo': False}
-db_params = {'url': 'postgresql://epmt:Goal2020@workflow1:5432/epmt', 'echo': False}
+db_params = {'url': 'sqlite:///:memory:', 'echo': False}
+
