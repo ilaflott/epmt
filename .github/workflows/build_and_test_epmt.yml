@@ -105,11 +105,15 @@ jobs:
         run: |
           epmt integration
 
-      - name: install and run pylint
-        continue-on-error: true
+      - name: install pylint
+        continue-on-error: false
         run: |
           pip install pylint
-          pylint --max-line-length 120 --max-args 6 -ry epmt
+  
+      - name: run pylint
+        continue-on-error: true
+        run: |          
+          pylint --max-line-length 120 --max-args 6 -ry src/epmt
 
       - name: upload pip installable
         uses: actions/upload-artifact@v4
