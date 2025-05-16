@@ -92,7 +92,7 @@ jobs:
       - name: epmt check call and check
         continue-on-error: true
         run: |
-          echo 2 > /proc/sys/kernel/perf_event_paranoid
+          echo 2 > /proc/sys/kernel/perf_event_paranoid || echo "failing this is understandable in CI"
           epmt -v check
 
       - name: epmt unittest call and check
