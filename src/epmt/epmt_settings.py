@@ -2,7 +2,7 @@
 from epmt.epmt_default_settings import *
 
 from logging import getLogger, basicConfig, ERROR
-basicConfig(level=ERROR)
+#basicConfig(level=ERROR)
 logger = getLogger(__name__)
 
 import sys

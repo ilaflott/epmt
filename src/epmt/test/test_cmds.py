@@ -279,13 +279,13 @@ class EPMTCmds(unittest.TestCase):
 
     @unittest.skipUnless( orm_in_memory(), 'skip on persistent database')
     def test_zz_drop_db(self):
-#        # submit a job to the db we just cleaned out... oops!
-#        datafiles='{}/test/data/misc/685000.tgz'.format(install_root)
-#        settings.post_process_job_on_ingest = True
-#        with capture() as (out,err):
-#            epmt_submit(glob(datafiles), dry_run=False)
-#        settings.post_process_job_on_ingest = False
-        
+        # submit a job to the db we just cleaned out... oops!
+        datafiles='{}/test/data/misc/685000.tgz'.format(install_root)
+        #        settings.post_process_job_on_ingest = True
+        with capture() as (out,err):
+            epmt_submit(glob(datafiles), dry_run=False)
+        #        settings.post_process_job_on_ingest = False
+
         # check that we get a list job nums as strs in a list
         jobs = eq.get_jobs(fmt='terse')
         self.assertTrue(len(jobs) > 0)

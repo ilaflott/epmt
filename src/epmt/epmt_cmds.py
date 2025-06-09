@@ -104,8 +104,9 @@ def PrintWarning():
 def verify_install_prefix():
     install_prefix = settings.install_prefix
     print("settings.install_prefix =",install_prefix, end='')
+    
     retval = True
-# Check for bad stuff and shortcut
+    # Check for bad stuff and shortcut
     if "*" in install_prefix or "?" in install_prefix:
         logger.error("Found wildcards in install_prefix: {}".format(install_prefix))
         PrintFail()
@@ -119,7 +120,7 @@ def verify_install_prefix():
             logger.error("%s failed",cmd)
             retval = False
 
-    if retval == True:
+    if retval:
         PrintPass()
     else:
         PrintFail()
@@ -1511,7 +1512,9 @@ def epmt_entrypoint(args):
         args.verbose = 0
         
     # we only need to log the PID to the console for parallel runs
-    epmt_logging_init(args.verbose or settings.verbose, check=True, log_pid = (hasattr(args, 'num_cpus') and (args.num_cpus > 1)))
+    epmt_logging_init( args.verbose or settings.verbose,
+                       check = True,
+                       log_pid = (hasattr(args, 'num_cpus') and (args.num_cpus > 1)) )
     logger = getLogger(__name__)  # you can use other name
     init_settings(settings)
 
@@ -1520,6 +1523,7 @@ def epmt_entrypoint(args):
     if args.command == 'shell':
         epmt_shell()
         return 0
+    
     if args.command == 'python':
         script_file = args.epmt_cmd_args
         if script_file:
@@ -1545,13 +1549,16 @@ def epmt_entrypoint(args):
         else:
             epmt_shell(ipython = False)
         return 0
+    
     if args.command == 'convert':
         from epmt.epmt_convert_csv import convert_csv_in_tar
         return (convert_csv_in_tar(args.src_tgz, args.dest_tgz) == False)
+    
     if args.command == 'explore':
         from epmt.epmt_exp_explore import exp_explore
         exp_explore(args.epmt_cmd_args, metric = args.metric, limit = args.limit)
         return 0
+    
     if args.command == 'gui':
         # Start both Dash interface and Static Web Server
         from threading import Thread
@@ -1641,30 +1648,34 @@ def epmt_entrypoint(args):
     if args.command == 'unittest':
         import unittest
         from importlib import import_module
-#        script_dir = path.dirname(path.realpath(__file__))
-#        logger.info("Changing directory to: {}".format(script_dir))
-#        chdir(script_dir)
-        TEST_MODULES = ['test.test_lib','test.test_settings','test.test_anysh','test.test_submit','test.test_run','test.test_cmds','test.test_query','test.test_outliers','test.test_db_schema' ]
+        TEST_MODULES = ['test.test_lib',
+                        'test.test_settings',
+                        'test.test_anysh',
+                        'test.test_submit',
+                        'test.test_run',
+                        'test.test_cmds',
+                        'test.test_query',
+                        'test.test_outliers',
+                        'test.test_db_schema' ]
         if args.epmt_cmd_args:
             TEST_MODULES = args.epmt_cmd_args
         success_list=[]
-        print(f'\n\nverbosity for tests set by epmt_logging_init')
         for m in TEST_MODULES:
-            # i could import test in epmt shell, but not epmt.test
+            # in epmt shell, the namespace changes. no leading epmt. needed. 
             m = f'epmt.{m}'
-            # comment-out line above for use in epmt shell
             mod = import_module(m)
             suite = unittest.TestLoader().loadTestsFromModule(mod)
-            print('\n\nRunning', m)
+            #print('\n\nRunning', m)
             result = unittest.TextTestRunner(verbosity=2).run(suite)
             success_list.append(result.wasSuccessful())
             if not result.wasSuccessful():
                 from sys import stderr
-                print('\n\nOne (or more) unit tests FAILED', file=stderr)
-                #return -1
-            if not any(success_list):
+                #print('\n\nOne (or more) unit tests FAILED', file=stderr)
                 return -1
-        print('All tests successfully PASSED')
+        if not all(success_list):
+            return -1
+        
+        #print('All tests successfully PASSED')
         return 0
 
     if args.command == 'retire':
@@ -1689,7 +1700,14 @@ def epmt_entrypoint(args):
                 logger.warning('No daemon mode set, defaulting to post-process and analysis')
                 args.post_process = True
                 args.no_analyze = False
-            daemon_args = { 'post_process': args.post_process, 'analyze': not args.no_analyze, 'ingest': args.ingest, 'recursive': args.recursive, 'keep': args.keep, 'move_away': args.move_away, 'retire': args.retire, 'verbose': args.verbose }
+            daemon_args = { 'post_process': args.post_process,
+                            'analyze': not args.no_analyze,
+                            'ingest': args.ingest,
+                            'recursive': args.recursive,
+                            'keep': args.keep,
+                            'move_away': args.move_away,
+                            'retire': args.retire,
+                            'verbose': args.verbose }
             return start_daemon(args.foreground,**daemon_args)
         elif args.stop:
             return stop_daemon()

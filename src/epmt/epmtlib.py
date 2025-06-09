@@ -14,10 +14,7 @@ from subprocess import call
 from json import dumps, loads
 from pwd import getpwuid
 
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from io import StringIO
 
 
 # semantic version
@@ -43,7 +40,8 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
     import logging
     import epmt.epmt_settings as settings
 
-    if check and hasattr(epmt_logging_init, 'initialized'): return
+    if check and hasattr(epmt_logging_init, 'initialized'):
+        return
     epmt_logging_init.initialized = True
     if intlvl is None:
         intlvl = 0 
@@ -1013,7 +1011,7 @@ def get_install_root():
     >>> '/abc/def/ghi.py'.rsplit('/',1)
     ['/abc/def', 'ghi.py']
     '''
-    logger = getLogger(__name__)
+    #logger = getLogger(__name__)
     install_root = (__file__.rsplit('/', 2)[0])
     # handle pip packaging here -- even when "manually" installed ala 4.9.6, our install_dir should always end in /epmt.
     # XXX THIS IS STILL HOKEY and i'm not sure how to make it work for all possible installations.
@@ -1023,7 +1021,7 @@ def get_install_root():
         #logger.warning('WARNING: adding it to the install root...')
         install_root = install_root + '/epmt'
         #logger.warning('WARNING: install_root changed to {}'.format(install_root))
-    logger.debug('install root is {}'.format(install_root) )
+    #logger.debug('install root is {}'.format(install_root) )
     return install_root
 
 def logfn(func):
@@ -1032,12 +1030,14 @@ def logfn(func):
     '''
     @wraps(func)
     def log_func(*func_args, **func_kwargs):
+        print("HELLO from epmtlib.logfn")
         # get the module name from the function itself
         logger = getLogger(func.__module__)
         # we want to log a message like:
         #  FUNC_NAME(arg1, arg2..., kwarg1=xyz, kwarg2=abc, ...)
         # the module is prepended automatically by our logging format
         # as we use getLogger with the module name
+        #logger.info('{}({}{}{})'.format(func.__name__,
         logger.debug('{}({}{}{})'.format(func.__name__,
                                          ", ".join( [ str(x) for x in func_args] ),
                                          "," if func_kwargs else "",
