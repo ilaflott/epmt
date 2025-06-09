@@ -49,29 +49,33 @@ env_blacklist = ["LS_COLORS"]
 
 #
 job_tags_env = 'EPMT_JOB_TAGS'
-per_process_fields = ["tags","hostname","exename","path","args","exitcode","pid","generation","ppid","pgid","sid","numtids", "mpinumranks", "mpirank", "exitsignal"]
-skip_for_thread_sums = ["tid", "start", "end", "num_threads", "starttime"]
+per_process_fields = [ "tags","hostname","exename","path","args","exitcode","pid","generation","ppid","pgid","sid",
+                       "numtids", "mpinumranks", "mpirank", "exitsignal" ]
+skip_for_thread_sums = [ "tid", "start", "end", "num_threads", "starttime" ]
 
 # outlier detection
 univariate_classifiers = ['iqr', 'modified_z_score', 'z_score']
-outlier_thresholds = { 'modified_z_score': 3.5, 'z_score': 3.0 }
+outlier_thresholds = { 'modified_z_score': 3.5,
+                       'z_score'         : 3.0 }
 # default features to use if no features specified
 outlier_features = ['duration', 'cpu_time', 'num_procs']
 # # blacklist features for outlier detection. These will be skipped.
-outlier_features_blacklist = ['env_dict', 'tags', 'info_dict', 'env_changes_dict', 'annotations', 'analyses', 'jobid', 'jobname', 'user', 'all_proc_tags', 'created_at', 'modified_at', 'start', 'end']
+outlier_features_blacklist = ['env_dict', 'tags', 'info_dict', 'env_changes_dict', 'annotations', 'analyses','jobid',
+                              'jobname', 'user', 'all_proc_tags', 'created_at', 'modified_at', 'start','end']
 
 # data retention
 # You will need to run `epmt retire` in a cron job for this to happen
 # Remember, jobs that have dependent trained models will not be retired
 #retire_jobs_ndays = 40   # specify in number of days; set to 0 to not retire jobs
-retire_jobs_ndays = 20   # specify in number of days; set to 0 to not retire jobs
+retire_jobs_ndays = 17   # specify in number of days; set to 0 to not retire jobs
 retire_models_ndays = 0 # specify in number of days; set to 0 to not retire models
 retire_jobs_per_delete_max = 20 # specify the chunk-size to delete jobs in 
 
 # we expect the settings below to be overriden in settings.py
 # depending on the template of your choice
 orm = 'sqlalchemy'
-db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
+#db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
+db_params = {'url': 'postgresql://epmt:Goal2020@workflow1:5432/epmt', 'echo': False}
 bulk_insert = True
 
 # we should normally always post-process on ingestion

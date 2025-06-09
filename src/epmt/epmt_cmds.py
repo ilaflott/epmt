@@ -1504,11 +1504,12 @@ def epmt_shell(ipython = True):
 
 
 def epmt_entrypoint(args):
+    print('!!!!epmt.epmt_cmds.epmt_entrypoint used!!!!')
 
     # I hate this sequence.
-
     if args.verbose == None:
         args.verbose = 0
+        
     # we only need to log the PID to the console for parallel runs
     epmt_logging_init(args.verbose or settings.verbose, check=True, log_pid = (hasattr(args, 'num_cpus') and (args.num_cpus > 1)))
     logger = getLogger(__name__)  # you can use other name

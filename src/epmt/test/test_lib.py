@@ -100,9 +100,12 @@ class EPMTLib(unittest.TestCase):
         for handler in logger.handlers: 
             logger.removeHandler(handler)
         logger.handlers = [] 
-        log_stream = StringIO()    
+        log_stream = StringIO()
+        print(log_string)
         stream_handler = logging.StreamHandler(log_stream)
+        print(stream_handler)
         streamFormatter = logging.Formatter("%(levelname)7.7s: %(name)s: %(message)s")
+        print(streamFormatter)
         stream_handler.setFormatter(streamFormatter)
         logger.addHandler(stream_handler)
 
