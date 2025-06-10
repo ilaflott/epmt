@@ -76,7 +76,6 @@ jobs:
           pip3 install src/dist/epmt*gz
 
       - name: create links to papiex executables, adjust path, install bats for integration tests
-        continue-on-error: true
         run: |
           mkdir -p /usr/lib/python3.9/site-packages/papiex-epmt-install
           ln -s  /usr/lib/python3.9/site-packages/epmt/lib /usr/lib/python3.9/site-packages/papiex-epmt-install/
@@ -100,13 +99,17 @@ jobs:
         run: |
           epmt -v unittest
 
+      - name: python unittest call and check
+        continue-on-error: true
+        run: |
+          python -m unittest -v src/epmt/test/test_*.py
+
       - name: epmt integration call and check
         continue-on-error: true
         run: |
           epmt integration
 
       - name: install pylint
-        continue-on-error: false
         run: |
           pip install pylint
   
