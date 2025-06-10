@@ -2590,15 +2590,23 @@ matching_keys : list of strings, optional
     return (len(comparable_job_partitions(jobs, matching_keys)) == 1)
 
 def _warn_incomparable_jobs(jobs):
+    #import logging
+    #logger.setLevel(logging.DEBUG)
     jobs = orm_jobs_col(jobs)
+    logger.debug(jobs)
     if not are_jobs_comparable(jobs):
-        msg = 'The jobs do not share identical tag values for "exp_name" and "exp_component"'
+        msg = 'WARNING: The jobs do not share identical tag values for "exp_name" and "exp_component"'
         from sys import stderr
         logger.warning(msg)
         #print('WARNING:', msg, file=stderr)
         for j in jobs:
-            print(type(j), file=stderr)
-            jmsg='   '.join[j.jobid, j.tags.get('exp_name'), j.tags.get('exp_component')]# file=stderr
+            logger.warning('j = %s', j)
+            logger.warning('j.tags = %s', j.tags)
+            j_deets_list=[]
+            j_deets_list.append(j.jobid)
+            j_deets_list.append(j.tags['exp_name'])
+            j_deets_list.append(j.tags['exp_component'])
+            jmsg='   '.join(j_deets_list)#'   '.join[j.jobid, j.tags.get('exp_name'), j.tags.get('exp_component')]# file=stderr
             logger.warning(jmsg)
             #print('   ',j.jobid, j.tags.get('exp_name'), j.tags.get('exp_component'), file=stderr)
 

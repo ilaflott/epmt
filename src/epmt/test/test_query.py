@@ -579,13 +579,13 @@ class QueryAPI(unittest.TestCase):
 
     @db_session
     def test_refmodel_crud(self):
-        #jobs = eq.get_jobs(JOBS_LIST, fmt='terse')
-        #self.assertEqual(len(jobs), 3)
-        jobs = eq.get_jobs(JOBS_LIST, fmt='orm')
-        self.assertEqual(jobs.count(), 3)
+        jobs = eq.get_jobs(JOBS_LIST, fmt='terse')
+        self.assertEqual(len(jobs), 3)
+        #jobs = eq.get_jobs(JOBS_LIST, fmt='orm')
+        #self.assertEqual(jobs.count(), 3)
         model_name = 'test_model'
-        #with capture() as (out, err):
-        r = eq.create_refmodel(jobs, tag='model_name:'+model_name)
+        with capture() as (out, err):
+            r = eq.create_refmodel(jobs, tag='model_name:'+model_name)
         self.assertIn('WARNING: The jobs do not share identical tag values', err.getvalue())
         self.assertEqual(r['tags'], {'model_name': model_name})
         self.assertTrue(eq.get_refmodels())

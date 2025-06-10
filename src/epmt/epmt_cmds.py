@@ -46,10 +46,12 @@ def dump_config(outf, sep = ":"):
             if type(value) in [str, int, float, list, dict, bool]:
                 print("%s%s%s" % (key,sep,str(value)), file=outf)
     print("\nenvironment variables (overrides settings.py):", file=outf)
-    for v in [ "PAPIEX_OSS_PATH", "PAPIEX_OUTPUT", "EPMT_DB_PROVIDER", "EPMT_DB_USER", "EPMT_DB_PASSWORD", "EPMT_DB_HOST", "EPMT_DB_DBNAME", "EPMT_DB_FILENAME" ]:
-#                "provider", "user", "password", "host", "dbname", "filename" ]:
-# "PAPIEX_OPTIONS","PAPIEX_DEBUG","PAPI_DEBUG","MONITOR_DEBUG","LIBPFM_DEBUG"
-#              ]:
+    for v in [ "PAPIEX_OSS_PATH", "PAPIEX_OUTPUT",
+               "EPMT_DB_PROVIDER", "EPMT_DB_USER", "EPMT_DB_PASSWORD",
+               "EPMT_DB_HOST", "EPMT_DB_DBNAME", "EPMT_DB_FILENAME" ]:
+        #                "provider", "user", "password", "host", "dbname", "filename" ]:
+        # "PAPIEX_OPTIONS","PAPIEX_DEBUG","PAPI_DEBUG","MONITOR_DEBUG","LIBPFM_DEBUG"
+        #              ]:
         if v in environ:
             print("%s%s%s" % (v,sep,environ[v]), file=outf)
 
@@ -855,6 +857,8 @@ def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run
 
 @logfn
 def epmt_run(cmdline, wrapit=False, dry_run=False, debug=False):
+    #logger.setLevel(DEBUG)
+    #logger.warning('HELLO')
     # logger.debug("epmt_run(%s, %s, %s, %s, %s)", cmdline, str(wrapit), str(dry_run), str(debug))
 
     if not cmdline:
@@ -1663,23 +1667,14 @@ def epmt_entrypoint(args):
             'test.test_db_migration', # 
             'test.test_db_schema', # 
             'test.test_lib', # 
-            'test.test_query', # keep working on it TODO
+            'test.test_query', # 
             'test.test_run', # 
-            'test.test_settings', # keep working on it TODO
-            'test.test_shell', # keep working on it TODO
+            'test.test_settings', #
+#            'test.test_shell', # half-baked, needs better control over env variables.
             'test.test_stat', # 
             'test.test_submit', # 
             'test.test_outliers', # keep working on it TODO
-            'test.test_explore' #
-#            'test.test_lib',
-#            'test.test_settings',
-#            'test.test_anysh',
-#            'test.test_submit',
-#            'test.test_run',
-#            'test.test_cmds',
-#            'test.test_query',
-#            'test.test_outliers',
-#            'test.test_db_schema',
+            'test.test_explore' 
         ]
         if args.epmt_cmd_args:
             TEST_MODULES = args.epmt_cmd_args

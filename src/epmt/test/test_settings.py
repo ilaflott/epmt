@@ -52,8 +52,9 @@ class EPMTSettings(unittest.TestCase):
         
         # Hack for the extra functions in the module. I'm confused yet I wrote this. -Pjm
         #for n in ['basicConfig','getLogger','exit','ERROR']:
-        for n in ['basicConfig','getLogger','ERROR', 'epmt', 'logger', 'sys']:
-            del settings_vars[n]
+        #for n in ['basicConfig','getLogger','ERROR', 'epmt', 'logger', 'sys']:
+        #for n in ['sys']:
+        #    del settings_vars[n]
         
         # the settings module keys are a union of the defaults and the later settings
         self.assertEqual( set(default_vars) | set(later_vars),
@@ -74,7 +75,7 @@ class EPMTSettings(unittest.TestCase):
             if k == 'epmt_settings_kind':
                 continue # empty/null v 'default'
             #print('\n')
-            print(f'k = {k}')
+            #print(f'k = {k}')
             if k=='path':
                 continue
                 #print(settings_vars[k])
