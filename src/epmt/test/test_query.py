@@ -71,7 +71,7 @@ class QueryAPI(unittest.TestCase):
 
     @db_session
     def test_job_advanced(self):
-        jobs = eq.get_jobs(JOBS_LIST, fmt='terse', order=desc(Job.start), limit=2, offset=1)
+        jobs = eq.get_jobs(JOBS_LIST, fmt='terse', order=eq.desc(Job.start), limit=2, offset=1)
         self.assertEqual(jobs, [u'685003', u'685000'], 'job limit/offset not working')
         if settings.orm == 'sqlalchemy':
             jobs = eq.get_jobs(JOBS_LIST, fltr=(Job.jobid != '685000'), fmt='orm')
@@ -96,8 +96,8 @@ class QueryAPI(unittest.TestCase):
 
         jobs = eq.get_jobs(JOBS_LIST, tags=['ocn_res:0.5l75;exp_component:ocean_cobalt_fdet_100', 'ocn_res:0.5l75;exp_component:ocean_annual_rho2_1x1deg'], fmt='terse')
         self.assertEqual(jobs, ['685000', '685003'])
-        #df = eq.get_jobs(order='desc(j.duration)', limit=1, fmt='pandas')
-        df = eq.get_jobs(JOBS_LIST, order=desc(Job.duration), limit=1, fmt='pandas')
+        #df = eq.get_jobs(           order='eq.desc(j.duration)', limit=1, fmt='pandas')
+        df = eq.get_jobs(JOBS_LIST, order=eq.desc(Job.duration), limit=1, fmt='pandas')
         self.assertEqual(df.shape[0], 1, 'job query with limit')
         self.assertEqual('685016', df.loc[0,'jobid'], "jobs dataframe query with order")
         jobs = eq.get_jobs(JOBS_LIST, before=0, fmt='terse')
@@ -178,13 +178,13 @@ class QueryAPI(unittest.TestCase):
     @db_session
     def test_procs_advanced(self):
         if settings.orm == 'sqlalchemy':
-            procs = eq.get_procs(JOBS_LIST, fltr=(Process.duration > 1000000), order=desc(Process.duration), fmt='orm')
+            procs = eq.get_procs(JOBS_LIST, fltr=(Process.duration > 1000000), order=eq.desc(Process.duration), fmt='orm')
         else:
             procs = eq.get_procs(JOBS_LIST, fltr=lambda p: p.duration > 1000000, order='desc(p.duration)', fmt='orm')
         self.assertEqual(procs.count(), 630, 'wrong count of processes in ORM format using filter')
         self.assertEqual(int(procs.first().duration), 7005558348, 'wrong order when using orm with filter and order')
 
-        df = eq.get_procs(JOBS_LIST, limit=5, order=desc(Process.cpu_time), fmt='pandas')
+        df = eq.get_procs(JOBS_LIST, limit=5, order=eq.desc(Process.cpu_time), fmt='pandas')
         self.assertIn(df.shape, ((5,50),(5,49)))
         self.assertEqual('685016', df.loc[0,'job'], "ordering of processes wrong in dataframe")
 
@@ -200,12 +200,12 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(len(procs), len(procs1)+1)
 
         if settings.orm == 'sqlalchemy': 
-            procs_with_tag = eq.get_procs(JOBS_LIST, tags='op_sequence:4', fltr=(Process.duration > 10000000), order=desc(Process.duration), fmt='orm')
+            procs_with_tag = eq.get_procs(JOBS_LIST, tags='op_sequence:4', fltr=(Process.duration > 10000000), order=eq.desc(Process.duration), fmt='orm')
         else:
             procs_with_tag = eq.get_procs(JOBS_LIST, tags='op_sequence:4', fltr='p.duration > 10000000', order='desc(p.duration)', fmt='orm')
         self.assertEqual(procs_with_tag.count(), 2, 'incorrect process count when using tag and filter')
         if settings.orm == 'sqlalchemy': 
-            procs_with_tag = eq.get_procs(JOBS_LIST, tags={'op_sequence': 4}, fltr=(Process.duration > 10000000), order=desc(Process.duration), fmt='orm')
+            procs_with_tag = eq.get_procs(JOBS_LIST, tags={'op_sequence': 4}, fltr=(Process.duration > 10000000), order=eq.desc(Process.duration), fmt='orm')
         else:
             procs_with_tag = eq.get_procs(JOBS_LIST, tags={'op_sequence': 4}, fltr='p.duration > 10000000', order='desc(p.duration)', fmt='orm')
         self.assertEqual(procs_with_tag.count(), 2)
@@ -242,7 +242,7 @@ class QueryAPI(unittest.TestCase):
     def test_process_tree(self):
         from epmt.epmt_job import mk_process_tree
         mk_process_tree('685000')
-        p = eq.get_procs('685000', fmt='orm', order=desc(Process.start), limit=1)[0]
+        p = eq.get_procs('685000', fmt='orm', order=eq.desc(Process.start), limit=1)[0]
         self.assertEqual(p.depth, 3)
         root = eq.root('685000', fmt='orm')
         self.assertEqual(root.depth, 0)
@@ -497,11 +497,13 @@ class QueryAPI(unittest.TestCase):
 
     @db_session
     def test_refmodel_crud(self):
-        jobs = eq.get_jobs(JOBS_LIST, fmt='terse')
-        self.assertEqual(len(jobs), 3)
+        #jobs = eq.get_jobs(JOBS_LIST, fmt='terse')
+        #self.assertEqual(len(jobs), 3)
+        jobs = eq.get_jobs(JOBS_LIST, fmt='orm')
+        self.assertEqual(jobs.count(), 3)
         model_name = 'test_model'
-        with capture() as (out, err):
-            r = eq.create_refmodel(jobs, tag='model_name:'+model_name)
+        #with capture() as (out, err):
+        r = eq.create_refmodel(jobs, tag='model_name:'+model_name)
         self.assertIn('WARNING: The jobs do not share identical tag values', err.getvalue())
         self.assertEqual(r['tags'], {'model_name': model_name})
         self.assertTrue(eq.get_refmodels())

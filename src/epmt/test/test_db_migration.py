@@ -2,7 +2,6 @@
 
 # the import below is crucial to get a sane test environment
 from . import *
-from epmt.orm import orm_in_memory
 
 def setUpModule():
 #    print('\n' + str(settings.db_params))

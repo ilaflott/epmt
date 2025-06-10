@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
-# the import below is crucial to get a sane test environment
+# don't do this for this one, i think....
+#from . import *
+
 import unittest
 from epmt.epmtlib import get_install_root
 from os import path    

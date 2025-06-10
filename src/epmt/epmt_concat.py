@@ -18,7 +18,7 @@
 #   Jobid: `goodSample_123`
 
 
-from __future__ import print_function
+#from __future__ import print_function
 from __future__ import unicode_literals
 from sys import exit
 from re import findall, search
@@ -27,6 +27,7 @@ from shutil import copyfile
 from glob import glob
 from logging import getLogger
 logger = getLogger('epmt_concat')  # you can use other name
+
 from epmt.epmtlib import epmt_logging_init, logfn
 
 class InvalidFileFormat(RuntimeError):

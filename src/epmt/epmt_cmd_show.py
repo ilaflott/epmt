@@ -1,6 +1,6 @@
-from __future__ import print_function
-import epmt.epmt_query as eq
+#from __future__ import print_function
 from logging import getLogger
+import epmt.epmt_query as eq
 
 def epmt_show_job(jobid, key = None):
     logger = getLogger(__name__)  # you can use other name

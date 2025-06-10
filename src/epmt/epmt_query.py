@@ -24,13 +24,13 @@ import epmt.epmt_settings as settings
 # using epmt_logging_init, other than import epmt_logging_init
 from epmt.epmtlib import epmt_logging_init, version
 logger = getLogger(__name__)  # you can use other name
-#epmt_logging_init(settings.verbose if hasattr(settings, 'verbose') else 0, check=True)
+epmt_logging_init(settings.verbose if hasattr(settings, 'verbose') else 0, check=True)
 
 ### Put EPMT imports below, after logging is set up
 from epmt.epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, unique_dicts, fold_dicts, isString, group_dicts_by_key, conv_to_datetime
 from epmt.epmt_stat import get_classifier_name, is_classifier_mv, mvod_scores, uvod_classifiers
 
-#init_settings(settings) # type: ignore
+init_settings(settings) # type: ignore
 setup_db(settings) # type: ignore
 
 PROC_SUMS_FIELD_IN_JOB='proc_sums'
@@ -2597,6 +2597,7 @@ def _warn_incomparable_jobs(jobs):
         logger.warning(msg)
         #print('WARNING:', msg, file=stderr)
         for j in jobs:
+            print(type(j), file=stderr)
             jmsg='   '.join[j.jobid, j.tags.get('exp_name'), j.tags.get('exp_component')]# file=stderr
             logger.warning(jmsg)
             #print('   ',j.jobid, j.tags.get('exp_name'), j.tags.get('exp_component'), file=stderr)

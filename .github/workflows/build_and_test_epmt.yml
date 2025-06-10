@@ -40,9 +40,9 @@ jobs:
         run: |
           cd /usr/src
           echo 'downloading python'
-          curl -o Python-3.9.21.tgz https://www.python.org/ftp/python/3.9.21/Python-3.9.21.tgz
-          tar xzf Python-3.9.21.tgz
-          cd Python-3.9.21
+          curl -o Python-3.9.22.tgz https://www.python.org/ftp/python/3.9.22/Python-3.9.22.tgz
+          tar xzf Python-3.9.22.tgz
+          cd Python-3.9.22
           echo 'building python3'
           ./configure --quiet --prefix=/usr --enable-shared --enable-optimizations --enable-loadable-sqlite-extensions
           make --silent install > /dev/null

@@ -11,10 +11,11 @@ from shutil import copyfile, rmtree, move
 import errno
 import fnmatch
 import pickle
-from logging import getLogger
-from epmt.orm import db_session
+from logging import getLogger, DEBUG
 
-logger = getLogger(__name__)  # you can use other name
+from epmt.orm import db_session
+logger = getLogger(__name__)
+
 import epmt.epmt_settings as settings
 from epmt.epmtlib import get_username, epmt_logging_init, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm, dict_filter, check_fix_metadata, logfn
 
@@ -103,7 +104,7 @@ def PrintWarning():
 
 def verify_install_prefix():
     install_prefix = settings.install_prefix
-    print("settings.install_prefix =",install_prefix, end='')
+    #print("settings.install_prefix =",install_prefix, end='')
     
     retval = True
     # Check for bad stuff and shortcut
@@ -129,23 +130,24 @@ def verify_install_prefix():
 def verify_epmt_output_prefix():
     opf = settings.epmt_output_prefix
     print("settings.epmt_output_prefix =",opf, end='')
+    
     retval = True
-# Check for bad stuff and shortcut
+    # Check for bad stuff and shortcut
     if "*" in opf or "?" in opf:
         logger.error("Found wildcards in value: %s",opf)
         PrintFail()
         return False
-# Print and create dir
+    # Print and create dir
     def testdir(str2):
         logger.info("\tmkdir -p "+str2)
         return(create_job_dir(str2))
-# Test create (or if it exists)
+    # Test create (or if it exists)
     if testdir(opf) == False:
         retval = False
-# Test make a subdir
+    # Test make a subdir
     if testdir(opf+"tmp") == False:
         retval = False
-# Test to make sure we can access it
+    # Test to make sure we can access it
     cmd = "ls -lR "+opf+" >/dev/null"    
     logger.info("\t"+cmd)
     return_code = run(cmd, shell=True).returncode
@@ -706,14 +708,18 @@ def _papiex_opt_byhost(o):
         if type(o.papiex_options_byhost) == dict:
             hostname = gethostname()
             logger.info("hostname to match papiex_options_byhost is %s",hostname)
+            #print("hostname to match papiex_options_byhost is ", hostname)
             for key, value in o.papiex_options_byhost.items():
                 try:
+                    logger.debug("trying to match %s to %s",key,hostname)
+                    #print("trying to match ",key," to ",hostname)
                     if match(key,hostname):
                         logger.debug("%s matched %s",key,hostname)
+                        #print(key, " matched ", hostname)
                         options = value
                         return options
-                except reerror:
-                    logger.error("Invalid regular expression in papiex_options_bycpu: %s",key)
+                except reerror as reerr:
+                    logger.error("Invalid regular expression in papiex_options_byhost: key is %s, value is %s. error is \n\n %s", key, value, reerr)
         else:
             logger.error("Unsupported type for papiex_options_byhost; must be a dictionary")
     return ""
@@ -726,16 +732,19 @@ def _papiex_opt_bycpu(o):
             if o.papiex_options_bycpu:            
                 from cpuinfo import get_cpu_info
                 cpu_info = get_cpu_info()
-                cpu_fms = str(cpu_info.get('family','no_family_found')) + "/" + str(cpu_info.get('model','no_model_found')) + "/" + str(cpu_info.get('stepping','no_stepping_found'))
+                cpu_fms = str(cpu_info.get('family','no_family_found')) + "/" + \
+                    str(cpu_info.get('model','no_model_found')) + "/" + \
+                    str(cpu_info.get('stepping','no_stepping_found'))
                 logger.info("cpu F/M/S to match papiex_options_bycpu is %s",cpu_fms)
                 for key, value in o.papiex_options_bycpu.items():
                     try:
+                        logger.debug("trying to match %s and %s",key,cpu_fms)                        
                         if match(key,cpu_fms):
                             logger.debug("%s matched %s",key,cpu_fms)
                             options = value
                             return options
-                    except reerror:
-                        logger.error("Invalid regular expression in papiex_options_bycpu: %s",key)
+                    except reerror:                        
+                        logger.error("Invalid regular expression in papiex_options_bycpu: key is %s, value is %s", key, value)
         else:
             logger.error("Unsupported type for papiex_options_bycpu; must be a dictionary")
     return ""
@@ -1505,7 +1514,7 @@ def epmt_shell(ipython = True):
 
 
 def epmt_entrypoint(args):
-    print('!!!!epmt.epmt_cmds.epmt_entrypoint used!!!!')
+    #print('!!!!epmt.epmt_cmds.epmt_entrypoint used!!!!')
 
     # I hate this sequence.
     if args.verbose == None:
@@ -1648,15 +1657,30 @@ def epmt_entrypoint(args):
     if args.command == 'unittest':
         import unittest
         from importlib import import_module
-        TEST_MODULES = ['test.test_lib',
-                        'test.test_settings',
-                        'test.test_anysh',
-                        'test.test_submit',
-                        'test.test_run',
-                        'test.test_cmds',
-                        'test.test_query',
-                        'test.test_outliers',
-                        'test.test_db_schema' ]
+        TEST_MODULES = [
+            'test.test_anysh', # 
+            'test.test_cmds', # 
+            'test.test_db_migration', # 
+            'test.test_db_schema', # 
+            'test.test_lib', # 
+            'test.test_query', # keep working on it TODO
+            'test.test_run', # 
+            'test.test_settings', # keep working on it TODO
+            'test.test_shell', # keep working on it TODO
+            'test.test_stat', # 
+            'test.test_submit', # 
+            'test.test_outliers', # keep working on it TODO
+            'test.test_explore' #
+#            'test.test_lib',
+#            'test.test_settings',
+#            'test.test_anysh',
+#            'test.test_submit',
+#            'test.test_run',
+#            'test.test_cmds',
+#            'test.test_query',
+#            'test.test_outliers',
+#            'test.test_db_schema',
+        ]
         if args.epmt_cmd_args:
             TEST_MODULES = args.epmt_cmd_args
         success_list=[]
@@ -1665,13 +1689,13 @@ def epmt_entrypoint(args):
             m = f'epmt.{m}'
             mod = import_module(m)
             suite = unittest.TestLoader().loadTestsFromModule(mod)
-            #print('\n\nRunning', m)
+            print('\n\nRunning', m)
             result = unittest.TextTestRunner(verbosity=2).run(suite)
             success_list.append(result.wasSuccessful())
             if not result.wasSuccessful():
                 from sys import stderr
-                #print('\n\nOne (or more) unit tests FAILED', file=stderr)
-                return -1
+                print('\n\nOne (or more) unit tests FAILED', file=stderr)
+                #return -1
         if not all(success_list):
             return -1
         

@@ -1,14 +1,12 @@
 #!/usr/bin/env python
 
 # the import below is crucial to get a sane test environment
-#from . import *
-import unittest
+from . import *
 
-from io import StringIO
-import sqlite3
-import pandas as pd
-import numpy as np
-import logging
+#import sqlite3
+#import pandas as pd
+#import numpy as np
+#import logging
 
 from epmt.epmtlib import dict_filter
 from epmt.epmtlib import merge_intervals

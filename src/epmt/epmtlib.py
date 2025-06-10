@@ -1030,7 +1030,7 @@ def logfn(func):
     '''
     @wraps(func)
     def log_func(*func_args, **func_kwargs):
-        print("HELLO from epmtlib.logfn")
+        #print("HELLO from epmtlib.logfn")
         # get the module name from the function itself
         logger = getLogger(func.__module__)
         # we want to log a message like:

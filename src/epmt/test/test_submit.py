@@ -16,7 +16,7 @@ from . import *
 #
 #from epmt.epmtlib import timing, get_install_root, capture, epmt_logging_init
 #from epmt.orm import db_session, setup_db, orm_db_provider
-#from epmt.orm.sqlalchemy.models import Job
+
 #from epmt.orm.sqlalchemy.general import orm_get
 #
 ## this will be used repeatedly in the tests, so let's store it 

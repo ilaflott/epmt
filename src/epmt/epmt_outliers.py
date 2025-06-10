@@ -13,11 +13,12 @@ high-level primitives such as jobs and processes.
 """
 
 
-from __future__ import print_function
+#from __future__ import print_function
 import pandas as pd
 import numpy as np
 from logging import getLogger
 from json import dumps, loads
+
 from epmt.orm import db_session, ReferenceModel, orm_get, orm_col_len
 
 # the first epmt import must be epmt_query as it sets up logging

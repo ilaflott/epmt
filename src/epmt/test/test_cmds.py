@@ -9,10 +9,8 @@ from epmt.epmt_cmd_list import ( epmt_list_jobs, epmt_list_procs, epmt_list_job_
                                  epmt_list_refmodels, epmt_list_op_metrics, epmt_list_thread_metrics )
 from epmt.epmt_daemon import daemon_loop
 
-from epmt.orm.sqlalchemy.models import UnprocessedJob
-
-from contextlib import nullcontext
-from os import path
+#from epmt.orm.sqlalchemy.models import UnprocessedJob
+#from os import path
 
 def do_cleanup():
     eq.delete_jobs(['685000', '627919', '691201', '692544'], force=True, remove_models = True)
@@ -25,7 +23,7 @@ def setUpModule():
     do_cleanup()
     datafiles='{}/test/data/misc/685000.tgz'.format(install_root)
 #    datafiles='{}/test/data/misc/685???.tgz'.format(install_root)
-    print('setUpModule: importing {0}'.format(datafiles))
+    print('setUpModule: submitting to db {0}'.format(datafiles))
     settings.post_process_job_on_ingest = True
     with capture() as (out,err):
         epmt_submit(glob(datafiles), dry_run=False)
@@ -44,16 +42,18 @@ class EPMTCmds(unittest.TestCase):
         from socket import gethostname
         from cpuinfo import get_cpu_info
         cpu_info = get_cpu_info()
-        cpu_fms = \
-            str( cpu_info.get( 'family','no_family_found' )) + "/" + \
+        cpu_fms  = str( cpu_info.get( 'family','no_family_found' )) + "/" + \
             str( cpu_info.get( 'model','no_model_found' )) + "/" + \
             str( cpu_info.get( 'stepping','no_stepping_found' ))
-        
         class S:
             def __init__(self):
                 self.papiex_options_byhost = dict({gethostname(): "MATCH1"})
                 self.papiex_options_bycpu = dict({cpu_fms: "MATCH2"})
                 self.papiex_options = "DEFAULT"
+            def __repr__(self):
+                return 'self.papiex_options_byhost = \n' + str(self.papiex_options_byhost) + \
+                    '\nself.papiex_options_bycpu = \n' + str(self.papiex_options_bycpu) + \
+                    '\nself.papiex_options = \n' + str(self.papiex_options)
                 
         s = S()
         opts = get_papiex_options(s)
@@ -71,12 +71,25 @@ class EPMTCmds(unittest.TestCase):
         self.assertTrue("MATCH4" in opts and "MATCH3" in opts and "DEFAULT" in opts)
 
         s.papiex_options_byhost = dict({"*": "MATCH5"})        
+
+        # this is throwing an error:
+        #     "Invalid regular expression in papiex_options_byhost: key is *, value is MATCH5."
+        # digging deeper gives us an error from re.match:
+        #     "nothing to repeat at position 0"
+        # this seems to be intentional. real question is why isnt logging working as desired? apparently. i digress.
+        #print("A")
         # quell the error messages
         epmt_logging_init(-2)
+        #print("B")
+        #print("s = ", s.__repr__())
         opts = get_papiex_options(s)
+        #print("C")
+        #print(opts)
         epmt_logging_init(-1)
+        #print("D")
+        #print("opts is ", opts)
         self.assertTrue("MATCH5" not in opts)
-        
+
     @db_session
     def test_daemon_ingest(self):
         self.assertFalse( eq.orm_get(eq.Job, '691201') or eq.orm_get(eq.Job, '692544') )

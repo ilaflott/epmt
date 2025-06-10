@@ -2,7 +2,7 @@
 
 # the import below is crucial to get a sane test environment
 from . import *
-from json import loads
+#from json import loads
 import epmt.epmt_outliers as eod
 
 
@@ -196,7 +196,12 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(list(scores_df.columns)[1:], sorted_features)
 
         # ensure tag importance order is correct
-        self.assertEqual(sorted_tags, [{u'op_instance': u'5', u'op_sequence': u'5', u'op': u'clean'}, {u'op_instance': u'4', u'op_sequence': u'4', u'op': u'build'}, {u'op_instance': u'3', u'op_sequence': u'3', u'op': u'configure'}, {u'op_instance': u'2', u'op_sequence': u'2', u'op': u'extract'}, {u'op_instance': u'1', u'op_sequence': u'1', u'op': u'download'}])
+        self.assertEqual(sorted_tags,
+                         [ {u'op_instance': u'5', u'op_sequence': u'5', u'op': u'clean'},
+                           {u'op_instance': u'4', u'op_sequence': u'4', u'op': u'build'},
+                           {u'op_instance': u'3', u'op_sequence': u'3', u'op': u'configure'},
+                           {u'op_instance': u'2', u'op_sequence': u'2', u'op': u'extract'},
+                           {u'op_instance': u'1', u'op_sequence': u'1', u'op': u'download'}])
         # check scores_df[tags] is ordered right
         self.assertEqual([loads(t) for t in list(scores_df['tags'])], sorted_tags)
         # check df[tags] is ordered right
@@ -206,7 +211,8 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(uniq_tags, sorted_tags)
 
         parts = { frozen_dict(loads(k)): v for k,v in parts.items() }
-        self.assertEqual(parts[frozen_dict({"op_instance": "4", "op_sequence": "4", "op": "build"})], (set([u'kern-6656-20190614-194024', u'kern-6656-20190614-190245', u'kern-6656-20190614-191138']), set([u'kern-6656-20190614-192044-outlier'])))
+        self.assertEqual( parts[frozen_dict({"op_instance": "4", "op_sequence": "4", "op": "build"})],
+                          (set([u'kern-6656-20190614-194024', u'kern-6656-20190614-190245', u'kern-6656-20190614-191138']), set([u'kern-6656-20190614-192044-outlier'])))
 
         # now also use the outlier job while creating the refmodel
         # this way, there should be NO outlier ops
@@ -222,7 +228,8 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(df.shape, (4,5))
         self.assertEqual(len(parts), 1)
         parts = { frozen_dict(loads(k)): v for k,v in parts.items() }
-        self.assertEqual(parts[frozen_dict({"op_instance": "4", "op_sequence": "4", "op": "build"})], (set([u'kern-6656-20190614-194024', u'kern-6656-20190614-190245', u'kern-6656-20190614-191138']), set([u'kern-6656-20190614-192044-outlier'])))
+        self.assertEqual(parts[frozen_dict({"op_instance": "4", "op_sequence": "4", "op": "build"})],
+                         (set([u'kern-6656-20190614-194024', u'kern-6656-20190614-190245', u'kern-6656-20190614-191138']), set([u'kern-6656-20190614-192044-outlier'])))
 
     @db_session
     def test_outlier_ops_trained_mvod(self):
@@ -317,9 +324,6 @@ class OutliersAPI(unittest.TestCase):
                            'pyod.models.cof': {'cpu_time,duration,num_procs': [1.0355, [[380807266.0, 2158730624.0, 9549.0], [381619141.0, 2203839312.0, 9549.0], [381227732.0, 2253935203.0, 9549.0]]]},
                            'pyod.models.hbos': {'cpu_time,duration,num_procs': [9.9657, [[380807266.0, 2158730624.0, 9549.0], [381619141.0, 2203839312.0, 9549.0], [381227732.0, 2253935203.0, 9549.0]]]},
                            'pyod.models.ocsvm': {'cpu_time,duration,num_procs': [-0.0, [[380807266.0, 2158730624.0, 9549.0], [381619141.0, 2203839312.0, 9549.0], [381227732.0, 2253935203.0, 9549.0]]]}})
-#                          {'pyod.models.cof': {'cpu_time,duration,num_procs': [1.0355, [[380807266.0, 2158730624.0, 9549.0], [381619141.0, 2203839312.0, 9549.0], [381227732.0, 2253935203.0, 9549.0]]]},
-#                           'pyod.models.hbos': {'cpu_time,duration,num_procs': [9.9657, [[380807266.0, 2158730624.0, 9549.0], [381619141.0, 2203839312.0, 9549.0], [381227732.0, 2253935203.0, 9549.0]]]},
-#                           'pyod.models.ocsvm': {'cpu_time,duration,num_procs': [-0.0, [[380807266.0, 2158730624.0, 9549.0], [381619141.0, 2203839312.0, 9549.0], [381227732.0, 2253935203.0, 9549.0]]]}}
                           
         self.assertEqual(r['computed']['{"op": "configure"}'],
                          {#'pyod.models.mcd': {'cpu_time,duration,num_procs': [2.0, [[20735346.0, 249388754.0, 1044.0], [20476970.0, 203959083.0, 1044.0], [20718776.0, 236011451.0, 1044.0]]]},

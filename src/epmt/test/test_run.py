@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from . import *
-import os
+#import os
 
 def remove_stale_files():
    for f in ['1', '1.tgz']:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from . import *
-import os
+#import os
 
 # These will be used in both tests
 # One can embed them in the class, but referring to them with

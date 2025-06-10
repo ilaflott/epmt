@@ -13,7 +13,7 @@ for path in sys.path:
 
 # now load the user-specific settings.py so they override the defaults
 try: 
-    import epmt.settings
+#    import epmt.settings
     from epmt.settings import *
 except Exception as e:
     raise ModuleImportError('alternate epmt.settings import approach did not' + \

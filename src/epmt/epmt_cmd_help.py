@@ -1,4 +1,6 @@
-from __future__ import print_function
+#from __future__ import print_function
+from inspect import signature
+from sys import stderr
 
 # ian - what is this???
 def epmt_help_api(funcs = []):
@@ -9,8 +11,7 @@ def epmt_help_api(funcs = []):
     import epmt.epmt_stat as es
     import epmt.epmt_exp_explore as exp
     from epmt.epmtlib import docs_module_index
-    from inspect import signature
-    from sys import stderr
+
     if funcs:
         for fname in funcs:
             func = None

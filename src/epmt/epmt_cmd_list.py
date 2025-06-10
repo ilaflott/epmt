@@ -1,9 +1,10 @@
-from __future__ import print_function
-from epmt.epmt_query import get_unanalyzed_jobs, get_unprocessed_jobs, get_jobs, get_procs, get_refmodels, get_thread_metrics, get_job_proc_tags, get_op_metrics
-from logging import getLogger
-from epmt.epmtlib import kwargify
+#from __future__ import print_function
 from sys import stderr
 from pandas import DataFrame
+from logging import getLogger
+
+from epmt.epmt_query import get_unanalyzed_jobs, get_unprocessed_jobs, get_jobs, get_procs, get_refmodels, get_thread_metrics, get_job_proc_tags, get_op_metrics
+from epmt.epmtlib import kwargify
 #import pandas
 logger = getLogger(__name__)  # you can use other name
 
