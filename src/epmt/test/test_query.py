@@ -46,7 +46,11 @@ class QueryAPI(unittest.TestCase):
 
     def test_get_features(self):
         f = eq.get_features(['685000', '685003', '685016'])
-        self.assertTrue(set(f) >= set(['PERF_COUNT_SW_CPU_CLOCK', 'cancelled_write_bytes', 'cpu_time', 'delayacct_blkio_time', 'duration', 'exitcode', 'guest_time', 'inblock', 'invol_ctxsw', 'majflt', 'minflt', 'num_procs', 'num_threads', 'outblock', 'processor', 'rchar', 'rdtsc_duration', 'read_bytes', 'rssmax', 'submit', 'syscr', 'syscw', 'systemtime', 'time_oncpu', 'time_waiting', 'timeslices', 'updated_at', 'usertime', 'vol_ctxsw', 'wchar', 'write_bytes']))
+        self.assertTrue( set(f) >= set(
+            ['PERF_COUNT_SW_CPU_CLOCK', 'cancelled_write_bytes', 'cpu_time', 'delayacct_blkio_time', 'duration',
+             'exitcode', 'guest_time', 'inblock', 'invol_ctxsw', 'majflt', 'minflt', 'num_procs', 'num_threads',
+             'outblock', 'processor', 'rchar', 'rdtsc_duration', 'read_bytes', 'rssmax', 'submit', 'syscr', 'syscw',
+             'systemtime', 'time_oncpu', 'time_waiting', 'timeslices', 'updated_at', 'usertime', 'vol_ctxsw', 'wchar', 'write_bytes']))
 
     @db_session
     def test_job(self):
@@ -62,7 +66,14 @@ class QueryAPI(unittest.TestCase):
         self.assertIn(df.shape, ((3,44), (3,48)))
         # pony has some extra fields we don't care about and will probably remove:
         # 'account', 'jobscriptname', 'sessionid', 'queue'
-        self.assertEqual(set(df.columns.values) - set(['account', 'jobscriptname', 'sessionid', 'queue']), set(['PERF_COUNT_SW_CPU_CLOCK', 'all_proc_tags', 'analyses', 'annotations', 'cancelled_write_bytes', 'cpu_time', 'created_at', 'delayacct_blkio_time', 'duration', 'end', 'env_changes_dict', 'env_dict', 'exitcode', 'guest_time', 'inblock', 'info_dict', 'invol_ctxsw', 'jobid', 'jobname', 'majflt', 'minflt', 'num_procs', 'num_threads', 'outblock', 'processor', 'rchar', 'rdtsc_duration', 'read_bytes', 'rssmax', 'start', 'submit', 'syscr', 'syscw', 'systemtime', 'tags', 'time_oncpu', 'time_waiting', 'timeslices', 'updated_at', 'user', 'usertime', 'vol_ctxsw', 'wchar', 'write_bytes']))
+        self.assertEqual( set(df.columns.values) - set(['account', 'jobscriptname', 'sessionid', 'queue']),
+                          set(['PERF_COUNT_SW_CPU_CLOCK', 'all_proc_tags', 'analyses', 'annotations',
+                               'cancelled_write_bytes', 'cpu_time', 'created_at', 'delayacct_blkio_time', 'duration',
+                               'end', 'env_changes_dict', 'env_dict', 'exitcode', 'guest_time', 'inblock', 'info_dict',
+                               'invol_ctxsw', 'jobid', 'jobname', 'majflt', 'minflt', 'num_procs', 'num_threads',
+                               'outblock', 'processor', 'rchar', 'rdtsc_duration', 'read_bytes', 'rssmax', 'start',
+                               'submit', 'syscr', 'syscw', 'systemtime', 'tags', 'time_oncpu', 'time_waiting',
+                               'timeslices', 'updated_at', 'user', 'usertime', 'vol_ctxsw', 'wchar', 'write_bytes']))
         df = eq.get_jobs('685016', fmt='pandas')
         self.assertEqual(df['jobid'][0], '685016', "cannot specify job as a single job id string")
         self.assertEqual(df.shape[0],1, "wrong selection of jobs when specified as a string")
@@ -94,7 +105,10 @@ class QueryAPI(unittest.TestCase):
         j.tags = t
         orm_commit()
 
-        jobs = eq.get_jobs(JOBS_LIST, tags=['ocn_res:0.5l75;exp_component:ocean_cobalt_fdet_100', 'ocn_res:0.5l75;exp_component:ocean_annual_rho2_1x1deg'], fmt='terse')
+        jobs = eq.get_jobs(JOBS_LIST,
+                           tags=['ocn_res:0.5l75;exp_component:ocean_cobalt_fdet_100',
+                                 'ocn_res:0.5l75;exp_component:ocean_annual_rho2_1x1deg'],
+                           fmt='terse')
         self.assertEqual(jobs, ['685000', '685003'])
         #df = eq.get_jobs(           order='eq.desc(j.duration)', limit=1, fmt='pandas')
         df = eq.get_jobs(JOBS_LIST, order=eq.desc(Job.duration), limit=1, fmt='pandas')
@@ -307,17 +321,48 @@ class QueryAPI(unittest.TestCase):
     def test_op(self):
         op = Operation(['685000'], {'op': 'timavg'})
         self.assertEqual((op.tags, op.duration), ({'op': 'timavg'},41388496.0))
-        self.assertEqual(op.proc_sums, {'syscr': 127808, 'guest_time': 0, 'inblock': 0, 'processor': 0, 'rchar': 5356358342, 'cancelled_write_bytes': 45056, 'outblock': 5139208, 'timeslices': 2661, 'PERF_COUNT_SW_CPU_CLOCK': 17547070414, 'wchar': 5262916589, 'rssmax': 7854752, 'numtids': 62, 'duration': 41388496.0, 'read_bytes': 0, 'time_waiting': 35814116, 'delayacct_blkio_time': 0, 'invol_ctxsw': 1884, 'majflt': 0, 'syscw': 80433, 'minflt': 92584, 'cpu_time': 17951212.0, 'vol_ctxsw': 714, 'time_oncpu': 17984466575, 'rdtsc_duration': 153196621348, 'systemtime': 4074354, 'num_procs': 57, 'write_bytes': 2631274496, 'usertime': 13876858 })
+        self.assertEqual(op.proc_sums,
+                         {'syscr': 127808, 'guest_time': 0, 'inblock': 0, 'processor': 0, 'rchar': 5356358342,
+                          'cancelled_write_bytes': 45056, 'outblock': 5139208, 'timeslices': 2661,
+                          'PERF_COUNT_SW_CPU_CLOCK': 17547070414, 'wchar': 5262916589, 'rssmax': 7854752, 'numtids': 62,
+                          'duration': 41388496.0, 'read_bytes': 0, 'time_waiting': 35814116, 'delayacct_blkio_time': 0,
+                          'invol_ctxsw': 1884, 'majflt': 0, 'syscw': 80433, 'minflt': 92584, 'cpu_time': 17951212.0,
+                          'vol_ctxsw': 714, 'time_oncpu': 17984466575, 'rdtsc_duration': 153196621348,
+                          'systemtime': 4074354, 'num_procs': 57, 'write_bytes': 2631274496, 'usertime': 13876858 })
         op = Operation(['685000'], {'op': 'timavg'}, op_duration_method = "sum-minus-overlap")
         self.assertEqual((op.tags, op.duration, op.num_runs()), ({'op': 'timavg'},21033390.0, 11))
-        self.assertEqual(op.proc_sums, {'syscr': 127808, 'guest_time': 0, 'inblock': 0, 'processor': 0, 'rchar': 5356358342, 'cancelled_write_bytes': 45056, 'outblock': 5139208, 'timeslices': 2661, 'PERF_COUNT_SW_CPU_CLOCK': 17547070414, 'wchar': 5262916589, 'rssmax': 7854752, 'numtids': 62, 'duration': 21033390.0, 'read_bytes': 0, 'time_waiting': 35814116, 'delayacct_blkio_time': 0, 'invol_ctxsw': 1884, 'majflt': 0, 'syscw': 80433, 'minflt': 92584, 'cpu_time': 17951212.0, 'vol_ctxsw': 714, 'time_oncpu': 17984466575, 'rdtsc_duration': 153196621348, 'systemtime': 4074354, 'num_procs': 57, 'write_bytes': 2631274496, 'usertime': 13876858 })
+        self.assertEqual(op.proc_sums,
+                         {'syscr': 127808, 'guest_time': 0, 'inblock': 0, 'processor': 0, 'rchar': 5356358342,
+                          'cancelled_write_bytes': 45056, 'outblock': 5139208, 'timeslices': 2661,
+                          'PERF_COUNT_SW_CPU_CLOCK': 17547070414, 'wchar': 5262916589, 'rssmax': 7854752, 'numtids': 62,
+                          'duration': 21033390.0, 'read_bytes': 0, 'time_waiting': 35814116, 'delayacct_blkio_time': 0,
+                          'invol_ctxsw': 1884, 'majflt': 0, 'syscw': 80433, 'minflt': 92584, 'cpu_time': 17951212.0,
+                          'vol_ctxsw': 714, 'time_oncpu': 17984466575, 'rdtsc_duration': 153196621348,
+                          'systemtime': 4074354, 'num_procs': 57, 'write_bytes': 2631274496, 'usertime': 13876858 })
         op = Operation(['685000'], {'op': 'timavg'}, op_duration_method = "finish-minus-start")
         self.assertEqual((op.tags, op.duration), ({'op': 'timavg'},51278054.0))
-        self.assertEqual(op.proc_sums, {'syscr': 127808, 'guest_time': 0, 'inblock': 0, 'processor': 0, 'rchar': 5356358342, 'cancelled_write_bytes': 45056, 'outblock': 5139208, 'timeslices': 2661, 'PERF_COUNT_SW_CPU_CLOCK': 17547070414, 'wchar': 5262916589, 'rssmax': 7854752, 'numtids': 62, 'duration': 51278054.0, 'read_bytes': 0, 'time_waiting': 35814116, 'delayacct_blkio_time': 0, 'invol_ctxsw': 1884, 'majflt': 0, 'syscw': 80433, 'minflt': 92584, 'cpu_time': 17951212.0, 'vol_ctxsw': 714, 'time_oncpu': 17984466575, 'rdtsc_duration': 153196621348, 'systemtime': 4074354, 'num_procs': 57, 'write_bytes': 2631274496, 'usertime': 13876858 })
-        self.assertEqual(set(op.to_dict().keys()), {'jobs', 'proc_sums', 'duration', 'tags', 'exact_tag_only', 'start', 'finish', 'op_duration_method'})
-        self.assertEqual(set(op.to_dict(full = True).keys()), {'jobs', 'proc_sums', 'duration', 'tags', 'processes',  'exact_tag_only', 'start', 'finish', 'intervals', 'num_runs', 'contiguous', 'op_duration_method'})
+        self.assertEqual(op.proc_sums,
+                         {'syscr': 127808, 'guest_time': 0, 'inblock': 0, 'processor': 0, 'rchar': 5356358342,
+                          'cancelled_write_bytes': 45056, 'outblock': 5139208, 'timeslices': 2661,
+                          'PERF_COUNT_SW_CPU_CLOCK': 17547070414, 'wchar': 5262916589, 'rssmax': 7854752, 'numtids': 62,
+                          'duration': 51278054.0, 'read_bytes': 0, 'time_waiting': 35814116, 'delayacct_blkio_time': 0,
+                          'invol_ctxsw': 1884, 'majflt': 0, 'syscw': 80433, 'minflt': 92584, 'cpu_time': 17951212.0,
+                          'vol_ctxsw': 714, 'time_oncpu': 17984466575, 'rdtsc_duration': 153196621348,
+                          'systemtime': 4074354, 'num_procs': 57, 'write_bytes': 2631274496, 'usertime': 13876858 })
+        self.assertEqual(set(op.to_dict().keys()),
+                         {'jobs', 'proc_sums', 'duration', 'tags', 'exact_tag_only', 'start', 'finish', 'op_duration_method'})
+        self.assertEqual(set(op.to_dict(full = True).keys()),
+                         {'jobs', 'proc_sums', 'duration', 'tags', 'processes',  'exact_tag_only', 'start', 'finish', 'intervals', 'num_runs', 'contiguous', 'op_duration_method'})
         op = Operation(['685000', '685003'], {'op': 'timavg'})
-        self.assertEqual(op.proc_sums, {'syscw': 89297, 'PERF_COUNT_SW_CPU_CLOCK': 29297709455, 'time_oncpu': 32531383700, 'usertime': 25906808, 'time_waiting': 81086345, 'timeslices': 8001, 'cancelled_write_bytes': 262144, 'outblock': 5665088, 'guest_time': 0, 'minflt': 647328, 'invol_ctxsw': 3996, 'processor': 0, 'rssmax': 10901764, 'read_bytes': 7303168, 'rdtsc_duration': 244679507379, 'inblock': 14264, 'majflt': 18, 'num_procs': 428, 'write_bytes': 2900525056, 'delayacct_blkio_time': 0, 'duration': 67847274.0, 'syscr': 206204, 'rchar': 8118076508, 'cpu_time': 32325636.0, 'systemtime': 6418828, 'wchar': 5805294586, 'vol_ctxsw': 3571, 'numtids': 433})
+        self.assertEqual(op.proc_sums,
+                         {'syscw': 89297, 'PERF_COUNT_SW_CPU_CLOCK': 29297709455, 'time_oncpu': 32531383700,
+                          'usertime': 25906808, 'time_waiting': 81086345, 'timeslices': 8001,
+                          'cancelled_write_bytes': 262144, 'outblock': 5665088, 'guest_time': 0, 'minflt': 647328,
+                          'invol_ctxsw': 3996, 'processor': 0, 'rssmax': 10901764, 'read_bytes': 7303168,
+                          'rdtsc_duration': 244679507379, 'inblock': 14264, 'majflt': 18, 'num_procs': 428,
+                          'write_bytes': 2900525056, 'delayacct_blkio_time': 0, 'duration': 67847274.0, 'syscr': 206204,
+                          'rchar': 8118076508, 'cpu_time': 32325636.0, 'systemtime': 6418828, 'wchar': 5805294586,
+                          'vol_ctxsw': 3571, 'numtids': 433})
 
     @db_session
     def test_op_metrics(self):
@@ -361,7 +406,18 @@ class QueryAPI(unittest.TestCase):
     def test_op_metrics_grouped(self):
         df = eq.get_op_metrics(['685000', '685003', '685016'], group_by_tag=True)
         self.assertEqual(df.shape,(459,29), 'wrong get_op_metrics grouped shape when no tag specified')
-        self.assertEqual(list(df['tags'].values[:10]), [{u'op_instance': u'11', u'op_sequence': u'66', u'op': u'cp'}, {u'op_instance': u'15', u'op_sequence': u'79', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'247', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'251', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'255', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'259', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'263', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'267', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'271', u'op': u'cp'}, {u'op_instance': u'3', u'op_sequence': u'30', u'op': u'cp'}], 'wrong tags ordering in grouped get_op_metrics')
+        self.assertEqual(list(df['tags'].values[:10]),
+                         [ {u'op_instance': u'11', u'op_sequence': u'66', u'op': u'cp'},
+                           {u'op_instance': u'15', u'op_sequence': u'79', u'op': u'cp'},
+                           {u'op_instance': u'3', u'op_sequence': u'247', u'op': u'cp'},
+                           {u'op_instance': u'3', u'op_sequence': u'251', u'op': u'cp'},
+                           {u'op_instance': u'3', u'op_sequence': u'255', u'op': u'cp'},
+                           {u'op_instance': u'3', u'op_sequence': u'259', u'op': u'cp'},
+                           {u'op_instance': u'3', u'op_sequence': u'263', u'op': u'cp'},
+                           {u'op_instance': u'3', u'op_sequence': u'267', u'op': u'cp'},
+                           {u'op_instance': u'3', u'op_sequence': u'271', u'op': u'cp'},
+                           {u'op_instance': u'3', u'op_sequence': u'30', u'op': u'cp'} ],
+                         'wrong tags ordering in grouped get_op_metrics')
         # pylint: disable=no-member
         self.assertEqual(list(df.cpu_time.values)[:10], [2476289.0, 2489292.0, 472905.0, 462906.0, 461906.0, 465903.0, 471904.0, 485902.0, 472905.0, 2577272.0])
 
@@ -411,12 +467,21 @@ class QueryAPI(unittest.TestCase):
     def test_job_tags(self):
         d = eq.get_job_tags(['685016', '685003', '685000'], tag_filter = 'exp_name:ESM4_historical_D151;exp_time:18840101')
         self.assertEqual(set(d.keys()), {'atm_res', 'exp_component', 'exp_name', 'exp_time', 'ocn_res', 'script_name'})
-        self.assertEqual(d, {'atm_res': 'c96l49', 'ocn_res': '0.5l75', 'exp_name': 'ESM4_historical_D151', 'exp_time': '18840101', 'script_name': {'ESM4_historical_D151_ocean_annual_rho2_1x1deg_18840101', 'ESM4_historical_D151_ocean_month_rho2_1x1deg_18840101', 'ESM4_historical_D151_ocean_cobalt_fdet_100_18840101'}, 'exp_component': {'ocean_month_rho2_1x1deg', 'ocean_annual_rho2_1x1deg', 'ocean_cobalt_fdet_100'}})
+        self.assertEqual(d, {'atm_res': 'c96l49', 'ocn_res': '0.5l75', 'exp_name': 'ESM4_historical_D151', 'exp_time': '18840101',
+                             'script_name': {'ESM4_historical_D151_ocean_annual_rho2_1x1deg_18840101',
+                                             'ESM4_historical_D151_ocean_month_rho2_1x1deg_18840101',
+                                             'ESM4_historical_D151_ocean_cobalt_fdet_100_18840101'},
+                             'exp_component': {'ocean_month_rho2_1x1deg', 'ocean_annual_rho2_1x1deg', 'ocean_cobalt_fdet_100'}})
 
     @db_session
     def test_job_roots(self):
         pids = [p.pid for p in eq.get_roots(['685000', '685003'], fmt='orm')]
-        self.assertEqual(pids, [6098, 29001, 31171, 31291, 10015, 10168, 32139, 11002, 32315, 11172, 1311, 1490, 12990, 13118, 13220, 1652, 1941, 13597, 14403, 14547, 2321, 2655, 26466, 26469, 26500, 26726, 26729, 26760, 26986, 26989, 27020, 27246, 27249, 27280, 27506, 27509, 27540, 27775, 27833, 27836, 27867, 28093, 28129, 8082, 8179, 8231, 8283, 8335, 8387, 8439, 8491, 8543, 8603, 8655, 8707, 8863, 8997, 9044, 9090, 9126, 9162, 9198, 9237, 9881, 9930, 9979, 10028, 10077, 10126, 10175])
+        self.assertEqual(pids,
+                         [6098, 29001, 31171, 31291, 10015, 10168, 32139, 11002, 32315, 11172, 1311, 1490, 12990, 13118,
+                          13220, 1652, 1941, 13597, 14403, 14547, 2321, 2655, 26466, 26469, 26500, 26726, 26729, 26760,
+                          26986, 26989, 27020, 27246, 27249, 27280, 27506, 27509, 27540, 27775, 27833, 27836, 27867,
+                          28093, 28129, 8082, 8179, 8231, 8283, 8335, 8387, 8439, 8491, 8543, 8603, 8655, 8707, 8863,
+                          8997, 9044, 9090, 9126, 9162, 9198, 9237, 9881, 9930, 9979, 10028, 10077, 10126, 10175])
 
     @db_session
     def test_jobs_annotations(self):
@@ -434,13 +499,20 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(r, {})
         self.assertEqual(eq.get_job_annotations('685000'), {})
         r = eq.annotate_job('685016', 'abc:200;def:bye')
-        self.assertEqual(r, {'abc': '200', 'def': 'bye', 'EPMT_JOB_TAGS': 'atm_res:c96l49;exp_component:ocean_month_rho2_1x1deg;exp_name:ESM4_historical_D151;exp_time:18840101;ocn_res:0.5l75;script_name:ESM4_historical_D151_ocean_month_rho2_1x1deg_18840101'})
-        self.assertEqual(eq.get_job_annotations('685016'), {'abc': '200', 'def': 'bye', 'EPMT_JOB_TAGS': 'atm_res:c96l49;exp_component:ocean_month_rho2_1x1deg;exp_name:ESM4_historical_D151;exp_time:18840101;ocn_res:0.5l75;script_name:ESM4_historical_D151_ocean_month_rho2_1x1deg_18840101'})
+        self.assertEqual(r,
+                         {'abc': '200', 'def': 'bye',
+                          'EPMT_JOB_TAGS': 'atm_res:c96l49;exp_component:ocean_month_rho2_1x1deg;exp_name:ESM4_historical_D151;exp_time:18840101;ocn_res:0.5l75;script_name:ESM4_historical_D151_ocean_month_rho2_1x1deg_18840101'})
+        self.assertEqual(eq.get_job_annotations('685016'),
+                         {'abc': '200', 'def': 'bye',
+                          'EPMT_JOB_TAGS': 'atm_res:c96l49;exp_component:ocean_month_rho2_1x1deg;exp_name:ESM4_historical_D151;exp_time:18840101;ocn_res:0.5l75;script_name:ESM4_historical_D151_ocean_month_rho2_1x1deg_18840101'})
         self.assertEqual(eq.get_jobs(annotations = {'abc': '200'}, fmt='terse'), [u'685016'])
 
     @db_session
     def test_jobs_comparable(self):
-        self.assertEqual(sorted(eq.comparable_job_partitions(['685000', '685003', '685016']), key=lambda v: v[1][0]), [(('ESM4_historical_D151', 'ocean_annual_rho2_1x1deg'), ['685000']), (('ESM4_historical_D151', 'ocean_cobalt_fdet_100'), ['685003']), (('ESM4_historical_D151', 'ocean_month_rho2_1x1deg'), ['685016'])])
+        self.assertEqual(sorted(eq.comparable_job_partitions(['685000', '685003', '685016']), key=lambda v: v[1][0]),
+                         [ (('ESM4_historical_D151', 'ocean_annual_rho2_1x1deg'), ['685000']),
+                           (('ESM4_historical_D151', 'ocean_cobalt_fdet_100'), ['685003']),
+                           (('ESM4_historical_D151', 'ocean_month_rho2_1x1deg'), ['685016']) ] )
         self.assertFalse(eq.are_jobs_comparable(['685000', '685003', '685016']))
 
     @db_session
@@ -479,10 +551,17 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(set([p.pid for p in op_root_procs]), set([11023, 11185, 11187, 32160, 32328, 32330]))
         #op_root_procs = eq.op_roots(['685000', '685003', '685016'], 'op_sequence:1', fmt='orm')
         #l = eq.select((p.job.jobid, p.pid) for p in op_root_procs)[:]
-        #self.assertEqual(l, [(u'685000', 6226), (u'685000', 10042), (u'685000', 10046), (u'685000', 10058), (u'685000', 10065), (u'685000', 10066), (u'685003', 29079), (u'685003', 31184), (u'685003', 31185), (u'685003', 31191), (u'685003', 31198), (u'685003', 31199), (u'685016', 122259), (u'685016', 128848), (u'685016', 128849), (u'685016', 128855), (u'685016', 128862), (u'685016', 128863)])
+        #self.assertEqual(l,
+        #                 [ (u'685000', 6226), (u'685000', 10042), (u'685000', 10046), (u'685000', 10058), (u'685000', 10065),
+        #                   (u'685000', 10066), (u'685003', 29079), (u'685003', 31184), (u'685003', 31185), (u'685003', 31191),
+        #                   (u'685003', 31198), (u'685003', 31199), (u'685016', 122259), (u'685016', 128848), (u'685016', 128849),
+        #                   (u'685016', 128855), (u'685016', 128862), (u'685016', 128863)])
         df = eq.op_roots(['685000', '685003', '685016'], 'op_sequence:1', fmt='pandas')
         self.assertIn(df.shape, ((18,50), (18,49)))
-        self.assertEqual(set(df['pid'].values), set([6226, 10042, 10046, 10058, 10065, 10066, 29079, 31184, 31185, 31191, 31198, 31199, 122259, 128848, 128849, 128855, 128862, 128863]))
+        self.assertEqual(set(df['pid'].values),
+                         set([ 6226, 10042, 10046, 10058, 10065, 10066, 29079,
+                               31184, 31185, 31191, 31198, 31199,
+                               122259, 128848, 128849, 128855, 128862, 128863 ]) )
 
     @db_session
     def test_timeline(self):
@@ -490,7 +569,10 @@ class QueryAPI(unittest.TestCase):
         procs = eq.timeline(jobs, fmt='orm')
         #p1 = procs.first()
         #self.assertEqual(p1.start, min(min(j.processes.start) for j in jobs))
-        self.assertEqual([ p.start for p in procs[:3] ], [datetime(2019, 6, 15, 7, 52, 4, 126892), datetime(2019, 6, 15, 7, 52, 4, 133795), datetime(2019, 6, 15, 7, 52, 4, 142141)])
+        self.assertEqual([ p.start for p in procs[:3] ],
+                         [ datetime(2019, 6, 15, 7, 52, 4, 126892),
+                           datetime(2019, 6, 15, 7, 52, 4, 133795),
+                           datetime(2019, 6, 15, 7, 52, 4, 142141)])
         procs = eq.timeline('685016', fmt='orm', limit=5)
         pids = [p.pid for p in procs]
         self.assertEqual(pids, [122181, 122182, 122183, 122184, 122185])
@@ -541,7 +623,10 @@ class QueryAPI(unittest.TestCase):
         # wildcard features
         with capture() as (out, err):
             r = eq.create_refmodel(jobs, tag='model_name:'+model_name, features='*')
-        all_features =  {'duration', 'syscr', 'systemtime', 'PERF_COUNT_SW_CPU_CLOCK', 'cpu_time', 'delayacct_blkio_time', 'time_waiting', 'write_bytes', 'inblock', 'minflt', 'invol_ctxsw', 'syscw', 'wchar', 'num_threads', 'processor', 'cancelled_write_bytes', 'rssmax', 'rchar', 'outblock', 'num_procs', 'time_oncpu', 'rdtsc_duration', 'usertime', 'timeslices', 'guest_time', 'vol_ctxsw', 'majflt', 'read_bytes', 'exitcode'}
+        all_features =  {'duration', 'syscr', 'systemtime', 'PERF_COUNT_SW_CPU_CLOCK', 'cpu_time', 'delayacct_blkio_time',
+                         'time_waiting', 'write_bytes', 'inblock', 'minflt', 'invol_ctxsw', 'syscw', 'wchar', 'num_threads',
+                         'processor', 'cancelled_write_bytes', 'rssmax', 'rchar', 'outblock', 'num_procs', 'time_oncpu',
+                         'rdtsc_duration', 'usertime', 'timeslices', 'guest_time', 'vol_ctxsw', 'majflt', 'read_bytes', 'exitcode'}
         self.assertEqual(eq.refmodel_get_metrics(r['id'], False), all_features) # all metrics
         self.assertEqual(eq.refmodel_get_metrics(r['id'], True), all_features)  # active metrics
         eq.delete_refmodels(r['id'])
@@ -582,7 +667,10 @@ class QueryAPI(unittest.TestCase):
 
     def test_status(self):
         status = eq.get_job_status('685000')
-        self.assertEqual(status, {'exit_code': 0, 'exit_reason': 'none', 'script_path': '/home/Jeffrey.Durachta/ESM4/DECK/ESM4_historical_D151/gfdl.ncrc4-intel16-prod-openmp/scripts/postProcess/ESM4_historical_D151_ocean_annual_rho2_1x1deg_18840101.tags', 'script_name': 'ESM4_historical_D151_ocean_annual_rho2_1x1deg_18840101'})
+        self.assertEqual(status,
+                         {'exit_code': 0, 'exit_reason': 'none',
+                          'script_path': '/home/Jeffrey.Durachta/ESM4/DECK/ESM4_historical_D151/gfdl.ncrc4-intel16-prod-openmp/scripts/postProcess/ESM4_historical_D151_ocean_annual_rho2_1x1deg_18840101.tags',
+                          'script_name': 'ESM4_historical_D151_ocean_annual_rho2_1x1deg_18840101'})
 
     @db_session
     def test_verify_jobs(self):
