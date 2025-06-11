@@ -58,7 +58,8 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
         level = DEBUG # 10
 
     # Set level and remove all existing handlers 
-    rootLogger = getLogger(__name__)
+    #rootLogger = getLogger(__name__) # thank you! @ ericzhou13
+    rootLogger = getLogger()
     rootLogger.debug("epmt_logging_init(%d,%s,%s): %d handlers",intlvl,check,log_pid,len(rootLogger.handlers))
     for handler in rootLogger.handlers:
         rootLogger.removeHandler(handler)
