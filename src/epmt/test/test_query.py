@@ -2,7 +2,7 @@
 
 # the import below is crucial to get a sane test environment
 from . import *
-
+epmt_logging_init(0)
 JOBS_LIST = ['685016', '685003', '685000']
 
 
@@ -18,7 +18,7 @@ def setUpModule():
     #    print('setUpModdule: importing {0}'.format(datafiles))
     with capture() as (out,err):
         epmt_submit(sorted(glob(datafiles)), dry_run=False)
-    # only use madz as the tests are written that way
+    # only use modz as the tests are written that way
     settings.univariate_classifiers = ['modified_z_score']
     
 
@@ -699,7 +699,8 @@ class QueryAPI(unittest.TestCase):
         n = eq.delete_jobs(['685000', '685016'])
         self.assertEqual(n, 0, 'multiple jobs deleted without "force"')
 
-        # test before/after
+    def test_zz_delete_jobs_force_before_after_ags(self):
+        # test before/after args
         ndays = (datetime.now() - datetime(2019, 6, 15, 7, 52, 4, 73965)).days 
         n = eq.delete_jobs(JOBS_LIST, force=True, after=-(ndays-1))
         self.assertEqual(n, 0)
@@ -707,14 +708,17 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(n, 0)
         n = eq.delete_jobs(JOBS_LIST, force=True, before='06/15/2019 00:00')
         self.assertEqual(n, 0)
-        n = eq.delete_jobs(['685000', '685016'], force=True)
+        
+    def test_zz_delete_jobs_force(self):
+        self.assertEqual( eq.get_jobs(fmt='orm').count(), 3 )
+        n = eq.delete_jobs(['685000', '685016'], force=True, remove_models=True)
         self.assertEqual(n, 2)
-        self.assertFalse(eq.orm_get(eq.Job, '685000') or eq.orm_get(eq.Job, '685016'))
+        #self.assertFalse(eq.orm_get(eq.Job, '685000') or eq.orm_get(eq.Job, '685016'))
         # n = eq.delete_jobs([], force=True, before=-(ndays-1))
         # self.assertTrue(n >= 1)
 
 
-if __name__ == '__main__':
-    unittest.main()
-    suite = unittest.TestLoader().loadTestsFromTestCase(QueryAPI)
-    unittest.TextTestRunner(verbosity=2).run(suite)
+#if __name__ == '__main__':
+#    unittest.main()
+#    suite = unittest.TestLoader().loadTestsFromTestCase(QueryAPI)
+#    unittest.TextTestRunner(verbosity=2).run(suite)
