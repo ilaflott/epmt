@@ -97,7 +97,7 @@ jobs:
       - name: epmt check call and check
         run: |
           echo 2 > /proc/sys/kernel/perf_event_paranoid
-          epmt -v check
+          epmt -vv check
 
       - name: python unittest test_anysh call and check
         run: |
@@ -116,12 +116,10 @@ jobs:
           python3 -m unittest -v epmt.test.test_db_schema
 
       - name: python unittest test_explore call and check
-        continue-on-error: true
         run: |
           python3 -m unittest -v epmt.test.test_explore
 
       - name: python unittest test_lib call and check
-        continue-on-error: true
         run: |
           python3 -m unittest -v epmt.test.test_lib
 
@@ -131,32 +129,26 @@ jobs:
           python3 -m unittest -v epmt.test.test_outliers
 
       - name: python unittest test_query call and check
-        continue-on-error: true
         run: |
           python3 -m unittest -v epmt.test.test_query
 
       - name: python unittest test_run call and check
-        continue-on-error: true
         run: |
           python3 -m unittest -v epmt.test.test_run
 
       - name: python unittest test_settings call and check
-        continue-on-error: true
         run: |
           python3 -m unittest -v epmt.test.test_settings
 
       - name: python unittest test_shell call and check
-        continue-on-error: true
         run: |
           python3 -m unittest -v epmt.test.test_shell
 
       - name: python unittest test_stat call and check
-        continue-on-error: true
         run: |
           python3 -m unittest -v epmt.test.test_stat
 
       - name: python unittest test_submit call and check
-        continue-on-error: true
         run: |
           python3 -m unittest -v epmt.test.test_submit
 
