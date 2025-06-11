@@ -3,7 +3,7 @@
 ## Issue ticket number, link (if applicable)
 
 ## Checklist
-A loose guide
+A loose guide to provide structure for contributions
 
 - [ ] the code runs
 - [ ] the code is readable
