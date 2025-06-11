@@ -1666,15 +1666,15 @@ def epmt_entrypoint(args):
             'test.test_cmds', # 
             'test.test_db_migration', # 
             'test.test_db_schema', # 
+            'test.test_explore', # 
             'test.test_lib', # 
+            'test.test_outliers', # 
             'test.test_query', # 
             'test.test_run', # 
             'test.test_settings', #
-#            'test.test_shell', # half-baked, needs better control over env variables.
+            'test.test_shell', # 
             'test.test_stat', # 
-            'test.test_submit', # 
-            'test.test_outliers', # keep working on it TODO
-            'test.test_explore' 
+            'test.test_submit'
         ]
         if args.epmt_cmd_args:
             TEST_MODULES = args.epmt_cmd_args
