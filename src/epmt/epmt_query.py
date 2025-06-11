@@ -1805,19 +1805,18 @@ def delete_jobs(jobs, force = False, before=None, after=None, warn = True, remov
             By default, False. 'force' has to be set to True to allow
             deletion of multiple jobs.
 
-    before,
-    after : datetime or string
+    before, after : datetime or string
             time specified as cutoff. See 'get_jobs' to see how to specify
             these options.
 
-     warn : boolean, optional
+    warn : boolean, optional
             This option is only useful in daemon mode where we want to 
             disable unnecessary copious warnings in logs.
             Default True. When disabled, no warnings will be given about attempting
             to delete jobs that have models associated with them. Instead
             those jobs will be skipped.
 
-remove_models : boolean, optional
+    remove_models : boolean, optional
             By default False. If set to True, dependent reference models will
             removed prior to removal of the job. If False, jobs with dependent
             models will not be deleted.
@@ -1918,7 +1917,11 @@ remove_models : boolean, optional
 
     # if orm_delete_jobs fails then it was one atomic transaction that failed
     # so no jobs will be deleted
-    return num_jobs if orm_delete_jobs(jobs) else 0
+    if orm_delete_jobs(jobs):
+        return num_jobs
+    else:
+        return 0
+    #return num_jobs if orm_delete_jobs(jobs) else 0
 
 def retire_jobs(ndays = settings.retire_jobs_ndays, skip_unprocessed = False, dry_run = False):
     """
