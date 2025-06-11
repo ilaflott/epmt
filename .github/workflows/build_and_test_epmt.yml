@@ -2,12 +2,6 @@ on:
   push
 
 
-env:
-  POSTGRES_DB: 'EPMT'
-  POSTGRES_USER: 'postgres'
-  POSTGRES_PASSWORD: 'example'
-  PIP_CACHE_DIR: '$CI_PROJECT_DIR/.cache/pip'
-
 #service:
 #  - postgres:latest
 
@@ -18,6 +12,12 @@ jobs:
 
     container:
       image: rockylinux:8
+      env:
+        POSTGRES_DB: 'EPMT'
+        POSTGRES_USER: 'postgres'
+        POSTGRES_PASSWORD: 'example'
+        PIP_CACHE_DIR: '$CI_PROJECT_DIR/.cache/pip'
+      options: --privileged
 
     steps:
       - uses: actions/checkout@v4
@@ -84,7 +84,6 @@ jobs:
           /usr/lib/python3.9/site-packages/epmt/test/integration/libs/bats/install.sh /usr/local
 
       - name: epmt version call and check
-        continue-on-error: true
         run: |
           epmt -v -V
 
@@ -99,10 +98,70 @@ jobs:
         run: |
           epmt -v unittest
 
-      - name: python unittest call and check
+      - name: python unittest test_anysh call and check
         continue-on-error: true
         run: |
-          python -m unittest -v src/epmt/test/test_*.py
+          python3 -m unittest -v src/epmt/test/test_anysh.py
+
+      - name: python unittest test_cmds call and check
+        continue-on-error: true
+        run: |
+          python3 -m unittest -v src/epmt/test/test_cmds.py
+
+      - name: python unittest test_db_migration call and check
+        continue-on-error: true
+        run: |
+          python3 -m unittest -v src/epmt/test/test_db_migration.py
+
+      - name: python unittest test_db_schema call and check
+        continue-on-error: true
+        run: |
+          python3 -m unittest -v src/epmt/test/test_db_schema.py
+
+      - name: python unittest test_lib call and check
+        continue-on-error: true
+        run: |
+          python3 -m unittest -v src/epmt/test/test_lib.py
+
+      - name: python unittest test_query call and check
+        continue-on-error: true
+        run: |
+          python3 -m unittest -v src/epmt/test/test_query.py
+
+      - name: python unittest test_run call and check
+        continue-on-error: true
+        run: |
+          python3 -m unittest -v src/epmt/test/test_run.py
+
+      - name: python unittest test_settings call and check
+        continue-on-error: true
+        run: |
+          python3 -m unittest -v src/epmt/test/test_settings.py
+
+      - name: python unittest test_shell call and check
+        continue-on-error: true
+        run: |
+          python3 -m unittest -v src/epmt/test/test_shell.py
+
+      - name: python unittest test_stat call and check
+        continue-on-error: true
+        run: |
+          python3 -m unittest -v src/epmt/test/test_stat.py
+
+      - name: python unittest test_submit call and check
+        continue-on-error: true
+        run: |
+          python3 -m unittest -v src/epmt/test/test_submit.py
+
+      - name: python unittest test_outliers call and check
+        continue-on-error: true
+        run: |
+          python3 -m unittest -v src/epmt/test/test_outliers.py
+
+      - name: python unittest test_explore call and check
+        continue-on-error: true
+        run: |
+          python3 -m unittest -v src/epmt/test/test_explore.py
 
       - name: epmt integration call and check
         continue-on-error: true
@@ -112,10 +171,10 @@ jobs:
       - name: install pylint
         run: |
           pip install pylint
-  
+
       - name: run pylint
         continue-on-error: true
-        run: |          
+        run: |
           pylint --max-line-length 120 --max-args 6 -ry src/epmt
 
       - name: upload pip installable
