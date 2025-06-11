@@ -90,70 +90,70 @@ jobs:
           export PATH='/usr/bin:${PATH}:/usr/local/libexec:/usr/local/bin'
           /usr/lib/python3.9/site-packages/epmt/test/integration/libs/bats/install.sh /usr/local
 
-      - name: epmt version call and check
+      - name: epmt version call 
         run: |
           epmt -v -V
 
-      - name: epmt check call and check
+      - name: epmt check call 
         run: |
           echo 2 > /proc/sys/kernel/perf_event_paranoid
           epmt -vv check
 
-      - name: python unittest test_anysh call and check
+      - name: test_anysh call 
         run: |
           python3 -m unittest -v epmt.test.test_anysh
 
-      - name: python unittest test_cmds call and check
+      - name: test_cmds call 
         run: |
           python3 -m unittest -v epmt.test.test_cmds
 
-      - name: python unittest test_db_migration call and check
+      - name: test_db_migration call 
         run: |
           python3 -m unittest -v epmt.test.test_db_migration
 
-      - name: python unittest test_db_schema call and check
+      - name: test_db_schema call 
         run: |
           python3 -m unittest -v epmt.test.test_db_schema
 
-      - name: python unittest test_explore call and check
+      - name: test_explore call 
         run: |
           python3 -m unittest -v epmt.test.test_explore
 
-      - name: python unittest test_lib call and check
+      - name: test_lib call 
         run: |
           python3 -m unittest -v epmt.test.test_lib
 
-      - name: python unittest test_outliers call and check
+      - name: test_outliers (GUARDED) call 
         continue-on-error: true
         run: |
           python3 -m unittest -v epmt.test.test_outliers
 
-      - name: python unittest test_query call and check
+      - name: test_query (GUARDED) call 
         continue-on-error: true
         run: |
           python3 -m unittest -v epmt.test.test_query
 
-      - name: python unittest test_run call and check
+      - name: test_run call 
         run: |
           python3 -m unittest -v epmt.test.test_run
 
-      - name: python unittest test_settings call and check
+      - name: test_settings call 
         run: |
           python3 -m unittest -v epmt.test.test_settings
 
-      - name: python unittest test_shell call and check
+      - name: test_shell call 
         run: |
           python3 -m unittest -v epmt.test.test_shell
 
-      - name: python unittest test_stat call and check
+      - name: test_stat call 
         run: |
           python3 -m unittest -v epmt.test.test_stat
 
-      - name: python unittest test_submit call and check
+      - name: test_submit call 
         run: |
           python3 -m unittest -v epmt.test.test_submit
 
-      - name: epmt integration call and check
+      - name: epmt integration (GUARDED) call 
         continue-on-error: true
         run: |
           epmt integration
@@ -162,7 +162,7 @@ jobs:
         run: |
           pip install pylint
 
-      - name: run pylint
+      - name: run pylint (GUARDED)
         continue-on-error: true
         run: |
           pylint --max-line-length 120 --max-args 6 -ry src/epmt
