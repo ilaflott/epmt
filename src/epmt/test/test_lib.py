@@ -79,50 +79,50 @@ class EPMTLib(unittest.TestCase):
         self.assertEqual(install_root + '/test', __file__.rsplit('/', 1)[0])
 
     # BROKEN FIX TODO
-    #    def test_logfn(self):
-    #        from epmt.epmtlib import logfn, epmt_logging_init, capture
-    #
-    #        # enable debug logging and,
-    #        # remove all handlers and add our StringIO handler
-    #        epmt_logging_init(2)
-    #        logger = logging.getLogger()
-    #
-    #        @logfn
-    #        def double(x):
-    #            return x*2
-    #
-    #        
-    #        # this removes the existing handlers
-    #        for handler in logger.handlers: 
-    #            logger.removeHandler(handler)
-    #        logger.handlers = [] 
-    #
-    #        log_stream = StringIO()
-    #        #print(log_stream)
-    #        stream_handler = logging.StreamHandler(log_stream)
-    #        #print(stream_handler)
-    #        streamFormatter = logging.Formatter("%(levelname)7.7s: %(name)s: %(message)s")
-    #        #print(streamFormatter)
-    #        stream_handler.setFormatter(streamFormatter)
-    #        logger.addHandler(stream_handler)
-    #
-    #        # call our function
-    #        y = double(25)
-    #        
-    #        # remove the StringIO handler        
-    #        logger.removeHandler(stream_handler)
-    #
-    #        # restore logging to sanity
-    #        epmt_logging_init(0)
-    #
-    #        # grab the logging output and parse it for what we exepct
-    #        s = log_stream.getvalue()
-    #        self.assertEqual(y, 50)
-    #        self.assertIn('DEBUG: epmt.test.test_lib: double(25)', s)
-    #        #print(s)
-    #        #print(s)
-    #        #print(s)
-    #        #print(s)
+    def test_logfn(self):
+        from epmt.epmtlib import logfn, epmt_logging_init, capture
+        
+        # enable debug logging and,
+        # remove all handlers and add our StringIO handler
+        epmt_logging_init(2)
+        logger = logging.getLogger()
+        
+        @logfn
+        def double(x):
+            return x*2
+        
+        
+        # this removes the existing handlers
+        for handler in logger.handlers: 
+            logger.removeHandler(handler)
+        logger.handlers = [] 
+            
+        log_stream = StringIO()
+        #print(log_stream)
+        stream_handler = logging.StreamHandler(log_stream)
+        #print(stream_handler)
+        streamFormatter = logging.Formatter("%(levelname)7.7s: %(name)s: %(message)s")
+        #print(streamFormatter)
+        stream_handler.setFormatter(streamFormatter)
+        logger.addHandler(stream_handler)
+    
+        # call our function
+        y = double(25)
+        
+        # remove the StringIO handler        
+        logger.removeHandler(stream_handler)
+        
+        # restore logging to sanity
+        epmt_logging_init(0)
+        
+        # grab the logging output and parse it for what we exepct
+        s = log_stream.getvalue()
+        self.assertEqual(y, 50)
+        self.assertIn('DEBUG: epmt.test.test_lib: double(25)', s)
+        #print(s)
+        #print(s)
+        #print(s)
+        #print(s)
 
         
 
