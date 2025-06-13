@@ -69,3 +69,4 @@ settings.py
 venv*
 
 
+src/epmt/epmt_default_settings.py
