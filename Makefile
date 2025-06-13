@@ -248,9 +248,11 @@ $(EPMT_DASH_SRC): $(EPMT_DASH_SRC_TARBALL)
 	@echo   "EPMT_DASH_SRC_URL     = ${EPMT_DASH_SRC_URL}"
 	@echo
 	@echo
-	echo "untarring ${EPMT_DASH_SRC_TARBALL}"; \
-	tar zxf $(EPMT_DASH_SRC_TARBALL); \
-	mv `tar ztf ${EPMT_DASH_SRC_TARBALL} | head -1` $(EPMT_DASH_SRC); \
+	#echo "untarring ${EPMT_DASH_SRC_TARBALL}"; \
+	#tar zxf $(EPMT_DASH_SRC_TARBALL); \
+	#mv `tar ztf ${EPMT_DASH_SRC_TARBALL} | head -1` $(EPMT_DASH_SRC); \
+	echo "cloning ${EPMT_DASH_SRC}"; \
+	git clone https://github.com/ilaflott/epmt-dash $(EPMT_DASH_SRC); \
 	echo "top-level dir contents of EPMT_DASH_SRC=${EPMT_DASH_SRC}..."; \
 	ls $(EPMT_DASH_SRC); \
 	echo "making symbolic link to epmt/ui/docs/index.md"; \
