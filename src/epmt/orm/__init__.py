@@ -39,7 +39,7 @@ def orm_db_size(findwhat=['database','table','index','tablespace'], usejson=True
     Print size of database,tables,index,tablespace storage and row count
 
     findwhat: List of entities to find the size of, default is [database, index, table, tablespace]
-    usejson: Printed in JSON, default. 
+    usejson: Printed in JSON, default.
     usebytes: All data reported in bytes, default.
 
     """
@@ -47,7 +47,7 @@ def orm_db_size(findwhat=['database','table','index','tablespace'], usejson=True
     from sys import exc_info
     from datetime import datetime
     from json import dumps
-    
+
     # Test if provider is supported
     provider = orm_db_provider()
     if provider != 'postgres':
@@ -131,4 +131,3 @@ if settings.orm == 'sqlalchemy':
     from .sqlalchemy import *
 else:
     from .pony import *
-

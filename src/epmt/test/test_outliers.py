@@ -26,7 +26,7 @@ def setUpModule():
     settings.univariate_classifiers = ['modified_z_score']
     # set lower madz and z-score thresholds to easily detect outliers
     settings.outlier_thresholds['modified_z_score'] = 2.5
-    settings.outlier_thresholds['z_score'] = 1.5 
+    settings.outlier_thresholds['z_score'] = 1.5
 
 def tearDownModule():
     do_cleanup()
@@ -110,7 +110,7 @@ class OutliersAPI(unittest.TestCase):
                            'num_procs': ( {'kern-6656-20190614-190245', 'kern-6656-20190614-191138',
                                            'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'},
                                           set() ) } )
-        
+
     @db_session
     def test_outlier_no_matched_tags(self):
         retval = eod.detect_outlier_ops(['kern-6656-20190614-190245', 'kern-6656-20190614-191138',
@@ -364,7 +364,7 @@ class OutliersAPI(unittest.TestCase):
                                                                                  [[380807266.0, 2158730624.0, 9549.0],
                                                                                   [381619141.0, 2203839312.0, 9549.0],
                                                                                   [381227732.0, 2253935203.0, 9549.0]]]}})
-                          
+
         self.assertEqual(r['computed']['{"op": "configure"}'],
                          {
                              #                          'pyod.models.mcd': {'cpu_time,duration,num_procs': [2.0,
@@ -404,7 +404,7 @@ class OutliersAPI(unittest.TestCase):
         procs = p.append([p]*9, ignore_index=True)
         # now double the value of cpu_time/duration of the 6th row
         # thus making it an outlier
-        procs.loc[[5], 'duration'] *= 2 
+        procs.loc[[5], 'duration'] *= 2
         procs.loc[[5], 'cpu_time'] *= 2
         # make sure the modified row is detected as an outlier
         outliers = eod.detect_outlier_processes(procs, ['duration', 'cpu_time'], methods=[es.iqr, es.modified_z_score])
@@ -414,12 +414,12 @@ class OutliersAPI(unittest.TestCase):
     def test_outlier_threads(self):
         import epmt.epmt_stat as es
         p = eq.get_procs('kern-6656-20190614-190245', fmt='orm', order=eq.desc(eq.Process.duration), limit=1)[0]
-        t = eq.get_thread_metrics(p) 
+        t = eq.get_thread_metrics(p)
         # clone and make 10 rows of the 1 thread row
         threads = t.append([t]*9, ignore_index=True)
         # now increase the value of usertime/systemtime of the 6th row
         # thus making it an outlier
-        threads.loc[[5], 'usertime'] *= 2 
+        threads.loc[[5], 'usertime'] *= 2
         threads.loc[[5], 'systemtime'] *= 2
         # make sure the modified row is detected as an outlier
         outliers = eod.detect_outlier_threads(threads, ['usertime', 'systemtime'], methods=[es.iqr, es.modified_z_score])
@@ -440,7 +440,7 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(parts['num_procs'],
                          (set(['kern-6656-20190614-190245', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024', 'kern-6656-20190614-191138']),
                           set([])))
-        
+
     @db_session
     def test_partition_jobs_by_ops(self):
         jobs = eq.get_jobs(fmt='terse', tags='exp_name:linux_kernel')
@@ -583,7 +583,7 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(list(df[df.jobid == 'kern-6656-20190614-192044-outlier'].iloc[0].values), ['kern-6656-20190614-192044-outlier', 2.8, 1, 0])
         self.assertEqual(df[df.jobid != 'kern-6656-20190614-192044-outlier'].shape, (2, 4))
         self.assertEqual(df[df.jobid != 'kern-6656-20190614-192044-outlier']['pca_weighted'].sum(), 0.0)
-        
+
 
     def test_pca_trained_model_ops(self):
         r = eq.create_refmodel(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024'], op_tags='*', features=[], pca=True)
@@ -639,7 +639,7 @@ class OutliersAPI(unittest.TestCase):
             figure = eod.feature_scatter_plot(jobs, outfile = plotfile)
         s = out.getvalue()
         self.assertIn('Plotly Cannot export static images, Feature coming soon', s)
-    
+
     def test_feature_scatter_plot_names(self):
         from tempfile import NamedTemporaryFile,gettempdir
         plotfile = NamedTemporaryFile(prefix='output_', suffix='.png', dir=gettempdir())
@@ -688,8 +688,8 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(r1.tags, {'exp_name': 'linux_kernel_test'})
         self.assertFalse(r1.op_tags)
         # pony and sqlalchemy have slightly different outputs
-        # in pony each value in modfied_z_score dictionary is a 
-        # a tuple, while in sqlalchemy it's a list. So, we use 
+        # in pony each value in modfied_z_score dictionary is a
+        # a tuple, while in sqlalchemy it's a list. So, we use
         # assertIn to check if either match occurs
         self.assertIn(r1.computed,
                       ({'modified_z_score': {'duration': (1.0287, 542680315.0, 14860060.0),

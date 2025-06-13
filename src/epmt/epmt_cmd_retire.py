@@ -1,5 +1,5 @@
 from logging import getLogger
-logger = getLogger(__name__)    
+logger = getLogger(__name__)
 
 import tracemalloc as tm
 
@@ -19,7 +19,7 @@ def epmt_retire(skip_unprocessed = False, dry_run = False):
     model_retire_size, model_retire_peak=tm.get_traced_memory()
     logger.info(f'after model retire: memory_size={model_retire_size/1024/1000} MiB, memory_peak={model_retire_peak/1024/1000} MiB')
     tm.reset_peak()
-    
+
     #------------------
     logger.warning('Retiring jobs older than %d days', retire_jobs_ndays)
     num_jobs_retired = retire_jobs(retire_jobs_ndays, skip_unprocessed = skip_unprocessed, dry_run=dry_run)
@@ -28,7 +28,7 @@ def epmt_retire(skip_unprocessed = False, dry_run = False):
     job_retire_size, job_retire_peak=tm.get_traced_memory()
     logger.info(f'  after job retire: memory_size={job_retire_size/1024/1000} MiB, memory_peak={job_retire_peak/1024/1000} MiB')
     tm.reset_peak()
-    
+
     #------------------
     logger.info('%d jobs retired, %d models retired',num_jobs_retired, num_models_retired)
     if dry_run:
@@ -36,5 +36,5 @@ def epmt_retire(skip_unprocessed = False, dry_run = False):
 
     # end memory tracing
     tm.stop()
-    
+
     return (num_jobs_retired, num_models_retired)

@@ -11,7 +11,7 @@ from functools import wraps
 from os import chdir, getcwd, path
 
 from logging import getLogger
-logger = getLogger(__name__) 
+logger = getLogger(__name__)
 import epmt.epmt_settings as settings
 
 logger.info('sqlalchemy orm selected')
@@ -57,7 +57,7 @@ def db_session(func):
             raise
         finally:
             thr_data.nestlevel -= 1
-            if thr_data.nestlevel == 0: 
+            if thr_data.nestlevel == 0:
                 if completed:
                     session.commit()
                 #Session.remove()  # NOTE: *remove* rather than *close* here
@@ -164,7 +164,7 @@ def orm_get(model, pk=None, **kwargs):
 #         Session.add(o)
 #         Session.commit()
 #     return o
- 
+
 
 def orm_findall(model, **kwargs):
     return Session.query(model).filter_by(**kwargs)
@@ -487,7 +487,7 @@ def orm_get_jobs(qs, tags, fltr, order, limit, offset, when, before, after, host
 
     if after != None:
         qs = qs.filter(Job.start >= after)
-                
+
 
     if hosts:
         qs = qs.join(Host, Job.hosts).filter(Host.name.in_(hosts))
@@ -579,7 +579,7 @@ def orm_dump_schema(show_attributes=True):
             return alembic_dump_schema()
 
         # alteratively return [t.name for t in Base.metadata.sorted_tables]
-        for t in Base.metadata.sorted_tables: 
+        for t in Base.metadata.sorted_tables:
             print('\nTABLE', t.name)
             for c in t.columns:
                 try:
@@ -619,7 +619,7 @@ def orm_raw_sql(sql, commit = False):
     # As we may get really long queries when moving processes from staging,
     # only log the first 100 or so of long queries
     if len(sql) > settings.max_log_statement_length:
-        logger.debug(f'Executing very long (length={len(sql)} SQL statement(s): ... ') 
+        logger.debug(f'Executing very long (length={len(sql)} SQL statement(s): ... ')
         logger.debug(''.join(map(str,sql[:settings.max_log_statement_length])))
     else:
         logger.debug('Executing: {0}'.format((sql)))
@@ -763,4 +763,3 @@ def alembic_dump_schema(version = ''):
 #     dbapi_connection.load_extension("./json1.so")
 #     dbapi_connection.enable_load_extension(False)
 #     #dbapi_connection.do_sqlite_things()
-

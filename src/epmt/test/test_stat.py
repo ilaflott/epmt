@@ -46,7 +46,7 @@ class EPMTStat(unittest.TestCase):
         self.assertEqual((max_score, mean_y, stdev_y), (3.1621, 95.9091, 285.9118))
 
     def test_check_dist(self):
-        from epmt.epmt_stat import check_dist        
+        from epmt.epmt_stat import check_dist
         np.random.seed(1)
         (passed, failed) = check_dist(range(100), 'norm')
         self.assertTrue(failed > passed)
@@ -88,17 +88,17 @@ class EPMTStat(unittest.TestCase):
         X = np.random.normal(0, 1, N)
         modes = get_modes(X)
         self.assertEqual(len(modes), 1)
-        self.assertEqual(sorted(list(modes.round(0))), [0]) 
+        self.assertEqual(sorted(list(modes.round(0))), [0])
         # bimodal
         X = np.concatenate((np.random.normal(0, 1, int(0.3 * N)), np.random.normal(5, 1, int(0.7 * N))))
         modes = get_modes(X)
         self.assertEqual(len(modes), 2)
-        self.assertEqual(sorted(list(modes.round(0))), [0, 5]) 
+        self.assertEqual(sorted(list(modes.round(0))), [0, 5])
         # trimodal
-        X = np.concatenate((np.random.normal(0, 1, int(0.3 * N)), np.random.normal(5, 1, int(0.3 * N)),np.random.normal(10,1,int(0.4*N)))) 
+        X = np.concatenate((np.random.normal(0, 1, int(0.3 * N)), np.random.normal(5, 1, int(0.3 * N)),np.random.normal(10,1,int(0.4*N))))
         modes = get_modes(X)
         self.assertEqual(len(modes), 3)
-        self.assertEqual(sorted(list(modes.round(0))), [0, 5, 10]) 
+        self.assertEqual(sorted(list(modes.round(0))), [0, 5, 10])
 
     def test_dict_outliers(self):
         from epmt.epmt_stat import dict_outliers

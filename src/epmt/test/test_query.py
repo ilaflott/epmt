@@ -20,7 +20,7 @@ def setUpModule():
         epmt_submit(sorted(glob(datafiles)), dry_run=False)
     # only use modz as the tests are written that way
     settings.univariate_classifiers = ['modified_z_score']
-    
+
 
 def tearDownModule():
     do_cleanup()
@@ -30,16 +30,16 @@ class QueryAPI(unittest.TestCase):
 #     @classmethod
 #     def setUpClass(cls):
 #         pass
-# 
+#
 #     # called ONCE after last tests in this class is finished
 #     @classmethod
 #     def tearDownClass(cls):
 #         pass
-# 
+#
 #     # called before every test
 #     def setUp(self):
 #         pass
-# 
+#
 #     # called after every test
 #     def tearDown(self):
 #         pass
@@ -213,12 +213,12 @@ class QueryAPI(unittest.TestCase):
         procs = eq.get_procs(tags={}, fmt='terse')
         self.assertEqual(len(procs), len(procs1)+1)
 
-        if settings.orm == 'sqlalchemy': 
+        if settings.orm == 'sqlalchemy':
             procs_with_tag = eq.get_procs(JOBS_LIST, tags='op_sequence:4', fltr=(Process.duration > 10000000), order=eq.desc(Process.duration), fmt='orm')
         else:
             procs_with_tag = eq.get_procs(JOBS_LIST, tags='op_sequence:4', fltr='p.duration > 10000000', order='desc(p.duration)', fmt='orm')
         self.assertEqual(procs_with_tag.count(), 2, 'incorrect process count when using tag and filter')
-        if settings.orm == 'sqlalchemy': 
+        if settings.orm == 'sqlalchemy':
             procs_with_tag = eq.get_procs(JOBS_LIST, tags={'op_sequence': 4}, fltr=(Process.duration > 10000000), order=eq.desc(Process.duration), fmt='orm')
         else:
             procs_with_tag = eq.get_procs(JOBS_LIST, tags={'op_sequence': 4}, fltr='p.duration > 10000000', order='desc(p.duration)', fmt='orm')
@@ -248,7 +248,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(eq.get_procs('685000', hosts=['pp208'], fmt='orm').count(), 3480)
         self.assertEqual(eq.get_procs('685000', hosts=['pp208', 'pp209'], fmt='orm').count(), 3480)
         self.assertEqual(eq.get_procs('685000', hosts=['pp209'], fmt='orm').count(), 0)
-        self.assertEqual(eq.get_procs(['685000', '685003'], hosts=['pp208', 'pp212'], fmt='orm').count(), 
+        self.assertEqual(eq.get_procs(['685000', '685003'], hosts=['pp208', 'pp212'], fmt='orm').count(),
 7265)
         self.assertEqual(eq.get_procs(['685000', '685003'], hosts=['pp212'], fmt='orm').count(), 3785)
 
@@ -307,7 +307,7 @@ class QueryAPI(unittest.TestCase):
 
     @db_session
     def test_job_proc_tags(self):
-        with self.assertRaises(ValueError): 
+        with self.assertRaises(ValueError):
             eq.job_proc_tags([], fold=False)
         tags = eq.job_proc_tags(['685000', '685016'], fold=False)
         self.assertEqual(len(tags), 89, "wrong unique process tags count")
@@ -655,7 +655,7 @@ class QueryAPI(unittest.TestCase):
     def test_ops_costs(self):
         jobs = eq.get_jobs(['685000', '685003', '685016'], fmt='orm')
         self.assertEqual(jobs.count(), 3)
-        (dm_percent, df, all_jobs_cpu_time, agg_df) = eq.ops_costs(jobs) 
+        (dm_percent, df, all_jobs_cpu_time, agg_df) = eq.ops_costs(jobs)
         self.assertEqual(dm_percent, 43.157, 'wrong dm percent')
         self.assertEqual(df.shape, (17, 30))
         self.assertEqual(all_jobs_cpu_time, 633756327.0, 'wrong job cpu time sum')
@@ -679,7 +679,7 @@ class QueryAPI(unittest.TestCase):
         p = eq.get_procs('685000', limit=1, fmt='orm')[0]
         proc_id = p.id
         j.start = datetime.datetime(1970,1,1)
-        tomorrow = datetime.datetime.now() + datetime.timedelta(days = 1) 
+        tomorrow = datetime.datetime.now() + datetime.timedelta(days = 1)
         j.end = tomorrow
         p.start = datetime.datetime(1970,1,1)
         orm_commit()
@@ -701,14 +701,14 @@ class QueryAPI(unittest.TestCase):
 
     def test_zz_delete_jobs_force_before_after_ags(self):
         # test before/after args
-        ndays = (datetime.now() - datetime(2019, 6, 15, 7, 52, 4, 73965)).days 
+        ndays = (datetime.now() - datetime(2019, 6, 15, 7, 52, 4, 73965)).days
         n = eq.delete_jobs(JOBS_LIST, force=True, after=-(ndays-1))
         self.assertEqual(n, 0)
         n = eq.delete_jobs(JOBS_LIST, force=True, after='06/16/2019 00:00')
         self.assertEqual(n, 0)
         n = eq.delete_jobs(JOBS_LIST, force=True, before='06/15/2019 00:00')
         self.assertEqual(n, 0)
-        
+
     def test_zz_delete_jobs_force(self):
         self.assertEqual( eq.get_jobs(fmt='orm').count(), 3 )
         n = eq.delete_jobs(['685000', '685016'], force=True, remove_models=True)

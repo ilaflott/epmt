@@ -57,9 +57,13 @@ EPMT_INSTALL_PATH=/opt/minimalmetrics
 EPMT_INSTALL_PREFIX=$(EPMT_INSTALL_PATH)/epmt-$(EPMT_VERSION)/epmt-install
 
 # <root>/src/epmt/ui submodule details
-EPMT_DASH_SRC_TARBALL=epmt-dash.tar.gz
-EPMT_DASH_SRC_BRANCH=multi_page
-EPMT_DASH_SRC_URL=$(MM_SRC_URL_BASE)/epmt-dash/-/archive/$(EPMT_DASH_SRC_BRANCH)/$(EPMT_DASH_SRC_TARBALL)
+#EPMT_DASH_SRC_TARBALL=epmt-dash.tar.gz
+#EPMT_DASH_SRC_BRANCH=multi_page
+#EPMT_DASH_SRC_URL=$(MM_SRC_URL_BASE)/epmt-dash/-/archive/$(EPMT_DASH_SRC_BRANCH)/$(EPMT_DASH_SRC_TARBALL)
+INL_SRC_URL_BASE=https://github.com/ilaflott
+EPMT_DASH_SRC_BRANCH=main
+EPMT_DASH_SRC_TARBALL=epmt-dash-$(EPMT_DASH_SRC_BRANCH).tar.gz
+EPMT_DASH_SRC_URL=$(INL_SRC_URL_BASE)/epmt-dash/archive/refs/heads/$(EPMT_DASH_SRC_TARBALL)
 EPMT_DASH_SRC=src/epmt/ui
 #EPMT_DASH_SRC=ui
 

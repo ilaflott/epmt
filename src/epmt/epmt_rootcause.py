@@ -3,8 +3,8 @@ import pandas as pd
 import numpy as np
 from epmt.epmt_stat import rca
 
-# Return a <boolean, df, list> tuple that consists of error/no-error, dataframe of derived stats, 
-# and a sorted hash in order of deviant feature values. 
+# Return a <boolean, df, list> tuple that consists of error/no-error, dataframe of derived stats,
+# and a sorted hash in order of deviant feature values.
 
 def rootcause_zscore(ref, input, features):
 # describe() computes the following, as an example
@@ -42,7 +42,7 @@ def rootcause_zscore(ref, input, features):
 
         val2compare = input[f][0]
 # Instead of binary testing here, I should be returning the score per metric and not dropping columns
-        zscore = abs(val2compare - rmean) / rsd 
+        zscore = abs(val2compare - rmean) / rsd
         print(f,"zscore is",f,zscore)
         ref_computed[f]['zscore'] = zscore
         zscore = abs(zscore - rmax_zscore)
@@ -63,7 +63,7 @@ def rootcause_zscore(ref, input, features):
 
 def rootcause(ref, input, features, methods = [rootcause_zscore]):
 # API input checking
-    if ref.empty or input.empty: 
+    if ref.empty or input.empty:
         return False
     if not features:
         features = input.columns.all()
@@ -86,7 +86,7 @@ def rootcause(ref, input, features, methods = [rootcause_zscore]):
 if (__name__ == "__main__"):
 # Synthesize 10 feature names
     n_features = 6
-    features = [ '%c' % x for x in range(97, 97+n_features) ] 
+    features = [ '%c' % x for x in range(97, 97+n_features) ]
     print("Features:\n",features)
 #
 # Check with multiple outliers

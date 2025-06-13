@@ -19,7 +19,7 @@ from . import *
 
 #from epmt.orm.sqlalchemy.general import orm_get
 #
-## this will be used repeatedly in the tests, so let's store it 
+## this will be used repeatedly in the tests, so let's store it
 ## in a variable instead of repeatedly calling the function
 #install_root = get_install_root()
 
@@ -32,7 +32,7 @@ def do_cleanup():
 
 @timing
 def setUpModule():
-    datafiles='{}/test/data/misc/685000.tgz'.format(install_root) 
+    datafiles='{}/test/data/misc/685000.tgz'.format(install_root)
     settings.post_process_job_on_ingest = True
     settings.verbose=2
     setup_db(settings)
@@ -41,7 +41,7 @@ def setUpModule():
     do_cleanup()
     with capture() as (out,err):
         epmt_submit(glob(datafiles), dry_run=False, remove_on_success=False, move_on_failure=False)
-        
+
 def tearDownModule():
     do_cleanup()
 
@@ -49,7 +49,7 @@ class EPMTSubmit(unittest.TestCase):
     @db_session
     def test_all_job_data(self):
         job_dict = eq.orm_to_dict(Job['685000'])
-      
+
         # we remove the field below as it cannot be compared with a reference
         # (it contains database row IDs, which will change from run to run
         # del job_dict['annotations']['papiex-error-process-ids']
@@ -78,7 +78,7 @@ class EPMTSubmit(unittest.TestCase):
     @db_session
     def test_dry_run(self):
         with self.assertRaises(Exception):
-            Job['685003'] 
+            Job['685003']
         with capture() as (out,err):
             epmt_submit(['{}/test/data/query/685003.tgz'.format(get_install_root())], dry_run=True, remove_on_success=False, move_on_failure=False)
         # the job should still not be in the database
@@ -93,7 +93,7 @@ class EPMTSubmit(unittest.TestCase):
             epmt_submit(['{}/test/data/submit/3455/'.format(get_install_root())], dry_run=False, remove_on_success=False, move_on_failure=False)
         j = Job['3455']
         self.assertEqual(j.duration, 28111.0)
-        
+
 
     @db_session
     def test_submit_minus_e(self):
@@ -110,7 +110,7 @@ class EPMTSubmit(unittest.TestCase):
         # we should not attempt to ingest 685003
         with self.assertRaises(Exception):
             Job['685003']
-       
+
 
     @db_session
     def test_unprocessed_jobs(self):
@@ -171,13 +171,13 @@ class EPMTSubmit(unittest.TestCase):
         from epmt.epmt_convert_csv import convert_csv_in_tar
         job_dict_csv = eq.get_jobs('685000', fmt='dict', limit=1, trigger_post_process=True)[0]
         eq.delete_jobs('685000')
-        
+
         (_, new_tar) = tempfile.mkstemp(prefix='epmt_', suffix='_collated_tsv.tgz')
 #        self.assertTrue(convert_csv_in_tar('{}/test/data/query/685000.tgz'.format(install_root), new_tar))
         self.assertTrue(convert_csv_in_tar('{}/test/data/misc/685000.tgz'.format(install_root), new_tar))
         with capture() as (out,err):
             epmt_submit(glob(new_tar), dry_run=False, remove_on_success = True, move_on_failure=False)
-            
+
         job_dict_tsv = eq.get_jobs('685000', fmt='dict', limit=1)[0]
         self.assertEqual(set(job_dict_csv), set(job_dict_tsv))
 
@@ -189,9 +189,9 @@ class EPMTSubmit(unittest.TestCase):
         for k in job_dict_csv.keys():
             if k in {'updated_at', 'created_at'}: continue
             self.assertEqual(job_dict_csv[k], job_dict_tsv[k], "Dicts differ for key: {}".format(k))
-        
 
-        
+
+
 
     @db_session
     def test_collated_tsv(self):
@@ -200,7 +200,7 @@ class EPMTSubmit(unittest.TestCase):
             epmt_submit([datafile], dry_run=False, remove_on_success = False, move_on_failure=False)
         j = Job['2220']
         if orm_db_provider() == 'postgres' and settings.orm == 'sqlalchemy':
-            # in postgres+SQLA the processes are put in a staging table 
+            # in postgres+SQLA the processes are put in a staging table
             self.assertTrue(eq.is_job_in_staging(j))
             self.assertFalse(eq.is_job_post_processed(j))
             self.assertFalse(j.processes)

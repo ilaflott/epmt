@@ -30,7 +30,7 @@ def sortKeyFunc(s):
 #    assert settings.input_pattern == "papiex-[0-9]*-[0-9]*.csv"
 # skip papiex- and .csv
     t = t[7:-4]
-# append instance number 
+# append instance number
     t2 = t.split("-")
     return int(t2[0]+t2[1])
 
@@ -40,7 +40,7 @@ def create_job(jobid,user):
     job = orm_get(Job, jobid)
     if job:
         return None
-    job = orm_create(Job,jobid=jobid,user=user) 
+    job = orm_create(Job,jobid=jobid,user=user)
     return job
 
 ##	metadata['job_pl_id'] = global_job_id
@@ -59,7 +59,7 @@ def create_job(jobid,user):
 #	metadata['job_el_stop'] = ts
 #	metadata['job_el_from_batch'] = from_batch
 #	metadata['job_el_status'] = status
-                    
+
 created_hosts = {}
 # Rather than using this function directly, please use
 # lookup_or_create_host_safe, as that handles a race condition
@@ -68,7 +68,7 @@ def lookup_or_create_host(hostname):
     logger = getLogger(__name__)  # you can use other name
     host = created_hosts.get(hostname)
     if host:
-        # sometimes we may have cached a host entry that's been invalidated 
+        # sometimes we may have cached a host entry that's been invalidated
         # in the session cache. In such a case, we need to purge it
         try:
             host.name
@@ -78,7 +78,7 @@ def lookup_or_create_host(hostname):
 
     if host is None:
         host = orm_get(Host, hostname)
-        
+
     if host is None:
         host = orm_create(Host, name=hostname)
         logger.info("Created host %s",hostname)
@@ -98,7 +98,7 @@ def lookup_or_create_host_safe(hostname):
     try:
         h = lookup_or_create_host(hostname)
     except exc.IntegrityError:
-        # The insert failed due to a concurrent transaction  
+        # The insert failed due to a concurrent transaction
         Session.rollback()
         # the host must exist now
         h = lookup_or_create_host(hostname)
@@ -155,7 +155,7 @@ def get_proc_rows(csvfile, skiprows = 0, fmt='1', metric_names=[]):
 
     # ordinarily the line below would not be a good idea,
     # however, we are dealing with small CSV files (less than 200k rows) so a gulp
-    # of the entire dataset isn't expensive 
+    # of the entire dataset isn't expensive
     rows = list(reader)
 
     # use int as the default type for non-empty, non-string entities
@@ -213,7 +213,7 @@ def get_proc_rows(csvfile, skiprows = 0, fmt='1', metric_names=[]):
             row_num += 1
 
 
-# 'proc' is a list of dicts, where each list item is a 
+# 'proc' is a list of dicts, where each list item is a
 # a dictionary containing data for a single thread
 # The first list item (thread 0) is special in that it has values for fields pertaining
 # to the process such as 'exename', 'args', etc. The other threads
@@ -239,7 +239,7 @@ def load_process_from_dictlist(proc, host, j, u, settings, profile):
             for key in ('pid', 'ppid', 'pgid', 'sid', 'generation'):
                 p[key] = int(proc[0][key])
         else:
-            p = orm_create(Process, 
+            p = orm_create(Process,
                            exename=proc[0]['exename'],
                            args=proc[0]['args'],
                            path=proc[0]['path'],
@@ -338,7 +338,7 @@ def load_process_from_dictlist(proc, host, j, u, settings, profile):
     profile.load_process.thread_sums += time.time() - _t
 
     return p
-    
+
 #
 # Extract a dictionary from the rows of header on the file
 #
@@ -358,7 +358,7 @@ def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
             f = tarfile.extractfile(info)
     else:
         f = open(jobdatafile,'r')
-    
+
     line = f.readline()
     while line:
         line = line.strip()
@@ -381,13 +381,13 @@ def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
 #    return True
 #
 # Load experiment
-# 
+#
 
 # @db_session
 # def ETL_ppr(metadata, jobid):
 # #    if not check_experiment_in_metadata(metadata):
 # #        return None
-# 
+#
 #     logger.info("Creating PostProcessRun(%s,%s,%s,%s)",
 #                 metadata["exp_component"],
 #                 metadata["exp_name"],
@@ -408,7 +408,7 @@ def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
 # really slow if the processes are to be re-read from the DB
 # relations and descendant maps are used if we do bulk inserts
 def _proc_ancestors(pid_map, proc, ancestor_pid, relations = None, descendant_map = {}):
-    
+
     if ancestor_pid in pid_map:
         proc.depth += 1
         entries = pid_map[ancestor_pid]
@@ -569,9 +569,9 @@ def mk_process_tree(j, all_procs = None, pid_map = None):
 # to create process tree.
 #
 # The function is tolerant to missing datastructures for all_tags
-# all_procs and pid_map. If any of them are missing, it will 
+# all_procs and pid_map. If any of them are missing, it will
 # build them by using the data in the database/ORM.
-# 
+#
 @timing
 def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, update_unprocessed_jobs_table = True, force = False):
     logger = getLogger(__name__)  # you can use other name
@@ -700,7 +700,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
                     if t.get('rdtsc_duration', 0) < 0:
                         t['rdtsc_duration'] = -1
                 proc.threads_df = thr_df
-                
+
 
         logger.info("  job contains %d processes (%d threads)",len(all_procs), nthreads)
         _t3 = time.time()
@@ -719,7 +719,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
         # we MUST NOT add all_procs to j.processes below
         # as we already associated the process with the job
         # when we created the process. The ORM automatically does the backref.
-        # In particular, in sqlalchemy, uncommenting the line below creates 
+        # In particular, in sqlalchemy, uncommenting the line below creates
         # duplicate bindings.
         # orm_add_to_collection(j.processes, all_procs)
 
@@ -740,7 +740,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
         annotations['papiex-error'] = papiex_err
         annotations['papiex-error-process-ids'] = sorted(papiex_err_pids)
         j.annotations = annotations
-        
+
     j.proc_sums = proc_sums
 
     # the keys below would be missing if the job has no processes
@@ -770,10 +770,10 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
 
     # now mark the job as processed if it was previously marked otherwise
     # for now, only sqlalchemy supports post-processing in a separate phase
-    # update_unprocessed_jobs_table option is used to speed up operations if the 
+    # update_unprocessed_jobs_table option is used to speed up operations if the
     # job has been just created. In this case, we know the job doesn't
     # already exist in the UnprocessedJobs table. This saves us a lookup
-    # which ordinarily should've been cheap, but because we haven't yet 
+    # which ordinarily should've been cheap, but because we haven't yet
     # done a commit/flush to the DB, the lookup appears as expensive and
     # makes the overall post-processing function appear costly, even though
     # it's just the cost of the db commit/flush
@@ -876,19 +876,19 @@ def populate_process_table_from_staging(j):
         if args is None: args = ''
         args = args.replace('%', '%%')
         args = psycopg2.extensions.adapt(args)
-        
+
         threads_sums = { metric_names[i]: int(threads_df[i]) for i in range(len(metric_names)) }
         for t in range(1, numtids):
             for i in range(len(metric_names)):
                 # threads_df is a flattened list where each thread's metrics are
-                # adjacent to the previous 
+                # adjacent to the previous
                 threads_sums[metric_names[i]] += int(threads_df[t*len(metric_names) + i])
         cpu_time = threads_sums.get('usertime', 0) + threads_sums.get('systemtime',0)
         # threads_sums is to be saved as JSON
         threads_sums = dumps(threads_sums)
 
         # threads_df is a flattened list where each thread's metrics are
-        # are placed next the previous one. Here we make it into a 
+        # are placed next the previous one. Here we make it into a
         # list of dicts
         _thr_dict_list = []
         for t in range(numtids):
@@ -898,7 +898,7 @@ def populate_process_table_from_staging(j):
 
         insert_sql += prefix_insert_sql + """('{jobid}',{duration},{tags},'{host_id}','{threads_df}','{threads_sums}',{numtids},{cpu_time},'{exename}','{path}',{args},{pid},{ppid},{pgid},{sid},{gen},{exitcode},'{start}','{end}');\n""".format(jobid=jobid, start=start, end=end, duration=duration, tags=tags, host_id=host_id, threads_df=threads_df, threads_sums=threads_sums, numtids=numtids, cpu_time=cpu_time, exename=exename, path=path, args=args, pid=pid, ppid=ppid, pgid=pgid, sid=sid, gen=gen, exitcode=exitcode)
 
-    
+
     # sql to delete the rows from the staging table
     delete_sql = "DELETE FROM processes_staging WHERE id BETWEEN {} AND {};\n".format(first_proc_id, last_proc_id)
 
@@ -907,11 +907,11 @@ def populate_process_table_from_staging(j):
     # these fields are meaningless after procs have been moved to the processes table
     # so we remove them from the job info_dict
     del job_info_dict['procs_staging_ids']
-    
+
     # We want to retain the metric_names in the job info_dict, so don't remove
     # it below, anymore
     # del job_info_dict['metric_names']
-    
+
     update_job_sql = "UPDATE jobs SET info_dict = '{}' WHERE jobid = '{}'".format(dumps(job_info_dict), jobid)
 
     # now do a transaction
@@ -954,7 +954,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 # Synthesize what we need
     # it's safe and fast to call the check_fix_metadata
     # it will not waste time re-checking (since it marks the metadata as checked)
-    metadata = check_fix_metadata(raw_metadata) 
+    metadata = check_fix_metadata(raw_metadata)
     if metadata is False:
         return (False, 'Error: Could not get valid metadata', ())
     job_status = {}
@@ -1044,7 +1044,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     try:
         u = lookup_or_create_user(username)
     except exc.IntegrityError as e:
-        # The insert failed due to a concurrent transaction  
+        # The insert failed due to a concurrent transaction
         Session.rollback()
         # the user must exist now
         u = lookup_or_create_user(username)
@@ -1055,7 +1055,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 
     j.jobname = jobname
     j.exitcode = exitcode
-    j.annotations = annotations    
+    j.annotations = annotations
 # fix below
     j.env_dict = env_dict
     j.env_changes_dict = env_changes_dict
@@ -1134,7 +1134,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                     msg = 'Could not open {} for reading: {}'.format(full_hdr_path, str(e))
                     logger.error(msg)
                     return (False, msg, ())
-            
+
         logger.info('CSV v{} files detected in tar: {}'.format(fmt, ",".join(files)))
 
         # get the metric names from the CSV header file if we have csv v2
@@ -1235,11 +1235,11 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 continue
 
             csv_file = StringIO(flo.read().decode('utf8'))
-                
+
             # from pandas import read_csv
             # collated_df = read_csv(flo,
             #                        sep=",",
-            #                        #dtype=dtype_dic, 
+            #                        #dtype=dtype_dic,
             #                        converters=conv_dic,
             #                        skiprows=rows, escapechar='\\')
             file_io_time += time.time() - _file_io_start_ts
@@ -1252,10 +1252,10 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             # there are 1 or more process dataframes in the collated df
             # let's iterate over them
             _df_process_start_ts = time.time()
-           
+
             # we ignore the second value returned by get_proc_rows
             # (rownum). The third is just a fixed value (number of
-            # rows in csv). 
+            # rows in csv).
             for (proc, _, nrows) in get_proc_rows(csv_file, skiprows, fmt, metric_names.split(',')):
                 _load_process_from_df_start_ts = time.time()
                 p = load_process_from_dictlist(proc, h, j, u, settings, profile)
@@ -1281,7 +1281,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 proc_tag_process_time += time.time() - _proc_tag_start_ts
 
                 _t = time.time()
-                # We shouldn't be seeing a pid repeat in a job. 
+                # We shouldn't be seeing a pid repeat in a job.
                 # Theoretically it's posssible but it would complicate the pid map a bit
                 # assert(p.pid not in pid_map)
                 pid_map[p.pid] = p

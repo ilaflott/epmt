@@ -54,7 +54,7 @@ class EPMTShell(unittest.TestCase):
         remove_stale_files()
         with capture() as (out,err):
             results = epmt_run(['sleep 1'],wrapit=True,dry_run=False,debug=False)
-        
+
         self.assertTrue(jobid in os.listdir(odir))
         self.assertEqual(0, results)
     # Test run with a slurm job id env
@@ -124,7 +124,7 @@ class EPMTShell(unittest.TestCase):
         with capture() as (out,err):
             results = epmt_run(['sleep 1'], wrapit=False, dry_run=False, debug=False)
             self.assertEqual(0, results)
-            
+
     def test_monolithic(self):
         from epmt.epmt_cmds import epmt_check, epmt_source, epmt_start_job, epmt_dump_metadata, epmt_run
         remove_jobid_envs()
@@ -139,7 +139,7 @@ class EPMTShell(unittest.TestCase):
             # it might be better to set this up to always fail. But how?
             # results = epmt_check()
             # self.assertEqual(results, False)
-      
+
             # Source
             results = epmt_source()
             self.assertIn("PAPIEX_OPTIONS", results, 'epmt_source options are missing')

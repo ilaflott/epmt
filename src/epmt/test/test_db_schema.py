@@ -30,9 +30,9 @@ class EPMTDBSchema(unittest.TestCase):
     @db_session
     def test_process_pk_bigint(self):
         pk_id = 4000000000
-        # If the database already has a process with this ID, then we have 
-        # already passed the test, and we don't need to do anything. 
-        # Otherwise, we create a Process with the large ID, and save it 
+        # If the database already has a process with this ID, then we have
+        # already passed the test, and we don't need to do anything.
+        # Otherwise, we create a Process with the large ID, and save it
         # to the database. Then we retrieve it, and finally delete it.
         if orm_get(Process, id=pk_id) is None:
             p = Process(id=pk_id)

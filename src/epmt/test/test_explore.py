@@ -17,7 +17,7 @@ def setUpModule():
     datafiles='{}/test/data/query/68500[03].tgz'.format(install_root)
     print('setUpModdule: importing {0}'.format(datafiles))
     epmt_submit(sorted(glob(datafiles)), dry_run=False)
-    
+
 
 def tearDownModule():
     do_cleanup()
@@ -27,16 +27,16 @@ class ExploreAPI(unittest.TestCase):
 #     @classmethod
 #     def setUpClass(cls):
 #         pass
-# 
+#
 #     # called ONCE after last tests in this class is finished
 #     @classmethod
 #     def tearDownClass(cls):
 #         pass
-# 
+#
 #     # called before every test
 #     def setUp(self):
 #         pass
-# 
+#
 #     # called after every test
 #     def tearDown(self):
 #         pass

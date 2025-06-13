@@ -107,7 +107,7 @@ def PrintWarning():
 def verify_install_prefix():
     install_prefix = settings.install_prefix
     #print("settings.install_prefix =",install_prefix, end='')
-    
+
     retval = True
     # Check for bad stuff and shortcut
     if "*" in install_prefix or "?" in install_prefix:
@@ -128,11 +128,11 @@ def verify_install_prefix():
     else:
         PrintFail()
     return retval
-    
+
 def verify_epmt_output_prefix():
     opf = settings.epmt_output_prefix
     print("settings.epmt_output_prefix =",opf, end='')
-    
+
     retval = True
     # Check for bad stuff and shortcut
     if "*" in opf or "?" in opf:
@@ -150,7 +150,7 @@ def verify_epmt_output_prefix():
     if testdir(opf+"tmp") == False:
         retval = False
     # Test to make sure we can access it
-    cmd = "ls -lR "+opf+" >/dev/null"    
+    cmd = "ls -lR "+opf+" >/dev/null"
     logger.info("\t"+cmd)
     return_code = run(cmd, shell=True).returncode
     if return_code != 0:
@@ -188,7 +188,7 @@ def verify_papiex_options():
     for e in eventlist:
         if e in [ 'COLLATED_TSV', 'DEBUG' ]:
             continue
-#        cmd = settings.install_prefix+"/bin/papi_command_line 2>&1 "+e+"| sed -n -e '/PERF_COUNT_SW_CPU_CLOCK\ :/,$p' | grep PERF_COUNT_SW_CPU_CLOCK > /dev/null 2>&1" # does not work for rocky-8. 
+#        cmd = settings.install_prefix+"/bin/papi_command_line 2>&1 "+e+"| sed -n -e '/PERF_COUNT_SW_CPU_CLOCK\ :/,$p' | grep PERF_COUNT_SW_CPU_CLOCK > /dev/null 2>&1" # does not work for rocky-8.
         cmd = settings.install_prefix+"/bin/papi_command_line 2>&1 "+e+"| sed -e '/PERF_COUNT_SW_CPU_CLOCK\ :/,$p' | grep PERF_COUNT_SW_CPU_CLOCK > /dev/null 2>&1" # guessing... NOT TRIED YET TODO: TRY THIS INSTEAD OF ABOVE LINE
         logger.info("\t"+cmd)
         return_code = run(cmd, shell=True).returncode
@@ -216,7 +216,7 @@ def verify_db_params():
         logger.error("Error setting up DB: {}".format(str(e)))
         PrintFail()
         return False
-    
+
 def verify_perf():
     f="/proc/sys/kernel/perf_event_paranoid"
     print(f,end='')
@@ -290,7 +290,7 @@ def verify_papiex():
             logger.error("%s matched %d job_metadata files instead of 1",global_datadir+"job_metadata",len(files))
             retval = False
 
-    logger.info("rmtree %s",global_datadir) 
+    logger.info("rmtree %s",global_datadir)
     rmtree(global_datadir, ignore_errors=True)
 
     if retval == True:
@@ -372,7 +372,7 @@ def merge_stop_job_metadata(metadata, exitcode=0, reason="none", from_batch=[]):
 
 def create_job_dir(dir):
     try:
-        makedirs(dir) 
+        makedirs(dir)
         logger.info("created dir %s",dir)
     except OSError as e:
         if e.errno != errno.EEXIST:
@@ -380,7 +380,7 @@ def create_job_dir(dir):
             return False
         logger.debug("dir exists %s",dir)
     return dir
-    
+
 def write_job_metadata(jobdatafile,data):
     with open(jobdatafile,'w+b') as file:
         pickle.dump(data,file)
@@ -493,7 +493,7 @@ def epmt_dump_metadata(filelist, key = None):
         else:
             logger.error('dump cannot be called before start without an explicit directory')
             return False
-        
+
     if len(filelist) < 1:
         logger.error("Could not identify your job id")
         return False
@@ -580,14 +580,14 @@ def annotate_metadata(metadatafile, annotations, replace = False):
 
 # args list is one of the following forms:
 #   ['key1=value1', 'key2=value2', ...]  - annotate stopped job within a batch env
-#   or 
+#   or
 #   ['111.tgz', 'key1=value1', 'key2=value2', ...] - annotate staged job file
 #   or
 #   ['658000', 'key1=value1', 'key2y=value2', ...] - annotate job in database
 #
 # Annotations are appended to unless replace is True, in which
 # case existing annotations are wiped clean first.
- 
+
 def epmt_annotate(argslist, replace = False):
     if not argslist:
         return False # nothing to do
@@ -606,8 +606,8 @@ def epmt_annotate(argslist, replace = False):
         if not ann:
             logger.error("epmt_annotate: No annotations found. Annotations must be of the form <key>=<value>")
         return ann
-        
-   
+
+
     if '=' in argslist[0]:
         # if equals is in first argument, then we have no filename, we are annotating
         # a job specified in the batch environment. It must be already started.
@@ -668,7 +668,7 @@ def epmt_annotate(argslist, replace = False):
             else:
                 logger.error('annotate cannot be called before start')
                 return False
-            
+
         else:
             # database jobid form
             jobid = argslist[0]
@@ -685,10 +685,10 @@ def epmt_annotate(argslist, replace = False):
             return annotations.items() <= updated_ann.items()
 
     # below we handle annotation update in the metadata file
-    # if its a job in the batch environment, we simply write out 
+    # if its a job in the batch environment, we simply write out
     # the metadata and we are done. If it's a staged file then
     # we also need to recreate the tar.
-    
+
     retval = annotate_metadata(metadatafile,annotations,replace=replace)
     if not retval:
         logger.error('Could not annotate metadatafile: ' + metadatafile)
@@ -731,7 +731,7 @@ def _papiex_opt_bycpu(o):
     from re import error as reerror
     if hasattr(o,'papiex_options_bycpu'):
         if type(o.papiex_options_bycpu) == dict:
-            if o.papiex_options_bycpu:            
+            if o.papiex_options_bycpu:
                 from cpuinfo import get_cpu_info
                 cpu_info = get_cpu_info()
                 cpu_fms = str(cpu_info.get('family','no_family_found')) + "/" + \
@@ -740,12 +740,12 @@ def _papiex_opt_bycpu(o):
                 logger.info("cpu F/M/S to match papiex_options_bycpu is %s",cpu_fms)
                 for key, value in o.papiex_options_bycpu.items():
                     try:
-                        logger.debug("trying to match %s and %s",key,cpu_fms)                        
+                        logger.debug("trying to match %s and %s",key,cpu_fms)
                         if match(key,cpu_fms):
                             logger.debug("%s matched %s",key,cpu_fms)
                             options = value
                             return options
-                    except reerror:                        
+                    except reerror:
                         logger.error("Invalid regular expression in papiex_options_bycpu: key is %s, value is %s", key, value)
         else:
             logger.error("Unsupported type for papiex_options_bycpu; must be a dictionary")
@@ -783,20 +783,20 @@ def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run
                 logger.debug("Detected CSH - Please read https://www-uxsup.csx.cam.ac.uk/misc/csh.html")
                 return True
         return False
-    
+
     sh_set_var=""
     equals="="
     cmd_sep=";\n"
     cmd=""
     undercsh=False
-    
+
     if slurm_prolog:
         sh_set_var="export "
         cmd_sep="\n"
     else:
-        undercsh=detect_csh()        
+        undercsh=detect_csh()
 
-    if run_cmd: 
+    if run_cmd:
         undercsh = False # All commands under run are started under Bash in Python
         cmd_sep=" "
     if undercsh:
@@ -811,7 +811,7 @@ def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run
     cmd = ""
     if monitor_debug: cmd = add_var(cmd,"MONITOR_DEBUG"+equals+"TRUE")
     if papiex_debug: cmd = add_var(cmd,"PAPIEX_DEBUG"+equals+"TRUE")
-    cmd = add_var(cmd,"PAPIEX_OUTPUT"+equals+global_datadir) 
+    cmd = add_var(cmd,"PAPIEX_OUTPUT"+equals+global_datadir)
     cmd = add_var(cmd,"PAPIEX_OPTIONS"+equals+get_papiex_options(settings))
     old_pl_libs = environ.get("LD_PRELOAD","")
     papiex_pl_libs = settings.install_prefix+"/lib/libpapiex.so:"+settings.install_prefix+"/lib/libmonitor.so:"+settings.install_prefix+"/lib/libpapi.so:"+settings.install_prefix+"/lib/libpfm.so"
@@ -832,9 +832,9 @@ def epmt_source(slurm_prolog=False, papiex_debug=False, monitor_debug=False, run
         tmp = "setenv PAPIEX_OPTIONS $PAPIEX_OPTIONS; setenv LD_PRELOAD $PAPIEX_LD_PRELOAD;"
         tmp += "setenv PAPIEX_OUTPUT $PAPIEX_OUTPUT;"
         if monitor_debug: tmp += "setenv MONITOR_DEBUG $MONITOR_DEBUG;"
-        if papiex_debug: tmp += "setenv PAPIEX_DEBUG $PAPIEX_DEBUG;" 
+        if papiex_debug: tmp += "setenv PAPIEX_DEBUG $PAPIEX_DEBUG;"
         cmd += "alias epmt_instrument '"+tmp+"';\n"
-#        cmd += "alias epmt 'epmt_uninstrument; ( command epmt \!* ); epmt_instrument;';\n"  
+#        cmd += "alias epmt 'epmt_uninstrument; ( command epmt \!* ); epmt_instrument;';\n"
         cmd += "alias epmt_uninstrument 'unsetenv MONITOR_DEBUG PAPIEX_OUTPUT PAPIEX_DEBUG PAPIEX_OPTIONS"
         if not old_pl_libs:
             cmd += " LD_PRELOAD';"
@@ -867,7 +867,7 @@ def epmt_run(cmdline, wrapit=False, dry_run=False, debug=False):
 
     cmd = epmt_source(papiex_debug=debug, monitor_debug=debug, run_cmd=True)
     if not cmd:
-        return 1 
+        return 1
     cmd += " "+" ".join(cmdline)
 
     if wrapit:
@@ -954,7 +954,7 @@ def epmt_submit(dirs, ncpus = 1, dry_run=True, drop=False, keep_going=False, rem
     logger.debug("epmt_submit(%s,dry_run=%s,drop=%s,keep_going=%s,ncpus=%d,remove_on_success=%s,move_on_failure=%s)",dirs,dry_run,drop,keep_going,ncpus,remove_on_success,move_on_failure)
 
     # ARG checking
-    
+
     if dry_run and drop:
         logger.error("You can't drop tables and do a dry run")
         return(False)
@@ -975,7 +975,7 @@ def epmt_submit(dirs, ncpus = 1, dry_run=True, drop=False, keep_going=False, rem
     if drop and (ncpus > 1):
         # FIX:
         # when we do drop tables we end up calling setup_db
-        # However, this initializes certain variables and later 
+        # However, this initializes certain variables and later
         # when a parallel submit happens setup_db is skipped in the
         # spawned processes. This means SQLA Session isn't initialized
         # with the newly created tables in any of the processes except the
@@ -983,7 +983,7 @@ def epmt_submit(dirs, ncpus = 1, dry_run=True, drop=False, keep_going=False, rem
         # when using multiple processes. This should be fixable.
         logger.error('Dropping tables in a parallel submit mode, not supported')
         return(False)
-        
+
     if drop:
         from epmt.orm import orm_drop_db, setup_db
         setup_db(settings)
@@ -1001,7 +1001,7 @@ def epmt_submit(dirs, ncpus = 1, dry_run=True, drop=False, keep_going=False, rem
             retval[f] = r
             (status, _, submit_details) = r
             if not keep_going:
-                if not(status): 
+                if not(status):
                     break # there was an error
                 # even if status is True, there is one condition
                 # where the job is in the database, when we don't
@@ -1066,7 +1066,7 @@ def epmt_submit(dirs, ncpus = 1, dry_run=True, drop=False, keep_going=False, rem
                 # we may have a True status, but if submit_details is empty
                 # that means the job was already in the database, and we
                 # couldn't submit it. Our behavior depends on whether keep_going
-                # is enabled or not. If it is, then 
+                # is enabled or not. If it is, then
                 logger.info('%s: %s', msg, f)
                 if not keep_going:
                     error_occurred = True
@@ -1093,7 +1093,7 @@ def copy_files(src_dir, dest_dir = '', patterns = ['*'], prefix = ''):
                  one will be created using mkdtemp. If specified,
                  a directory will be created if it does not exist.
         prefix : This option is only meaningful if `dest_dir` is
-                 not spcified, and mkdtemp is used to create a 
+                 not spcified, and mkdtemp is used to create a
                  temporary directory. In that case, the prefix if
                  set will be honored while creating `dest_dir` name.
       patterns : list, optional
@@ -1134,7 +1134,7 @@ def copy_files(src_dir, dest_dir = '', patterns = ['*'], prefix = ''):
     for p in patterns:
         matching_paths.extend(glob(src_dir + '/' + p))
 
-    files = [ f for f in matching_paths if path.isfile(f) ] 
+    files = [ f for f in matching_paths if path.isfile(f) ]
 
     if not files:
         logger.debug('No files to copy!')
@@ -1249,16 +1249,16 @@ def open_compressed_tar(inputf):
         flags = "r:"
     else:
         return False,None
-    
+
     import tarfile
     try:
         tar = tarfile.open(inputf, flags)
     except Exception as e:
         logger.error('error opening compressed tar ' + inputf + ":" + str(e))
         return True,None
-    
+
     return False,tar
-    
+
 # Compute differences in environment if detected
 # Merge start and stop environments
 #    total_env = start_env.copy()
@@ -1276,7 +1276,7 @@ def submit_dir_or_tgz_to_db(inputf, pattern=settings.input_pattern, dry_run=True
             except Exception as e:
                 logger.error("Exception from move(%s,%s): %s",from_file,to_dir,str(e))
             logger.info("done: move(%s,%s)",from_file,to_dir)
-        
+
     def trash(from_path):
         logger.info("sending %s to trash",from_path);
         try:
@@ -1288,16 +1288,16 @@ def submit_dir_or_tgz_to_db(inputf, pattern=settings.input_pattern, dry_run=True
             logger.error("Exception from remove/rmtree(%s): %s",from_path,str(e))
 
     def goodpath(from_path):
-        return (path.isfile(from_path) and (from_path.endswith("tar.gz") or from_path.endswith("tgz") or from_path.endswith("tar"))) or path.isdir(from_path) 
-    
+        return (path.isfile(from_path) and (from_path.endswith("tar.gz") or from_path.endswith("tgz") or from_path.endswith("tar"))) or path.isdir(from_path)
+
     if not goodpath(inputf):
         return (False, "submit_dir_or_tgz_to_db("+inputf+") not a job dir or tar archive", ())
 
     status = False
     exc = None
     r = None
-    msg = "submit_dir_or_tgz_to_db({}): ".format(inputf) 
-    
+    msg = "submit_dir_or_tgz_to_db({}): ".format(inputf)
+
     try:
         r = submit_to_db(inputf,pattern,dry_run=dry_run)
     except Exception as e:
@@ -1307,7 +1307,7 @@ def submit_dir_or_tgz_to_db(inputf, pattern=settings.input_pattern, dry_run=True
             exc.args = (msg, *exc.args)
             move_away(inputf,destdir_on_failure)
             raise exc
-        
+
     if not r:
         r = (False, msg, ())
     (status, msg, submit_details) = r
@@ -1384,7 +1384,7 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True):
     if not indir or len(indir) == 0:
         logger.error("stage_job: indir is epmty")
         return False
-    if not settings.stage_command or not settings.stage_command_dest or len(settings.stage_command) == 0 or len(settings.stage_command_dest) == 0: 
+    if not settings.stage_command or not settings.stage_command_dest or len(settings.stage_command) == 0 or len(settings.stage_command_dest) == 0:
         logger.debug("stage_job: no stage commands to do")
         return True
     import time
@@ -1394,7 +1394,7 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True):
         tempdir = copy_files(indir, patterns = ['job_metadata'], prefix = 'epmt_stage_')
         if not tempdir:
             logger.error("No job metadata found in " + indir)
-            # no need to cleanup as copy_files will clean 
+            # no need to cleanup as copy_files will clean
             # up temp dir if it created one using mkdtemp
             return False
         tsv_files = glob(indir + '/*.tsv')
@@ -1416,7 +1416,7 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True):
                 d={}
                 d["epmt_stage_error"]=str(badfiles)
                 logger.error("Job being annotated with %s",str(d))
-                # begin HACK: should call a real annotate function            
+                # begin HACK: should call a real annotate function
                 metadatafile = tempdir+"/job_metadata"
                 metadata = read_job_metadata(metadatafile)
                 if not metadata:
@@ -1427,7 +1427,7 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True):
                     logger.error("Failed to write to %s annotations of erroneous stage",metadatafile)
                     rmtree(tempdir, ignore_errors=True)
                     return False
-                
+
         from tempfile import gettempdir
         if compress_and_tar:
             filetostage = gettempdir()+"/"+path.basename(path.dirname(indir))+".tgz"
@@ -1437,7 +1437,7 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True):
         else:
             filetostage = gettempdir()+"/"+path.basename(path.dirname(indir))
             move(tempdir,filetostage)
-            
+
 # end HACK
     cmd = settings.stage_command + " " + filetostage + " " + settings.stage_command_dest
     logger.info(cmd)
@@ -1478,7 +1478,7 @@ def epmt_stage(dirs, keep_going=True, collate=True, compress_and_tar=True):
             logger.debug("stage_job early exit status = %s",r)
             return False
 
-    logger.debug("stage_job final status = %s",r)    
+    logger.debug("stage_job final status = %s",r)
     return r
 
 def epmt_dbsize(findwhat=['database','table','index','tablespace'], usejson=True, usebytes=True):
@@ -1523,7 +1523,7 @@ def epmt_entrypoint(args):
     # I hate this sequence.
     if args.verbose == None:
         args.verbose = 0
-        
+
     # we only need to log the PID to the console for parallel runs
     epmt_logging_init( args.verbose or settings.verbose,
                        check = True,
@@ -1536,7 +1536,7 @@ def epmt_entrypoint(args):
     if args.command == 'shell':
         epmt_shell()
         return 0
-    
+
     if args.command == 'python':
         script_file = args.epmt_cmd_args
         if script_file:
@@ -1562,16 +1562,16 @@ def epmt_entrypoint(args):
         else:
             epmt_shell(ipython = False)
         return 0
-    
+
     if args.command == 'convert':
         from epmt.epmt_convert_csv import convert_csv_in_tar
         return (convert_csv_in_tar(args.src_tgz, args.dest_tgz) == False)
-    
+
     if args.command == 'explore':
         from epmt.epmt_exp_explore import exp_explore
         exp_explore(args.epmt_cmd_args, metric = args.metric, limit = args.limit)
         return 0
-    
+
     if args.command == 'gui':
         # Start both Dash interface and Static Web Server
         from threading import Thread
@@ -1621,7 +1621,7 @@ def epmt_entrypoint(args):
                     logger.warning("Could not find a test containing '{}' in testdir: {}".format(r,test_folder))
         else:
             tests_to_run = tests
-        
+
         #tests_to_run = ' '.join([test_folder + '/' + t if x not in t else '' for x in args.exclude for t in tests_to_run])
         good_tests = []
         if len(args.exclude)>0:
@@ -1663,25 +1663,25 @@ def epmt_entrypoint(args):
         import unittest
         from importlib import import_module
         TEST_MODULES = [
-            'test.test_anysh', # 
-            'test.test_cmds', # 
-            'test.test_db_migration', # 
-            'test.test_db_schema', # 
-            'test.test_explore', # 
-            'test.test_lib', # 
-            'test.test_outliers', # 
-            'test.test_query', # 
-            'test.test_run', # 
+            'test.test_anysh', #
+            'test.test_cmds', #
+            'test.test_db_migration', #
+            'test.test_db_schema', #
+            'test.test_explore', #
+            'test.test_lib', #
+            'test.test_outliers', #
+            'test.test_query', #
+            'test.test_run', #
             'test.test_settings', #
-            'test.test_shell', # 
-            'test.test_stat', # 
+            'test.test_shell', #
+            'test.test_stat', #
             'test.test_submit'
         ]
         if args.epmt_cmd_args:
             TEST_MODULES = args.epmt_cmd_args
         success_list=[]
         for m in TEST_MODULES:
-            # in epmt shell, the namespace changes. no leading epmt. needed. 
+            # in epmt shell, the namespace changes. no leading epmt. needed.
             m = f'epmt.{m}'
             mod = import_module(m)
             suite = unittest.TestLoader().loadTestsFromModule(mod)
@@ -1694,7 +1694,7 @@ def epmt_entrypoint(args):
                 #return -1
         if not all(success_list):
             return -1
-        
+
         #print('All tests successfully PASSED')
         return 0
 
@@ -1713,7 +1713,7 @@ def epmt_entrypoint(args):
         if args.no_analyze and not args.post_process:
             logger.error("Skipping analysis requires post processing to be enabled")
             return 0
-                         
+
         if args.start or args.foreground:
             if not args.ingest and not args.post_process and not args.retire:
                 # if no command is set, default to post-process and analyze

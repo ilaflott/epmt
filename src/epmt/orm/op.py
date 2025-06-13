@@ -83,9 +83,9 @@ class Operation(dict):
         if self._intervals is None:
             from logging import getLogger
             logger = getLogger(__name__)
-            logger.debug('computing operation intervals..') 
+            logger.debug('computing operation intervals..')
             _intervals = [[p.start, p.end] for p in self.processes]
-            logger.debug('merging operation intervals..') 
+            logger.debug('merging operation intervals..')
             _mi = merge_intervals(_intervals)
             self._intervals = tuple([tuple(i) for i in _mi])
         return self._intervals
@@ -107,11 +107,11 @@ class Operation(dict):
             else:
                 raise ValueError("Do not know how to handle op_duration_method: {}".format(self.op_duration_method))
         return self._duration
-            
+
 
     @property
     def proc_sums(self):
-        if self._proc_sums is None: 
+        if self._proc_sums is None:
             from epmt.epmt_query import get_op_metrics
             from epmt.epmtlib import sum_dicts_list
             from logging import getLogger

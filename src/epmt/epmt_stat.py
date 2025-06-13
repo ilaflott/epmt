@@ -23,7 +23,7 @@ logger = getLogger(__name__)  # you can use other name
 import epmt.epmt_settings as settings
 
 # this sets the defaults to be used when a trained model is not provided
-thresholds = settings.outlier_thresholds 
+thresholds = settings.outlier_thresholds
 
 
 def get_classifier_name(c):
@@ -78,7 +78,7 @@ def z_score(ys, params = ()):
     -------
     abs_z_scores : list of floats
                    Absolute z-scores (same shape as ys)
-     z_score_max : float 
+     z_score_max : float
                    Max. absolute z-score
          mean_ys : float
                    Mean of the input vector
@@ -93,7 +93,7 @@ def z_score(ys, params = ()):
     EXAMPLES
     --------
 
-    >>> z_score([1,2,3,4,5,6,7,8,9,10, 1000])                                                          
+    >>> z_score([1,2,3,4,5,6,7,8,9,10, 1000])
     (array([0.332 , 0.3285, 0.325 , 0.3215, 0.318 , 0.3145, 0.311 , 0.3075,
             0.304 , 0.3005, 3.1621]), 3.1621, 95.9091, 285.9118)
     '''
@@ -111,7 +111,7 @@ def z_score(ys, params = ()):
         mean_y = np.mean(ys).round(4)
         stdev_y = np.std(ys).round(4)
     abs_z_scores = np.nan_to_num(np.abs((ys - mean_y) / stdev_y).round(4))
-    return (abs_z_scores, abs_z_scores.max(), mean_y, stdev_y) 
+    return (abs_z_scores, abs_z_scores.max(), mean_y, stdev_y)
 
 def iqr(ys, params = ()):
     '''
@@ -156,11 +156,11 @@ def iqr(ys, params = ()):
             Q3 = 5*Ymax/8 + 3*Ymin/8
 
 
-  EXAMPLES: 
+  EXAMPLES:
 
     # in the simplest case we only care about the outliers vector
     # not the other two return values (those are used for trained models)
-    >>> (outliers, _, _, _) = es.iqr([1,1,2,3,4,1,100])                                             
+    >>> (outliers, _, _, _) = es.iqr([1,1,2,3,4,1,100])
     >>> outliers
         array([0, 0, 0, 0, 0, 0, 1])
     '''
@@ -192,7 +192,7 @@ def iqr(ys, params = ()):
 
 # this function returns a tuple consisting of:
 #  (scores, worst_score, median, median_absolute_deviation)
-# 
+#
 # All values after the first two are relevant only to this method
 # and will only be used to compare an input against a reference run
 # params if passed in, is of the form (max, median, median_abs_dev)
@@ -260,7 +260,7 @@ def outliers_uv(ys, methods = [outliers_iqr, outliers_z_score, outliers_modified
     an outlier.
 
          ys: Input vector (numpy 1-d array)
-    methods: List of univariate classifiers to use. If unset all 
+    methods: List of univariate classifiers to use. If unset all
              supported UV classifiers will be used. The classifiers
              must all return the outliers bitmask as their sole return
              value. So, use the outliers_* wrappers instead of methods
@@ -321,13 +321,13 @@ def mvod_classifiers(contamination = 0.1, warnopts='ignore'):
     # from pyod.models.iforest import IForest # not stable, repeated calls give different scores
 
     classifiers = [
-                      ABOD(contamination=contamination), 
+                      ABOD(contamination=contamination),
                       KNN(contamination=contamination), # requires too many data points
-                      MCD(contamination=contamination), 
-                      COF(contamination=contamination), 
-                      HBOS(contamination=contamination), 
-                      PCA(contamination=contamination), 
-                      OCSVM(contamination=contamination), 
+                      MCD(contamination=contamination),
+                      COF(contamination=contamination),
+                      HBOS(contamination=contamination),
+                      PCA(contamination=contamination),
+                      OCSVM(contamination=contamination),
                       # IForest(contamination=contamination), # unstable, repeated calls give diff scores
                   ]
     return classifiers
@@ -343,8 +343,8 @@ def mvod_scores(X = None, classifiers = [], warnopts = 'ignore'):
 
     Performs multivariate outlier scoring on a multi-dimensional
     numpy array. Returns a numpy array of scores for each
-    classifier (same length as the input) where each score 
-    represents to the anomaly score of the corresponding point 
+    classifier (same length as the input) where each score
+    represents to the anomaly score of the corresponding point
     in the original array using that classifer.
     The more the likelihood of a point being an outlier, the
     higher score it will have.
@@ -355,7 +355,7 @@ def mvod_scores(X = None, classifiers = [], warnopts = 'ignore'):
 
     X: Multi-dimensional np array. If not provided a random
        two-dimenstional numpy array is generated
-       
+
     classifiers is a list of classifier functions like so:
              [
                  ABOD(),
@@ -367,7 +367,7 @@ def mvod_scores(X = None, classifiers = [], warnopts = 'ignore'):
 
     Here is a run with random data:
 
-    >>> x = mvod_scores()                                                                                     
+    >>> x = mvod_scores()
     No input data for MVOD. Random data will be used with 16 features
     No of Errors using  Angle-based Outlier Detector (ABOD) :  2
     Angle-based Outlier Detector (ABOD)  threshold:  -0.0883552095486537  (> threshold => outlier)
@@ -375,7 +375,7 @@ def mvod_scores(X = None, classifiers = [], warnopts = 'ignore'):
     K Nearest Neighbors (KNN)  threshold:  0.8296872805514997  (> threshold => outlier)
     >>> x
     {'Angle-based Outlier Detector (ABOD)': array(...),
-     'K Nearest Neighbors (KNN)':  array(...) }    
+     'K Nearest Neighbors (KNN)':  array(...) }
     '''
 
     if warnopts:
@@ -416,23 +416,23 @@ def mvod_scores(X = None, classifiers = [], warnopts = 'ignore'):
             X, Y = generate_data(n_train=n_pts,train_only=True, n_features=n_features, contamination=contamination)
         # store outliers and inliers in different numpy arrays
         x_outliers, x_inliers = get_outliers_inliers(X,Y)
-    
+
         n_inliers = len(x_inliers)
         n_outliers = len(x_outliers)
 
     (npts, ndim) = X.shape
     logger.debug('mvod: input length {0}, dimensions {1}'.format(npts, ndim))
     logger.debug(X)
-    
+
     scores = {}
     max_score_for_cf = {}
     for clf in classifiers:
         clf_name = get_classifier_name(clf)
-   
+
         # classifiers may often fail for a variety of reasons,
-        # and do so by throwing exceptions. We trap those 
+        # and do so by throwing exceptions. We trap those
         # exceptions, issue a warning and move on to the
-        # next MVOD classifiers 
+        # next MVOD classifiers
         try:
             # fit the dataset to the model
             clf.fit(X)
@@ -447,25 +447,25 @@ def mvod_scores(X = None, classifiers = [], warnopts = 'ignore'):
             continue
         scores[clf_name] = _clf_scores
         max_score_for_cf[clf_name] = _clf_scores.max()
-       
-   
-        if Y is not None: 
+
+
+        if Y is not None:
             # prediction of a datapoint category outlier or inlier
             y_pred = clf.predict(X)
             # print(Y)
             # print(y_pred)
-    
+
             # no of errors in prediction
             n_errors = (y_pred != Y).sum()
             print('No. of errors using ', clf_name, ': ', n_errors)
-    
-    
+
+
             # threshold value to consider a datapoint inlier or outlier
             # 0.1 is the default outlier fraction in the generated data
             threshold = stats.scoreatpercentile(scores[clf_name],100 * (1 - contamination))
             logger.debug('{0} threshold: {1}'.format(clf_name, threshold))
     #print(scores)
-    if not scores: 
+    if not scores:
         # some error occured and we didn't generate scores at all
         return False
     logger.debug('mvod: scores')
@@ -489,7 +489,7 @@ def mvod_scores_using_model(inp, model_inp, classifier, threshold = None):
     the model input, and then run on MVOD on the resultant
     matrix. Then we pick score for the inp row and append
     it to the return array of scores. If threshold is set
-    then we just return an array of 0/1 values. 
+    then we just return an array of 0/1 values.
 
     inp: ndarray, columns correspond to features, and rows
          presumably, different jobs.
@@ -500,13 +500,13 @@ def mvod_scores_using_model(inp, model_inp, classifier, threshold = None):
 
     threshold: optional. If provided this represents the
                the model score, and the inp is classified
-               against it. 
+               against it.
 
     Returns: If threshold is not set, then:
 
              numpy array of scores where the score at the
              ith index corresponds to the score of
-             the ith row of inp.     
+             the ith row of inp.
 
              If threshold is set, then a numpy array of
              0 or 1, where the ith index is 1 if the ith
@@ -563,13 +563,13 @@ def mvod_scores_using_model(inp, model_inp, classifier, threshold = None):
     # multiply by 1 to convert to a 0/1 vector
     logger.debug('*** input scores (model threshold={}) ***'.format(threshold))
     logger.debug(scores)
-    
+
     return scores if (threshold is None) else (scores > threshold) * 1
 
-    
+
 # ref is a dataframe of reference entities, where the columns represent
 # the features.
-# inp represents a single entity and is either a Series or a DataFrame 
+# inp represents a single entity and is either a Series or a DataFrame
 # with a single row. If inp is a series then it's index labels MUST
 # match the column labels of the ref dataframe. Similarly if inp is a
 # dataframe then it's column labels must match those of ref and in the
@@ -659,20 +659,20 @@ def pca_stat(inp_features, desired = 2):
     '''
     Performs PCA on an ndarray::Statistics
 
-    Combines features ndarray into a new PCA feature array with 
+    Combines features ndarray into a new PCA feature array with
     a dimensionality equal to n_components. It also returns an
-    array containing the explained_variance_ratio. 
+    array containing the explained_variance_ratio.
 
     The PCA analysis will do scaling as part of this function,
     so the original feature set need not be provided scaled.
 
     inp_features: numpy multidimensional array of input features
 
-    desired: Usually represents the number of PCA components desired. 
+    desired: Usually represents the number of PCA components desired.
              Defaults to 2. If this number is set to a floating point number
-             less than 1.0, then it will be interpreted as the desired 
-             variance ratio. In that case the number of PCA components 
-             will be determined to be the least number of components that 
+             less than 1.0, then it will be interpreted as the desired
+             variance ratio. In that case the number of PCA components
+             will be determined to be the least number of components that
              yields a variance greater than or equal to the level desired.
 
     Returns: A tuple, the first element is a numpy array of
@@ -735,7 +735,7 @@ def check_dist(data = [], dist='norm', alpha = 0.05):
 
     Reference: https://machinelearningmastery.com/a-gentle-introduction-to-normality-tests-in-python/
 
-    >>> check_dist(np.linspace(-15, 15, 100), 'uniform')                                              
+    >>> check_dist(np.linspace(-15, 15, 100), 'uniform')
       DEBUG: epmt_stat: data array shape: (100,)
       DEBUG: epmt_stat: min=-15.000 max=15.000 mean=0.000 std=8.747
       DEBUG: epmt_stat: alpha=0.05
@@ -745,7 +745,7 @@ def check_dist(data = [], dist='norm', alpha = 0.05):
       DEBUG: epmt_stat:   Kolmogorov-Smirnov (uniform) test: PASSED
       DEBUG: epmt_stat: check_dist: 1 tests PASSED, 0 tests FAILED
     (1, 0)
-    >>> check_dist(np.random.randn(100), 'norm')                                                      
+    >>> check_dist(np.random.randn(100), 'norm')
       DEBUG: epmt_stat: data array shape: (100,)
       DEBUG: epmt_stat: min=-2.613 max=2.773 mean=-0.096 std=1.049
       DEBUG: epmt_stat: alpha=0.05
@@ -761,7 +761,7 @@ def check_dist(data = [], dist='norm', alpha = 0.05):
       DEBUG: epmt_stat:   Kolmogorov-Smirnov (norm) test: PASSED
       DEBUG: epmt_stat: check_dist: 3 tests PASSED, 0 tests FAILED
     (3, 0)
-    >>> check_dist(np.random.randn(100), 'uniform')                                                   
+    >>> check_dist(np.random.randn(100), 'uniform')
       DEBUG: epmt_stat: data array shape: (100,)
       DEBUG: epmt_stat: min=-2.207 max=2.165 mean=0.090 std=0.944
       DEBUG: epmt_stat: alpha=0.05
@@ -812,7 +812,7 @@ def check_dist(data = [], dist='norm', alpha = 0.05):
     if not dist in tests:
         raise ValueError('We only support the following distributions: {}'.format(tests.keys()))
     logger.debug('Testing for {} distribution'.format(dist))
-        
+
     for (test, f) in tests[dist]:
         # normality test
         logger.debug('Doing {} test..'.format(test))
@@ -839,7 +839,7 @@ def get_modes(X, max_modes = 10):
                    determine the number of modes
         max_modes: int
                    The maximum number of modes to check for (>= 2)
-               
+
     Returns
     -------
           modes: numpy 1-D array of mode values
@@ -869,12 +869,12 @@ def get_modes(X, max_modes = 10):
     for i in range(1,max_modes):
         km = KMeans(n_clusters=i, random_state=0).fit(X_scaled)
         preds = km.predict(X_scaled)
-    
+
         logger.debug("Score for number of cluster(s) {}: {}".format(i,km.score(X_scaled)))
         km_scores.append(-km.score(X_scaled))
-   
+
         if (i > 1):
-            # silhouette method only works for n_clusters >= 2 
+            # silhouette method only works for n_clusters >= 2
             silhouette = silhouette_score(X_scaled,preds)
             km_silhouette.append(silhouette)
             logger.debug("Silhouette score for number of cluster(s) {}: {}".format(i,silhouette))
@@ -900,14 +900,14 @@ def get_modes(X, max_modes = 10):
     preds = km.predict(X_scaled)
     modes = scaler.inverse_transform(km.cluster_centers_).reshape(num_modes,)
     return modes
-    
+
 
 def normalize(v, min_=0, max_=1):
     '''
     Performs normalization (min-max scaling) on an input vector::Statistics
 
     Performs column-wise min-max scaling of a numpy array (of any dimension)
-    so that the elements of each column range from min_ to max_. 
+    so that the elements of each column range from min_ to max_.
 
     Returns a new scaled numpy array of the same shape as the original.
     '''
@@ -972,7 +972,7 @@ def dframe_append_weighted_row(df, weights, ignore_index = True, use_abs = False
     assert(df.shape[0] == len(weights))
     weights_array = np.asarray(weights)
     new_row = []
-    
+
     for c in df.columns:
         new_row.append(((abs(df[c].values) if use_abs else df[c].values) * np.asarray(weights_array)).sum())
     return df.append(pd.DataFrame([new_row], columns = df.columns), ignore_index = ignore_index)
@@ -986,7 +986,7 @@ def dict_outliers(dlist, labels = [], threshold = 2.0):
         dlist : list of dicts
        labels : list of strings, optional
                 List of labels. If provided this must be the same
-                length as dlist and each item in the labels must 
+                length as dlist and each item in the labels must
                 be the label for the corresponding dict in dlist.
                 If not provided, the index of the dict in dlist will
                 be assumed to be its label
@@ -1036,15 +1036,14 @@ def dict_outliers(dlist, labels = [], threshold = 2.0):
 # https://datascience.stackexchange.com/questions/57122/in-elbow-curve-how-to-find-the-point-from-where-the-curve-starts-to-rise
 # def __find_elbow(data):
 #     theta = np.arctan2(data[:, 1].max() - data[:, 1].min(), data[:, 0].max() - data[:, 0].min())
-#    
+#
 #     # make rotation matrix
 #     co = np.cos(theta)
 #     si = np.sin(theta)
 #     rotation_matrix = np.array(((co, -si), (si, co)))
-# 
+#
 #     # rotate data vector
 #     rotated_vector = data.dot(rotation_matrix)
-# 
+#
 #     # return index of elbow
 #     return np.where(rotated_vector == rotated_vector.min())[0][0]
-

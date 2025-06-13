@@ -55,7 +55,7 @@ def epmt_list_unanalyzed_jobs(arglist):
         if len(leftover):
             logger.warning("Unanalyzed jobs not found: %s",str(leftover))
             return False
-            
+
     print(jobs)
     return True
 
@@ -76,7 +76,7 @@ def epmt_list_unprocessed_jobs(arglist):
         if len(leftover):
             logger.warning("Jobs not found in unprocessed table: %s",str(leftover))
             return False
-            
+
     print(jobs)
     return True
 
@@ -145,4 +145,3 @@ def epmt_list_job_proc_tags(arglist):
         return False
     print(jobs)
     return True
-
