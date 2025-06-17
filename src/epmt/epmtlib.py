@@ -104,7 +104,8 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
     # to show the sqlalchemy's INFO level messages (but instead
     # a level higher).
     sqlalchemy_logger = logging.getLogger('sqlalchemy')
-    sqlalchemy_logger.setLevel(level+10)
+    #sqlalchemy_logger.setLevel(level+10)
+    sqlalchemy_logger.setLevel(level+20)
 
 def init_settings(settings):
     if hasattr(init_settings, 'initialized'): return

@@ -2905,7 +2905,7 @@ def is_job_post_processed(job):
     # only processed jobs have this set
     info_dict = job.info_dict or {}
     retval = info_dict.get('post_processed', 0) > 0
-    logger.debug("is_job_post_processed(%s): %s",job.jobid,retval)
+    #logger.debug("is_job_post_processed(%s): %s",job.jobid,retval)
     return retval
 
 @db_session

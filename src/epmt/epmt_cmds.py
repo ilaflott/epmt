@@ -1576,12 +1576,13 @@ def epmt_entrypoint(args):
         # Start both Dash interface and Static Web Server
         from threading import Thread
         from epmt.ui import init_app, app
-        from serve_static import app as docsapp
+        from epmt.serve_static import app as docsapp
         # Bug in pyinstaller does not import the idna encoding
         import encodings.idna
         # Here app is the content of the dash interface
         init_app()
-        ui = Thread(target=app.run_server, kwargs={'port':8050, 'host':'0.0.0.0'})
+        #ui = Thread(target=app.run_server, kwargs={'port':8050, 'host':'0.0.0.0'})
+        ui = Thread(target=app.run, kwargs={'port':8050, 'host':'0.0.0.0'})
         docs = Thread(target=docsapp.run, kwargs={'port':8080, 'host':'0.0.0.0'})
         ui.start()
         docs.start()
