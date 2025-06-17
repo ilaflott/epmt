@@ -2,7 +2,7 @@ load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 
 setup() {
-  resource_path=$(dirname `command -v epmt`)
+  resource_path="${PWD}/src/epmt"
   papiex_path=$(epmt -h | grep install_prefix|cut -f2 -d:)
   test -n "${resource_path}" || fail
   test -d ${resource_path} || fail
@@ -99,7 +99,7 @@ exp_output=('-d" -f2' '\\\' ' b' '\' ',' "'" '-e \tHello' '-e \tThereU\nR' '-e \
 
   # Below we have the expected output in sequence, don't use run as it doesn't play with a pipe
   for i in ${!exp_output[*]}; do
-      out=$(echo 'import epmt_query as eq; procs=eq.get_procs(fmt="orm", jobs=["12340"])[:]; p = procs['$i']; print(p.args);'  | epmt python -)
+      out=$(echo 'import epmt; from epmt import epmt_query as eq; procs=eq.get_procs(fmt="orm", jobs=["12340"])[:]; p = procs['$i']; print(p.args);'  | epmt python -)
       [[ "$out" == "${exp_output[$i]}" ]]
   done
 }

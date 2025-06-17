@@ -5,7 +5,7 @@ setup() {
   stage_dest=$(epmt -h | sed -n 's/stage_command_dest://p')
   test -n "${stage_dest}" || fail
   test -d ${stage_dest} || fail
-  resource_path=$(dirname `command -v epmt`)
+  resource_path="${PWD}/src/epmt"
   test -n "${resource_path}" || fail
   test -d ${resource_path} || fail
   epmt_output_prefix=$(epmt -h | sed -n 's/epmt_output_prefix://p')
@@ -30,6 +30,7 @@ teardown() {
   assert_output --partial "'inbetween_1': 1, 'inbetween_2': 1"
   assert_output --partial "'c': 200, 'd': 400, 'e': 300, 'f': 600"
 }
+
 @test "epmt annotate write db" {
   epmt annotate 3456 g=400 h=800  # annotate job in database as well
   run epmt dump -k annotations 3456
