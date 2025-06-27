@@ -39,14 +39,17 @@ DOCKER_BUILD:=docker build -f
 MM_SRC_URL_BASE=https://gitlab.com/minimal-metrics-llc/epmt
 
 # papiex details
+INL_SRC_URL_BASE=https://github.com/ilaflott
 PAPIEX_VERSION?=2.3.14
 PAPIEX_SRC?=papiex
 #PAPIEX_SRC_BRANCH=master
 #PAPIEX_SRC_BRANCH=centos7_yum_fix
 #PAPIEX_SRC_BRANCH=rocky8_docker
 PAPIEX_SRC_BRANCH=rocky8_docker_mchip_mac
-PAPIEX_SRC_TARBALL=papiex-epmt.tar.gz
-PAPIEX_SRC_URL=$(MM_SRC_URL_BASE)/papiex/-/archive/$(PAPIEX_SRC_BRANCH)/$(PAPIEX_SRC_TARBALL)
+#PAPIEX_SRC_TARBALL=papiex-epmt.tar.gz
+PAPIEX_SRC_TARBALL=$(PAPIEX_SRC_BRANCH).tar.gz
+#PAPIEX_SRC_URL=$(MM_SRC_URL_BASE)/papiex/-/archive/$(PAPIEX_SRC_BRANCH)/$(PAPIEX_SRC_TARBALL)
+PAPIEX_SRC_URL=$(INL_SRC_URL_BASE)/papiex/archive/$(PAPIEX_SRC_TARBALL)
 PAPIEX_RELEASE=papiex-epmt-$(PAPIEX_VERSION)-$(OS_TARGET).tgz
 
 # epmt details
@@ -58,13 +61,13 @@ EPMT_INSTALL_PATH=/opt/minimalmetrics
 EPMT_INSTALL_PREFIX=$(EPMT_INSTALL_PATH)/epmt-$(EPMT_VERSION)/epmt-install
 
 # <root>/src/epmt/ui submodule details
-#INL_SRC_URL_BASE=https://github.com/ilaflott
-#EPMT_DASH_SRC_BRANCH=main
+EPMT_DASH_SRC_BRANCH=main
 #EPMT_DASH_SRC_TARBALL=epmt-dash-$(EPMT_DASH_SRC_BRANCH).tar.gz
-#EPMT_DASH_SRC_URL=$(INL_SRC_URL_BASE)/epmt-dash/archive/refs/heads/$(EPMT_DASH_SRC_TARBALL)
-EPMT_DASH_SRC_TARBALL=epmt-dash.tar.gz
-EPMT_DASH_SRC_BRANCH=multi_page
-EPMT_DASH_SRC_URL=$(MM_SRC_URL_BASE)/epmt-dash/-/archive/$(EPMT_DASH_SRC_BRANCH)/$(EPMT_DASH_SRC_TARBALL)
+EPMT_DASH_SRC_TARBALL=$(EPMT_DASH_SRC_BRANCH).tar.gz
+EPMT_DASH_SRC_URL=$(INL_SRC_URL_BASE)/epmt-dash/archive/$(EPMT_DASH_SRC_TARBALL)
+#EPMT_DASH_SRC_TARBALL=epmt-dash.tar.gz
+#EPMT_DASH_SRC_BRANCH=multi_page
+#EPMT_DASH_SRC_URL=$(MM_SRC_URL_BASE)/epmt-dash/-/archive/$(EPMT_DASH_SRC_BRANCH)/$(EPMT_DASH_SRC_TARBALL)
 EPMT_DASH_SRC=src/epmt/ui
 #EPMT_DASH_SRC=ui
 
@@ -249,23 +252,23 @@ $(EPMT_DASH_SRC): $(EPMT_DASH_SRC_TARBALL)
 	@echo   "EPMT_DASH_SRC_URL     = ${EPMT_DASH_SRC_URL}"
 	@echo
 	@echo
-	#echo "untarring ${EPMT_DASH_SRC_TARBALL}"; \
-	#tar zxf $(EPMT_DASH_SRC_TARBALL); \
-	#mv `tar ztf ${EPMT_DASH_SRC_TARBALL} | head -1` $(EPMT_DASH_SRC); \
-	echo "cloning ${EPMT_DASH_SRC}"; \
-	git clone https://github.com/ilaflott/epmt-dash $(EPMT_DASH_SRC); \
+#	@echo "cloning ${EPMT_DASH_SRC}"
+#	git clone https://github.com/ilaflott/epmt-dash $(EPMT_DASH_SRC)
+	echo "untarring ${EPMT_DASH_SRC_TARBALL}"; \
+	tar zxf $(EPMT_DASH_SRC_TARBALL); \
+	mv `tar ztf ${EPMT_DASH_SRC_TARBALL} | head -1` $(EPMT_DASH_SRC); \
 	echo "top-level dir contents of EPMT_DASH_SRC=${EPMT_DASH_SRC}..."; \
 	ls $(EPMT_DASH_SRC); \
 	echo "making symbolic link to epmt/ui/docs/index.md"; \
 	cd epmtdocs/docs && \
 	ln -s ../../$(EPMT_DASH_SRC)/docs/index.md index.md || \
-	echo "symbolic link creation failed."; \
+	echo "symbolic link creation failed. but it's OK."; \
 	cd -
 
 $(EPMT_DASH_SRC_TARBALL):
 	@echo "(EPMT_DASH_SRC_TARBALL) whoami: $(shell whoami)"
 	echo "grabbing epmt-dash via curl"; \
-	curl -O $(EPMT_DASH_SRC_URL); \
+	curl -L -O $(EPMT_DASH_SRC_URL); \
 	ls $(EPMT_DASH_SRC_TARBALL); \
 # ----------- \end EPMT_DASH THINGS ---------- #
 
@@ -309,7 +312,7 @@ $(PAPIEX_SRC): $(PAPIEX_SRC_TARBALL)
 
 $(PAPIEX_SRC_TARBALL):
 	@echo "(PAPIEX_SRC_TARBALL) whoami: $(shell whoami)"
-	curl -O $(PAPIEX_SRC_URL); \
+	curl -L -O $(PAPIEX_SRC_URL); \
 	ls $(PAPIEX_SRC_TARBALL)
 # ----------- \end PAPIEX THINGS ---------- #
 
