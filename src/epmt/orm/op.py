@@ -8,15 +8,14 @@ class Operation(dict):
     a superset of the operation tag.
     '''
 
-
     __getattr__ = dict.get
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
 
     # op_duration_method is one of "sum", "sum-minus-overlap", "finish-minus-start"
-    def __init__(self, jobs, tags, exact_tag_only = False, op_duration_method = "sum"):
-#        from orm import orm_is_query, orm_jobs_col
-        from . import orm_is_query, orm_jobs_col # rocky-8 change
+    def __init__(self, jobs, tags, exact_tag_only=False, op_duration_method="sum"):
+        #        from orm import orm_is_query, orm_jobs_col
+        from . import orm_is_query, orm_jobs_col  # rocky-8 change
         from epmt.epmtlib import tag_from_string, tags_list
         from logging import getLogger
         logger = getLogger(__name__)
@@ -26,7 +25,7 @@ class Operation(dict):
         if (jobs.count() == 0):
             raise ValueError("jobs count should be greater than zero")
         self.jobs = jobs
-        self.tags = tags_list(tags) if (type(tags) == list) else tag_from_string(tags)
+        self.tags = tags_list(tags) if (isinstance(tags, list)) else tag_from_string(tags)
         self.exact_tag_only = exact_tag_only
         self.op_duration_method = op_duration_method
         # this will be initialized on first reference
@@ -49,13 +48,11 @@ class Operation(dict):
             self._start = min([p.start for p in self.processes])
         return self._start
 
-
     @property
     def finish(self):
         if self._finish is None:
             self._finish = max([p.end for p in self.processes])
         return self._finish
-
 
     @property
     def processes(self):
@@ -64,7 +61,7 @@ class Operation(dict):
             from epmt.epmt_query import get_procs
             logger = getLogger(__name__)
             logger.debug('computing op processes..')
-            self._processes = get_procs(jobs = self.jobs, tags = self.tags, exact_tag_only = self.exact_tag_only, fmt='orm')
+            self._processes = get_procs(jobs=self.jobs, tags=self.tags, exact_tag_only=self.exact_tag_only, fmt='orm')
             if len(self._processes[:]) == 0:
                 logger.warning("No processes found for operation -- {0}".format(self.tags))
             # else:
@@ -72,7 +69,6 @@ class Operation(dict):
             #     self.start = min(p.start for p in self.processes)
             #     self.end = max(p.end for p in self.processes)
         return self._processes
-
 
     @property
     def intervals(self):
@@ -101,13 +97,13 @@ class Operation(dict):
                 self._duration = round(self._duration.total_seconds() * 1e6, 1)
             elif self.op_duration_method == "sum-minus-overlap":
                 # self.intervals is a sorted list of tuples
-                self._duration = round(sum([(interval[-1] - interval[0]).total_seconds() for interval in self.intervals]) * 1e6, 1)
+                self._duration = round(sum([(interval[-1] - interval[0]).total_seconds()
+                                       for interval in self.intervals]) * 1e6, 1)
             elif self.op_duration_method == "finish-minus-start":
                 self._duration = round((self.finish - self.start).total_seconds() * 1e6, 1)
             else:
                 raise ValueError("Do not know how to handle op_duration_method: {}".format(self.op_duration_method))
         return self._duration
-
 
     @property
     def proc_sums(self):
@@ -117,19 +113,24 @@ class Operation(dict):
             from logging import getLogger
             logger = getLogger(__name__)
             logger.debug('getting op_metrics for jobs={0}, tags={1}'.format(self.jobs, self.tags))
-            op_metrics = get_op_metrics(jobs = self.jobs, tags = self.tags, exact_tags_only = False, group_by_tag=True, fmt='dict')
-            if type(self.tags) == list:
-                assert(len(op_metrics) == len(self.tags))
+            op_metrics = get_op_metrics(
+                jobs=self.jobs,
+                tags=self.tags,
+                exact_tags_only=False,
+                group_by_tag=True,
+                fmt='dict')
+            if isinstance(self.tags, list):
+                assert (len(op_metrics) == len(self.tags))
             else:
-                assert(len(op_metrics) == 1)
-            self._proc_sums = sum_dicts_list(op_metrics, exclude = ['tags'])
+                assert (len(op_metrics) == 1)
+            self._proc_sums = sum_dicts_list(op_metrics, exclude=['tags'])
             # use duration as calculated by us
             self._proc_sums['duration'] = self.duration
         return self._proc_sums
 
-    def to_dict(self, full = False):
+    def to_dict(self, full=False):
         d = dict(self)
-        d['jobs'] = [ j.jobid for j in self.jobs ]
+        d['jobs'] = [j.jobid for j in self.jobs]
         d['duration'] = self.duration
         d['proc_sums'] = self.proc_sums
         # d['processes'] = self.processes[:]
@@ -141,5 +142,6 @@ class Operation(dict):
             d['num_runs'] = len(self.intervals)
             from epmt.epmt_query import conv_procs
             d['processes'] = conv_procs(self.processes, fmt='dict')
-        for attr in ('_duration', '_start', '_finish', '_intervals', '_proc_sums', '_processes'): del d[attr]
+        for attr in ('_duration', '_start', '_finish', '_intervals', '_proc_sums', '_processes'):
+            del d[attr]
         return d

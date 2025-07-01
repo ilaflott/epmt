@@ -3,6 +3,7 @@ from flask import Flask, send_from_directory, render_template
 # set the project root directory as the static folder
 app = Flask(__name__, static_folder='epmtdocs/site/', template_folder="epmtdocs/site/")
 
+
 @app.errorhandler(404)
 # inbuilt function which takes error as parameter
 def not_found(e):
@@ -16,6 +17,8 @@ def send_filert():
     return send_from_directory(app.static_folder, 'Quickstart.html')
 
 # Serve any requested page from within the site directory
+
+
 @app.route('/<apage>')
 def send_file(apage):
     return send_from_directory(app.static_folder, apage)

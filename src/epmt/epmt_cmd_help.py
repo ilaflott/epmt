@@ -1,9 +1,11 @@
-#from __future__ import print_function
+# from __future__ import print_function
 from inspect import signature
 from sys import stderr
 
 # ian - what is this???
-def epmt_help_api(funcs = []):
+
+
+def epmt_help_api(funcs=[]):
     import epmt.epmt_settings as settings
     import epmt.epmt_query as eq
     import epmt.epmt_outliers as eod

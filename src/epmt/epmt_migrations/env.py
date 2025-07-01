@@ -1,5 +1,9 @@
-#from logging.config import fileConfig
+# from logging.config import fileConfig
 
+from orm.sqlalchemy import models
+from epmt_settings import db_params
+from os.path import dirname
+import sys
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
@@ -11,23 +15,19 @@ config = context.config
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
-#fileConfig(config.config_file_name)
+# fileConfig(config.config_file_name)
 
 # this will overwrite the ini-file sqlalchemy.url path
 # with the path given in the config of the main code
 # append the parent directory of this test to the module search path
-import sys
-from os.path import dirname
-sys.path.append(dirname(__file__) + "/..") #TODO destroy.
+sys.path.append(dirname(__file__) + "/..")  # TODO destroy.
 
-from epmt_settings import db_params
 db_url = db_params.get('url', 'sqlite:///:memory:')
 # print('INFO  [alembic.runtime.migration] Using {0}'.format(db_url))
 config.set_main_option('sqlalchemy.url', db_url)
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-from orm.sqlalchemy import models
 target_metadata = models.Base.metadata
 
 # other values from the config, defined by the needs of env.py,

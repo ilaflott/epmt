@@ -8,19 +8,27 @@ from .op import *
 
 # Note, the function below is not ATOMIC! There is a potential
 # for a race condition here.
+
+
 def orm_get_or_create(model, **kwargs):
     return (orm_get(model, **kwargs) or orm_create(model, **kwargs))
 
+
 def orm_db_provider():
-    if 'postgres' in settings.db_params.get('url', settings.db_params.get('provider')): return 'postgres'
-    if 'sqlite' in settings.db_params.get('url', settings.db_params.get('provider')): return 'sqlite'
+    if 'postgres' in settings.db_params.get('url', settings.db_params.get('provider')):
+        return 'postgres'
+    if 'sqlite' in settings.db_params.get('url', settings.db_params.get('provider')):
+        return 'sqlite'
     return settings.db_params.get('provider', 'unknown')
+
 
 def orm_in_memory():
     return 'memory' in settings.db_params.get('url', settings.db_params.get('provider'))
 
+
 def orm_drop_db():
     return setup_db(settings, drop=True)
+
 
 def orm_sql(sql):
     return orm_raw_sql(sql)
@@ -28,13 +36,16 @@ def orm_sql(sql):
 # return the length of a collection
 # For most collections, the len function suffices. However,
 # for ORM queries under SQLA, we need to use the count method.
+
+
 def orm_col_len(c):
     try:
         return len(c)
-    except:
+    except BaseException:
         return c.count()
 
-def orm_db_size(findwhat=['database','table','index','tablespace'], usejson=True, usebytes=True):
+
+def orm_db_size(findwhat=['database', 'table', 'index', 'tablespace'], usejson=True, usebytes=True):
     """
     Print size of database,tables,index,tablespace storage and row count
 
@@ -51,14 +62,14 @@ def orm_db_size(findwhat=['database','table','index','tablespace'], usejson=True
     # Test if provider is supported
     provider = orm_db_provider()
     if provider != 'postgres':
-        logger.warning("%s not supported for dbsize",provider)
-        return(False)
+        logger.warning("%s not supported for dbsize", provider)
+        return (False)
 
     if setup_db(settings) == False:
         logger.error("Could not connect to db")
-        return(False)
+        return (False)
 
-    struct={}
+    struct = {}
     for arg in findwhat:
         if arg == 'database':
             databased = {}
@@ -67,21 +78,21 @@ def orm_db_size(findwhat=['database','table','index','tablespace'], usejson=True
                 sizes = orm_sql(cmd)
                 for name, size in sizes:
                     databased[name] = int(size)
-                    logger.debug("database[%s]=%d",name,int(size))
+                    logger.debug("database[%s]=%d", name, int(size))
                 struct[arg] = databased
-            except:
+            except BaseException:
                 e = exc_info()[0]
-                logger.warning("DB size query failed: %s" % e )
+                logger.warning("DB size query failed: %s" % e)
 
         if arg == 'table':
             tabled = {}
-            for table in orm_dump_schema(show_attributes = False):
-                cmd = "SELECT pg_total_relation_size(\'"+table+"\')"
+            for table in orm_dump_schema(show_attributes=False):
+                cmd = "SELECT pg_total_relation_size(\'" + table + "\')"
                 size = orm_sql(cmd).fetchall()[0][0]
-                cmd = "SELECT count(*) from \""+table+"\""
+                cmd = "SELECT count(*) from \"" + table + "\""
                 count = orm_sql(cmd).fetchall()[0][0]
-                tabled[table] = [int(size),int(count)]
-                logger.debug("table[%s]=[%d,%d]",table,int(size),int(count))
+                tabled[table] = [int(size), int(count)]
+                logger.debug("table[%s]=[%d,%d]", table, int(size), int(count))
                 struct[arg] = tabled
 #            except:
 #                e = exc_info()[0]
@@ -90,15 +101,15 @@ def orm_db_size(findwhat=['database','table','index','tablespace'], usejson=True
         if arg == 'index':
             indexd = {}
             try:
-                for table in orm_dump_schema(show_attributes = False):
-                    cmd = "SELECT pg_indexes_size(\'"+table+"\')"
+                for table in orm_dump_schema(show_attributes=False):
+                    cmd = "SELECT pg_indexes_size(\'" + table + "\')"
                     size = orm_sql(cmd).fetchone()[0]
                     indexd[table] = int(size)
-                    logger.debug("index[%s]=%d",table,int(size))
+                    logger.debug("index[%s]=%d", table, int(size))
                 struct[arg] = indexd
-            except:
+            except BaseException:
                 e = exc_info()[0]
-                logger.warning("Index size query failed: %s" % e )
+                logger.warning("Index size query failed: %s" % e)
 
         if arg == 'tablespace':
             tablespaced = {}
@@ -106,17 +117,17 @@ def orm_db_size(findwhat=['database','table','index','tablespace'], usejson=True
                 tablespaces = orm_sql("SELECT spcname FROM pg_tablespace")
                 for tablespace in tablespaces:
                     tablespace = tablespace[0]
-                    cmd = "SELECT pg_tablespace_size(\'"+str(tablespace)+"\')"
+                    cmd = "SELECT pg_tablespace_size(\'" + str(tablespace) + "\')"
                     size = orm_sql(cmd).fetchall()[0][0]
                     tablespaced[tablespace] = int(size)
-                    logger.debug("tablespace[%s]=%d",tablespace,int(size))
+                    logger.debug("tablespace[%s]=%d", tablespace, int(size))
                 struct[arg] = tablespaced
-            except:
+            except BaseException:
                 e = exc_info()[0]
-                logger.warning("Tablespace size query failed: %s" % e )
+                logger.warning("Tablespace size query failed: %s" % e)
 
-    current_time = datetime.utcnow().isoformat()+"Z"
-    printsettings={}
+    current_time = datetime.utcnow().isoformat() + "Z"
+    printsettings = {}
     printsettings["orm"] = settings.orm
     printsettings.update(settings.db_params)
     struct["timestamp"] = current_time
@@ -124,8 +135,9 @@ def orm_db_size(findwhat=['database','table','index','tablespace'], usejson=True
     if not usejson:
         print(struct)
     else:
-        print(dumps(struct,indent=4))
-    return(True)
+        print(dumps(struct, indent=4))
+    return (True)
+
 
 if settings.orm == 'sqlalchemy':
     from .sqlalchemy import *

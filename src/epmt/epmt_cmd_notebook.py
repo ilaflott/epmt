@@ -4,8 +4,9 @@ logger = getLogger(__name__)  # you can use other name
 # Takes string
 # Returns list of successfully deleted jobid's as strings
 
+
 def epmt_notebook(arglist):
-    logger.info("epmt_notebook: %s",str(arglist))
+    logger.info("epmt_notebook: %s", str(arglist))
 
     mode = None
     cmd_args = []
@@ -21,7 +22,7 @@ def epmt_notebook(arglist):
         args = ["kernel"]
         args.extend(cmd_args)
         # This does not want argv[0]
-        logger.info("ipython kernel argv: %s",str(args))
+        logger.info("ipython kernel argv: %s", str(args))
         from IPython import start_ipython
         start_ipython(argv=args)
     else:                 # Run IPython Notebook with passed ops
@@ -29,12 +30,12 @@ def epmt_notebook(arglist):
         from os.path import realpath
         from os import getcwd
         me = realpath(sys.argv[0])
-        logger.debug("Using %s as binary" ,me)
+        logger.debug("Using %s as binary", me)
         args = []
-        args.extend(["--notebook-dir="+getcwd(),
-                     "--KernelManager.kernel_cmd=['"+me+"', 'notebook', 'kernel', '--', '-f', '{connection_file}']"])
+        args.extend(["--notebook-dir=" + getcwd(),
+                     "--KernelManager.kernel_cmd=['" + me + "', 'notebook', 'kernel', '--', '-f', '{connection_file}']"])
         args.extend(all_args)
-        logger.info("notebook argv: %s",str(args))
+        logger.info("notebook argv: %s", str(args))
         from notebook import notebookapp
         notebookapp.launch_new_instance(argv=args)
     return True

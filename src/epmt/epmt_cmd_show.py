@@ -1,10 +1,11 @@
-#from __future__ import print_function
+# from __future__ import print_function
 from logging import getLogger
 import epmt.epmt_query as eq
 
-def epmt_show_job(jobid, key = None):
+
+def epmt_show_job(jobid, key=None):
     logger = getLogger(__name__)  # you can use other name
-    if type(jobid) == list:
+    if isinstance(jobid, list):
         jobid = jobid[0]
     jobs = eq.get_jobs([jobid], fmt='dict')
     if len(jobs) != 1:

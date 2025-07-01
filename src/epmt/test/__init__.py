@@ -1,5 +1,12 @@
 #!/usr/bin/env python
 
+from epmt.orm.sqlalchemy.models import Job, UnprocessedJob, Process
+from epmt.orm.sqlalchemy.general import orm_get, orm_dump_schema, orm_commit, orm_is_query
+from epmt.orm import db_session, setup_db, orm_db_provider, orm_in_memory, Operation
+from epmt.epmtlib import timing, get_install_root, get_username, str_dict
+from epmt.epmt_cmds import epmt_submit
+import epmt.epmt_query as eq
+import epmt.epmt_settings as settings
 import os
 import unittest
 from sys import stderr
@@ -23,24 +30,15 @@ import numpy as np
 # add in the imports theyre actually testing.
 
 from epmt.epmtlib import epmt_logging_init, capture
-## ERROR
+# ERROR
 epmt_logging_init(-1)
-## WARNING
-#epmt_logging_init(0)
-## INFO
-#epmt_logging_init(1)
-##DEBUG
-#epmt_logging_init(2)
+# WARNING
+# epmt_logging_init(0)
+# INFO
+# epmt_logging_init(1)
+# DEBUG
+# epmt_logging_init(2)
 
-import epmt.epmt_settings as settings
-import epmt.epmt_query as eq
-
-from epmt.epmt_cmds import epmt_submit
-from epmt.epmtlib import timing, get_install_root, get_username, str_dict
-from epmt.orm import db_session, setup_db, orm_db_provider, orm_in_memory, Operation
-
-from epmt.orm.sqlalchemy.general import orm_get, orm_dump_schema, orm_commit, orm_is_query
-from epmt.orm.sqlalchemy.models import Job, UnprocessedJob, Process
 
 # this will be used repeatedly in the tests, so let's store it
 # in a variable instead of repeatedly calling the function

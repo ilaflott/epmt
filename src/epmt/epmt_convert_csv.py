@@ -27,18 +27,51 @@ import atexit
 
 # these fields must be present at a minimum or our sanity
 # check will flag an error
-INPUT_CSV_FIELDS = {'tags','hostname','exename','path','args','exitcode','pid','generation','ppid','pgid','sid','numtids','tid','start','end'}
+INPUT_CSV_FIELDS = {
+    'tags',
+    'hostname',
+    'exename',
+    'path',
+    'args',
+    'exitcode',
+    'pid',
+    'generation',
+    'ppid',
+    'pgid',
+    'sid',
+    'numtids',
+    'tid',
+    'start',
+    'end'}
 # Only the fields present in the list below will be output and the order will match the list order
 # If you modify this list you WILL need to change the process_staging table
 # defined in one of the migration files.
 # Please note, threads_df will be replaced by a string of metric names
-OUTPUT_CSV_FIELDS = ['threads_df', 'tags', 'hostname', 'exename', 'path', 'exitcode', 'exitsignal', 'pid', 'generation', 'ppid', 'pgid', 'sid', 'numtids', 'start', 'finish', 'args']
+OUTPUT_CSV_FIELDS = [
+    'threads_df',
+    'tags',
+    'hostname',
+    'exename',
+    'path',
+    'exitcode',
+    'exitsignal',
+    'pid',
+    'generation',
+    'ppid',
+    'pgid',
+    'sid',
+    'numtids',
+    'start',
+    'finish',
+    'args']
 OUTPUT_CSV_SEP = '\t'
 
 # Expected input format
 # tags,hostname,exename,path,args,exitcode,pid,generation,ppid,pgid,sid,numtids,tid,start,end,usertime,systemtime,rssmax,minflt,majflt,inblock,outblock,vol_ctxsw,invol_ctxsw,num_threads,starttime,processor,delayacct_blkio_time,guest_time,rchar,wchar,syscr,syscw,read_bytes,write_bytes,cancelled_write_bytes,time_oncpu,time_waiting,timeslices,rdtsc_duration,PERF_COUNT_SW_CPU_CLOCK
 # ,pp208,tcsh,/bin/tcsh,-f /home/Jeffrey.Durachta/ESM4/DECK/ESM4_historical_D151/gfdl.ncrc4-intel16-prod-openmp/scripts/postProcess/ESM4_historical_D151_ocean_annual_rho2_1x1deg_18840101.tags,0,6099,0,6098,6089,6084,1,6099,1560599524133795,1560599524134048,2999,0,2852,387,0,0,0,0,0,0,1296261120000,0,0,0,17618,0,40,0,0,0,0,3604195,47138,1,846248,246094
-def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_CSV_FIELDS):
+
+
+def conv_csv_for_dbcopy(infile, outfile='', jobid='', input_fields=INPUT_CSV_FIELDS):
     '''
     Convert a CSV into a format suitable for ingestion using PostgreSQL COPY
 
@@ -80,7 +113,7 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
     outfile = outfile or infile   # empty outfile => overwrite infile
 
     if infile == outfile:
-        outfd, outfile = tempfile.mkstemp(prefix = 'epmt_conv_outcsv_', suffix = '.csv')
+        outfd, outfile = tempfile.mkstemp(prefix='epmt_conv_outcsv_', suffix='.csv')
         # logger.debug('in-place CSV conversion, so creating a tempfile {}'.format(outfile))
         in_place = True
     else:
@@ -99,22 +132,24 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
 
     # if infile is a string, then it's a path
     # else it's a file-handle
-    infile_flo = open(infile, newline='') if (type(infile) == str) else infile
+    infile_flo = open(infile, newline='') if (isinstance(infile, str)) else infile
 
     reader = csv.DictReader(infile_flo, escapechar='\\')
     with open(outfile, 'w', newline='') as csvfile:
-        row_num = 0 # input row being processed
-        outrows = 0 # number of rows output (we combine threads into one row)
+        row_num = 0  # input row being processed
+        outrows = 0  # number of rows output (we combine threads into one row)
         for r in reader:
             row_num += 1
             if row_num == 1:
-                if input_fields and not(set(r.keys()) >= input_fields):
+                if input_fields and not (set(r.keys()) >= input_fields):
                     # sanity check to make sure our input file has the correct format
                     logger.error('Input CSV format is not correct. Likely missing  header row. Is it already in v2 format?')
                     return False
-                thr_fields = sorted(set(r.keys()) - set(settings.skip_for_thread_sums) - set(settings.per_process_fields))
+                thr_fields = sorted(set(r.keys()) -
+                                    set(settings.skip_for_thread_sums) -
+                                    set(settings.per_process_fields))
                 metric_names = ",".join(thr_fields)
-                header = OUTPUT_CSV_SEP.join(OUTPUT_CSV_FIELDS).replace('threads_df', '{'+metric_names+'}')
+                header = OUTPUT_CSV_SEP.join(OUTPUT_CSV_FIELDS).replace('threads_df', '{' + metric_names + '}')
                 # we create a copy as we don't want to modify the constant
                 # -- it's used elesewhere
                 output_fields = OUTPUT_CSV_FIELDS.copy()
@@ -132,7 +167,7 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
 
             # Eventually, we should move to floats. However, for now
             # want to be consistent with our existing codebase in epmt_jobs
-            threads_df = [ int(r[k]) for k in thr_fields ] # array of ints
+            threads_df = [int(r[k]) for k in thr_fields]  # array of ints
 
             numtids = int(r['numtids'])
             # now read in remaining thread rows (if the process is multithreaded)
@@ -163,12 +198,11 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
             #
             # replace postgres eof marker in the args field
             # https://stackoverflow.com/questions/23790995/postgres-9-3-end-of-copy-marker-corrupt-any-way-to-change-this-setting
-            #if '\.' in r['args']:
+            # if '\.' in r['args']:
             #    r['args'] = r['args'].replace('\.', '\\\.')
 
             for field in ['pid', 'ppid', 'pgid', 'sid', 'generation', 'exitcode', 'exitsignal', 'start', 'end']:
                 r[field] = int(r[field])
-
 
             # end is reserved word in sql, so we prefer using finish
             # in our staging table
@@ -184,8 +218,8 @@ def conv_csv_for_dbcopy(infile, outfile = '', jobid = '', input_fields = INPUT_C
                     outrow[f] = json.dumps(r[f]).replace('[', '{').replace(']', '}')
             writer.writerow(outrow)
     _finish_time = time.time()
-    logger.info('Wrote {} rows at {:.2f} procs/sec'.format(outrows,(outrows/(_finish_time - _start_time))))
-    infile_flo.close() # close input file
+    logger.info('Wrote {} rows at {:.2f} procs/sec'.format(outrows, (outrows / (_finish_time - _start_time))))
+    infile_flo.close()  # close input file
     if in_place:
         logger.debug('overwriting input file {} with {}'.format(infile, outfile))
         shutil.move(outfile, infile)
@@ -199,14 +233,16 @@ def _cleanup(path):
     if isfile(path):
         try:
             os.remove(path)
-        except: pass
+        except BaseException:
+            pass
     elif isdir(path):
         try:
             shutil.rmtree(path)
-        except: pass
+        except BaseException:
+            pass
 
 
-def convert_csv_in_tar(in_tar, out_tar = ''):
+def convert_csv_in_tar(in_tar, out_tar=''):
     '''
     Converts a collated CSV in a staged tarfile into a format
     suitable for direct copy into PostgreSQL. The CSV file
@@ -245,7 +281,7 @@ def convert_csv_in_tar(in_tar, out_tar = ''):
         # in-place editing, so create a temporary output file,
         # and then replace the input file
         in_place = True
-        _, out_tar = tempfile.mkstemp(prefix='epmt_conv_outtar_', suffix = '.tgz')
+        _, out_tar = tempfile.mkstemp(prefix='epmt_conv_outtar_', suffix='.tgz')
         atexit.register(_cleanup, out_tar)
         logger.info('Doing in-place CSV format conversion in {}'.format(in_tar))
         logger.debug('Will create a temporary output tar ({}) as we are doing in-place conversion'.format(out_tar))
@@ -269,20 +305,20 @@ def convert_csv_in_tar(in_tar, out_tar = ''):
     except Exception as e:
         logger.error('Error extracting {} to {}: {}'.format(in_tar, tempdir, e))
         return False
-    tar.close() # close the input tar
+    tar.close()  # close the input tar
     in_csv_files = glob('{}/*.csv'.format(tempdir))
     if not in_csv_files:
         logger.error('No CSV files found in {}'.format(in_tar))
         return False
     # we should be having exactly 1 CSV file
-    assert(len(in_csv_files) == 1)
+    assert (len(in_csv_files) == 1)
     hostname = basename(in_csv_files[0]).split('-')[0]
     header_filename = "{}-papiex-header.tsv".format(hostname)
     if "./" + header_filename in tar_contents:
         # a header file presence indicates v2 CSV
         logger.error('{} already contains CSV files in v2 format'.format(in_tar))
         return False
-    in_csv = in_csv_files[0] # only one csv file will be present
+    in_csv = in_csv_files[0]  # only one csv file will be present
     out_csv = tempdir + "/" + "{}-papiex.tsv".format(hostname)
     logger.info('Starting CSV conversion..')
     # save the header returned for subsequent use
@@ -311,9 +347,11 @@ def convert_csv_in_tar(in_tar, out_tar = ''):
         return False
     # copy files other than *.csv
     for f in tar_contents + ["./" + basename(out_csv)]:
-        if f.endswith('.csv'): continue
+        if f.endswith('.csv'):
+            continue
         try:
-            if os.path.isfile(f): tar.add(f)
+            if os.path.isfile(f):
+                tar.add(f)
         except Exception as e:
             logger.error('Error adding {}/{} to {}: {}'.format(tempdir, f, out_tar, e))
             return False
