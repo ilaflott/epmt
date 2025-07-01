@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from six import with_metaclass
 import epmt.epmt_settings as settings
+from sqlalchemy import Column, Table, String, ForeignKey, Integer, DateTime, Boolean, Float, JSON
 
 if 'postgres' in settings.db_params.get('url', ''):
     from sqlalchemy.dialects.postgresql import JSONB as JSON
