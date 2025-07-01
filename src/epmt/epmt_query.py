@@ -389,7 +389,7 @@ def get_jobs(
              This returns a union of jobs that match 'ocn_res:0.5l75;exp_component:ocean_cobalt_fdet_100'
              and those that match 'ocn_res:0.5l75;exp_component:ocean_annual_rho2_1x1deg'
 
-   fltr   :  callable or ORM-specific condition, optional
+    fltr   :  callable or ORM-specific condition, optional
              Optional filter whose format will depend on the ORM.
              For sqlalchemy, you can use something like:
              (Job.jobid == '685000')
@@ -399,7 +399,7 @@ def get_jobs(
              e.g., lambda j: count(j.processes) > 100 will filter jobs more than 100 processes
              or, 'j.duration > 100000' will filter jobs whose duration is more than 100000
 
-    order  : callable, optional
+   order  : callable, optional
              Optionally sort the output by setting this to a lambda function or string
              e.g, to sort by job duration descending:
                   order = desc(Job.created_at)
@@ -469,15 +469,15 @@ def get_jobs(
              'terse': In this format only the primary key ID is printed for each job
              Default is 'dict'
 
-annotations: dict, optional
+    annotations: dict, optional
              Dictionary of key/value pairs that must ALL match the job
              annotations. The matching job may have additional key/values.
 
-   analyses: dict, optional
+    analyses: dict, optional
              Dictionary of key/value pairs that must ALL match the job
              analyses. The matching job may have additional key/values.
 
-merge_proc_sums: boolean, optional
+    merge_proc_sums: boolean, optional
              By default True, which means the fields inside job.proc_sums
              will be hoisted up one level to become first-class members of the job.
              This will make aggregates across processes appear as part of the job
@@ -485,13 +485,13 @@ merge_proc_sums: boolean, optional
              of key/value pairs, where each is an process attribute, such as numtids,
              and the value is the sum acorss all processes of the job.
 
-exact_tag_only: boolean, optional
+    exact_tag_only: boolean, optional
              If set, tag will be considered matched if saved tag
              identically matches the passed tag. The default is False, which
              means if the tag in the database are a superset of the passed
              tag a match will considered.
 
-trigger_post_process : boolean, optional
+    trigger_post_process : boolean, optional
               This is an advanced flag. Normally this should be set to True,
               as we want jobs to be post-processed if they aren't so.
               In rare cases you may want to set this to False to avoid
@@ -518,7 +518,7 @@ trigger_post_process : boolean, optional
     # same as above except we use the orm format
     >>> jobs_orm = get_jobs(tags = 'exp_name:ESM4_historical_D151;exp_component=atmos_cmip', fmt='orm')
     """
-    from datetime import datetime
+
     # Customer feedback strongly indicated that limits on the job table were
     # a strong no-no. So, commenting out the code below:
     #
@@ -2168,7 +2168,7 @@ dm_agg_df_by_job: dataframe
     This makes the computation slower (5x) than with 'cpu_time',
     where the aggregation is performed in the database layer.
     """
-    from datetime import datetime
+
     logger.info('dm ops: {0}'.format(tags))
     if metric not in {"duration", "cpu_time"}:
         raise ValueError('We only support "duration" or "cpu_time" for metric')
@@ -2524,7 +2524,7 @@ def set_job_analyses(jobid, analyses, replace=False, size_limit=64 * 1024):
     full_analyses = {} if replace else dict(j.analyses)
     full_analyses.update(analyses)
     if size_limit:
-        from json import dumps
+
         size = len(dumps(full_analyses))
         if size > size_limit:
             logger.error("Analyses length({}) > max. analyses limit({}). Aborting..".format(size, size_limit))
@@ -3148,8 +3148,8 @@ def verify_jobs(jobs):
     >>>  'Process[191898] >> threads_sums >> rdtsc_duration is negative']
     '''
     from math import isnan, isinf
-#    from pony.orm.ormtypes import TrackedList, TrackedDict
-    import datetime
+    # from pony.orm.ormtypes import TrackedList, TrackedDict
+    # import datetime
 
     def verify_num(n):
         if isnan(n):
@@ -3166,7 +3166,7 @@ def verify_jobs(jobs):
         '''
         # logger.debug('Verifying {}'.format(c))
         err = []
-        now = datetime.datetime.now()
+        now = datetime.now()
 
         # we try to iterate over a list or dict identically to keep code DRY
 #        keys = range(len(c)) if type(c) in (list, TrackedList) else c.keys()
@@ -3191,8 +3191,8 @@ def verify_jobs(jobs):
                 ret = verify_num(val)
                 if ret:
                     err.append('{}{} {}'.format(prefix, k, ret))
-            elif isinstance(val, datetime.datetime):
-                if (val < datetime.datetime(2019, 1, 1)):
+            elif isinstance(val, datetime):
+                if (val < datetime(2019, 1, 1)):
                     err.append('{}{} {}'.format(prefix, k, 'contains an invalid timestamp (too old)'))
                 elif (val > now):
                     err.append('{}{} {}'.format(prefix, k, 'contains an invalid timestamp (in the future)'))

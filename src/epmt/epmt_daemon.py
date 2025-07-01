@@ -224,7 +224,7 @@ def daemon_loop(context, niters=0, post_process=True, analyze=True, retire=False
         # were made before we became a daemon. In particular we
         # might not have been using the file handler for logging.
         if hasattr(context, 'detach_process') and context.detach_process:
-            import epmt.epmt_settings as settings
+            #import epmt.epmt_settings as settings
             from epmt.epmtlib import epmt_logging_init
             verbose = verbose or (settings.verbose if hasattr(settings, 'verbose') else 0)
             epmt_logging_init(verbose, check=False)

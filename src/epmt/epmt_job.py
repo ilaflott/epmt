@@ -1002,7 +1002,7 @@ def populate_process_table_from_staging(j):
 def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     logger = getLogger(__name__)  # you can use other name
     job_init_start_time = time.time()
-# Synthesize what we need
+    # Synthesize what we need
     # it's safe and fast to call the check_fix_metadata
     # it will not waste time re-checking (since it marks the metadata as checked)
     metadata = check_fix_metadata(raw_metadata)
@@ -1027,7 +1027,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     if env_dict.get('pp_script'):
         job_status['script_path'] = env_dict.get('pp_script')
 
-# Fields used in this function
+    # Fields used in this function
     jobid = metadata['job_pl_id']
     username = metadata['job_pl_username']
     start_ts = metadata['job_pl_start_ts']
@@ -1077,7 +1077,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     if (job_status.get('script_name') is None) and job_tags and job_tags.get('script_name'):
         job_status['script_name'] = job_tags.get('script_name')
 
-#    info_dict = metadata['job_pl_from_batch'] # end batch also
+    # info_dict = metadata['job_pl_from_batch'] # end batch also
 
     logger.info("Processing job id %s", jobid)
 
@@ -1087,15 +1087,15 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     earliest_process = datetime.utcnow().replace(tzinfo=pytz.utc)
     latest_process = datetime.fromtimestamp(0).replace(tzinfo=pytz.utc)
 
-#    stdout.write('-')
-# Hostname, job, metricname objects
-# Iterate over hosts
+    # stdout.write('-')
+    ## Hostname, job, metricname objects
+    ## Iterate over hosts
 
     logger.debug("Iterating over %d hosts for job ID %s, user %s...", len(filedict.keys()), jobid, username)
 
-#
-# Create user and job object
-#
+    #
+    # Create user and job object
+    #
     from sqlalchemy import exc
     try:
         u = lookup_or_create_user(username)
@@ -1463,7 +1463,6 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         # logger.debug('post process job took: %2.5f sec', time.time() - _post_process_start_ts)
     else:
         # mark job as unprocessed. It will need post-processing later
-        from sqlalchemy import exc
         try:
             logger.debug('inserting **UNPROCESSED** reference for job %s', j.jobid)
             orm_create(UnprocessedJob, jobid=j.jobid)

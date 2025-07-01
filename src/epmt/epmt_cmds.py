@@ -1707,7 +1707,7 @@ def epmt_entrypoint(args):
         logger.debug("test directory: {}".format(test_folder))
 
         # Get test names in test directory
-        from glob import glob
+
         from os.path import basename
         tests = sorted([basename(x) for x in glob(test_folder + '/*.bats')])
 
@@ -1739,7 +1739,7 @@ def epmt_entrypoint(args):
         good_tests = ' '.join(good_tests)
         logger.debug("Tests to run {}".format(good_tests))
         if len(good_tests) < 1:
-            from sys import stderr
+
             print('No test found', file=stderr)
             return -1
 
@@ -1751,7 +1751,7 @@ def epmt_entrypoint(args):
         from epmt.epmtlib import set_signal_handlers
         from signal import SIGTERM
         import psutil
-        from sys import stderr
+
 
         def sig_handler(signo, frame):
             print("Sending TERM to child processes..", file=stderr)
@@ -1798,7 +1798,6 @@ def epmt_entrypoint(args):
             result = unittest.TextTestRunner(verbosity=2).run(suite)
             success_list.append(result.wasSuccessful())
             if not result.wasSuccessful():
-                from sys import stderr
                 print('\n\nOne (or more) unit tests FAILED', file=stderr)
                 # return -1
         if not all(success_list):

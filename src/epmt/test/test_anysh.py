@@ -68,7 +68,6 @@ class EPMTShell(unittest.TestCase):
             self.assertIn("LD_PRELOAD", results, 'epmt_source ld_preload is missing')
 
             # Start
-            from epmt.epmt_cmds import epmt_start_job
             results = epmt_start_job()
             self.assertTrue(results)
 

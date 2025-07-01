@@ -7,7 +7,7 @@ from epmt.epmt_cmds import epmt_dbsize
 from epmt.epmt_cmd_delete import epmt_delete_jobs
 from epmt.epmt_cmd_list import (epmt_list_jobs, epmt_list_procs, epmt_list_job_proc_tags,
                                 epmt_list_refmodels, epmt_list_op_metrics, epmt_list_thread_metrics)
-from epmt.epmt_daemon import daemon_loop
+from epmt.epmt_daemon import is_daemon_running, daemon_loop
 
 # from epmt.orm.sqlalchemy.models import UnprocessedJob
 # from os import path
@@ -124,7 +124,6 @@ class EPMTCmds(unittest.TestCase):
         # and unprocessed jobs. Then we run the daemon loop once.
         # That should clear the backlog of unprocessed and
         # unanalyzed jobs
-        from epmt.epmt_daemon import is_daemon_running, daemon_loop
         from epmt.epmt_job import post_process_pending_jobs
         self.assertTrue(is_daemon_running() == (False, -1))
 
@@ -212,7 +211,6 @@ class EPMTCmds(unittest.TestCase):
         self.assertEqual(retval, True, 'wrong list jobs return value')
 
     def test_dbsize_json(self):
-        from epmt.epmt_cmds import epmt_dbsize
         with capture() as (out, err):
             retval = epmt_dbsize(['database', 'table', 'index', 'tablespace'], usejson=True)
         s = out.getvalue()
