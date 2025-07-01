@@ -48,11 +48,37 @@ class QueryAPI(unittest.TestCase):
 
     def test_get_features(self):
         f = eq.get_features(['685000', '685003', '685016'])
-        self.assertTrue(set(f) >= set(
-            ['PERF_COUNT_SW_CPU_CLOCK', 'cancelled_write_bytes', 'cpu_time', 'delayacct_blkio_time', 'duration',
-             'exitcode', 'guest_time', 'inblock', 'invol_ctxsw', 'majflt', 'minflt', 'num_procs', 'num_threads',
-             'outblock', 'processor', 'rchar', 'rdtsc_duration', 'read_bytes', 'rssmax', 'submit', 'syscr', 'syscw',
-             'systemtime', 'time_oncpu', 'time_waiting', 'timeslices', 'updated_at', 'usertime', 'vol_ctxsw', 'wchar', 'write_bytes']))
+        self.assertTrue(set(f) >= set(['PERF_COUNT_SW_CPU_CLOCK',
+                                       'cancelled_write_bytes',
+                                       'cpu_time',
+                                       'delayacct_blkio_time',
+                                       'duration',
+                                       'exitcode',
+                                       'guest_time',
+                                       'inblock',
+                                       'invol_ctxsw',
+                                       'majflt',
+                                       'minflt',
+                                       'num_procs',
+                                       'num_threads',
+                                       'outblock',
+                                       'processor',
+                                       'rchar',
+                                       'rdtsc_duration',
+                                       'read_bytes',
+                                       'rssmax',
+                                       'submit',
+                                       'syscr',
+                                       'syscw',
+                                       'systemtime',
+                                       'time_oncpu',
+                                       'time_waiting',
+                                       'timeslices',
+                                       'updated_at',
+                                       'usertime',
+                                       'vol_ctxsw',
+                                       'wchar',
+                                       'write_bytes']))
 
     @db_session
     def test_job(self):
@@ -398,9 +424,27 @@ class QueryAPI(unittest.TestCase):
                           'vol_ctxsw': 714, 'time_oncpu': 17984466575, 'rdtsc_duration': 153196621348,
                           'systemtime': 4074354, 'num_procs': 57, 'write_bytes': 2631274496, 'usertime': 13876858})
         self.assertEqual(set(op.to_dict().keys()),
-                         {'jobs', 'proc_sums', 'duration', 'tags', 'exact_tag_only', 'start', 'finish', 'op_duration_method'})
+                         {'jobs',
+                          'proc_sums',
+                          'duration',
+                          'tags',
+                          'exact_tag_only',
+                          'start',
+                          'finish',
+                          'op_duration_method'})
         self.assertEqual(set(op.to_dict(full=True).keys()),
-                         {'jobs', 'proc_sums', 'duration', 'tags', 'processes', 'exact_tag_only', 'start', 'finish', 'intervals', 'num_runs', 'contiguous', 'op_duration_method'})
+                         {'jobs',
+                          'proc_sums',
+                          'duration',
+                          'tags',
+                          'processes',
+                          'exact_tag_only',
+                          'start',
+                          'finish',
+                          'intervals',
+                          'num_runs',
+                          'contiguous',
+                          'op_duration_method'})
         op = Operation(['685000', '685003'], {'op': 'timavg'})
         self.assertEqual(op.proc_sums,
                          {'syscw': 89297, 'PERF_COUNT_SW_CPU_CLOCK': 29297709455, 'time_oncpu': 32531383700,
@@ -530,11 +574,17 @@ class QueryAPI(unittest.TestCase):
         d = eq.get_job_tags(['685016', '685003', '685000'],
                             tag_filter='exp_name:ESM4_historical_D151;exp_time:18840101')
         self.assertEqual(set(d.keys()), {'atm_res', 'exp_component', 'exp_name', 'exp_time', 'ocn_res', 'script_name'})
-        self.assertEqual(d, {'atm_res': 'c96l49', 'ocn_res': '0.5l75', 'exp_name': 'ESM4_historical_D151', 'exp_time': '18840101',
-                             'script_name': {'ESM4_historical_D151_ocean_annual_rho2_1x1deg_18840101',
-                                             'ESM4_historical_D151_ocean_month_rho2_1x1deg_18840101',
-                                             'ESM4_historical_D151_ocean_cobalt_fdet_100_18840101'},
-                             'exp_component': {'ocean_month_rho2_1x1deg', 'ocean_annual_rho2_1x1deg', 'ocean_cobalt_fdet_100'}})
+        self.assertEqual(d,
+                         {'atm_res': 'c96l49',
+                          'ocn_res': '0.5l75',
+                          'exp_name': 'ESM4_historical_D151',
+                          'exp_time': '18840101',
+                          'script_name': {'ESM4_historical_D151_ocean_annual_rho2_1x1deg_18840101',
+                                          'ESM4_historical_D151_ocean_month_rho2_1x1deg_18840101',
+                                          'ESM4_historical_D151_ocean_cobalt_fdet_100_18840101'},
+                             'exp_component': {'ocean_month_rho2_1x1deg',
+                                               'ocean_annual_rho2_1x1deg',
+                                               'ocean_cobalt_fdet_100'}})
 
     @db_session
     def test_job_roots(self):
@@ -562,12 +612,18 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(r, {})
         self.assertEqual(eq.get_job_annotations('685000'), {})
         r = eq.annotate_job('685016', 'abc:200;def:bye')
-        self.assertEqual(r,
-                         {'abc': '200', 'def': 'bye',
-                          'EPMT_JOB_TAGS': 'atm_res:c96l49;exp_component:ocean_month_rho2_1x1deg;exp_name:ESM4_historical_D151;exp_time:18840101;ocn_res:0.5l75;script_name:ESM4_historical_D151_ocean_month_rho2_1x1deg_18840101'})
-        self.assertEqual(eq.get_job_annotations('685016'),
-                         {'abc': '200', 'def': 'bye',
-                          'EPMT_JOB_TAGS': 'atm_res:c96l49;exp_component:ocean_month_rho2_1x1deg;exp_name:ESM4_historical_D151;exp_time:18840101;ocn_res:0.5l75;script_name:ESM4_historical_D151_ocean_month_rho2_1x1deg_18840101'})
+        self.assertEqual(
+            r,
+            {
+                'abc': '200',
+                'def': 'bye',
+                'EPMT_JOB_TAGS': 'atm_res:c96l49;exp_component:ocean_month_rho2_1x1deg;exp_name:ESM4_historical_D151;exp_time:18840101;ocn_res:0.5l75;script_name:ESM4_historical_D151_ocean_month_rho2_1x1deg_18840101'})
+        self.assertEqual(
+            eq.get_job_annotations('685016'),
+            {
+                'abc': '200',
+                'def': 'bye',
+                'EPMT_JOB_TAGS': 'atm_res:c96l49;exp_component:ocean_month_rho2_1x1deg;exp_name:ESM4_historical_D151;exp_time:18840101;ocn_res:0.5l75;script_name:ESM4_historical_D151_ocean_month_rho2_1x1deg_18840101'})
         self.assertEqual(eq.get_jobs(annotations={'abc': '200'}, fmt='terse'), ['685016'])
 
     @db_session
@@ -685,10 +741,36 @@ class QueryAPI(unittest.TestCase):
         # wildcard features
         with capture() as (out, err):
             r = eq.create_refmodel(jobs, tag='model_name:' + model_name, features='*')
-        all_features = {'duration', 'syscr', 'systemtime', 'PERF_COUNT_SW_CPU_CLOCK', 'cpu_time', 'delayacct_blkio_time',
-                        'time_waiting', 'write_bytes', 'inblock', 'minflt', 'invol_ctxsw', 'syscw', 'wchar', 'num_threads',
-                        'processor', 'cancelled_write_bytes', 'rssmax', 'rchar', 'outblock', 'num_procs', 'time_oncpu',
-                        'rdtsc_duration', 'usertime', 'timeslices', 'guest_time', 'vol_ctxsw', 'majflt', 'read_bytes', 'exitcode'}
+        all_features = {
+            'duration',
+            'syscr',
+            'systemtime',
+            'PERF_COUNT_SW_CPU_CLOCK',
+            'cpu_time',
+            'delayacct_blkio_time',
+            'time_waiting',
+            'write_bytes',
+            'inblock',
+            'minflt',
+            'invol_ctxsw',
+            'syscw',
+            'wchar',
+            'num_threads',
+            'processor',
+            'cancelled_write_bytes',
+            'rssmax',
+            'rchar',
+            'outblock',
+            'num_procs',
+            'time_oncpu',
+            'rdtsc_duration',
+            'usertime',
+            'timeslices',
+            'guest_time',
+            'vol_ctxsw',
+            'majflt',
+            'read_bytes',
+            'exitcode'}
         self.assertEqual(eq.refmodel_get_metrics(r['id'], False), all_features)  # all metrics
         self.assertEqual(eq.refmodel_get_metrics(r['id'], True), all_features)  # active metrics
         eq.delete_refmodels(r['id'])
@@ -728,10 +810,13 @@ class QueryAPI(unittest.TestCase):
 
     def test_status(self):
         status = eq.get_job_status('685000')
-        self.assertEqual(status,
-                         {'exit_code': 0, 'exit_reason': 'none',
-                          'script_path': '/home/Jeffrey.Durachta/ESM4/DECK/ESM4_historical_D151/gfdl.ncrc4-intel16-prod-openmp/scripts/postProcess/ESM4_historical_D151_ocean_annual_rho2_1x1deg_18840101.tags',
-                          'script_name': 'ESM4_historical_D151_ocean_annual_rho2_1x1deg_18840101'})
+        self.assertEqual(
+            status,
+            {
+                'exit_code': 0,
+                'exit_reason': 'none',
+                'script_path': '/home/Jeffrey.Durachta/ESM4/DECK/ESM4_historical_D151/gfdl.ncrc4-intel16-prod-openmp/scripts/postProcess/ESM4_historical_D151_ocean_annual_rho2_1x1deg_18840101.tags',
+                'script_name': 'ESM4_historical_D151_ocean_annual_rho2_1x1deg_18840101'})
 
     @db_session
     def test_verify_jobs(self):

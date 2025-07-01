@@ -225,7 +225,7 @@ class EPMTCmds(unittest.TestCase):
 
             from json import loads
             d = loads(s)
-            self.assertTrue(d != False)
+            self.assertTrue(d)
             self.assertEqual(type(d), dict, "wrong return type")
             self.assertTrue(len(d.keys()) > 0)
 
@@ -258,7 +258,7 @@ class EPMTCmds(unittest.TestCase):
         copytree("{}/test/data/corrupted_csv".format(install_root), tempdir + "/corrupted_csv")
         with capture() as (out, err):
             retval = epmt_stage([tempdir + "/corrupted_csv"], keep_going=True)
-        self.assertTrue(retval == True, "corrupted CSV files but keep_going, should have returned True")
+        self.assertTrue(retval, "corrupted CSV files but keep_going, should have returned True")
         self.assertTrue(path.exists(errorfile))
         self.assertFalse(path.exists(tempdir + "/corrupted_csv"))
 

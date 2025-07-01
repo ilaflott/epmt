@@ -5,7 +5,8 @@ from . import *
 
 
 class SHELLCmds(unittest.TestCase):
-    @unittest.skipUnless(False, 'halfbaked unit test never seemed to actually run in the minimal-metrics main/master branch')
+    @unittest.skipUnless(False,
+                         'halfbaked unit test never seemed to actually run in the minimal-metrics main/master branch')
     def test_run_cond(self):
         # with capture() as (out,err):
         # import argparse, json

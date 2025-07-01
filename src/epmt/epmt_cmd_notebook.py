@@ -32,8 +32,8 @@ def epmt_notebook(arglist):
         me = realpath(sys.argv[0])
         logger.debug("Using %s as binary", me)
         args = []
-        args.extend(["--notebook-dir=" + getcwd(),
-                     "--KernelManager.kernel_cmd=['" + me + "', 'notebook', 'kernel', '--', '-f', '{connection_file}']"])
+        args.extend(["--notebook-dir=" + getcwd(), "--KernelManager.kernel_cmd=['" +
+                    me + "', 'notebook', 'kernel', '--', '-f', '{connection_file}']"])
         args.extend(all_args)
         logger.info("notebook argv: %s", str(args))
         from notebook import notebookapp

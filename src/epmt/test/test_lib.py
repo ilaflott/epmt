@@ -19,8 +19,12 @@ from epmt.epmtlib import get_install_root
 # The class below tests library functions
 class EPMTLib(unittest.TestCase):
     def test_sqlite_json_support(self):
-        self.assertTrue(sqlite3.sqlite_version_info > (3, 9),
-                        'SQLite version {0} is too old and does not have JSON1 extensions. You need version 3.9 or later (with JSON1 extensions enabled)'.format(sqlite3.sqlite_version))
+        self.assertTrue(
+            sqlite3.sqlite_version_info > (
+                3,
+                9),
+            'SQLite version {0} is too old and does not have JSON1 extensions. You need version 3.9 or later (with JSON1 extensions enabled)'.format(
+                sqlite3.sqlite_version))
 
     def test_dict_filter(self):
         d = {'abc': 10, 'def': 20, '_ghi': 30, 'LS_COLORS': 'xyz'}

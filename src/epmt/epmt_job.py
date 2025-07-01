@@ -1327,7 +1327,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                     logger.error("Failed loading process, file %s!", f)
                     continue
 
-                if not 'metric_names' in info_dict:
+                if 'metric_names' not in info_dict:
                     # save the metric names in the info_dict
                     # only need to do this once
                     info_dict['metric_names'] = ",".join(sorted(p.threads_sums.keys()))

@@ -105,8 +105,8 @@ def parseFile(inputfile, masterHeader, masterHeaderFile, delim, commentDelim):
             comments.append(line)
             continue
         try:
-            header, data, headerDelimCount, headerFound, masterHeader, masterHeaderFile = parseLine(inputfile, line, masterHeader, masterHeaderFile,
-                                                                                                    headerDelimCount, headerFound, delim)
+            header, data, headerDelimCount, headerFound, masterHeader, masterHeaderFile = parseLine(
+                inputfile, line, masterHeader, masterHeaderFile, headerDelimCount, headerFound, delim)
             if data:
                 datas.append(data)
             logger.debug("File %s: data %s", inputfile, str(data))

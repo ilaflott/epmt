@@ -342,8 +342,23 @@ def op_roots(jobs, tag, fmt='dict'):
 
 
 @db_session
-def get_jobs(jobs=[], tags=None, fltr=None, order=None, limit=None, offset=0, when=None, before=None, after=None, hosts=[
-], fmt='dict', annotations=None, analyses=None, merge_proc_sums=True, exact_tag_only=False, trigger_post_process=True):
+def get_jobs(
+        jobs=[],
+        tags=None,
+        fltr=None,
+        order=None,
+        limit=None,
+        offset=0,
+        when=None,
+        before=None,
+        after=None,
+        hosts=[],
+        fmt='dict',
+        annotations=None,
+        analyses=None,
+        merge_proc_sums=True,
+        exact_tag_only=False,
+        trigger_post_process=True):
     """
     Returns a collection of jobs based on some filtering and ordering criteria::Jobs
 
@@ -1977,8 +1992,10 @@ def delete_jobs(jobs, force=False, before=None, after=None, warn=True, remove_mo
     if num_jobs != init_num_jobs:
         logger.warning('requested to delete %d jobs, but will actually delete %d jobs.',
                        init_num_jobs, num_jobs)
-        logger.warning('%d unprocessed jobs and %d jobs with models were targeted for deletion but will be spared instead',
-                       len(jobs_unprocessed), num_jobs_with_models_unremoved)
+        logger.warning(
+            '%d unprocessed jobs and %d jobs with models were targeted for deletion but will be spared instead',
+            len(jobs_unprocessed),
+            num_jobs_with_models_unremoved)
 
     logger.info('deleting %d jobs, in an atomic operation..', num_jobs)
 
@@ -2437,7 +2454,7 @@ def analyze_comparable_jobs(jobids, check_comparable=True, keys=('exp_name', 'ex
         if check_comparable:
             for j in jobids:
                 v = jobids[j].tags.get(k, '')
-                if not k in jobids[j].tags:
+                if k not in jobids[j].tags:
                     logger.warning('job {0} tags has no key -- {1}'.format(j, k))
                 assert (jobids[j].tags.get(k, '') == model_tag[k])
     logger.debug('Searching for trained models with tag: {0}'.format(model_tag))

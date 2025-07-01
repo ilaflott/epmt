@@ -370,7 +370,7 @@ def dict_in_list(d, L):
     for item in L:
         flag = True
         for (k, v) in item.items():
-            if (not k in d) or not (d[k] == v):
+            if (k not in d) or not (d[k] == v):
                 flag = False
         if (flag):
             return True
@@ -415,7 +415,7 @@ def unique_dicts(dicts, exclude_keys=[]):
     new_dicts = []
     if exclude_keys:
         for d in dicts:
-            new_d = {x: d[x] for x in d if not x in exclude_keys}
+            new_d = {x: d[x] for x in d if x not in exclude_keys}
             new_dicts.append(new_d)
     else:
         new_dicts = dicts
@@ -432,7 +432,7 @@ def unique_dicts(dicts, exclude_keys=[]):
     ordered_dicts = []
     for d in new_dicts:
         x = frozenset([(k, d[k]) for k in sorted(d.keys())])
-        if not x in all_dicts_set:
+        if x not in all_dicts_set:
             all_dicts_set.add(x)
             ordered_dicts.append(d)
     return ordered_dicts
@@ -469,7 +469,7 @@ def group_dicts_by_key(dicts, key='tags', exclude=[]):
     groups = {}
     for d in dicts:
         k = dumps(d[key], sort_keys=True)
-        if not k in groups:
+        if k not in groups:
             groups[k] = []
         groups[k].append(d)
     exclude.append(key)
@@ -511,7 +511,7 @@ def kwargify(list_of_str, strict=False):
     myDict = {}
     jobs = []
     for s in list_of_str:
-        if not "=" in s and not strict:
+        if "=" not in s and not strict:
             jobs.append(s)
         else:
             a, b = s.split('=')
@@ -1069,8 +1069,8 @@ def docs_module_index(mod, fmt=None):
     # We skip functions whose names start with underscore (_)
     # and also functions that are not actually defined in the module, but
     # merely imported from some other module
-    funcs = sorted([
-        o[1] for o in getmembers(mod) if isfunction(o[1]) and (not o[1].__name__.startswith('_')) and (o[1].__module__ == mod.__name__)], key=lambda f: f.__name__)
+    funcs = sorted([o[1] for o in getmembers(mod) if isfunction(o[1]) and (
+        not o[1].__name__.startswith('_')) and (o[1].__module__ == mod.__name__)], key=lambda f: f.__name__)
 
     # prepare a list of tuples; the first tuple number is the
     # function name, and the second item is it's one-line summary extracted

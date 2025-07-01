@@ -365,7 +365,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features=FEATURES, methods=[],
     for m in methods:
         c_name = get_classifier_name(m)
         if trained_model:
-            if not c_name in trained_model.computed:
+            if c_name not in trained_model.computed:
                 logger.warning("Skipping classifier {} -- could not find it in trained model".format(c_name))
                 continue
             model_params[m] = trained_model.computed[c_name]
@@ -501,7 +501,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features=FEATURES, methods=[],
         classfiers_od_dict = {}  # will store outlier vectors index by classifier
         for m in mv_methods:
             m_name = get_classifier_name(m)
-            if not features_str in model_params[m]:
+            if features_str not in model_params[m]:
                 logger.warning(
                     'Skipping classifier {}, as could not find model threshold for the feature set'.format(m_name))
                 continue
@@ -996,7 +996,7 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
             logger.debug('\n:{}'.format(rows[['jobid', 'tags']]))
             for m in mv_methods:
                 m_name = get_classifier_name(m)
-                if not features_str in model_params[t][m]:
+                if features_str not in model_params[t][m]:
                     logger.warning(
                         'Skipping classifier {}, as could not find model threshold for the feature set for tag {}'.format(
                             m_name, t))

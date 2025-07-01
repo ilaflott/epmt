@@ -189,7 +189,7 @@ def conv_csv_for_dbcopy(infile, outfile='', jobid='', input_fields=INPUT_CSV_FIE
             r['jobid'] = jobid
             # r['host_id'] = r['hostname']
             # r['gen'] = r['generation']
-            if not 'exitsignal' in r:
+            if 'exitsignal' not in r:
                 r['exitsignal'] = 0
 
             # We no longer need to do the hack below, as we now use copy_expert

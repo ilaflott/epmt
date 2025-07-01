@@ -216,7 +216,7 @@ OrderedDict([('18540101', {'jobids': ['625151'], 'metrics': [10425623185.0]}),
     for j in exp_jobs:
         exp_time = j.tags.get('exp_time', '')
         if exp_time:
-            if not exp_time in od:
+            if exp_time not in od:
                 # initialize the dict
                 od[exp_time] = {'jobids': [], 'metrics': []}
             # append the jobid and it's metric to the list of jobids

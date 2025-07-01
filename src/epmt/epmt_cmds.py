@@ -175,7 +175,7 @@ def verify_epmt_output_prefix():
     if return_code != 0:
         retval = False
 # Cleanup
-    if retval == True:
+    if retval:
         PrintPass()
     else:
         PrintFail()
@@ -213,7 +213,7 @@ def verify_papiex_options():
             logger.error("%s failed", cmd)
             retval = False
 # End
-    if retval == True:
+    if retval:
         PrintPass()
     else:
         PrintFail()
@@ -305,7 +305,7 @@ def verify_papiex():
             logger.error("%s matched %d papiex output files instead of %d",
                          global_datadir + settings.input_pattern, len(files), num_to_find)
             retval = False
-    if retval == True:
+    if retval:
         files = glob(global_datadir + "job_metadata")
         if len(files) != 1:
             logger.error("%s matched %d job_metadata files instead of 1", global_datadir + "job_metadata", len(files))
@@ -314,7 +314,7 @@ def verify_papiex():
     logger.info("rmtree %s", global_datadir)
     rmtree(global_datadir, ignore_errors=True)
 
-    if retval == True:
+    if retval:
         PrintPass()
     else:
         PrintFail()
@@ -364,7 +364,7 @@ def create_start_job_metadata(jobid, submit_ts, from_batch=[]):
 #   print env
     metadata['job_pl_id'] = jobid
 #   metadata['job_pl_hostname'] = gethostname()
-    if submit_ts == False:
+    if not submit_ts:
         metadata['job_pl_submit_ts'] = ts
     else:
         metadata['job_pl_submit_ts'] = submit_ts
@@ -957,7 +957,7 @@ def get_filedict(dirname, pattern, tar=False):
         files = glob(dirname + pattern)
 
     # TODO: Remove this gross hack
-    files = [f for f in files if not "papiex-header" in f]
+    files = [f for f in files if "papiex-header" not in f]
 
     if not files:
         logger.info("%s matched no files", pattern)
@@ -1493,7 +1493,7 @@ def stage_job(indir, collate=True, compress_and_tar=True, keep_going=True):
             from epmt.epmt_concat import csvjoiner
             status, _, badfiles = csvjoiner(indir, outpath=tempdir +
                                             "/", keep_going=keep_going, errdir=settings.error_dest)
-            if status == False:
+            if not status:
                 logger.debug("csv concatenation returned status = %s", status)
                 rmtree(tempdir, ignore_errors=True)
                 return False

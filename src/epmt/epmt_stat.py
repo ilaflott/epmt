@@ -828,7 +828,7 @@ def check_dist(data=[], dist='norm', alpha=0.05):
     if data.size > 20:
         # The test below requires at least 20 elements
         tests['norm'].append(('D\'Agostino', normaltest))
-    if not dist in tests:
+    if dist not in tests:
         raise ValueError('We only support the following distributions: {}'.format(tests.keys()))
     logger.debug('Testing for {} distribution'.format(dist))
 
