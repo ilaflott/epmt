@@ -75,8 +75,8 @@ retire_jobs_per_delete_max = 20 # specify the chunk-size to delete jobs in
 # we expect the settings below to be overriden in settings.py
 # depending on the template of your choice
 orm = 'sqlalchemy'
-db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
-
+#db_params = { 'url': 'sqlite:///:memory:', 'echo': False }
+db_params = {'url': 'postgresql://epmt:Goal2020@workflow1:5432/epmt', 'echo': False}
 bulk_insert = True
 
 # we should normally always post-process on ingestion
