@@ -105,7 +105,8 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
     # a level higher).
     sqlalchemy_logger = logging.getLogger('sqlalchemy')
     #sqlalchemy_logger.setLevel(level+10)
-    sqlalchemy_logger.setLevel(level+20)
+    #sqlalchemy_logger.setLevel(level+20)
+    sqlalchemy_logger.setLevel(level+30)
 
 def init_settings(settings):
     if hasattr(init_settings, 'initialized'): return
@@ -231,10 +232,12 @@ def timing(f):
         return result
     return wrap
 
-# This function has a bug because it does not work with subprocess.run().
-# Needs to be fixed #TODO
 @contextmanager
 def capture():
+    '''
+    This function has a bug because it does not work with subprocess.run().
+    Needs to be fixed #TODO
+    '''
     import sys
     new_out, new_err = StringIO(), StringIO()
     old_out, old_err = sys.stdout, sys.stderr
@@ -244,21 +247,23 @@ def capture():
     finally:
         sys.stdout, sys.stderr = old_out, old_err
 
-# we assume tag is of the format:
-#  "key1:value1 ; key2:value2"
-# where the whitespace is optional and discarded. The output would be:
-# { "key1": value1, "key2": value2 }
-#
-# We can also handle the case where a value is not set for
-# a key, by assigning a default value for the key
-# For example, for the input:
-# "multitheaded;app=fft" and a tag_default_value="1"
-# the output would be:
-# { "multithreaded": "1", "app": "fft" }
-#
-# Note, both key and values will be strings and no attempt will be made to
-# guess the type for integer/floats
 def tag_from_string(s, delim = ';', sep = ':', tag_default_value = '1'):
+    '''
+    we assume tag is of the format:
+     "key1:value1 ; key2:value2"
+    where the whitespace is optional and discarded. The output would be:
+    { "key1": value1, "key2": value2 }
+    
+    We can also handle the case where a value is not set for
+    a key, by assigning a default value for the key
+    For example, for the input:
+    "multitheaded;app=fft" and a tag_default_value="1"
+    the output would be:
+    { "multithreaded": "1", "app": "fft" }
+    
+    Note, both key and values will be strings and no attempt will be made to
+    guess the type for integer/floats
+    '''
     import warnings
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore",category=DeprecationWarning)
@@ -295,15 +300,15 @@ def tag_dict_to_string(tag, delim = ';', sep = ':'):
         return tag
     return delim.join([ "{}{}{}".format(k, sep, tag[k]) for k in sorted(tag.keys()) ])
 
-# returns a list of tags, where each tag is a dict.
-# the input can be a list of strings or a single string.
-# each string will be converted to a dict
 def tags_list(tags):
-#    from pony.orm.ormtypes import TrackedDict
+    """
+    returns a list of tags, where each tag is a dict.
+    the input can be a list of strings or a single string.
+    each string will be converted to a dict
+    """
     # do we have a single tag in string or dict form?
     if isString(tags):
         tags = [tag_from_string(tags)]
-#    elif type(tags) in [dict, TrackedDict]:
     elif type(tags) == dict:
         tags = [tags]
     tags = [tag_from_string(t) if isString(t) else t for t in tags]
@@ -332,11 +337,13 @@ def sum_chk_overflow(x, y):
        z = float(x) + float(y)
     return z
 
-# return the sum of keys across two dictionaries
-# x = {'both1':1, 'both2':2, 'only_x': 100 }
-# y = {'both1':10, 'both2': 20, 'only_y':200 }
-# {'only_y': 200, 'both2': 22, 'both1': 11, 'only_x': 100}
 def sum_dicts(x, y):
+    """
+    return the sum of keys across two dictionaries
+        x = {'both1':1, 'both2':2, 'only_x': 100 }
+        y = {'both1':10, 'both2': 20, 'only_y':200 }
+        {'only_y': 200, 'both2': 22, 'both1': 11, 'only_x': 100}
+    """
     return { k: x.get(k, 0) + y.get(k, 0) for k in set(x) | set(y) }
 
 def sum_dicts_list(dicts, exclude=[]):

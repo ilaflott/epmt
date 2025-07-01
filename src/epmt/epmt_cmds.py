@@ -578,17 +578,19 @@ def annotate_metadata(metadatafile, annotations, replace = False):
     metadata['annotations'] = ann
     return write_job_metadata(metadatafile,metadata)
 
-# args list is one of the following forms:
-#   ['key1=value1', 'key2=value2', ...]  - annotate stopped job within a batch env
-#   or
-#   ['111.tgz', 'key1=value1', 'key2=value2', ...] - annotate staged job file
-#   or
-#   ['658000', 'key1=value1', 'key2y=value2', ...] - annotate job in database
-#
-# Annotations are appended to unless replace is True, in which
-# case existing annotations are wiped clean first.
 
 def epmt_annotate(argslist, replace = False):
+    '''
+    args list is one of the following forms:
+      ['key1=value1', 'key2=value2', ...]  - annotate stopped job within a batch env
+      or
+      ['111.tgz', 'key1=value1', 'key2=value2', ...] - annotate staged job file
+      or
+      ['658000', 'key1=value1', 'key2y=value2', ...] - annotate job in database
+    
+    Annotations are appended to unless replace is True, in which
+    case existing annotations are wiped clean first.
+    '''
     if not argslist:
         return False # nothing to do
 
@@ -1267,7 +1269,12 @@ def open_compressed_tar(inputf):
 #    metadata = check_and_add_workflowdb_envvars(metadata,total_env)
 
 # remove_on_success is set, then we will delete the file on success
-def submit_dir_or_tgz_to_db(inputf, pattern=settings.input_pattern, dry_run=True, keep_going=False, remove_on_success=settings.ingest_remove_on_success, destdir_on_failure=settings.ingest_failed_dir):
+def submit_dir_or_tgz_to_db(inputf,
+                            pattern=settings.input_pattern,
+                            dry_run=True,
+                            keep_going=False,
+                            remove_on_success=settings.ingest_remove_on_success,
+                            destdir_on_failure=settings.ingest_failed_dir):
     def move_away(from_file,to_dir):
         if to_dir:
             logger.info("move(%s,%s)",from_file,to_dir)
@@ -1288,7 +1295,7 @@ def submit_dir_or_tgz_to_db(inputf, pattern=settings.input_pattern, dry_run=True
             logger.error("Exception from remove/rmtree(%s): %s",from_path,str(e))
 
     def goodpath(from_path):
-        return (path.isfile(from_path) and (from_path.endswith("tar.gz") or from_path.endswith("tgz") or from_path.endswith("tar"))) or path.isdir(from_path)
+        return ( path.isfile(from_path) and ( from_path.endswith("tar.gz") or from_path.endswith("tgz") or from_path.endswith("tar") ) ) or path.isdir(from_path)
 
     if not goodpath(inputf):
         return (False, "submit_dir_or_tgz_to_db("+inputf+") not a job dir or tar archive", ())
@@ -1325,20 +1332,20 @@ def submit_to_db(inputf, pattern, dry_run=True):
 
     err,tar = open_compressed_tar(inputf)
     if err:
-        return (False, 'Error processing compressed tar file '+inputf, ())
-#    None
-#    if (input.endswith("tar.gz") or input.endswith("tgz")):
-#        import tarfile
-#        tar = tarfile.open(input, "r:gz")
-#    elif (input.endswith("tar")):
-#        import tarfile
-#        tar = tarfile.open(input, "r:")
+        return (False, 'Error processing compressed tar file '+inputf, ())#    None
+    # if (input.endswith("tar.gz") or input.endswith("tgz")):
+    #     import tarfile
+    #     tar = tarfile.open(input, "r:gz")
+    # elif (input.endswith("tar")):
+    #     import tarfile
+    #     tar = tarfile.open(input, "r:")
+    
     if not tar and not inputf.endswith("/"):
         logger.warning("missing trailing / on submit dirname %s",inputf);
         inputf += "/"
 
     if tar:
-#        for member in tar.getmembers():
+        # for member in tar.getmembers():
         try:
             info = tar.getmember("./job_metadata")
         except KeyError:
@@ -1360,21 +1367,21 @@ def submit_to_db(inputf, pattern, dry_run=True):
     for h in filedict.keys():
         logger.info("host %s: %d files to import",h,len(filedict[h]))
 
-# Do as much as we can before bailing
+    # empty tuple in return object represents the submit details
+    # It's empty because we didn't actually submit anything (dry-run)
     if dry_run:
-#        check_workflowdb_dict(metadata,pfx="exp_")
+        # check_workflowdb_dict(metadata,pfx="exp_") #TODO ????
         logger.info("Dry run finished, skipping DB work")
-        # the third parameter below, represents the submit details
-        # It's empty because we didn't actually submit anything
         return (True, 'Dry run finished, skipping DB work', ())
 
-# Now we touch the Database
+    # Now we touch the Database
     from epmt.orm import setup_db
     if setup_db(settings,False) == False:
         return (False, 'Error in DB setup', ())
     from epmt.epmt_job import ETL_job_dict
     r = ETL_job_dict(metadata,filedict,settings,tarfile=tar)
     return r
+
     # (j, process_count) = r[-1]
     # logger.info("Committed job %s to database: %s",j.jobid,j)
     # return (j.jobid, process_count)
@@ -1392,11 +1399,13 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True):
     # Always collate into local temp dir
     if collate:
         tempdir = copy_files(indir, patterns = ['job_metadata'], prefix = 'epmt_stage_')
+        
+        # no need to cleanup as copy_files will clean
+        # up temp dir if it created one using mkdtemp
         if not tempdir:
             logger.error("No job metadata found in " + indir)
-            # no need to cleanup as copy_files will clean
-            # up temp dir if it created one using mkdtemp
             return False
+        
         tsv_files = glob(indir + '/*.tsv')
         if (tsv_files):
             copied_to = copy_files(indir, dest_dir = tempdir, patterns = ['*.tsv'])
@@ -1412,11 +1421,11 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True):
                 logger.debug("csv concatenation returned status = %s",status)
                 rmtree(tempdir, ignore_errors=True)
                 return False
+       # \begin HACK: should call a real annotate function
             if badfiles:
                 d={}
                 d["epmt_stage_error"]=str(badfiles)
                 logger.error("Job being annotated with %s",str(d))
-                # begin HACK: should call a real annotate function
                 metadatafile = tempdir+"/job_metadata"
                 metadata = read_job_metadata(metadatafile)
                 if not metadata:
@@ -1437,8 +1446,8 @@ def stage_job(indir,collate=True,compress_and_tar=True,keep_going=True):
         else:
             filetostage = gettempdir()+"/"+path.basename(path.dirname(indir))
             move(tempdir,filetostage)
-
-# end HACK
+        # \end HACK
+    
     cmd = settings.stage_command + " " + filetostage + " " + settings.stage_command_dest
     logger.info(cmd)
     return_code = run(cmd, shell=True).returncode
@@ -1483,7 +1492,7 @@ def epmt_stage(dirs, keep_going=True, collate=True, compress_and_tar=True):
 
 def epmt_dbsize(findwhat=['database','table','index','tablespace'], usejson=True, usebytes=True):
     from epmt.orm import orm_db_size
-# Absolutely all argument checking should go here, specifically the findwhat stuff
+    # Absolutely all argument checking should go here, specifically the findwhat stuff
     if findwhat == "all":
         findwhat = ['database','table','index','tablespace']
     return(orm_db_size(findwhat,usejson,usebytes))
@@ -1550,14 +1559,6 @@ def epmt_entrypoint(args):
                     return(-1)
                 else:
                     f = open(script_file)
-            # Pony needs the session with a db_session context manager
-            # SQLA doesn't care. We also don't have the SQLA db_session
-            # honoring the context manager contract yet. So, we have
-            # to have some conditional code unfortunately
-            #if settings.orm == 'pony':
-            #    with db_session:
-            #        exec(f.read())
-            #else:
             exec(f.read())
         else:
             epmt_shell(ipython = False)
@@ -1565,49 +1566,71 @@ def epmt_entrypoint(args):
 
     if args.command == 'convert':
         from epmt.epmt_convert_csv import convert_csv_in_tar
-        return (convert_csv_in_tar(args.src_tgz, args.dest_tgz) == False)
+        return (convert_csv_in_tar(args.src_tgz,
+                                   args.dest_tgz) == False)
 
     if args.command == 'explore':
         from epmt.epmt_exp_explore import exp_explore
-        exp_explore(args.epmt_cmd_args, metric = args.metric, limit = args.limit)
+        exp_explore(args.epmt_cmd_args,
+                    metric = args.metric,
+                    limit = args.limit)
         return 0
 
     if args.command == 'gui':
-        # Start both Dash interface and Static Web Server
+        logger.info('//CALL// \\begin epmt gui //CALL//')
         from threading import Thread
-        from epmt.ui import init_app, app
-        from epmt.serve_static import app as docsapp
-        # Bug in pyinstaller does not import the idna encoding
+        
+        # for Dash interface 
+        # this triggers postprocessing, why?  callbacks?
+        logger.info('//IMPORT// import epmt.ui.init_app //IMPORT//')
+        from epmt.ui import init_app 
+
+        # Here app == dash.Dash
+        logger.info('//IMPORT// import epmt.ui.app //IMPORT//')
+        from epmt.ui import app
+        
+        # Bug in pyinstaller does not import the idna encoding #TODO double check this
         import encodings.idna
-        # Here app is the content of the dash interface
+        
+        logger.info('//CALL// init_app() //CALL//')
         init_app()
+        
+        #logger.info('//CALL// app.run_server //CALL//')
         #ui = Thread(target=app.run_server, kwargs={'port':8050, 'host':'0.0.0.0'})
+        logger.info('//CALL// app.run //CALL//')
         ui = Thread(target=app.run, kwargs={'port':8050, 'host':'0.0.0.0'})
-        docs = Thread(target=docsapp.run, kwargs={'port':8080, 'host':'0.0.0.0'})
         ui.start()
-        docs.start()
+
+        ## for Static Webserver
+        #logger.info('//IMPORT// import epmt.serve_static.app //IMPORT//')
+        #from epmt.serve_static import app as docsapp
+        #logger.info('//CALL// docsapp.run //CALL//')
+        #docs = Thread(target=docsapp.run, kwargs={'port':8080, 'host':'0.0.0.0'})
+        #docs.start()
+        
         return 0
 
     if args.command == 'integration':
-        import subprocess
         from epmt.epmtlib import get_install_root
-        from glob import glob
+        install_root = get_install_root()
+
         req_tests = None
         tests_to_run = []
         logger.debug("exclude {}".format(args.exclude))
         if args.epmt_cmd_args:
             req_tests = args.epmt_cmd_args
-        install_root = get_install_root()
-#        bats_tester = install_root+'/test/integration/libs/bats/bin/bats'
+
         bats_tester = install_root+'/test/integration/libs/bats/libexec/bats'
-        #sample_test = install_root+'/test/integration/001-basic.bats'
-        test_folder = install_root+'/test/integration'
         logger.debug("Bats: {}".format(bats_tester))
+
+        test_folder = install_root+'/test/integration'
         logger.debug("test directory: {}".format(test_folder))
+
+        # Get test names in test directory
         from glob import glob
         from os.path import basename
-        # Get test names in test directory
         tests = sorted([basename(x) for x in glob(test_folder+'/*.bats')])
+        
         # Search the requested test names without path for a match
         if req_tests:
             for r in req_tests:
@@ -1626,26 +1649,30 @@ def epmt_entrypoint(args):
         good_tests = []
         if len(args.exclude)>0:
             for t in tests_to_run:
-                    for x in args.exclude:
-                        if x not in t:
-                            good_tests.append(test_folder + '/' + t)
+                for x in args.exclude:
+                    if x not in t:
+                        good_tests.append(test_folder + '/' + t)
         else:
             for t in tests_to_run:
                 good_tests.append(test_folder + '/' + t)
+                
         good_tests = ' '.join(good_tests)
         logger.debug("Tests to run {}".format(good_tests))
         if len(good_tests) < 1:
                 from sys import stderr
                 print('No test found', file=stderr)
                 return -1
+            
         cmd = bats_tester+" "+good_tests
         logger.debug(cmd)
+        
         # set up a signal handler so we can make sure we trap common
         # interrupts and also send the SIGTERM to spanwed child processes
         from epmt.epmtlib import set_signal_handlers
         from signal import SIGTERM
         import psutil
         from sys import stderr
+        
         def sig_handler(signo, frame):
             print("Sending TERM to child processes..", file=stderr)
             # use psutil to determine all the child processes
@@ -1654,7 +1681,10 @@ def epmt_entrypoint(args):
             for child in children:
                 kill(child.pid, SIGTERM)
         set_signal_handlers([], sig_handler)
+
+        import subprocess
         retval = subprocess.run(cmd, shell=True)
+        
         # restore signal handlers to the defaults
         set_signal_handlers([])
         return retval.returncode
@@ -1681,7 +1711,6 @@ def epmt_entrypoint(args):
             TEST_MODULES = args.epmt_cmd_args
         success_list=[]
         for m in TEST_MODULES:
-            # in epmt shell, the namespace changes. no leading epmt. needed.
             m = f'epmt.{m}'
             mod = import_module(m)
             suite = unittest.TestLoader().loadTestsFromModule(mod)
@@ -1700,15 +1729,17 @@ def epmt_entrypoint(args):
 
     if args.command == 'retire':
         from epmt.epmt_cmd_retire import epmt_retire
-        epmt_retire(skip_unprocessed=args.skip_unproc, dry_run=args.dry_run)
+        epmt_retire(skip_unprocessed=args.skip_unproc,
+                    dry_run=args.dry_run)
         return 0
 
     if args.command == 'check':
         # fake a job id so that epmt_check doesn't fail because of a missing job id
         environ['SLURM_JOB_ID'] = '1'
-        return(0 if epmt_check() else 1)
+        return ( 0 if epmt_check() else 1 )
 
     if args.command == 'daemon':
+        
         from epmt.epmt_daemon import start_daemon, stop_daemon, daemon_loop, print_daemon_status
         if args.no_analyze and not args.post_process:
             logger.error("Skipping analysis requires post processing to be enabled")
@@ -1728,12 +1759,16 @@ def epmt_entrypoint(args):
                             'move_away': args.move_away,
                             'retire': args.retire,
                             'verbose': args.verbose }
-            return start_daemon(args.foreground,**daemon_args)
+            return start_daemon(args.foreground,
+                                **daemon_args)
+        
         elif args.stop:
             return stop_daemon()
+        
         else:
             return print_daemon_status()
-    # submit does the drop on its own, so here we handle
+        
+    # submit does the drop on its own, so here we handle... Ian: why was this sentence never finished??
     if args.command == 'drop':
         if (not(args.force)):
             confirm = input("This will drop the entire database. This action cannot be reversed. Are you sure (yes/NO): ")
@@ -1743,18 +1778,32 @@ def epmt_entrypoint(args):
         from epmt.orm import orm_drop_db
         orm_drop_db()
         return 0
+    
     if args.command == 'dbsize':
         return(epmt_dbsize(args.epmt_cmd_args) == False)
+    
     if args.command == 'start':
-        return(epmt_start_job(keep_going=not args.error, other=args.epmt_cmd_args) == False)
+        return(epmt_start_job(keep_going=not args.error,
+                              other=args.epmt_cmd_args) == False)
+    
     if args.command == 'stop':
-        return(epmt_stop_job(keep_going=not args.error, other=args.epmt_cmd_args) == False)
+        return(epmt_stop_job(keep_going=not args.error,
+                             other=args.epmt_cmd_args) == False)
+    
     if args.command == "stage":
-        return(epmt_stage(args.epmt_cmd_args,keep_going=not args.error,collate=not args.no_collate,compress_and_tar=not args.no_compress_and_tar) == False)
+        return(epmt_stage(args.epmt_cmd_args,
+                          keep_going=not args.error,
+                          collate=not args.no_collate,
+                          compress_and_tar=not args.no_compress_and_tar) == False)
     if args.command == 'run':
-        return(epmt_run(args.epmt_cmd_args,wrapit=args.auto,dry_run=args.dry_run,debug=(args.verbose > 2)))
+        return(epmt_run(args.epmt_cmd_args,
+                        wrapit=args.auto,
+                        dry_run=args.dry_run,
+                        debug=(args.verbose > 2)))
+    
     if args.command == 'annotate':
-        return(epmt_annotate(args.epmt_cmd_args, args.replace) == False)
+        return(epmt_annotate(args.epmt_cmd_args,
+                             args.replace) == False)
 
     if args.command == 'schema':
         from epmt.orm import orm_dump_schema
@@ -1768,24 +1817,40 @@ def epmt_entrypoint(args):
     # if args.command == 'show':
     #     from epmt.epmt_cmd_show import epmt_show_job
     #     return(epmt_show_job(args.epmt_cmd_args, key = args.key) == False)
+    
     if args.command == 'source':
-        s = epmt_source(slurm_prolog=args.slurm,papiex_debug=(args.verbose > 2),monitor_debug=(args.verbose > 3))
+        s = epmt_source(slurm_prolog=args.slurm,
+                        papiex_debug=(args.verbose > 2),
+                        monitor_debug=(args.verbose > 3))
         if not s:
             return(1)
         print(s,end="")
         return(0)
+
     if args.command == 'dump':
-        return(epmt_dump_metadata(args.epmt_cmd_args, key = args.key) == False)
+        return(epmt_dump_metadata(args.epmt_cmd_args,
+                                  key = args.key) == False)
+
     if args.command == 'submit':
-        return(epmt_submit(args.epmt_cmd_args,dry_run=args.dry_run,drop=args.drop,keep_going=not args.error, ncpus = args.num_cpus, remove_on_success=args.remove, move_on_failure=args.move_away) == False)
+        return(epmt_submit(args.epmt_cmd_args,
+                           dry_run=args.dry_run,
+                           drop=args.drop,
+                           keep_going=not args.error,
+                           ncpus = args.num_cpus,
+                           remove_on_success=args.remove,
+                           move_on_failure=args.move_away) == False)
+
     if args.command == 'check':
         return(epmt_check() == False)
+    
     if args.command == 'delete':
         from epmt.epmt_cmd_delete import epmt_delete_jobs
         return(epmt_delete_jobs(args.epmt_cmd_args) == False)
+    
     if args.command == 'list':
         from epmt.epmt_cmd_list import epmt_list
         return(epmt_list(args.epmt_cmd_args) == False)
+    
     if args.command == 'notebook':
         from epmt.epmt_cmd_notebook import epmt_notebook
         return(epmt_notebook(args.epmt_cmd_args) == False)
