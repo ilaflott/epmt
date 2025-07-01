@@ -245,11 +245,11 @@ def verifyOut(fileList, outfile):
 
 def file_len(fname):
     """Helper function for counting file lines"""
+    ind = None
     with open(fname) as f:
         for i, ln in enumerate(f):
-            ln = ln
-            pass
-    return i + 1
+            ind = i
+    return ind + 1
 
 
 def determine_output_filename(instr):

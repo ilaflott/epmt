@@ -306,7 +306,8 @@ def daemon_loop(context, niters=0, post_process=True, analyze=True, retire=False
             iters += 1
             _loop_time = (time() - _t1)
             delay = MAX_DELAY - _loop_time
-            if (niters > 0) and (iters >= niters):
+            #if (niters > 0) and (iters >= niters):
+            if 0 < niters <= iters:
                 logger.debug('ending daemon loop, as requested %d iterations completed', niters)
                 break
             if delay > 0:

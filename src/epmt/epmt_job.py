@@ -1311,7 +1311,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             #     continue
 
 
-# Make Process/Thread/Metrics objects in DB
+            # Make Process/Thread/Metrics objects in DB
             # there are 1 or more process dataframes in the collated df
             # let's iterate over them
             _df_process_start_ts = time.time()
@@ -1332,30 +1332,31 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                     # only need to do this once
                     info_dict['metric_names'] = ",".join(sorted(p.threads_sums.keys()))
 
-# If using old version of papiex, process tags are in the comment field
+                # If using old version of papiex, process tags are in the comment field
                 _proc_tag_start_ts = time.time()
                 if not p.tags:
                     p.tags = tag_from_string(oldproctag) if oldproctag else {}
-
+                # pickle and add tag dictionaries to a set
+                # remember to sort_keys during the pickle!
                 if p.tags:
-                    # pickle and add tag dictionaries to a set
-                    # remember to sort_keys during the pickle!
                     all_tags.add(dumps(p.tags, sort_keys=True))
                 proc_tag_process_time += time.time() - _proc_tag_start_ts
-
                 _t = time.time()
+                
                 # We shouldn't be seeing a pid repeat in a job.
                 # Theoretically it's posssible but it would complicate the pid map a bit
                 # assert(p.pid not in pid_map)
                 pid_map[p.pid] = p
                 all_procs.append(p)
                 total_procs += 1
-# Compute duration of job
+                
+                # Compute duration of job
                 if (p.start < earliest_process):
                     earliest_process = p.start
                     root_proc = p
-                if (p.end > latest_process):
-                    latest_process = p.end
+                #if (p.end > latest_process):
+                #    latest_process = p.end
+                latest_process = max(latest_process, p.end)
 
                 # correct the process start/stop times for timezone
                 # start_ts and end_ts are timezone-aware datetime objects
@@ -1366,11 +1367,12 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                         p.exename, p.pid, p.start, p.end, start_ts, stop_ts)
                     logger.error(msg)
                     raise ValueError(msg)
+                
                 # save naive datetime objects in the database
                 p.start = p.start.replace(tzinfo=None)
                 p.end = p.end.replace(tzinfo=None)
 
-# Debugging/    progress
+                # Debugging/    progress
                 cnt += 1
                 nrecs += p.numtids
                 csvt = datetime.now() - csv
@@ -1389,7 +1391,6 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 
             df_process_time += time.time() - _df_process_start_ts
 
-#
         if cnt:
             didsomething = True
 

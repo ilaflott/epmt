@@ -1696,7 +1696,7 @@ def get_ops(jobs, tags=[], exact_tag_only=False, combine=False, fmt='dict', op_d
     _tags = []
     job_proc_tags = get_job_proc_tags(jobs, fold=True)
     for t in tags:
-        if isString(t) and not (':' in t):
+        if isString(t) and ':' not in t:
             # this means we have specified a label such as 'op'
             # and we want to expand that into a list of tags such as
             # [{'op': 'timavg'}, {'op': 'dmget'},...]
@@ -2080,8 +2080,7 @@ def retire_jobs(ndays=settings.retire_jobs_ndays, skip_unprocessed=False, dry_ru
 
             logger.info('%d jobs out of %d deleted so far', tot_num_deleted, num_delete_attempts)
 
-        else:
-            logger.info('done deleting jobs in chunks!')
+        logger.info('done deleting jobs in chunks!')
 
         return tot_num_deleted
 

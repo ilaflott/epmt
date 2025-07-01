@@ -8,9 +8,9 @@ from epmt.epmtlib import get_install_root
 from os import path
 
 
-def setUpModule():
-    global install_root
-    install_root = get_install_root()
+#def setUpModule():
+#    global install_root
+install_root = get_install_root()
 
 
 class EPMTSettings(unittest.TestCase):

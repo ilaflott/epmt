@@ -274,11 +274,11 @@ def verify_stage_command():
         safe_rm(target)
         open(inp, 'a').close()
         run_shell_cmd(stage_cmd, inp, dest)
-        if not path.exists(target):
-            raise ("could not create output in {0}".format(dest))
     except Exception as e:
         print(str(e), file=stderr)
         PrintFail()
+        if not path.exists(target):
+            raise FileNotFoundError("could not create output in {0}".format(dest)) from e
         return False
     finally:
         safe_rm(inp)
@@ -1639,7 +1639,7 @@ def epmt_entrypoint(args):
                     return (-1)
                 else:
                     f = open(script_file)
-            exec(f.read())
+            exec(f.read()) # TODO remove this functionality, it's risky and not really needed
         else:
             epmt_shell(ipython=False)
         return 0
