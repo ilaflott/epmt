@@ -62,9 +62,6 @@ papiex/*
 src/epmt.egg-info/*
 src/papiex-epmt-install/*
 
-# user settings
-src/epmt/settings.py
-
 # virtualenv
 venv*
 
