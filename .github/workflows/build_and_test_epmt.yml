@@ -12,164 +12,191 @@ concurrency:
 
 
 jobs:
-  build-linux:
-    runs-on: ubuntu-latest
+  example_matrix:
+    strategy:
+      matrix:
+        database: ["sqlite3", "postgresql"]
 
-    #service:
-    #  - postgres:latest
+    build-linux:
+      runs-on: ubuntu-latest
+      
+      services:
+        postgres: latest
+        image: postgres:15
+        env:
+          POSTGRES_USER: epmt
+          POSTGRES_PASSWORD: Goal2020
+          POSTGRES_DB: epmt
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U testuser"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
-    container:
-      image: rockylinux:8
-      env:
-        POSTGRES_DB: 'EPMT'
-        POSTGRES_USER: 'postgres'
-        POSTGRES_PASSWORD: 'example'
-        PIP_CACHE_DIR: '$CI_PROJECT_DIR/.cache/pip'
-      options: --privileged
+      container:
+        image: rockylinux:8
+        env:
+          POSTGRES_DB: 'EPMT'
+          POSTGRES_USER: 'postgres'
+          POSTGRES_PASSWORD: 'example'
+          PIP_CACHE_DIR: '$CI_PROJECT_DIR/.cache/pip'
+        options: --privileged
 
-    steps:
-      - uses: actions/checkout@v4
-      - name: yum install and update
-        run: |
-          yum update -y
-          yum install -y findutils unzip bash tcsh nc curl make git gcc postgresql-devel zlib-devel bzip2 bzip2-devel readline-devel sqlite-devel openssl-devel xz xz-devel libffi-devel
+      steps:
+        - uses: actions/checkout@v4
+        - name: yum install and update
+          run: |
+            yum update -y
+            yum install -y findutils unzip bash tcsh nc curl make git gcc postgresql-devel zlib-devel bzip2 bzip2-devel readline-devel sqlite-devel openssl-devel xz xz-devel libffi-devel
 
-      - name: install and configure sqlite3
-        run: |
-          cd /usr/src
-          echo 'downloading sqlite3'
-          curl -o sqlite-amalgamation-3490100.zip https://www.sqlite.org/2025/sqlite-amalgamation-3490100.zip
-          unzip sqlite-amalgamation-3490100.zip
-          echo 'building libsqlite3 with json1 and other useful extensions'
-          cd sqlite-amalgamation-3490100
-          gcc -shared -fPIC -O2  -DSQLITE_ENABLE_JSON1 -DSQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_MAX_VARIABLE_NUMBER=9999 sqlite3.c -o /usr/lib64/libsqlite3.so
+        - name: install and configure sqlite3
+          if: matrix.database == "sqlite3" 
+          run: |
+            cd /usr/src
+            echo 'downloading sqlite3'
+            curl -o sqlite-amalgamation-3490100.zip https://www.sqlite.org/2025/sqlite-amalgamation-3490100.zip
+            unzip sqlite-amalgamation-3490100.zip
+            echo 'building libsqlite3 with json1 and other useful extensions'
+            cd sqlite-amalgamation-3490100
+            gcc -shared -fPIC -O2  -DSQLITE_ENABLE_JSON1 -DSQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_MAX_VARIABLE_NUMBER=9999 sqlite3.c -o /usr/lib64/libsqlite3.so
 
-      - name: install python3
-        run: |
-          cd /usr/src
-          echo 'downloading python'
-          curl -o Python-3.9.22.tgz https://www.python.org/ftp/python/3.9.22/Python-3.9.22.tgz
-          tar xzf Python-3.9.22.tgz
-          cd Python-3.9.22
-          echo 'building python3'
-          ./configure --quiet --prefix=/usr --enable-shared --enable-optimizations --enable-loadable-sqlite-extensions
-          make --silent install > /dev/null
+        - name: install and configure postgresql
+          if: matrix.database == 'postgresql'
+          env: 
+            DATABASE_URL: 'postgresql://epmt:Goal2020@workflow1:5432/epmt'
+          run: |
+            echo 'running postgresql'
+            psql -d ppostgresql://epmt:Goal2020@workflow1:5432/epmt
 
-      - name: configure python3 and upgrade pip and grab gcc-c++
-        run: |
-          ldconfig
-          python3 -V
-          pip3 install --upgrade pip
-          yum install -y gcc-c++
 
-      - name: install requirements
-        run: |
-          pip3 install -r requirements.txt.py3
+        - name: install python3
+          run: |
+            cd /usr/src
+            echo 'downloading python'
+            curl -o Python-3.9.22.tgz https://www.python.org/ftp/python/3.9.22/Python-3.9.22.tgz
+            tar xzf Python-3.9.22.tgz
+            cd Python-3.9.22
+            echo 'building python3'
+            ./configure --quiet --prefix=/usr --enable-shared --enable-optimizations --enable-loadable-sqlite-extensions
+            make --silent install > /dev/null
 
-      - name: make dash tarball
-        run: |
-          make epmt-dash
+        - name: configure python3 and upgrade pip and grab gcc-c++
+          run: |
+            ldconfig
+            python3 -V
+            pip3 install --upgrade pip
+            yum install -y gcc-c++
 
-      - name: make papiex tarball
-        run: |
-          make OUTSIDE_DOCKER='YUP' papiex-dist
+        - name: install requirements
+          run: |
+            pip3 install -r requirements.txt.py3
 
-      - name: make epmt pip-packaging
-        run: |
-          make dist python-dist dist-test
+        - name: make dash tarball
+          run: |
+            make epmt-dash
 
-      - name: pip install epmt pip-package
-        run: |
-          ls src/dist/epmt*gz
-          pip3 install src/dist/epmt*gz
+        - name: make papiex tarball
+          run: |
+            make OUTSIDE_DOCKER='YUP' papiex-dist
 
-      - name: create links to papiex executables, adjust path, install bats for integration tests
-        run: |
-          mkdir -p /usr/lib/python3.9/site-packages/papiex-epmt-install
-          ln -s  /usr/lib/python3.9/site-packages/epmt/lib /usr/lib/python3.9/site-packages/papiex-epmt-install/
-          ln -s  /usr/lib/python3.9/site-packages/epmt/bin /usr/lib/python3.9/site-packages/papiex-epmt-install/
-          export PATH='/usr/bin:${PATH}:/usr/local/libexec:/usr/local/bin'
-          /usr/lib/python3.9/site-packages/epmt/test/integration/libs/bats/install.sh /usr/local
+        - name: make epmt pip-packaging
+          run: |
+            make dist python-dist dist-test
 
-      - name: epmt version call 
-        run: |
-          epmt -v -V
+        - name: pip install epmt pip-package
+          run: |
+            ls src/dist/epmt*gz
+            pip3 install src/dist/epmt*gz
 
-      - name: epmt check call 
-        run: |
-          echo 2 > /proc/sys/kernel/perf_event_paranoid
-          epmt -vv check
+        - name: create links to papiex executables, adjust path, install bats for integration tests
+          run: |
+            mkdir -p /usr/lib/python3.9/site-packages/papiex-epmt-install
+            ln -s  /usr/lib/python3.9/site-packages/epmt/lib /usr/lib/python3.9/site-packages/papiex-epmt-install/
+            ln -s  /usr/lib/python3.9/site-packages/epmt/bin /usr/lib/python3.9/site-packages/papiex-epmt-install/
+            export PATH='/usr/bin:${PATH}:/usr/local/libexec:/usr/local/bin'
+            /usr/lib/python3.9/site-packages/epmt/test/integration/libs/bats/install.sh /usr/local
 
-      - name: test_anysh call 
-        run: |
-          python3 -m unittest -v epmt.test.test_anysh
+        - name: epmt version call 
+          run: |
+            epmt -v -V
 
-      - name: test_cmds call 
-        run: |
-          python3 -m unittest -v epmt.test.test_cmds
+        - name: epmt check call 
+          run: |
+            echo 2 > /proc/sys/kernel/perf_event_paranoid
+            epmt -vv check
 
-      - name: test_db_migration call 
-        run: |
-          python3 -m unittest -v epmt.test.test_db_migration
+        - name: test_anysh call 
+          run: |
+            python3 -m unittest -v epmt.test.test_anysh
 
-      - name: test_db_schema call 
-        run: |
-          python3 -m unittest -v epmt.test.test_db_schema
+        - name: test_cmds call 
+          run: |
+            python3 -m unittest -v epmt.test.test_cmds
 
-      - name: test_explore call 
-        run: |
-          python3 -m unittest -v epmt.test.test_explore
+        - name: test_db_migration call 
+          run: |
+            python3 -m unittest -v epmt.test.test_db_migration
 
-      - name: test_lib call 
-        run: |
-          python3 -m unittest -v epmt.test.test_lib
+        - name: test_db_schema call 
+          run: |
+            python3 -m unittest -v epmt.test.test_db_schema
 
-      - name: test_outliers (GUARDED) call 
-        continue-on-error: true
-        run: |
-          python3 -m unittest -v epmt.test.test_outliers
+        - name: test_explore call 
+          run: |
+            python3 -m unittest -v epmt.test.test_explore
 
-      - name: test_query (GUARDED) call 
-        continue-on-error: true
-        run: |
-          python3 -m unittest -v epmt.test.test_query
+        - name: test_lib call 
+          run: |
+            python3 -m unittest -v epmt.test.test_lib
 
-      - name: test_run call 
-        run: |
-          python3 -m unittest -v epmt.test.test_run
+        - name: test_outliers (GUARDED) call 
+          continue-on-error: true
+          run: |
+            python3 -m unittest -v epmt.test.test_outliers
 
-      - name: test_settings call 
-        run: |
-          python3 -m unittest -v epmt.test.test_settings
+        - name: test_query (GUARDED) call 
+          continue-on-error: true
+          run: |
+            python3 -m unittest -v epmt.test.test_query
 
-      - name: test_shell call 
-        run: |
-          python3 -m unittest -v epmt.test.test_shell
+        - name: test_run call 
+          run: |
+            python3 -m unittest -v epmt.test.test_run
 
-      - name: test_stat call 
-        run: |
-          python3 -m unittest -v epmt.test.test_stat
+        - name: test_settings call 
+          run: |
+            python3 -m unittest -v epmt.test.test_settings
 
-      - name: test_submit call 
-        run: |
-          python3 -m unittest -v epmt.test.test_submit
+        - name: test_shell call 
+          run: |
+            python3 -m unittest -v epmt.test.test_shell
 
-      - name: epmt integration (GUARDED) call 
-        continue-on-error: true
-        run: |
-          epmt integration
+        - name: test_stat call 
+          run: |
+            python3 -m unittest -v epmt.test.test_stat
 
-      - name: install pylint
-        run: |
-          pip install pylint
+        - name: test_submit call 
+          run: |
+            python3 -m unittest -v epmt.test.test_submit
 
-      - name: run pylint (GUARDED)
-        continue-on-error: true
-        run: |
-          pylint --max-line-length 120 --max-args 6 -ry src/epmt
+        - name: epmt integration (GUARDED) call 
+          continue-on-error: true
+          run: |
+            epmt integration
 
-      - name: upload pip installable
-        uses: actions/upload-artifact@v4
-        with:
-          name: epmt-pip-install-TEST
-          path: src/dist/epmt-4.11.0.tar.gz
+        - name: install pylint
+          run: |
+            pip install pylint
+
+        - name: run pylint (GUARDED)
+          continue-on-error: true
+          run: |
+            pylint --max-line-length 120 --max-args 6 -ry src/epmt
+
+        - name: upload pip installable
+          uses: actions/upload-artifact@v4
+          with:
+            name: epmt-pip-install-TEST
+            path: src/dist/epmt-4.11.0.tar.gz
