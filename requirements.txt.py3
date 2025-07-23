@@ -88,8 +88,7 @@ py-cpuinfo
 pycparser
 PyGithub
 Pygments
-pyinstaller==5.7.0
-pyinstaller-hooks-contrib==2023.11
+
 PyJWT
 PyNaCl
 pyod
