@@ -362,10 +362,7 @@ class QueryAPI(unittest.TestCase):
                         ref), 'error in {0} -> {1}'.format(inp_fmt, out_fmt))
                 elif out_fmt == 'dict':
                     self.assertTrue(
-                        (isinstance(
-                            out,
-                            type(
-                                out[0])) == dict),
+                        isinstance(out, list) and len(out) > 0 and isinstance(out[0], dict),
                         'output format not dictlist when input fmt: {0}'.format(inp_fmt))
                     self.assertEqual(sorted([j['jobid'] for j in out]), sorted(ref),
                                      'error in {0} -> {1}'.format(inp_fmt, out_fmt))
