@@ -975,7 +975,7 @@ def dframe_append_weighted_row(df, weights, ignore_index = True, use_abs = False
     
     for c in df.columns:
         new_row.append(((abs(df[c].values) if use_abs else df[c].values) * np.asarray(weights_array)).sum())
-    return df.append(pd.DataFrame([new_row], columns = df.columns), ignore_index = ignore_index)
+    return df._append(pd.DataFrame([new_row], columns = df.columns), ignore_index = ignore_index)
 
 def dict_outliers(dlist, labels = [], threshold = 2.0):
     '''
