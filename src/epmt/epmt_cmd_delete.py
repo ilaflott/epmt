@@ -12,11 +12,10 @@ def epmt_delete_jobs(joblist):
     if not joblist or len(joblist) == 0:
         logger.error("joblist must not be empty")
         raise ValueError()
-    
+
     # Delete jobs should return which ones don't get deleted if it cannot guarantee atomicity
     logger.info("deleted jobs %s",str(joblist))
     n_del_jobs =delete_jobs(joblist, force=True)
     if n_del_jobs != len(joblist):
         logger.warning("Warning! Some jobs could not be deleted.")
     return ( delete_jobs(joblist, force=True) == len(joblist) )
-

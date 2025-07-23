@@ -35,7 +35,7 @@ input_pattern = "*-papiex*.[ct]sv"
 
 from epmt.epmtlib import get_install_root
 install_prefix =     path.abspath(get_install_root() + "/../papiex-epmt-install/")
-    
+
 #install_prefix = path.dirname(path.abspath(__file__)) + "/../papiex-oss/papiex-epmt-install/"
 #install_prefix = path.abspath(this_file_dir + "/../../papiex-epmt-install/")
 
@@ -70,7 +70,7 @@ outlier_features_blacklist = ['env_dict', 'tags', 'info_dict', 'env_changes_dict
 #retire_jobs_ndays = 40   # specify in number of days; set to 0 to not retire jobs
 retire_jobs_ndays = 17   # specify in number of days; set to 0 to not retire jobs
 retire_models_ndays = 0 # specify in number of days; set to 0 to not retire models
-retire_jobs_per_delete_max = 20 # specify the chunk-size to delete jobs in 
+retire_jobs_per_delete_max = 20 # specify the chunk-size to delete jobs in
 
 # we expect the settings below to be overriden in settings.py
 # depending on the template of your choice
@@ -93,4 +93,3 @@ lazy_compute_process_tree = True
 
 # METADATA INTERNAL USE ONLY
 epmt_settings_kind = 'default'
-

@@ -20,7 +20,7 @@ def setUpModule():
         epmt_submit(sorted(glob(datafiles)), dry_run=False)
     # only use modz as the tests are written that way
     settings.univariate_classifiers = ['modified_z_score']
-    
+
 
 def tearDownModule():
     do_cleanup()
@@ -30,16 +30,16 @@ class QueryAPI(unittest.TestCase):
 #     @classmethod
 #     def setUpClass(cls):
 #         pass
-# 
+#
 #     # called ONCE after last tests in this class is finished
 #     @classmethod
 #     def tearDownClass(cls):
 #         pass
-# 
+#
 #     # called before every test
 #     def setUp(self):
 #         pass
-# 
+#
 #     # called after every test
 #     def tearDown(self):
 #         pass
@@ -83,7 +83,7 @@ class QueryAPI(unittest.TestCase):
     @db_session
     def test_job_advanced(self):
         jobs = eq.get_jobs(JOBS_LIST, fmt='terse', order=eq.desc(Job.start), limit=2, offset=1)
-        self.assertEqual(jobs, [u'685003', u'685000'], 'job limit/offset not working')
+        self.assertEqual(jobs, ['685003', '685000'], 'job limit/offset not working')
         if settings.orm == 'sqlalchemy':
             jobs = eq.get_jobs(JOBS_LIST, fltr=(Job.jobid != '685000'), fmt='orm')
         else:
@@ -130,9 +130,9 @@ class QueryAPI(unittest.TestCase):
         jobs = eq.get_jobs(JOBS_LIST, hosts=[], fmt='terse')
         self.assertEqual(set(jobs), set(JOBS_LIST))
         jobs = eq.get_jobs(JOBS_LIST, hosts=['pp208', 'pp212'], fmt='terse')
-        self.assertEqual(jobs, [u'685000', u'685003'])
+        self.assertEqual(jobs, ['685000', '685003'])
         jobs = eq.get_jobs(set(JOBS_LIST), hosts=['pp208', 'pp209', 'pp212'], fmt='terse')
-        self.assertEqual(jobs, sorted([u'685003', u'685000']))
+        self.assertEqual(jobs, sorted(['685003', '685000']))
         jobs = eq.get_jobs(JOBS_LIST, hosts=['pp208', 'pp313', 'pp212'], fmt='terse')
         self.assertEqual(jobs, sorted(JOBS_LIST))
         # when
@@ -148,11 +148,11 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(jobs, sorted(JOBS_LIST))
         # hosts + when
         jobs = eq.get_jobs(JOBS_LIST, hosts = 'pp208', when='06/15/2019 08:00', fmt='terse')
-        self.assertEqual(jobs, [u'685000'])
+        self.assertEqual(jobs, ['685000'])
         jobs = eq.get_jobs(JOBS_LIST, hosts = 'pp208', when='06/15/2019 11:00', fmt='terse')
         self.assertEqual(jobs, [])
         jobs = eq.get_jobs(JOBS_LIST, when='06/15/2019 08:00', hosts=['pp208', 'pp212'], fmt='terse')
-        self.assertEqual(jobs, sorted([u'685003', u'685000']))
+        self.assertEqual(jobs, sorted(['685003', '685000']))
         jobs = eq.get_jobs(JOBS_LIST, when='06/16/2019 08:00', hosts=['pp208', 'pp212'], fmt='terse')
         self.assertEqual(jobs, [])
 
@@ -213,12 +213,12 @@ class QueryAPI(unittest.TestCase):
         procs = eq.get_procs(tags={}, fmt='terse')
         self.assertEqual(len(procs), len(procs1)+1)
 
-        if settings.orm == 'sqlalchemy': 
+        if settings.orm == 'sqlalchemy':
             procs_with_tag = eq.get_procs(JOBS_LIST, tags='op_sequence:4', fltr=(Process.duration > 10000000), order=eq.desc(Process.duration), fmt='orm')
         else:
             procs_with_tag = eq.get_procs(JOBS_LIST, tags='op_sequence:4', fltr='p.duration > 10000000', order='desc(p.duration)', fmt='orm')
         self.assertEqual(procs_with_tag.count(), 2, 'incorrect process count when using tag and filter')
-        if settings.orm == 'sqlalchemy': 
+        if settings.orm == 'sqlalchemy':
             procs_with_tag = eq.get_procs(JOBS_LIST, tags={'op_sequence': 4}, fltr=(Process.duration > 10000000), order=eq.desc(Process.duration), fmt='orm')
         else:
             procs_with_tag = eq.get_procs(JOBS_LIST, tags={'op_sequence': 4}, fltr='p.duration > 10000000', order='desc(p.duration)', fmt='orm')
@@ -248,7 +248,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(eq.get_procs('685000', hosts=['pp208'], fmt='orm').count(), 3480)
         self.assertEqual(eq.get_procs('685000', hosts=['pp208', 'pp209'], fmt='orm').count(), 3480)
         self.assertEqual(eq.get_procs('685000', hosts=['pp209'], fmt='orm').count(), 0)
-        self.assertEqual(eq.get_procs(['685000', '685003'], hosts=['pp208', 'pp212'], fmt='orm').count(), 
+        self.assertEqual(eq.get_procs(['685000', '685003'], hosts=['pp208', 'pp212'], fmt='orm').count(),
 7265)
         self.assertEqual(eq.get_procs(['685000', '685003'], hosts=['pp212'], fmt='orm').count(), 3785)
 
@@ -284,7 +284,7 @@ class QueryAPI(unittest.TestCase):
             j1 = orm_get(Job, '685000')
             j2 = orm_get(Job, '685003')
             self.assertEqual(set(eq.conv_jobs(jobs, fmt='orm')[:]), set([j1, j2]))
-            self.assertEqual(set(eq.conv_jobs(jobs, fmt='pandas')['jobid'].values), set([u'685000', u'685003']))
+            self.assertEqual(set(eq.conv_jobs(jobs, fmt='pandas')['jobid'].values), set(['685000', '685003']))
             self.assertEqual(set([j['jobid'] for j in eq.conv_jobs(jobs, fmt='dict')]), set(['685000', '685003']))
 
         ref = eq.get_jobs(JOBS_LIST, fmt='terse')
@@ -307,7 +307,7 @@ class QueryAPI(unittest.TestCase):
 
     @db_session
     def test_job_proc_tags(self):
-        with self.assertRaises(ValueError): 
+        with self.assertRaises(ValueError):
             eq.job_proc_tags([], fold=False)
         tags = eq.job_proc_tags(['685000', '685016'], fold=False)
         self.assertEqual(len(tags), 89, "wrong unique process tags count")
@@ -371,7 +371,7 @@ class QueryAPI(unittest.TestCase):
         df = eq.get_op_metrics(['685000', '685016'])
         self.assertEqual(df.shape, (178,31), "wrong dataframe shape for get_op_metrics")
         top = df[['job', 'tags', 'duration']].sort_values('duration', axis=0, ascending=False)[:1]
-        self.assertEqual(top.tags.values[0], {u'op_instance': u'2', u'op_sequence': u'89', u'op': u'dmput'})
+        self.assertEqual(top.tags.values[0], {'op_instance': '2', 'op_sequence': '89', 'op': 'dmput'})
         self.assertEqual(int(top.duration.values[0]), 7008334182)
 
         df = eq.get_op_metrics(['685000', '685016'], op_duration_method = "sum-minus-overlap")
@@ -407,16 +407,16 @@ class QueryAPI(unittest.TestCase):
         df = eq.get_op_metrics(['685000', '685003', '685016'], group_by_tag=True)
         self.assertEqual(df.shape,(459,29), 'wrong get_op_metrics grouped shape when no tag specified')
         self.assertEqual(list(df['tags'].values[:10]),
-                         [ {u'op_instance': u'11', u'op_sequence': u'66', u'op': u'cp'},
-                           {u'op_instance': u'15', u'op_sequence': u'79', u'op': u'cp'},
-                           {u'op_instance': u'3', u'op_sequence': u'247', u'op': u'cp'},
-                           {u'op_instance': u'3', u'op_sequence': u'251', u'op': u'cp'},
-                           {u'op_instance': u'3', u'op_sequence': u'255', u'op': u'cp'},
-                           {u'op_instance': u'3', u'op_sequence': u'259', u'op': u'cp'},
-                           {u'op_instance': u'3', u'op_sequence': u'263', u'op': u'cp'},
-                           {u'op_instance': u'3', u'op_sequence': u'267', u'op': u'cp'},
-                           {u'op_instance': u'3', u'op_sequence': u'271', u'op': u'cp'},
-                           {u'op_instance': u'3', u'op_sequence': u'30', u'op': u'cp'} ],
+                         [ {'op_instance': '11', 'op_sequence': '66', 'op': 'cp'},
+                           {'op_instance': '15', 'op_sequence': '79', 'op': 'cp'},
+                           {'op_instance': '3', 'op_sequence': '247', 'op': 'cp'},
+                           {'op_instance': '3', 'op_sequence': '251', 'op': 'cp'},
+                           {'op_instance': '3', 'op_sequence': '255', 'op': 'cp'},
+                           {'op_instance': '3', 'op_sequence': '259', 'op': 'cp'},
+                           {'op_instance': '3', 'op_sequence': '263', 'op': 'cp'},
+                           {'op_instance': '3', 'op_sequence': '267', 'op': 'cp'},
+                           {'op_instance': '3', 'op_sequence': '271', 'op': 'cp'},
+                           {'op_instance': '3', 'op_sequence': '30', 'op': 'cp'} ],
                          'wrong tags ordering in grouped get_op_metrics')
         # pylint: disable=no-member
         self.assertEqual(list(df.cpu_time.values)[:10], [2476289.0, 2489292.0, 472905.0, 462906.0, 461906.0, 465903.0, 471904.0, 485902.0, 472905.0, 2577272.0])
@@ -424,7 +424,7 @@ class QueryAPI(unittest.TestCase):
         df = eq.get_op_metrics(['685000', '685003', '685016'], tags=['op:hsmget', 'op:mv'], group_by_tag=True)
         self.assertEqual(df.shape, (2,29), 'wrong get_op_metrics shape with tags specified')
         # pylint: disable=no-member
-        self.assertEqual(list(df.tags.values), [{u'op': u'hsmget'}, {u'op': u'mv'}])
+        self.assertEqual(list(df.tags.values), [{'op': 'hsmget'}, {'op': 'mv'}])
         self.assertEqual(list(df['cpu_time'].values), [208577324.0, 30292583.0])
 
     @db_session
@@ -457,7 +457,7 @@ class QueryAPI(unittest.TestCase):
     @db_session
     def test_root(self):
         p = eq.root('685016')
-        self.assertEqual((p['pid'], p['exename']), (122181, u'tcsh'))
+        self.assertEqual((p['pid'], p['exename']), (122181, 'tcsh'))
         p = eq.root('685016', fmt='orm')
         self.assertEqual(p.pid, 122181)
         df = eq.root('685016', fmt='pandas')
@@ -491,7 +491,7 @@ class QueryAPI(unittest.TestCase):
         r = eq.annotate_job('685000', {'def': 'hello'})
         self.assertEqual(r, {'abc': 100, 'def': 'hello'})
         self.assertEqual(eq.get_job_annotations('685000'), {'abc': 100, 'def': 'hello'})
-        self.assertEqual(eq.get_jobs(annotations = {'abc': 100}, fmt='terse'), [u'685000'])
+        self.assertEqual(eq.get_jobs(annotations = {'abc': 100}, fmt='terse'), ['685000'])
         r = eq.annotate_job('685000', {'def': 'hello'}, True)
         self.assertEqual(r, {'def': 'hello'})
         self.assertEqual(eq.get_job_annotations('685000'), {'def': 'hello'})
@@ -505,7 +505,7 @@ class QueryAPI(unittest.TestCase):
         self.assertEqual(eq.get_job_annotations('685016'),
                          {'abc': '200', 'def': 'bye',
                           'EPMT_JOB_TAGS': 'atm_res:c96l49;exp_component:ocean_month_rho2_1x1deg;exp_name:ESM4_historical_D151;exp_time:18840101;ocn_res:0.5l75;script_name:ESM4_historical_D151_ocean_month_rho2_1x1deg_18840101'})
-        self.assertEqual(eq.get_jobs(annotations = {'abc': '200'}, fmt='terse'), [u'685016'])
+        self.assertEqual(eq.get_jobs(annotations = {'abc': '200'}, fmt='terse'), ['685016'])
 
     @db_session
     def test_jobs_comparable(self):
@@ -528,7 +528,7 @@ class QueryAPI(unittest.TestCase):
         r = eq.set_job_analyses('685000', {'rca': 1})
         self.assertEqual(r, {'outlier_detection': 1, 'rca': 1})
         self.assertEqual(eq.get_job_analyses('685000'), {'outlier_detection': 1, 'rca': 1})
-        self.assertEqual(eq.get_jobs(analyses={'rca': 1}, fmt='terse'), [u'685000'])
+        self.assertEqual(eq.get_jobs(analyses={'rca': 1}, fmt='terse'), ['685000'])
         r = eq.set_job_analyses('685000', {'rca': 1}, True)
         self.assertEqual(r, {'rca': 1})
         self.assertEqual(eq.get_job_analyses('685000'), {'rca': 1})
@@ -552,10 +552,10 @@ class QueryAPI(unittest.TestCase):
         #op_root_procs = eq.op_roots(['685000', '685003', '685016'], 'op_sequence:1', fmt='orm')
         #l = eq.select((p.job.jobid, p.pid) for p in op_root_procs)[:]
         #self.assertEqual(l,
-        #                 [ (u'685000', 6226), (u'685000', 10042), (u'685000', 10046), (u'685000', 10058), (u'685000', 10065),
-        #                   (u'685000', 10066), (u'685003', 29079), (u'685003', 31184), (u'685003', 31185), (u'685003', 31191),
-        #                   (u'685003', 31198), (u'685003', 31199), (u'685016', 122259), (u'685016', 128848), (u'685016', 128849),
-        #                   (u'685016', 128855), (u'685016', 128862), (u'685016', 128863)])
+        #                 [ ('685000', 6226), ('685000', 10042), ('685000', 10046), ('685000', 10058), ('685000', 10065),
+        #                   ('685000', 10066), ('685003', 29079), ('685003', 31184), ('685003', 31185), ('685003', 31191),
+        #                   ('685003', 31198), ('685003', 31199), ('685016', 122259), ('685016', 128848), ('685016', 128849),
+        #                   ('685016', 128855), ('685016', 128862), ('685016', 128863)])
         df = eq.op_roots(['685000', '685003', '685016'], 'op_sequence:1', fmt='pandas')
         self.assertIn(df.shape, ((18,50), (18,49)))
         self.assertEqual(set(df['pid'].values),
@@ -655,7 +655,7 @@ class QueryAPI(unittest.TestCase):
     def test_ops_costs(self):
         jobs = eq.get_jobs(['685000', '685003', '685016'], fmt='orm')
         self.assertEqual(jobs.count(), 3)
-        (dm_percent, df, all_jobs_cpu_time, agg_df) = eq.ops_costs(jobs) 
+        (dm_percent, df, all_jobs_cpu_time, agg_df) = eq.ops_costs(jobs)
         self.assertEqual(dm_percent, 43.157, 'wrong dm percent')
         self.assertEqual(df.shape, (17, 30))
         self.assertEqual(all_jobs_cpu_time, 633756327.0, 'wrong job cpu time sum')
@@ -679,7 +679,7 @@ class QueryAPI(unittest.TestCase):
         p = eq.get_procs('685000', limit=1, fmt='orm')[0]
         proc_id = p.id
         j.start = datetime.datetime(1970,1,1)
-        tomorrow = datetime.datetime.now() + datetime.timedelta(days = 1) 
+        tomorrow = datetime.datetime.now() + datetime.timedelta(days = 1)
         j.end = tomorrow
         p.start = datetime.datetime(1970,1,1)
         orm_commit()
@@ -701,14 +701,14 @@ class QueryAPI(unittest.TestCase):
 
     def test_zz_delete_jobs_force_before_after_ags(self):
         # test before/after args
-        ndays = (datetime.now() - datetime(2019, 6, 15, 7, 52, 4, 73965)).days 
+        ndays = (datetime.now() - datetime(2019, 6, 15, 7, 52, 4, 73965)).days
         n = eq.delete_jobs(JOBS_LIST, force=True, after=-(ndays-1))
         self.assertEqual(n, 0)
         n = eq.delete_jobs(JOBS_LIST, force=True, after='06/16/2019 00:00')
         self.assertEqual(n, 0)
         n = eq.delete_jobs(JOBS_LIST, force=True, before='06/15/2019 00:00')
         self.assertEqual(n, 0)
-        
+
     def test_zz_delete_jobs_force(self):
         self.assertEqual( eq.get_jobs(fmt='orm').count(), 3 )
         n = eq.delete_jobs(['685000', '685016'], force=True, remove_models=True)

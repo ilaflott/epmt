@@ -28,7 +28,7 @@ def setUpModule():
     settings.univariate_classifiers = ['modified_z_score']
     # set lower madz and z-score thresholds to easily detect outliers
     settings.outlier_thresholds['modified_z_score'] = 2.5
-    settings.outlier_thresholds['z_score'] = 1.5 
+    settings.outlier_thresholds['z_score'] = 1.5
 
 def tearDownModule():
     do_cleanup()
@@ -83,8 +83,8 @@ class OutliersAPI(unittest.TestCase):
         self.assertTrue('outlier' in df[df.cpu_time > 0]['jobid'].values[0], "wrong cpu_time outlier")
         self.assertEqual(len(parts), 3, "wrong number of items in partition dictionary")
         self.assertEqual(parts['duration'],
-                         ( set( [u'kern-6656-20190614-190245', u'kern-6656-20190614-194024', u'kern-6656-20190614-191138'] ),
-                           set( [u'kern-6656-20190614-192044-outlier'] ) ) )
+                         ( set( ['kern-6656-20190614-190245', 'kern-6656-20190614-194024', 'kern-6656-20190614-191138'] ),
+                           set( ['kern-6656-20190614-192044-outlier'] ) ) )
         # now test with wildcard features
         (df, _) = eod.detect_outlier_jobs(jobs, features='*')
         self.assertEqual(df.shape, (4,30))
@@ -112,7 +112,7 @@ class OutliersAPI(unittest.TestCase):
                            'num_procs': ( {'kern-6656-20190614-190245', 'kern-6656-20190614-191138',
                                            'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'},
                                           set() ) } )
-        
+
     @db_session
     def test_outlier_no_matched_tags(self):
         retval = eod.detect_outlier_ops(['kern-6656-20190614-190245', 'kern-6656-20190614-191138',
@@ -134,8 +134,8 @@ class OutliersAPI(unittest.TestCase):
         self.assertTrue('outlier' in df[df.duration > 0]['jobid'].values[0], "wrong duration outlier")
         self.assertTrue('outlier' in df[df.cpu_time > 0]['jobid'].values[0], "wrong cpu_time outlier")
         self.assertEqual(parts['duration'],
-                         ( set([u'kern-6656-20190614-190245', u'kern-6656-20190614-194024', u'kern-6656-20190614-191138']),
-                           set([u'kern-6656-20190614-192044-outlier']) ) )
+                         ( set(['kern-6656-20190614-190245', 'kern-6656-20190614-194024', 'kern-6656-20190614-191138']),
+                           set(['kern-6656-20190614-192044-outlier']) ) )
         # now create a ref model that *includes* the outlier job
         # this way it won't later be classified as a outlier
         r = eq.create_refmodel(all_jobs, fmt='terse')
@@ -203,8 +203,8 @@ class OutliersAPI(unittest.TestCase):
         # make sure rssmax was discarded from the features
         self.assertEqual(set(df.columns.values) & set(features), { 'cpu_time', 'duration', 'num_procs' })
         # pylint: disable=unsubscriptable-object
-        self.assertEqual(set(df[df.duration > 0]['jobid']), set([u'kern-6656-20190614-192044-outlier']))
-        self.assertEqual(set(df[df.cpu_time > 0]['jobid']), set([u'kern-6656-20190614-192044-outlier']))
+        self.assertEqual(set(df[df.duration > 0]['jobid']), set(['kern-6656-20190614-192044-outlier']))
+        self.assertEqual(set(df[df.cpu_time > 0]['jobid']), set(['kern-6656-20190614-192044-outlier']))
         self.assertEqual(set(df[df.num_procs > 0]['jobid']), set([]))
         df_cols = list(df.columns)
         self.assertEqual(set(sorted_features), { 'cpu_time', 'duration', 'num_procs' })
@@ -217,11 +217,11 @@ class OutliersAPI(unittest.TestCase):
 
         # ensure tag importance order is correct
         self.assertEqual(sorted_tags,
-                         [ {u'op_instance': u'5', u'op_sequence': u'5', u'op': u'clean'},
-                           {u'op_instance': u'4', u'op_sequence': u'4', u'op': u'build'},
-                           {u'op_instance': u'3', u'op_sequence': u'3', u'op': u'configure'},
-                           {u'op_instance': u'2', u'op_sequence': u'2', u'op': u'extract'},
-                           {u'op_instance': u'1', u'op_sequence': u'1', u'op': u'download'}])
+                         [ {'op_instance': '5', 'op_sequence': '5', 'op': 'clean'},
+                           {'op_instance': '4', 'op_sequence': '4', 'op': 'build'},
+                           {'op_instance': '3', 'op_sequence': '3', 'op': 'configure'},
+                           {'op_instance': '2', 'op_sequence': '2', 'op': 'extract'},
+                           {'op_instance': '1', 'op_sequence': '1', 'op': 'download'}])
         # check scores_df[tags] is ordered right
         self.assertEqual([loads(t) for t in list(scores_df['tags'])], sorted_tags)
         # check df[tags] is ordered right
@@ -232,7 +232,7 @@ class OutliersAPI(unittest.TestCase):
 
         parts = { frozen_dict(loads(k)): v for k,v in parts.items() }
         self.assertEqual( parts[frozen_dict({"op_instance": "4", "op_sequence": "4", "op": "build"})],
-                          (set([u'kern-6656-20190614-194024', u'kern-6656-20190614-190245', u'kern-6656-20190614-191138']), set([u'kern-6656-20190614-192044-outlier'])))
+                          (set(['kern-6656-20190614-194024', 'kern-6656-20190614-190245', 'kern-6656-20190614-191138']), set(['kern-6656-20190614-192044-outlier'])))
 
         # now also use the outlier job while creating the refmodel
         # this way, there should be NO outlier ops
@@ -249,7 +249,7 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(len(parts), 1)
         parts = { frozen_dict(loads(k)): v for k,v in parts.items() }
         self.assertEqual(parts[frozen_dict({"op_instance": "4", "op_sequence": "4", "op": "build"})],
-                         (set([u'kern-6656-20190614-194024', u'kern-6656-20190614-190245', u'kern-6656-20190614-191138']), set([u'kern-6656-20190614-192044-outlier'])))
+                         (set(['kern-6656-20190614-194024', 'kern-6656-20190614-190245', 'kern-6656-20190614-191138']), set(['kern-6656-20190614-192044-outlier'])))
 
     @db_session
     def test_outlier_ops_trained_mvod(self):
@@ -299,13 +299,13 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(len(df[df.duration > 0]), 3, 'wrong outlier count for duration')
         self.assertEqual(len(df[df.cpu_time > 0]), 5, 'wrong outlier count for cpu_time')
         self.assertEqual(len(df[df.num_procs > 0]), 0, 'wrong outlier count for num_procs')
-        self.assertEqual(list(df.loc[2].values), [u'kern-6656-20190614-192044-outlier', {u'op_instance': u'4', u'op_sequence': u'4', u'op': u'build'}, 1, 1, 0])
+        self.assertEqual(list(df.loc[2].values), ['kern-6656-20190614-192044-outlier', {'op_instance': '4', 'op_sequence': '4', 'op': 'build'}, 1, 1, 0])
         self.assertEqual(len(parts), 5, 'wrong number of distinct tags')
         #print(parts.keys())
         parts = { frozen_dict(loads(k)): v for k,v in parts.items() }
         self.assertEqual( parts[frozen_dict({"op_instance": "4", "op_sequence": "4", "op": "build"})],
-                          (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024']),
-                           set([u'kern-6656-20190614-192044-outlier']) ))
+                          (set(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024']),
+                           set(['kern-6656-20190614-192044-outlier']) ))
 
         (df, parts, _, _, _) = eod.detect_outlier_ops(jobs, tags = {"op_instance": "4", "op_sequence": "4", "op": "build"})
         self.assertEqual(df.shape, (4,5), "wrong shape of df from detect_outlier_ops with supplied tag")
@@ -315,8 +315,8 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(len(parts), 1)
         parts = { frozen_dict(loads(k)): v for k,v in parts.items() }
         self.assertEqual(parts[frozen_dict({"op_instance": "4", "op_sequence": "4", "op": "build"})],
-                         (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024']),
-                          set([u'kern-6656-20190614-192044-outlier'])))
+                         (set(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024']),
+                          set(['kern-6656-20190614-192044-outlier'])))
 
         # wildcard features
         (df, _, _, _, _) = eod.detect_outlier_ops(jobs, features = '*')
@@ -360,8 +360,7 @@ class OutliersAPI(unittest.TestCase):
                            'pyod.models.ocsvm': {'cpu_time,duration,num_procs': [-0.0,
                                                                                  [[380807266.0, 2158730624.0, 9549.0],
                                                                                   [381619141.0, 2203839312.0, 9549.0],
-                                                                                  [381227732.0, 2253935203.0, 9549.0]]]}})
-                          
+                                                                                  [381227732.0, 2253935203.0, 9549.0]]]}})        
         self.assertEqual(r.computed['{"op": "configure"}'],
                          {
                           'pyod.models.cof': {'cpu_time,duration,num_procs': [1.3176,
@@ -397,7 +396,7 @@ class OutliersAPI(unittest.TestCase):
         procs = p.append([p]*9, ignore_index=True)
         # now double the value of cpu_time/duration of the 6th row
         # thus making it an outlier
-        procs.loc[[5], 'duration'] *= 2 
+        procs.loc[[5], 'duration'] *= 2
         procs.loc[[5], 'cpu_time'] *= 2
         # make sure the modified row is detected as an outlier
         outliers = eod.detect_outlier_processes(procs, ['duration', 'cpu_time'], methods=[es.iqr, es.modified_z_score])
@@ -407,12 +406,12 @@ class OutliersAPI(unittest.TestCase):
     def test_outlier_threads(self):
         import epmt.epmt_stat as es
         p = eq.get_procs('kern-6656-20190614-190245', fmt='orm', order=eq.desc(eq.Process.duration), limit=1)[0]
-        t = eq.get_thread_metrics(p) 
+        t = eq.get_thread_metrics(p)
         # clone and make 10 rows of the 1 thread row
         threads = t.append([t]*9, ignore_index=True)
         # now increase the value of usertime/systemtime of the 6th row
         # thus making it an outlier
-        threads.loc[[5], 'usertime'] *= 2 
+        threads.loc[[5], 'usertime'] *= 2
         threads.loc[[5], 'systemtime'] *= 2
         # make sure the modified row is detected as an outlier
         outliers = eod.detect_outlier_threads(threads, ['usertime', 'systemtime'], methods=[es.iqr, es.modified_z_score])
@@ -425,15 +424,15 @@ class OutliersAPI(unittest.TestCase):
         parts = eod.partition_jobs(jobs)
         self.assertEqual(len(parts), 3, "incorrect count of items in partition dict")
         self.assertEqual(parts['cpu_time'],
-                         (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-194024', u'kern-6656-20190614-191138']),
-                          set([u'kern-6656-20190614-192044-outlier'])))
+                         (set(['kern-6656-20190614-190245', 'kern-6656-20190614-194024', 'kern-6656-20190614-191138']),
+                          set(['kern-6656-20190614-192044-outlier'])))
         self.assertEqual(parts['duration'],
-                         (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-194024', u'kern-6656-20190614-191138']),
-                          set([u'kern-6656-20190614-192044-outlier'])))
+                         (set(['kern-6656-20190614-190245', 'kern-6656-20190614-194024', 'kern-6656-20190614-191138']),
+                          set(['kern-6656-20190614-192044-outlier'])))
         self.assertEqual(parts['num_procs'],
-                         (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-192044-outlier', u'kern-6656-20190614-194024', u'kern-6656-20190614-191138']),
+                         (set(['kern-6656-20190614-190245', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024', 'kern-6656-20190614-191138']),
                           set([])))
-        
+
     @db_session
     def test_partition_jobs_by_ops(self):
         jobs = eq.get_jobs(fmt='terse', tags='exp_name:linux_kernel')
@@ -441,23 +440,23 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(len(parts), 5, "incorrect number of tags in output")
         parts = { frozen_dict(loads(k)): v for k,v in parts.items() }
         self.assertEqual(parts[frozen_dict({"op_instance": "3", "op_sequence": "3", "op": "configure"})],
-                         (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024']),
-                          set([u'kern-6656-20190614-192044-outlier'])), "wrong partitioning for configure op")
+                         (set(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024']),
+                          set(['kern-6656-20190614-192044-outlier'])), "wrong partitioning for configure op")
         parts = eod.partition_jobs_by_ops(jobs, tags = 'op:build;op_instance:4;op_sequence:4')
         self.assertEqual(len(parts), 1)
         parts = { frozen_dict(loads(k)): v for k,v in parts.items() }
         self.assertEqual(parts[frozen_dict({"op_instance": "4", "op_sequence": "4", "op": "build"})],
-                         (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024']),
-                          set([u'kern-6656-20190614-192044-outlier'])), "wrong partitioning when supplying a single tag string")
+                         (set(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024']),
+                          set(['kern-6656-20190614-192044-outlier'])), "wrong partitioning when supplying a single tag string")
         parts = eod.partition_jobs_by_ops(jobs, tags = ['op:build;op_instance:4;op_sequence:4', {"op_instance": "2", "op_sequence": "2", "op": "extract"}])
         self.assertEqual(len(parts), 2)
         parts = { frozen_dict(loads(k)): v for k,v in parts.items() }
         self.assertEqual(parts[frozen_dict({"op_instance": "4", "op_sequence": "4", "op": "build"})],
-                         (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024']),
-                          set([u'kern-6656-20190614-192044-outlier'])))
+                         (set(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024']),
+                          set(['kern-6656-20190614-192044-outlier'])))
         self.assertEqual(parts[frozen_dict({"op_instance": "2", "op_sequence": "2", "op": "extract"})],
-                         (set([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024']),
-                          set([u'kern-6656-20190614-192044-outlier'])), "wrong partitioning when supplying tags consisting of a list of string and dict")
+                         (set(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024']),
+                          set(['kern-6656-20190614-192044-outlier'])), "wrong partitioning when supplying tags consisting of a list of string and dict")
 
     def test_pca(self):
         jobs_df = eq.get_jobs(tags='exp_name:linux_kernel', fmt='pandas')
@@ -578,7 +577,7 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(list(df[df.jobid == 'kern-6656-20190614-192044-outlier'].iloc[0].values), ['kern-6656-20190614-192044-outlier', 2.8, 1, 0])
         self.assertEqual(df[df.jobid != 'kern-6656-20190614-192044-outlier'].shape, (2, 4))
         self.assertEqual(df[df.jobid != 'kern-6656-20190614-192044-outlier']['pca_weighted'].sum(), 0.0)
-        
+
 
     def test_pca_trained_model_ops(self):
         r = eq.create_refmodel(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-194024'], op_tags='*', features=[], pca=True, fmt='orm')
@@ -636,7 +635,7 @@ class OutliersAPI(unittest.TestCase):
             figure = eod.feature_scatter_plot(jobs, outfile = plotfile)
         s = out.getvalue()
         self.assertIn('Plotly Cannot export static images, Feature coming soon', s)
-    
+
     def test_feature_scatter_plot_names(self):
         from tempfile import NamedTemporaryFile,gettempdir
         plotfile = NamedTemporaryFile(prefix='output_', suffix='.png', dir=gettempdir())
@@ -685,8 +684,8 @@ class OutliersAPI(unittest.TestCase):
         self.assertEqual(r1.tags, {'exp_name': 'linux_kernel_test'})
         self.assertFalse(r1.op_tags)
         # pony and sqlalchemy have slightly different outputs
-        # in pony each value in modfied_z_score dictionary is a 
-        # a tuple, while in sqlalchemy it's a list. So, we use 
+        # in pony each value in modfied_z_score dictionary is a
+        # a tuple, while in sqlalchemy it's a list. So, we use
         # assertIn to check if either match occurs
         self.assertIn(r1.computed,
                       ({'modified_z_score': {'duration': (1.0287, 542680315.0, 14860060.0),
@@ -696,7 +695,7 @@ class OutliersAPI(unittest.TestCase):
                                              'cpu_time': [1.3207, 449914707.0, 444671.0],
                                              'num_procs': [0.0, 10600.0, 0.0]}}))
         self.assertEqual(set([j.jobid for j in r1.jobs]),
-                         set([u'kern-6656-20190614-194024', u'kern-6656-20190614-191138', u'kern-6656-20190614-190245']))
+                         set(['kern-6656-20190614-194024', 'kern-6656-20190614-191138', 'kern-6656-20190614-190245']))
 
 
 

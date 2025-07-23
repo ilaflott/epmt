@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 EPMT Outliers API
 =================
 
 The EPMT Outliers API provides functions to determine outliers
 among a collection of jobs, operations or processes. It uses
-EPMT Query API and the EPMT statistics module for the underlying 
+EPMT Query API and the EPMT statistics module for the underlying
 operations.
 
 Most functions in this API deal with dataframes and understand
@@ -59,9 +58,9 @@ def partition_jobs(jobs, features=FEATURES, methods=[], thresholds=thresholds):
     A dict where the keys are feature strings and the values are
     tuples containing the two disjoint sets -- reference jobs and
     outlier jobs
- 
+
     Examples
-    -------- 
+    --------
     >> parts = eod.partition_jobs(jobs, methods = [es.modified_z_score])
     >>> pprint(parts)
     {'cpu_time': (set([u'kern-6656-20190614-190245',
@@ -86,7 +85,7 @@ def partition_jobs_by_ops(jobs, tags=[], features=FEATURES, methods=[modified_z_
     """
     Partitions operations into disjoint sets of reference and outliers::Outlier Detection
 
-    
+
     Parameters
     ----------
           jobs : list of strings or list of Job objects or ORM query
@@ -106,19 +105,19 @@ def partition_jobs_by_ops(jobs, tags=[], features=FEATURES, methods=[modified_z_
                  Defines the thresholds for different classifiers.
                  This is used from settings, and ordinarily you should
                  not have to manually use this option
-    
+
     Returns
     -------
-       dictionary where each key is a tag, and the value is a tuple like 
+       dictionary where each key is a tag, and the value is a tuple like
        ([ref_jobs],[outlier_jobs).
-    
+
     Notes
     -----
     This function partitions the supplied jobs into two partitions:
     reference jobs and outliers. The partitioning is done for each tag, and
     for a tag, if any feature makes a job an outlier then it's put in the
     outlier partition.
-    
+
     Examples
     --------
     >>> jobs = eq.get_jobs(tags = 'exp_name:linux_kernel', fmt='terse)
@@ -134,8 +133,8 @@ def partition_jobs_by_ops(jobs, tags=[], features=FEATURES, methods=[modified_z_
                                                                set([u'kern-6656-20190614-192044-outlier'])),
     ...
     }
-    
-    
+
+
     In the example above we did not supply any tags so the set of unique
     process tags was determined automatically. We can also choose to
     specify a tag (or a list of tags) as so:
@@ -160,7 +159,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
     would like to dig deeper into the operations that are outliers,
     then use `detect_outlier_ops`, which will take appreciably longer
     than this function.
-    
+
     Parameters
     ----------
 
@@ -173,17 +172,17 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
                  outlier detection will be done from within the jobs
 
     features   : list of strings or '*', optional
-                 List of features to use for outlier detection. 
+                 List of features to use for outlier detection.
                  An empty list or '*' means use all available features.
                  Defaults to a list specified in settings
 
-       methods : list of callables, optional 
+       methods : list of callables, optional
                  This is an advanced option to specify the function(s) to use
                  for outlier detection. If unspecified it will default to
                  all the available univariate classifiers
-                 If multivariate classifiers are specified, a trained model 
-                 *must* be specified. We only support pyod classifiers at present 
-                 for multivariate classifiers. Do not mix univariate and 
+                 If multivariate classifiers are specified, a trained model
+                 *must* be specified. We only support pyod classifiers at present
+                 for multivariate classifiers. Do not mix univariate and
                  multivariate classifiers.
 
     thresholds : dict, optional
@@ -199,12 +198,12 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
                  on the features prior to outlier detection. Rather than setting
                  this option to True, you may also set this option to something
                  like: pca = 2, in which case it will mean you want two components
-                 in the PCA. Or something like, pca = 0.95, which will be 
+                 in the PCA. Or something like, pca = 0.95, which will be
                  intepreted as meaning do PCA and automatically select the number
                  components to arrive at the number of components in the PCA.
                  If set to True, a 0.85 variance ratio will be set to enable
                  automatic selection of PCA components.
-    
+
     Returns
     -------
       The output of the function depends on the classifier methods
@@ -229,14 +228,14 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
     -----
     You cannot mix UV classifiers with MV classifiers. You MUST specify
     either only univariate classifiers, or only multivariate classifiers.
-    
-    
+
+
     Examples
     --------
 
     The following examples show OD using UV classifiers:
 
-    >>> jobs = eq.get_jobs(fmt='orm', tags='exp_name:linux_kernel') 
+    >>> jobs = eq.get_jobs(fmt='orm', tags='exp_name:linux_kernel')
     >>> len(jobs)
     4
     >>> (df, parts) = eod.detect_outlier_jobs(jobs, methods=[es.modified_z_score])
@@ -246,7 +245,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
     1  kern-6656-20190614-192044-outlier         1         1          0
     2          kern-6656-20190614-194024         0         0          0
     3          kern-6656-20190614-191138         0         0          0
-    
+
     >>> pprint(parts)
     {'cpu_time': ([u'kern-6656-20190614-190245',
                    u'kern-6656-20190614-194024',
@@ -270,7 +269,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
     # Notice, we select all available features as input to the PCA engine.
     # We scale the PCA scores since the PCA features aren't equal. So,
     # the column of importance is 'pca_weighted', rather than the individual
-    # pca columns. 
+    # pca columns.
 
     >>> x = eod.detect_outlier_jobs(eq.get_jobs(fmt='pandas'), features=[], pca = 2, methods=[es.modified_z_score])
            INFO: epmt_outliers: outlier detection provided 1 classifiers
@@ -435,7 +434,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
 
     logger.debug('doing outlier detection on:\n{}'.format(jobs[['jobid'] + features]))
     # unfortunately we cannot leverage the same code for
-    # univariate and multivariate classifiers, since the 
+    # univariate and multivariate classifiers, since the
     # univariate code needs to iterate over the features
     # while the multivariate code takes them in one go
     if uv_methods:
@@ -508,7 +507,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
             # sum the bitmap vectors - the value for the ith row in the result
             # shows the number of mvod classifiers that considered the row (job) to
             # be an outlier
-            mvod_outliers = outliers_vec if (mvod_outliers is None) else mvod_outliers + outliers_vec 
+            mvod_outliers = outliers_vec if (mvod_outliers is None) else mvod_outliers + outliers_vec
         mvod_df = pd.DataFrame(mvod_outliers, columns=['outlier'], index=jobs.index)
         # add a jobid column to the output dataframe
         mvod_df['jobid'] = jobs['jobid']
@@ -540,7 +539,7 @@ def detect_outlier_jobs(jobs, trained_model=None, features = FEATURES, methods=[
     # while for MV classifiers, we will return a single dataframe
     return (retlist if len(retlist) > 1 else retlist[0])
 
- 
+
 # This function can be very expensive. So, we only use a single outlier
 # scoring method by default. Using 2 more really takes too long.
 @db_session
@@ -570,17 +569,17 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
                  outlier detection will be done from within the jobs
 
     features   : list of strings or '*', optional
-                 List of features to use for outlier detection. 
+                 List of features to use for outlier detection.
                  An empty list or '*' means use all available features.
                  Defaults to a list specified in settings
 
-       methods : list of callables, optional 
+       methods : list of callables, optional
                  This is an advanced option to specify the function(s) to use
-                 for outlier detection. If unspecified it will default to 
+                 for outlier detection. If unspecified it will default to
                  all available univariate classifiers.
-                 If multivariate classifiers are specified, a trained model 
-                 *must* be specified. We only support pyod classifiers at present 
-                 for multivariate classifiers. Do not mix univariate and 
+                 If multivariate classifiers are specified, a trained model
+                 *must* be specified. We only support pyod classifiers at present
+                 for multivariate classifiers. Do not mix univariate and
                  multivariate classifiers
 
     thresholds : dict, optional
@@ -593,7 +592,7 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
                  on the features prior to outlier detection. Rather than setting
                  this option to True, you may also set this option to something
                  like: pca = 2, in which case it will mean you want two components
-                 in the PCA. Or something like, pca = 0.95, which will be 
+                 in the PCA. Or something like, pca = 0.95, which will be
                  intepreted as meaning do PCA and automatically select the number
                  components to arrive at the number of components in the PCA.
                  If set to True, a 0.85 variance ratio will be set to enable
@@ -601,7 +600,7 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
                  When pca is enabled, then the return value is a single dataframe
                  with no special ordering of rows other than they are grouped
                  by tag
-    
+
     Returns
     -------
 
@@ -611,21 +610,21 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
     where:
        df is the dataframe that is sorted by decreasing tag importance, and
        has a bitmask showing whether a particular operation of a job was an
-       outlier when contrasted with the same operation in other jobs. The 
+       outlier when contrasted with the same operation in other jobs. The
        columns of 'df' are sorted in decreasing order of feature importance
        from left to right.
-    
-       The dict_of_partitions is indexed by the tag, and the value 
+
+       The dict_of_partitions is indexed by the tag, and the value
        is a tuple, consisting of the (<ref_part>,<outlier_part>) for the tag.
-    
+
     scores_df is a dataframe containing the max scores for each tag against
     a particular feature. It's sorted in decreasing order of tag scores, where
     a tag_score is defined as the max of scores across all features for the tag.
-    
+
     sorted_tags is just a sorted list of tags by decreasing tag_score
-    
+
     sorted_features is a sorted list of features by feature_score, where
-    feature_score is defined as the sum of scores for a feature across 
+    feature_score is defined as the sum of scores for a feature across
     all tags:
 
     Notes
@@ -633,31 +632,31 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
     You cannot mix UV and MV classifiers.
     When pca is enabled, then the return value is a single dataframe
     with no special ordering of rows other than they are grouped by tag.
-    
+
     Examples
     --------
-    
+
     The following examples cover OD using univariate classifiers:
     jobs = [u'625151', u'627907', u'629322', u'633114', u'675992', u'680163', u'685001', u'691209', u'693129', u'696110', u'802938', u'804266']
-    
-    
+
+
     >>> (df, parts, scores_df, sorted_tags, sorted_features) = eod.detect_outlier_ops(jobs, methods=[es.modified_z_score])
-    
+
     >>> df.head()
         jobid                                               tags  duration  \
-    0  627907  {u'op_instance': u'13', u'op_sequence': u'69',...         0   
-    1  629322  {u'op_instance': u'13', u'op_sequence': u'69',...         0   
-    2  633114  {u'op_instance': u'13', u'op_sequence': u'69',...         0   
-    3  675992  {u'op_instance': u'13', u'op_sequence': u'69',...         0   
-    4  680163  {u'op_instance': u'13', u'op_sequence': u'69',...         0   
-    
-       cpu_time  num_procs  
-    0         0          0  
-    1         1          0  
-    2         0          0  
-    3         1          0  
-    4         1          0  
-    
+    0  627907  {u'op_instance': u'13', u'op_sequence': u'69',...         0
+    1  629322  {u'op_instance': u'13', u'op_sequence': u'69',...         0
+    2  633114  {u'op_instance': u'13', u'op_sequence': u'69',...         0
+    3  675992  {u'op_instance': u'13', u'op_sequence': u'69',...         0
+    4  680163  {u'op_instance': u'13', u'op_sequence': u'69',...         0
+
+       cpu_time  num_procs
+    0         0          0
+    1         1          0
+    2         0          0
+    3         1          0
+    4         1          0
+
     >>> scores_df.head()[['tags','duration','cpu_time']]
                                                     tags  duration  cpu_time
     0  {"op": "mv", "op_instance": "13", "op_sequence...    11.530  4043.151
@@ -665,10 +664,10 @@ def detect_outlier_ops(jobs, tags=[], trained_model=None, features = FEATURES, m
     2  {"op": "hsmget", "op_instance": "6", "op_seque...   824.428     0.973
     3  {"op": "hsmget", "op_instance": "7", "op_seque...   393.765     1.160
     4  {"op": "hsmget", "op_instance": "6", "op_seque...   387.099     0.000
-    
+
     >>> sorted_tags[:3]
     [{u'op_instance': u'13', u'op_sequence': u'69', u'op': u'mv'}, {u'op_instance': u'10', u'op_sequence': u'60', u'op': u'mv'}, {u'op_instance': u'6', u'op_sequence': u'21', u'op': u'hsmget'}]
-    
+
     >>> sorted_features
     ['duration', 'cpu_time', 'num_procs']
 
@@ -721,7 +720,7 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
 
     >>> part
     {'{"op": "build", "op_instance": "4", "op_sequence": "4"}': {'pyod.models.cof': [0, 0, 1, 0], 'pyod.models.hbos': [0, 0, 1, 0], 'pyod.models.mcd': [0, 0, 1, 0], 'pyod.models.ocsvm': [0, 0, 0, 0]}, '{"op": "clean", "op_instance": "5", "op_sequence": "5"}': {'pyod.models.cof': [0, 0, 1, 0], 'pyod.models.hbos': [0, 0, 1, 0], 'pyod.models.mcd': [0, 0, 1, 0], 'pyod.models.ocsvm': [0, 0, 0, 0]}, '{"op": "configure", "op_instance": "3", "op_sequence": "3"}': {'pyod.models.cof': [0, 0, 1, 0], 'pyod.models.hbos': [0, 0, 1, 0], 'pyod.models.mcd': [0, 0, 1, 0], 'pyod.models.ocsvm': [0, 0, 0, 0]}, '{"op": "download", "op_instance": "1", "op_sequence": "1"}': {'pyod.models.cof': [0, 0, 1, 0], 'pyod.models.hbos': [0, 0, 1, 0], 'pyod.models.mcd': [0, 0, 1, 0], 'pyod.models.ocsvm': [0, 0, 0, 0]}, '{"op": "extract", "op_instance": "2", "op_sequence": "2"}': {'pyod.models.cof': [0, 0, 1, 0], 'pyod.models.hbos': [0, 0, 1, 0], 'pyod.models.mcd': [0, 0, 1, 0], 'pyod.models.ocsvm': [0, 0, 0, 0]}}
-    
+
 
     """
     eq._empty_collection_check(jobs)
@@ -774,9 +773,9 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
                     tags_to_use.append(d)
     else:
         tags_to_use = tags
- 
+
     methods = methods or uvod_classifiers()
-    _methods = set() 
+    _methods = set()
     for t in tags_to_use:
         t = dumps(t, sort_keys=True)
         model_params[t] = {}
@@ -933,7 +932,7 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
         # and it's sorted in order of desc tag importance
         tag_scores_df = pd.DataFrame(_trows, columns=['tags']+features)
 
-        # now let's figure out the sorted feature list by summing the 
+        # now let's figure out the sorted feature list by summing the
         # scores for the feature across tags
         f_scores = []
         for f in features:
@@ -947,7 +946,7 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
         for t in sorted_tags:
             all_rows.append(retval[retval.tags == t])
         sorted_df = pd.concat(all_rows, ignore_index=True)
-            
+
         # partition using tags
         parts = {}
         for tag in tags_to_use:
@@ -994,7 +993,7 @@ ime', 'time_oncpu', 'time_waiting', 'timeslices', 'usertime', 'vol_ctxsw', 'wcha
                 # sum the bitmap vectors - the value for the ith row in the result
                 # shows the number of mvod classifiers that considered the row (job) to
                 # be an outlier
-                mvod_outliers = outliers_vec if (mvod_outliers is None) else mvod_outliers + outliers_vec 
+                mvod_outliers = outliers_vec if (mvod_outliers is None) else mvod_outliers + outliers_vec
             logger.info('Outlier vector for tag [{}]: {}'.format(t, mvod_outliers))
             outlier_indices = np.where(mvod_outliers > 0)[0]
             # map to the outlier rows indices to the indices in the original df
@@ -1029,11 +1028,11 @@ def detect_outliers(df, features=[], methods=[]):
           methods : list, optional
                     List of functions to use for outlier detection
                     Defaults to all available univariate classifiers
- 
+
 
     Notes
     -----
-    This function currently supports only univariate classifiers. Trained models 
+    This function currently supports only univariate classifiers. Trained models
     are not presently supported, either.
     """
     eq._empty_collection_check(df)
@@ -1070,7 +1069,7 @@ def detect_outlier_processes(processes, features=['duration','cpu_time'], method
 
     Notes
     -----
-    This function currently supports only univariate classifiers. Trained models 
+    This function currently supports only univariate classifiers. Trained models
     are not presently supported, either.
     """
     return detect_outliers(processes, features=features, methods=methods)
@@ -1091,7 +1090,7 @@ def detect_outlier_threads(threads, features=['usertime','systemtime', 'rssmax']
 
     Notes
     -----
-    This function currently supports only univariate classifiers. Trained models 
+    This function currently supports only univariate classifiers. Trained models
     are not presently supported, either.
     """
     return detect_outliers(threads, features=features, methods=methods)
@@ -1112,11 +1111,11 @@ def detect_rootcause(jobs, inp, features = FEATURES,  methods = [modified_z_scor
                  you want to perform RCA
 
     features   : list of strings or '*', optional
-                 List of features to use for outlier detection. 
+                 List of features to use for outlier detection.
                  An empty list or '*' means use all available features.
                  Defaults to a list specified in settings
 
-       methods : list of callables, optional 
+       methods : list of callables, optional
                  This is an advanced option to specify the function(s) to use
                  for outlier detection. If unspecified it will default to MADZ
 
@@ -1155,14 +1154,14 @@ def detect_rootcause_op(jobs, inp, tag, features = FEATURES,  methods = [modifie
                  This is used to select the operation
 
       features : list of strings or '*', optional
-                 List of features to use for outlier detection. 
+                 List of features to use for outlier detection.
                  An empty list or '*' means use all available features.
                  Defaults to a list specified in settings
 
-       methods : list of callables, optional 
+       methods : list of callables, optional
                  This is an advanced option to specify the function(s) to use
                  for outlier detection. If unspecified it will default to MADZ
-    
+
     Returns
     -------
         (res, df, sorted_feature_list),
@@ -1171,11 +1170,11 @@ def detect_rootcause_op(jobs, inp, tag, features = FEATURES,  methods = [modifie
     to the difference of the score for the input with the score for the reference
     for the feature. The sorted_tuples consists of a list of tuples, where each
     tuple (feature,<diff_score>)
-    
+
     Examples
     --------
     >>> (retval, df, s) = eod.detect_rootcause_op([u'kern-6656-20190614-190245', u'kern-6656-20190614-191138', u'kern-6656-20190614-194024'], u'kern-6656-20190614-192044-outlier', tag = 'op_sequence:4', methods=[es.modified_z_score])
-    
+
     >>> df
                                   cpu_time      duration  num_procs
     count                     3.000000e+00  3.000000e+00          3
@@ -1235,13 +1234,13 @@ def pca_feature_combine(inp_df, inp_features = [], desired = 2, retain_features 
                 A list of features to use. If not set, the feature set
                 will be automatically determined
 
-      desired : int (>= 1) or float (< 1.0), optional 
-                If an integer (>= 1) it refers to the desired number of PCA 
-                components. It may be set instead to a float < 1.0, in which 
+      desired : int (>= 1) or float (< 1.0), optional
+                If an integer (>= 1) it refers to the desired number of PCA
+                components. It may be set instead to a float < 1.0, in which
                 case it refers to the desired PCA variance ratio. Defaults
                 to 2, meaning we want 2 PCA components
 
-retain_features: boolean, optional 
+retain_features: boolean, optional
                 Defaults to False. If enabled, the input features
                 will also be copied into the output dataframe.
 
@@ -1349,7 +1348,7 @@ pca_variance_ratios_list: List of variance ratios. You should
         invol_ctxsw              0.073167
         syscr                    0.062168
         rssmax                   0.061841
-        
+
 
         >>> x = eod.detect_outlier_jobs(df, features = pca_features)
         >>> x[0]
@@ -1380,7 +1379,7 @@ pca_variance_ratios_list: List of variance ratios. You should
         7  691209       0       0
         8  693129       0       0
 
-    IOW, 625151 is an outlier according to pca_01.        
+    IOW, 625151 is an outlier according to pca_01.
     '''
 
     from epmt.epmt_stat import pca_stat
@@ -1404,7 +1403,7 @@ pca_variance_ratios_list: List of variance ratios. You should
 
     inp_features_set = set(features)
     for c in inp_df.columns.values:
-        # input features don't need to be in the output df 
+        # input features don't need to be in the output df
         # unless retain_features is set
         if (not(retain_features)) and c in inp_features_set: continue
         out_df[c] = inp_df[c]
@@ -1490,9 +1489,9 @@ def pca_feature_rank(jobs, inp_features = []):
     -------
     (features_df, sorted_features), where:
 
-        features_df is a dataframe with 3 rows. The first two rows 
-        are the feature coefficients for the two PCA components 
-        (the first being more important than the second). The third 
+        features_df is a dataframe with 3 rows. The first two rows
+        are the feature coefficients for the two PCA components
+        (the first being more important than the second). The third
         row uses the PCA variances as weights and determines a
         composite absolute score for the feature. The dataframe columns
         are sorted from left-to-right in decreasing feature importance.
@@ -1523,7 +1522,7 @@ def pca_feature_rank(jobs, inp_features = []):
     # The last row is a weighted score determined by multiplying the
     # first row (abs value) by it's PCA variance ratio, and the second by it's
     # variance ratio, summing the values and then dividing by the sum of the
-    # variance ratios to normalize the values. Since, the first row's weight is 
+    # variance ratios to normalize the values. Since, the first row's weight is
     # significantly higher than the second, the final score is close
     # to the abs value of the first row to the first order of approximation
 
@@ -1605,7 +1604,7 @@ def feature_scatter_plot(jobs, features = [], outfile='', annotate = False):
         return plt
 
 
-    
+
 # Sanitize feature list by removing blacklisted features
 # and allowing only features whose columns have int/float types
 # f: feature list
@@ -1685,8 +1684,8 @@ def get_feature_distributions(jobs, features = []):
         jobs : list of strings or list of Job objects or ORM query
 
     features: list of strings, optional
-              A list of *numeric* features for which we want to 
-              determine the the distribution. The argument is optional, 
+              A list of *numeric* features for which we want to
+              determine the the distribution. The argument is optional,
               and if not specified, all available numeric features for the
               jobs will be used.
 
@@ -1698,10 +1697,10 @@ def get_feature_distributions(jobs, features = []):
 
     Examples
     --------
-   
+
     # Below we explicitly choose two features: cpu_time and rssmax. If we do not specify
-    # the features, all the numeric features are selected. 
-    >>> eod.get_feature_distributions(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], features=['cpu_time', 'rssmax'])                
+    # the features, all the numeric features are selected.
+    >>> eod.get_feature_distributions(['kern-6656-20190614-190245', 'kern-6656-20190614-191138', 'kern-6656-20190614-192044-outlier', 'kern-6656-20190614-194024'], features=['cpu_time', 'rssmax'])
     {'cpu_time': 'unknown', 'rssmax': 'norm'}
 
     '''
@@ -1738,4 +1737,3 @@ def _err_col_len(c, min_length = 1, msg = None):
         msg = msg or "length of collection is less than the minimum ({0})".format(min_length)
         logger.warning(msg)
         raise RuntimeError(msg)
-

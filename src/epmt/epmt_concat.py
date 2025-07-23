@@ -45,7 +45,7 @@ def rename_bad_files(outfile, errdir, badfiles):
     ed=path.normpath(errdir)
     if not path.exists(ed):
         try:
-            makedirs(ed) 
+            makedirs(ed)
         except OSError as e:
             logger.error("makedirs(%s): %s, skipping renamng of bad CSV files!",ed,str(e))
             return badfiles
@@ -89,7 +89,7 @@ def parseFile(inputfile, masterHeader, masterHeaderFile, delim, commentDelim):
     except Exception as e:
         logger.error("Failed to read file %s: %s",inputfile,str(e))
         return(comments, masterHeader, masterHeaderFile, None)
-    
+
     for line in fileLines:
         line = line.strip('\r\n')
         # line is blank
@@ -345,7 +345,7 @@ def csvjoiner(indir,
         if not keep_going:
             return False, None, badfiles
         badfiles_renamed = rename_bad_files(outfile,errdir,badfiles)
-        
+
     if masterHeader and masterHeaderFile and dataList:
         rv = writeCSV(outfile, commentsList, masterHeader, dataList)
         if (rv is True) and verifyOut(list(set(fileList)-set(badfiles)), outfile):

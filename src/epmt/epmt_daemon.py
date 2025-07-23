@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)  # you can use other name
 # ALL IMPORTS SHOULD BE HANDLED IN DAEMON LOOP
 # **** AFTER ****
 # THE DAEMON OR NULL CONTEXT ENTERED
-    
+
 # This should be in settings somewhere
 PID_FILE = '/tmp/epmt.pid.' + getuser()
 
@@ -49,7 +49,7 @@ def is_daemon_running(pidf = PID_FILE):
     return True, int(pid)
 
 def start_daemon(foreground = False, pidf = PID_FILE, **daemon_args):
-    logger = logging.getLogger(start_daemon.__name__)  
+    logger = logging.getLogger(start_daemon.__name__)
     stat, pid = is_daemon_running(pidf)
     if stat:
         logger.error('Daemon may be still running at pid {0}. If not, please remove the lock file {1} and try again'.format(pid,pidf))
@@ -107,7 +107,7 @@ def stop_daemon(pidf = PID_FILE):
 
     # normally the lock file is removed already. Just in case it isn't
     # perhaps because the process had been killed with SIGKILL, we will
-    # remove the stale lock file. Make sure to ignore any exceptions, 
+    # remove the stale lock file. Make sure to ignore any exceptions,
     # since you can count on getting an IOError for file not found
     try:
         unlink(pidf)
@@ -122,7 +122,7 @@ def print_daemon_status(pidf = PID_FILE):
         print('EPMT daemon not running, start with "epmt daemon --start"')
         return -1
     else:
-    	print('EPMT daemon running PID {0}. stop with "epmt daemon --stop"'.format(pid))
+        print('EPMT daemon running PID {0}. stop with "epmt daemon --stop"'.format(pid))
     return 0
 
 # if niters is set, then the daemon loop will end after 'niters' iterations
@@ -149,7 +149,7 @@ def daemon_loop(context, niters = 0, post_process = True, analyze = True, retire
                   successful submission to the database.
             move_away: Only meaningful when ingest is set. It indicates whether
                   on failed ingest the file should be moved away to the value
-                  in settings.failed_ingest_dir 
+                  in settings.failed_ingest_dir
                   By default, True; meaning the files will be moved away on
                   failed submission to the database.
          verbose: As the daemon reinitializes logging, the verbose argument
@@ -158,7 +158,7 @@ def daemon_loop(context, niters = 0, post_process = True, analyze = True, retire
     import epmt.epmt_settings as settings
     from epmt.epmtlib import init_settings
     init_settings(settings) # normally this is done when you import epmt_query
-    
+
     global sig_count
     sig_count = 0
 
@@ -205,7 +205,7 @@ def daemon_loop(context, niters = 0, post_process = True, analyze = True, retire
             from epmt.epmtlib import epmt_logging_init
             verbose = verbose or (settings.verbose if hasattr(settings, 'verbose') else 0)
             epmt_logging_init(verbose, check=False)
-            
+
         # max delay in seconds; we will subtract from this processing time
         # should be in settings instead!
         MAX_DELAY = 60
@@ -253,7 +253,7 @@ def daemon_loop(context, niters = 0, post_process = True, analyze = True, retire
                 tot_pp_jobs += len(ppd_jobs)
                 logger.info('{0} jobs post-processed, {1} errors'.format(len(ppd_jobs),len(err_ppd_jobs)))
 
-                # 
+                #
                 # Handle unprocessed jobs, remove from unprocessed and log
                 #
 
@@ -298,4 +298,3 @@ def signal_handler(signum, frame):
         logger.info('Received signal; will terminate shortly')
         sig_count = 1
     return None
-

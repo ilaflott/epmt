@@ -46,8 +46,8 @@ def exp_component_outliers(exp_name, metric = 'duration', op = np.sum, limit = 1
         is something like "duration". The returned list is of the form:
 
         [
-          { 
-            "exp_component" : <component-name>, 
+          {
+            "exp_component" : <component-name>,
             "jobids": [ list of jobids for component ],
             "metrics" : [ list of metric values corresponding to the jobids (same order) ],
             "exp_times" : [ list of exp_time values corresponding to the jobids (same order) ],
@@ -73,19 +73,19 @@ def exp_component_outliers(exp_name, metric = 'duration', op = np.sum, limit = 1
     >>> exp_component_outliers('ESM4_historical_D151', 'duration')
     INFO: epmt_query: Experiment ESM4_historical_D151 contains 13 jobs: 625151,627907,629322,633114,675992, 680163,685000..685001,685003,685016,691209,692500,693129
     [{
-         'exp_component': 'ocean_annual_z_1x1deg', 
-          'exp_times': ['18540101','18590101','18640101','18690101','18740101','18790101','18840101','18890101','18940101'], 
-          'jobids': ['625151','627907','629322','633114','675992','680163','685001','691209','693129'], 
-          'metrics': array([1.04256232e+10, 6.58917488e+09, 7.28633175e+09, 6.03672005e+09, 9.11415052e+09, 6.15619201e+09, 6.81571048e+09, 8.60163243e+08, 3.61932477e+09]), 
+         'exp_component': 'ocean_annual_z_1x1deg',
+          'exp_times': ['18540101','18590101','18640101','18690101','18740101','18790101','18840101','18890101','18940101'],
+          'jobids': ['625151','627907','629322','633114','675992','680163','685001','691209','693129'],
+          'metrics': array([1.04256232e+10, 6.58917488e+09, 7.28633175e+09, 6.03672005e+09, 9.11415052e+09, 6.15619201e+09, 6.81571048e+09, 8.60163243e+08, 3.61932477e+09]),
           'outlier_scores': array([2., 0., 0., 0., 0., 0., 0., 2., 1.])
-     }, 
+     },
      {
-          'exp_component': 'ocean_month_rho2_1x1deg', 
-          'exp_times': ['18840101'], 
-          'jobids': ['685016'], 
-          'metrics': array([7.00561851e+09]), 
+          'exp_component': 'ocean_month_rho2_1x1deg',
+          'exp_times': ['18840101'],
+          'jobids': ['685016'],
+          'metrics': array([7.00561851e+09]),
           'outlier_scores': array([0.])
-     }, 
+     },
      ...
     ]
     '''
@@ -110,18 +110,18 @@ def exp_component_outliers(exp_name, metric = 'duration', op = np.sum, limit = 1
     # Effectively we get to know for each component, the jobs and the time-segment
     # for the job, as well as the metric value for the job
     # {
-    #      'ocean_annual_z_1x1deg': {'data': [('18540101', '625151', 10425623185.0), 
-    #                                         ('18590101', '627907', 6589174875.0), 
-    #                                         ('18640101', '629322', 7286331754.0), 
-    #                                         ('18690101', '633114', 6036720046.0), 
-    #                                         ('18740101', '675992', 9114150525.0), 
-    #                                         ('18790101', '680163', 6156192011.0), 
-    #                                         ('18840101', '685001', 6815710476.0), 
-    #                                         ('18890101', '691209', 860163243.0), 
-    #                                         ('18940101', '693129', 3619324767.0)]}, 
-    #   'ocean_annual_rho2_1x1deg': {'data': [('18840101', '685000', 6460243317.0)]}, 
-    #      'ocean_cobalt_fdet_100': {'data': [('18840101', '685003', 6615525773.0)]}, 
-    #    'ocean_month_rho2_1x1deg': {'data': [('18840101', '685016', 7005618511.0)]}, 
+    #      'ocean_annual_z_1x1deg': {'data': [('18540101', '625151', 10425623185.0),
+    #                                         ('18590101', '627907', 6589174875.0),
+    #                                         ('18640101', '629322', 7286331754.0),
+    #                                         ('18690101', '633114', 6036720046.0),
+    #                                         ('18740101', '675992', 9114150525.0),
+    #                                         ('18790101', '680163', 6156192011.0),
+    #                                         ('18840101', '685001', 6815710476.0),
+    #                                         ('18890101', '691209', 860163243.0),
+    #                                         ('18940101', '693129', 3619324767.0)]},
+    #   'ocean_annual_rho2_1x1deg': {'data': [('18840101', '685000', 6460243317.0)]},
+    #      'ocean_cobalt_fdet_100': {'data': [('18840101', '685003', 6615525773.0)]},
+    #    'ocean_month_rho2_1x1deg': {'data': [('18840101', '685016', 7005618511.0)]},
     #     'ocean_monthly_z_1x1deg': {'data': [('18890101', '692500', 1663860093.0)]}
     # }
     # More keys (other than data will be added later)
@@ -155,7 +155,7 @@ def exp_component_outliers(exp_name, metric = 'duration', op = np.sum, limit = 1
         # we can remove v['data'] once we have created the above fields
         del v['data']
         comp_list.append(v)
-   
+
     # We generally care about components that have higher duration (metric) summed across
     # all the jobs of the component. However, we retain flexibility by ordering by
     # something like min/max/stddev instead by changing op.
@@ -178,7 +178,7 @@ def exp_time_segment_stats(exp_name, metric = 'duration'):
 
      RETURNS: A an OrderedDict of the form:
               {
-                '18540101': { 
+                '18540101': {
                                'jobids': [list of jobids],
                               'metrics': [vector of metric values corresponding to the jobids]
                             }
@@ -192,7 +192,7 @@ def exp_time_segment_stats(exp_name, metric = 'duration'):
    # number of jobs. If the number of jobs had been same (something we expect
    # normally, then by aggregating the metrics vector, one can easily
    # determine if one time-segment is an outlier.
-   >>> exp_time_segment_stats('ESM4_historical_D151')                                                 
+   >>> exp_time_segment_stats('ESM4_historical_D151')
 OrderedDict([('18540101', {'jobids': ['625151'], 'metrics': [10425623185.0]}),
              ('18590101', {'jobids': ['627907'], 'metrics': [6589174875.0]}),
              ('18640101', {'jobids': ['629322'], 'metrics': [7286331754.0]}),
@@ -200,7 +200,7 @@ OrderedDict([('18540101', {'jobids': ['625151'], 'metrics': [10425623185.0]}),
              ('18740101', {'jobids': ['675992'], 'metrics': [9114150525.0]}),
              ('18790101', {'jobids': ['680163'], 'metrics': [6156192011.0]}),
              ('18840101', {'jobids': ['685000', '685001', '685003', '685016'],
-                           'metrics': [6460243317.0, 6815710476.0, 6615525773.0, 7005618511.0]}), 
+                           'metrics': [6460243317.0, 6815710476.0, 6615525773.0, 7005618511.0]}),
              ('18890101', {'jobids': ['691209', '692500'], 'metrics': [860163243.0, 1663860093.0]}),
              ('18940101', {'jobids': ['693129'], 'metrics': [3619324767.0]})])
     '''
@@ -217,7 +217,7 @@ OrderedDict([('18540101', {'jobids': ['625151'], 'metrics': [10425623185.0]}),
             if not exp_time in od:
                 # initialize the dict
                 od[exp_time] = { 'jobids': [], 'metrics': [] }
-            # append the jobid and it's metric to the list of jobids 
+            # append the jobid and it's metric to the list of jobids
             # for the corresponding time-segment
             od[exp_time]['jobids'].append(j.jobid)
             # the metric value is either in the job model or in the proc_sums field
@@ -236,7 +236,7 @@ def exp_explore(exp_name, metric = 'duration', op = np.sum, limit=10):
 
     metric = metric or 'duration' # defaults when using with command-line
     limit = limit or 10 # defaults when using with command-line
-    
+
     exp_jobs = eq.get_jobs(tags = { 'exp_name': exp_name }, fmt = 'orm' )
     ordered_comp_list = exp_component_outliers(exp_name, metric, op, limit)
 
@@ -257,7 +257,7 @@ def exp_explore(exp_name, metric = 'duration', op = np.sum, limit=10):
             print("%16.16s %12s %12s %16d %6s" % (v['exp_component'], v['exp_times'][idx], v['jobids'][idx], v['metrics'][idx], "**" * int(outliers[idx])))
         print()
 
-    # finally let's see if by summing the metric across all the jobs in a 
+    # finally let's see if by summing the metric across all the jobs in a
     # time segment we can spot something interesting
     od = exp_time_segment_stats(exp_name, metric)
     time_segments = list(od.keys())

@@ -94,6 +94,6 @@ class EPMTShell(unittest.TestCase):
           # Submit
           results = epmt_submit([jobid+'.tgz'],dry_run=False)
           self.assertTrue(results)
-       
+
 if __name__ == '__main__':
     unittest.main()

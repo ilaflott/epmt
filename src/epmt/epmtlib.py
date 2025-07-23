@@ -44,7 +44,7 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
         return
     epmt_logging_init.initialized = True
     if intlvl is None:
-        intlvl = 0 
+        intlvl = 0
     intlvl = int(intlvl)
     if intlvl < -1:
         level = CRITICAL # 50
@@ -57,7 +57,7 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
     else: #intlvl >= 2:
         level = DEBUG # 10
 
-    # Set level and remove all existing handlers 
+    # Set level and remove all existing handlers
     #rootLogger = getLogger(__name__) # thank you! @ ericzhou13
     rootLogger = getLogger()
     rootLogger.debug("epmt_logging_init(%d,%s,%s): %d handlers",intlvl,check,log_pid,len(rootLogger.handlers))
@@ -83,16 +83,16 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
     rootLogger.addHandler(consoleHandler)
 
     # matplotlib generates a ton of debug messages
-    mpl_logger = logging.getLogger('matplotlib') 
-    mpl_logger.setLevel(logging.WARNING) 
+    mpl_logger = logging.getLogger('matplotlib')
+    mpl_logger.setLevel(logging.WARNING)
 
     # numba.byteflow generates a ton of debug messages
-    numba_logger = logging.getLogger('numba') 
-    numba_logger.setLevel(logging.WARNING) 
+    numba_logger = logging.getLogger('numba')
+    numba_logger.setLevel(logging.WARNING)
 
     # ipython's parso logger has too many debug messages
-    parso_logger = logging.getLogger('parso') 
-    parso_logger.setLevel(logging.WARNING) 
+    parso_logger = logging.getLogger('parso')
+    parso_logger.setLevel(logging.WARNING)
 
     alembic_logger = logging.getLogger('alembic')
     alembic_logger.setLevel(level)
@@ -105,7 +105,8 @@ def epmt_logging_init(intlvl = 0, check = False, log_pid = False):
     # a level higher).
     sqlalchemy_logger = logging.getLogger('sqlalchemy')
     #sqlalchemy_logger.setLevel(level+10)
-    sqlalchemy_logger.setLevel(level+20)
+    #sqlalchemy_logger.setLevel(level+20)
+    sqlalchemy_logger.setLevel(level+30)
 
 def init_settings(settings):
     if hasattr(init_settings, 'initialized'): return
@@ -231,10 +232,12 @@ def timing(f):
         return result
     return wrap
 
-# This function has a bug because it does not work with subprocess.run().
-# Needs to be fixed #TODO
 @contextmanager
 def capture():
+    '''
+    This function has a bug because it does not work with subprocess.run().
+    Needs to be fixed #TODO
+    '''
     import sys
     new_out, new_err = StringIO(), StringIO()
     old_out, old_err = sys.stdout, sys.stderr
@@ -244,21 +247,23 @@ def capture():
     finally:
         sys.stdout, sys.stderr = old_out, old_err
 
-# we assume tag is of the format:
-#  "key1:value1 ; key2:value2"
-# where the whitespace is optional and discarded. The output would be:
-# { "key1": value1, "key2": value2 }
-#
-# We can also handle the case where a value is not set for
-# a key, by assigning a default value for the key
-# For example, for the input:
-# "multitheaded;app=fft" and a tag_default_value="1"
-# the output would be:
-# { "multithreaded": "1", "app": "fft" }
-#
-# Note, both key and values will be strings and no attempt will be made to
-# guess the type for integer/floats
 def tag_from_string(s, delim = ';', sep = ':', tag_default_value = '1'):
+    '''
+    we assume tag is of the format:
+     "key1:value1 ; key2:value2"
+    where the whitespace is optional and discarded. The output would be:
+    { "key1": value1, "key2": value2 }
+    
+    We can also handle the case where a value is not set for
+    a key, by assigning a default value for the key
+    For example, for the input:
+    "multitheaded;app=fft" and a tag_default_value="1"
+    the output would be:
+    { "multithreaded": "1", "app": "fft" }
+    
+    Note, both key and values will be strings and no attempt will be made to
+    guess the type for integer/floats
+    '''
     import warnings
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore",category=DeprecationWarning)
@@ -295,16 +300,16 @@ def tag_dict_to_string(tag, delim = ';', sep = ':'):
         return tag
     return delim.join([ "{}{}{}".format(k, sep, tag[k]) for k in sorted(tag.keys()) ])
 
-# returns a list of tags, where each tag is a dict.
-# the input can be a list of strings or a single string.
-# each string will be converted to a dict
 def tags_list(tags):
-#    from pony.orm.ormtypes import TrackedDict
-    # do we have a single tag in string or dict form? 
+    """
+    returns a list of tags, where each tag is a dict.
+    the input can be a list of strings or a single string.
+    each string will be converted to a dict
+    """
+    # do we have a single tag in string or dict form?
     if isString(tags):
         tags = [tag_from_string(tags)]
-#    elif type(tags) in [dict, TrackedDict]:
-    elif type(tags) == dict:        
+    elif type(tags) == dict:
         tags = [tags]
     tags = [tag_from_string(t) if isString(t) else t for t in tags]
     return tags
@@ -330,13 +335,15 @@ def sum_chk_overflow(x, y):
     z = x + y
     if (abs(z) > (2 ** 31 - 1)):
        z = float(x) + float(y)
-    return z 
+    return z
 
-# return the sum of keys across two dictionaries
-# x = {'both1':1, 'both2':2, 'only_x': 100 }
-# y = {'both1':10, 'both2': 20, 'only_y':200 }
-# {'only_y': 200, 'both2': 22, 'both1': 11, 'only_x': 100}
 def sum_dicts(x, y):
+    """
+    return the sum of keys across two dictionaries
+        x = {'both1':1, 'both2':2, 'only_x': 100 }
+        y = {'both1':10, 'both2': 20, 'only_y':200 }
+        {'only_y': 200, 'both2': 22, 'both1': 11, 'only_x': 100}
+    """
     return { k: x.get(k, 0) + y.get(k, 0) for k in set(x) | set(y) }
 
 def sum_dicts_list(dicts, exclude=[]):
@@ -353,7 +360,7 @@ def sum_dicts_list(dicts, exclude=[]):
 
 # from list of dictionaries, get the unique ones
 # exclude keys is an optional list of keys that are removed
-# from 
+# from
 def unique_dicts(dicts, exclude_keys=[]):
     new_dicts = []
     if exclude_keys:
@@ -401,7 +408,7 @@ def fold_dicts(dicts):
 #       {'jobid': "1251", 'tags': {'op': 'hsmget'}, 'duration': 2000},
 #       {'jobid': "3451", 'tags': {'op': 'gcp'}, 'duration': 100},
 #       {'jobid': "1251", 'tags': {'op': 'gcp'}, 'duration': 200}]
-#  
+#
 #  group_dicts_by_key(d, key='tags', exclude = ['job', 'jobid'])
 #  would return:
 #  [{'tags': {'op': 'hsmget'}, duration: 3000},
@@ -421,7 +428,7 @@ def group_dicts_by_key(dicts, key = 'tags', exclude = []):
         sum_dict[key] = key_val
         out.append(sum_dict)
     return out
-    
+
 
 
 def isString(s):
@@ -472,7 +479,7 @@ def conv_dict_byte2str(bytes_dict):
         if type(key) == bytes:
             key = key.decode("utf-8")
         if type(value) == bytes:
-            str_dict[key] = value.decode("utf-8") 
+            str_dict[key] = value.decode("utf-8")
         elif type(value) == dict:
             str_dict[key] = conv_dict_byte2str(value)
         else:
@@ -482,7 +489,7 @@ def conv_dict_byte2str(bytes_dict):
 # returns a hashable dict in the form of a frozenset of dict items
 # ordered by dict keys
 def frozen_dict(d):
-    l = [(str(k), str(d[k]) if isString(d[k]) else d[k]) for k in d.keys()]   
+    l = [(str(k), str(d[k]) if isString(d[k]) else d[k]) for k in d.keys()]
     return frozenset(l)
 
 # return a stringified version of the dictionary
@@ -501,10 +508,10 @@ class dotdict(dict):
     __delattr__ = dict.__delitem__
 
 # given a list of overlapping intervals this will return a sorted
-# list of merged intervals. See, 
+# list of merged intervals. See,
 # https://stackoverflow.com/questions/43600878/merging-overlapping-intervals
 #
-# For e.g., 
+# For e.g.,
 # input: [[-25, -14], [-21, -16], [-20, -15], [-10, -7], [-8, -5], [-6, -3], [2, 4], [2, 3], [3, 6], [12, 15], [13, 18], [14, 17], [22, 27], [25, 30], [26, 29]]
 # output: [[-25, -14], [-10, -3], [2, 6], [12, 18], [22, 30]]
 def merge_intervals(intervals):
@@ -600,7 +607,7 @@ def check_fix_metadata(raw_metadata):
     logger = getLogger(__name__)  # you can use other name
 # First check what should be here
     try:
-        for n in [ 'job_pl_id', 'job_pl_submit_ts', 'job_pl_start_ts', 'job_pl_env', 
+        for n in [ 'job_pl_id', 'job_pl_submit_ts', 'job_pl_start_ts', 'job_pl_env',
                    'job_el_stop_ts', 'job_el_exitcode', 'job_el_reason', 'job_el_env' ]:
             s = str(raw_metadata[n])
             assert(len(s) > 0)
@@ -684,7 +691,7 @@ def conv_to_datetime(t):
     """
     This converts a time specified as a string or a Unix timestamp
     or a negative integer (signifiying a relative offset in days
-    from the current time) to a python datetime object. If passed a 
+    from the current time) to a python datetime object. If passed a
     datetime object it will be returned without modification
     E.g., of valid values of t:
 
@@ -720,7 +727,7 @@ def conv_to_datetime(t):
 def ranges(i):
     """
     Return a list of ranges for a list of integers
-    
+
     >>> print(list(ranges([0, 1, 2, 3, 4, 7, 8, 9, 11])))
     >>> [(0, 4), (7, 9), (11, 11)]
     """
@@ -790,7 +797,7 @@ def decode2strings(v):
 def dframe_encode_features(df, features = [], reversible = False):
     '''
     Replaces feature columns containing string/object (non-numeric)
-    values with columns containing encoded integers. 
+    values with columns containing encoded integers.
 
          df: Input dataframe possibly containing non-numeric feature columns
 
@@ -800,7 +807,7 @@ def dframe_encode_features(df, features = [], reversible = False):
 
  reversible: If set, a reversible encoding is done so that the integer
              columns can be converted to the original strings if needed.
-             It is not recommended that you enable this option as the 
+             It is not recommended that you enable this option as the
              resultant integers can be inordinately long for long strings
 
     RETURNS: (encoded_df, mapped_features)
@@ -876,7 +883,7 @@ def dframe_decode_features(df, features):
     else:
         logger.info('Decoded features: {}'.format(decoded_features))
     return (decoded_df, decoded_features)
-    
+
 
 def find_files_in_dir(path, pattern = '*.tgz', recursive = False):
     '''
@@ -942,7 +949,7 @@ def docs_func_section(func):
     '''
     summary_string = ((func.__doc__ or '').lstrip().split('\n')[0].strip())
     return summary_string.rsplit('::', 1)[1] if '::' in summary_string else ''
-    
+
 
 def docs_module_index(mod, fmt=None):
     '''
@@ -960,9 +967,9 @@ def docs_module_index(mod, fmt=None):
        A list of the form:
            [ (func1, summary1), (func2, summary2) ... ]
 
-       where func1, func2,... are function names from the module 
-       sorted alphabetically or according to some other criteria 
-       such as category to which the function. 
+       where func1, func2,... are function names from the module
+       sorted alphabetically or according to some other criteria
+       such as category to which the function.
 
     '''
     from inspect import getmembers, isfunction
@@ -974,7 +981,7 @@ def docs_module_index(mod, fmt=None):
     funcs = sorted( [
         o[1] for o in getmembers(mod) if isfunction(o[1]) and (not o[1].__name__.startswith('_')) and (o[1].__module__ == mod.__name__)], key = lambda f: f.__name__)
 
-    # prepare a list of tuples; the first tuple number is the 
+    # prepare a list of tuples; the first tuple number is the
     # function name, and the second item is it's one-line summary extracted
     # from it's docstring. Some functions may have no docstrings, and thats OK
     out = [ (f.__name__, docs_func_summary(f), docs_func_section(f)) for f in funcs ]
@@ -1055,7 +1062,7 @@ def csv_probe_format(f):
     Parameters
     ----------
             f : file handle or string
-                If `f` is a file handle, it must be positioned at 
+                If `f` is a file handle, it must be positioned at
                 the beginning of the file
 
     Returns
@@ -1088,7 +1095,7 @@ def csv_probe_format(f):
     if '\t' in s:
         # the second element is a list of CSV column names
         return ('2', s.split('\n')[0].split('\t'))
-    elif ',' in s: 
+    elif ',' in s:
         # the second element is a list of CSV column names
         return ('1', s.split('\n')[0].split(','))
     # if we reached here, then we don't understand the CSV format

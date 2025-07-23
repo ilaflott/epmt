@@ -12,15 +12,14 @@ from epmt.epmt_default_settings import *
 #    logger.debug(f"path={path}")
 
 # now load the user-specific settings.py so they override the defaults
-try: 
+try:
     from epmt.settings import *
 except Exception as e:
     raise ModuleImportError('alternate epmt.settings import approach did not' + \
                             ' work and neither did the first attempt!') from e
 #else:
-#    logger.debug('epmt_settings imported successfully! yay!!!')    
+#    logger.debug('epmt_settings imported successfully! yay!!!')
 
 
 #epmt_settings_kind=''
 #db_params = {'url': 'sqlite:///:memory:', 'echo': False}
-

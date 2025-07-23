@@ -26,7 +26,7 @@ class EPMTLib(unittest.TestCase):
         d = { 'abc': 10, 'def': 20, '_ghi': 30, 'LS_COLORS': 'xyz'}
         cloned_d = d.copy()
         pruned_d = dict_filter(d, ['LS_COLORS'])
-        self.assertEqual(d, cloned_d) 
+        self.assertEqual(d, cloned_d)
         self.assertEqual(pruned_d, { 'abc': 10, 'def': 20 })
         pruned_d2 = dict_filter(d, ['LS_COLORS'], remove_underscores = False)
         self.assertEqual(pruned_d2, { 'abc': 10, 'def': 20, '_ghi': 30 })
@@ -81,22 +81,22 @@ class EPMTLib(unittest.TestCase):
     # BROKEN FIX TODO
     def test_logfn(self):
         from epmt.epmtlib import logfn, epmt_logging_init, capture
-        
+
         # enable debug logging and,
         # remove all handlers and add our StringIO handler
         epmt_logging_init(2)
         logger = logging.getLogger()
-        
+
         @logfn
         def double(x):
             return x*2
-        
-        
+
+
         # this removes the existing handlers
-        for handler in logger.handlers: 
+        for handler in logger.handlers:
             logger.removeHandler(handler)
-        logger.handlers = [] 
-            
+        logger.handlers = []
+
         log_stream = StringIO()
         #print(log_stream)
         stream_handler = logging.StreamHandler(log_stream)
@@ -105,16 +105,16 @@ class EPMTLib(unittest.TestCase):
         #print(streamFormatter)
         stream_handler.setFormatter(streamFormatter)
         logger.addHandler(stream_handler)
-    
+
         # call our function
         y = double(25)
-        
-        # remove the StringIO handler        
+
+        # remove the StringIO handler
         logger.removeHandler(stream_handler)
-        
+
         # restore logging to sanity
         epmt_logging_init(0)
-        
+
         # grab the logging output and parse it for what we exepct
         s = log_stream.getvalue()
         self.assertEqual(y, 50)
@@ -124,7 +124,7 @@ class EPMTLib(unittest.TestCase):
         #print(s)
         #print(s)
 
-        
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -42,6 +42,6 @@ from epmt.orm import db_session, setup_db, orm_db_provider, orm_in_memory, Opera
 from epmt.orm.sqlalchemy.general import orm_get, orm_dump_schema, orm_commit, orm_is_query
 from epmt.orm.sqlalchemy.models import Job, UnprocessedJob, Process
 
-# this will be used repeatedly in the tests, so let's store it 
+# this will be used repeatedly in the tests, so let's store it
 # in a variable instead of repeatedly calling the function
 install_root = get_install_root()
