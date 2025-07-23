@@ -11,7 +11,8 @@ in the functions of this module. The idea is to use them as pure
 stateless mathematical functions. No database connectivity is assumed
 for the functions in this module.
 """
-#from __future__ import print_function
+# from __future__ import print_function
+import epmt.epmt_settings as settings
 import pandas as pd
 import numpy as np
 import operator
@@ -20,7 +21,6 @@ from numbers import Number
 from epmt.epmtlib import logfn
 
 logger = getLogger(__name__)  # you can use other name
-import epmt.epmt_settings as settings
 
 # this sets the defaults to be used when a trained model is not provided
 thresholds = settings.outlier_thresholds
@@ -30,9 +30,12 @@ def get_classifier_name(c):
     """
     Returns the classifier name as a string::Statistics
     """
-    if hasattr(c, '__name__'): return c.__name__
-    if hasattr(c, '__module__'): return c.__module__
+    if hasattr(c, '__name__'):
+        return c.__name__
+    if hasattr(c, '__module__'):
+        return c.__module__
     raise 'Could not determine classifier name for {}'.format(c)
+
 
 def is_classifier_mv(c):
     """
@@ -43,20 +46,23 @@ def is_classifier_mv(c):
     classifiers in this module and pyod
     """
     n = get_classifier_name(c)
-    if n.startswith('pyod'): return True
+    if n.startswith('pyod'):
+        return True
     return False
+
 
 def partition_classifiers_uv_mv(classifiers):
     """
     Partition classifiers into two disjoint sets of univariate and multivariate::Statistics
 
     """
-    mv_set = set([ c for c in classifiers if is_classifier_mv(c) ])
+    mv_set = set([c for c in classifiers if is_classifier_mv(c)])
     uv_set = set(classifiers) - mv_set
     return (uv_set, mv_set)
 
+
 @logfn
-def z_score(ys, params = ()):
+def z_score(ys, params=()):
     '''
     Computes the *absolute* z-scores for an input vector::Statistics
 
@@ -100,7 +106,7 @@ def z_score(ys, params = ()):
     # suppress divide by 0 warnings. We handle the actual division
     # issue by using np.nan_to_num
     import warnings
-    warnings.filterwarnings("ignore",category=RuntimeWarning)
+    warnings.filterwarnings("ignore", category=RuntimeWarning)
     logger = getLogger(__name__)  # you can use other name
     logger.debug('scoring using {}'.format('z_score'))
     ys = np.array(ys)
@@ -113,7 +119,8 @@ def z_score(ys, params = ()):
     abs_z_scores = np.nan_to_num(np.abs((ys - mean_y) / stdev_y).round(4))
     return (abs_z_scores, abs_z_scores.max(), mean_y, stdev_y)
 
-def iqr(ys, params = ()):
+
+def iqr(ys, params=()):
     '''
     Detects outliers using the 1.5 IQR rule::Statistics
 
@@ -186,8 +193,8 @@ def iqr(ys, params = ()):
     # If this vector were to be fitted, we can compute artifical
     # values of Q1 and Q3 based on the equation (see NOTES in the
     # documentation)
-    fitted_Q1 = 3*ys.max()/8 + 5*ys.min()/8
-    fitted_Q3 = 5*ys.max()/8 + 3*ys.min()/8
+    fitted_Q1 = 3 * ys.max() / 8 + 5 * ys.min() / 8
+    fitted_Q3 = 5 * ys.max() / 8 + 3 * ys.min() / 8
     return (outliers, 0, round(fitted_Q1, 4), round(fitted_Q3, 4))
 
 # this function returns a tuple consisting of:
@@ -197,6 +204,8 @@ def iqr(ys, params = ()):
 # and will only be used to compare an input against a reference run
 # params if passed in, is of the form (max, median, median_abs_dev)
 # We will ignore params(0) as that's the max z_score in the ref_model
+
+
 def modified_z_score(ys, params=()):
     '''
     Returns the modified-adjusted Z-score (MADZ) for an input vector::Statistics
@@ -226,13 +235,15 @@ def modified_z_score(ys, params=()):
 # whether an element is an outlier or not. They are wrappers
 # around scoring methods -- z_score, modified_z_score, iqr
 
+
 def outliers_iqr(ys):
     '''
     Returns a vector mask that identifies outliers using IQR::Statistics
     '''
     return iqr(ys)[0]
 
-def outliers_modified_z_score(ys,threshold=thresholds['modified_z_score']):
+
+def outliers_modified_z_score(ys, threshold=thresholds['modified_z_score']):
     '''
     Returns a vector mask that identifies outliers using MADZ::Statistics
     '''
@@ -241,7 +252,8 @@ def outliers_modified_z_score(ys,threshold=thresholds['modified_z_score']):
     # the + 0 will make it a numeric bitmask
     return (np.abs(scores) > threshold) + 0
 
-def outliers_z_score(ys,threshold=thresholds['z_score']):
+
+def outliers_z_score(ys, threshold=thresholds['z_score']):
     '''
     Returns a vector mask that identifies outliers using z-score::Statistics
     '''
@@ -250,7 +262,8 @@ def outliers_z_score(ys,threshold=thresholds['z_score']):
     # the + 0 will make it a numeric bitmask
     return (np.abs(scores) > threshold) + 0
 
-def outliers_uv(ys, methods = [outliers_iqr, outliers_z_score, outliers_modified_z_score]):
+
+def outliers_uv(ys, methods=[outliers_iqr, outliers_z_score, outliers_modified_z_score]):
     '''
     Detects outliers in a vector using one or more univariate classifiers::Statistics
 
@@ -290,14 +303,15 @@ def uvod_classifiers():
     are returned. The returned list contains one or more callables that support
     the epmt univariate classifier interface.
     '''
-    method_names = settings.univariate_classifiers if hasattr(settings, 'univariate_classifiers') else ['iqr', 'modified_z_score', 'z_score']
+    method_names = settings.univariate_classifiers if hasattr(settings, 'univariate_classifiers') else [
+        'iqr', 'modified_z_score', 'z_score']
     import sys
     thismodule = sys.modules[__name__]
-    funcs = [ getattr(thismodule, m) for m in method_names ]
+    funcs = [getattr(thismodule, m) for m in method_names]
     return funcs
 
 
-def mvod_classifiers(contamination = 0.1, warnopts='ignore'):
+def mvod_classifiers(contamination=0.1, warnopts='ignore'):
     '''
     Returns a list of multivariate classifiers::Statistics
     '''
@@ -308,28 +322,28 @@ def mvod_classifiers(contamination = 0.1, warnopts='ignore'):
 
     from pyod.models.abod import ABOD
     from pyod.models.knn import KNN
-    #from pyod.models.feature_bagging import FeatureBagging # not stable, wrong results
+    # from pyod.models.feature_bagging import FeatureBagging # not stable, wrong results
     from pyod.models.mcd import MCD
     from pyod.models.cof import COF
     from pyod.models.hbos import HBOS
     from pyod.models.pca import PCA
     # from pyod.models.sos import SOS  # wrong result
-    #from pyod.models.lmdd import LMDD # not stable
-    #from pyod.models.cblof import CBLOF
-    #from pyod.models.loci import LOCI # wrong result
+    # from pyod.models.lmdd import LMDD # not stable
+    # from pyod.models.cblof import CBLOF
+    # from pyod.models.loci import LOCI # wrong result
     from pyod.models.ocsvm import OCSVM
     # from pyod.models.iforest import IForest # not stable, repeated calls give different scores
 
     classifiers = [
-                      ABOD(contamination=contamination),
-                      KNN(contamination=contamination), # requires too many data points
-                      MCD(contamination=contamination),
-                      COF(contamination=contamination),
-                      HBOS(contamination=contamination),
-                      PCA(contamination=contamination),
-                      OCSVM(contamination=contamination),
-                      # IForest(contamination=contamination), # unstable, repeated calls give diff scores
-                  ]
+        ABOD(contamination=contamination),
+        KNN(contamination=contamination),  # requires too many data points
+        MCD(contamination=contamination),
+        COF(contamination=contamination),
+        HBOS(contamination=contamination),
+        PCA(contamination=contamination),
+        OCSVM(contamination=contamination),
+        # IForest(contamination=contamination), # unstable, repeated calls give diff scores
+    ]
     return classifiers
 
 
@@ -337,7 +351,7 @@ def mvod_classifiers(contamination = 0.1, warnopts='ignore'):
 # x = mvod_scores(...)
 # to get outliers for a particular threshold:
 # (x['K Nearest Neighbors (KNN)'] > 0.5104869395352308) * 1
-def mvod_scores(X = None, classifiers = [], warnopts = 'ignore'):
+def mvod_scores(X=None, classifiers=[], warnopts='ignore'):
     '''
     Perform outlier scoring using multivariate classifiers::Statistics
 
@@ -406,16 +420,16 @@ def mvod_scores(X = None, classifiers = [], warnopts = 'ignore'):
         logger.warning('No input data for MVOD. Random data will be used with contamination {}'.format(contamination))
         from pyod.utils.data import generate_data, get_outliers_inliers
         from scipy import stats
-        #generate random data with two features
+        # generate random data with two features
         X = None
         # generate_data has a bug in that in some rare cases it produces
         # zeroes for the outliers. This messes model
         # fitting. So we just make sure we generate valid data
         # pylint: disable=unsubscriptable-object
-        while (X is None) or (X[-int(n_pts*contamination):-1].sum() == 0.0):
-            X, Y = generate_data(n_train=n_pts,train_only=True, n_features=n_features, contamination=contamination)
+        while (X is None) or (X[-int(n_pts * contamination):-1].sum() == 0.0):
+            X, Y = generate_data(n_train=n_pts, train_only=True, n_features=n_features, contamination=contamination)
         # store outliers and inliers in different numpy arrays
-        x_outliers, x_inliers = get_outliers_inliers(X,Y)
+        x_outliers, x_inliers = get_outliers_inliers(X, Y)
 
         n_inliers = len(x_inliers)
         n_outliers = len(x_outliers)
@@ -448,7 +462,6 @@ def mvod_scores(X = None, classifiers = [], warnopts = 'ignore'):
         scores[clf_name] = _clf_scores
         max_score_for_cf[clf_name] = _clf_scores.max()
 
-
         if Y is not None:
             # prediction of a datapoint category outlier or inlier
             y_pred = clf.predict(X)
@@ -459,12 +472,11 @@ def mvod_scores(X = None, classifiers = [], warnopts = 'ignore'):
             n_errors = (y_pred != Y).sum()
             print('No. of errors using ', clf_name, ': ', n_errors)
 
-
             # threshold value to consider a datapoint inlier or outlier
             # 0.1 is the default outlier fraction in the generated data
-            threshold = stats.scoreatpercentile(scores[clf_name],100 * (1 - contamination))
+            threshold = stats.scoreatpercentile(scores[clf_name], 100 * (1 - contamination))
             logger.debug('{0} threshold: {1}'.format(clf_name, threshold))
-    #print(scores)
+    # print(scores)
     if not scores:
         # some error occured and we didn't generate scores at all
         return False
@@ -473,7 +485,7 @@ def mvod_scores(X = None, classifiers = [], warnopts = 'ignore'):
     return (scores, max_score_for_cf)
 
 
-def mvod_scores_using_model(inp, model_inp, classifier, threshold = None):
+def mvod_scores_using_model(inp, model_inp, classifier, threshold=None):
     """
     Performs multivariate scoring against a model::Statistics
 
@@ -535,7 +547,11 @@ def mvod_scores_using_model(inp, model_inp, classifier, threshold = None):
     logger.debug('MVOD {0} (threshold={1})'.format(c_name, threshold))
     from math import isclose
     if not isclose(model_score_max, threshold, rel_tol=1e-2):
-        logger.warning('MVOD {} is not stable. We computed a threshold {}, while the passed threshold from the saved model was {}'.format(c_name, model_score_max, threshold))
+        logger.warning(
+            'MVOD {} is not stable. We computed a threshold {}, while the passed threshold from the saved model was {}'.format(
+                c_name,
+                model_score_max,
+                threshold))
     for i in range(inp_nrows):
         # pick the ith row
         row = inp[i]
@@ -574,7 +590,7 @@ def mvod_scores_using_model(inp, model_inp, classifier, threshold = None):
 # match the column labels of the ref dataframe. Similarly if inp is a
 # dataframe then it's column labels must match those of ref and in the
 # same order.
-def rca(ref, inp, features, methods = [modified_z_score]):
+def rca(ref, inp, features, methods=[modified_z_score]):
     '''
     Perform low-level RCA::Statistics
     '''
@@ -582,9 +598,8 @@ def rca(ref, inp, features, methods = [modified_z_score]):
     if ref.empty or inp.empty:
         return (False, None, None)
 
-    if type(inp) == pd.Series:
+    if isinstance(inp, pd.Series):
         inp = pd.DataFrame(inp).transpose()
-
 
     # if list(ref.columns.values) != list(inp.columns.values):
     #     logger.error('ref and inp MUST have the same columns and in the same order')
@@ -594,19 +609,19 @@ def rca(ref, inp, features, methods = [modified_z_score]):
     if (not features) or (features == '*'):
         # pick all the common numeric columns in the dataframe
         ref_cols_set = set(ref.columns.values)
-        features = [f for f in list(inp.columns.values) if (isinstance(inp[f][0], Number) and (f in ref_cols_set)) ]
+        features = [f for f in list(inp.columns.values) if (isinstance(inp[f][0], Number) and (f in ref_cols_set))]
         logger.debug('using following features for RCA analysis: ' + str(features))
 
     ref_computed = ref[features].describe()
     ref_computed.loc['input'] = inp.iloc[0]
 
-    result_dict = { f: 0 for f in features }
+    result_dict = {f: 0 for f in features}
 
     for m in methods:
         c_name = get_classifier_name(m)
         ref_computed.loc['ref_max_' + c_name] = 0
         ref_computed.loc[c_name] = 0
-        ref_computed.loc[c_name+'_ratio' ] = 0
+        ref_computed.loc[c_name + '_ratio'] = 0
         for f in features:
             # lets get the params for ref using the scoring method
             # we expect the following tuple:
@@ -620,12 +635,12 @@ def rca(ref, inp, features, methods = [modified_z_score]):
             inp_score = inp_params[0][0]
             ref_computed[f][c_name] = inp_score
             if ref_max_score != 0:
-                ratio = inp_score/ref_max_score
+                ratio = inp_score / ref_max_score
             elif inp_score == 0:
                 ratio = inp_score
             else:
                 ratio = float('inf')
-            ref_computed[f][c_name+'_ratio'] = ratio
+            ref_computed[f][c_name + '_ratio'] = ratio
             result_dict[f] += ratio
 
     # sort the result_dict by descending value
@@ -647,15 +662,18 @@ def check_finite(values):
     n_nans = 0
     n_infs = 0
     for v in values:
-        if isnan(v): n_nans += 1
-        if isinf(v): n_infs += 1
+        if isnan(v):
+            n_nans += 1
+        if isinf(v):
+            n_infs += 1
     if n_nans:
         logger.debug('found {} NaN'.format(n_nans))
     if n_infs:
         logger.debug('found {} Inf'.format(n_infs))
     return ((n_infs == 0) and (n_nans == 0))
 
-def pca_stat(inp_features, desired = 2):
+
+def pca_stat(inp_features, desired=2):
     '''
     Performs PCA on an ndarray::Statistics
 
@@ -699,7 +717,7 @@ def pca_stat(inp_features, desired = 2):
         logger.debug('desired variance ratio: {}'.format(desired))
 
     n_samples, n_dim = inp_features.shape
-    assert(n_dim > 1)
+    assert (n_dim > 1)
 
     x = StandardScaler().fit_transform(inp_features)
     logger.debug('input after standard scaling:\n{}'.format(x))
@@ -717,7 +735,7 @@ def pca_stat(inp_features, desired = 2):
     return (pc_array, pca)
 
 
-def check_dist(data = [], dist='norm', alpha = 0.05):
+def check_dist(data=[], dist='norm', alpha=0.05):
     '''
     Determines the distribution of input data::Statistics
 
@@ -782,7 +800,7 @@ def check_dist(data = [], dist='norm', alpha = 0.05):
     from scipy.stats import normaltest
     from scipy.stats import kstest
 
-    if (type(data) != np.ndarray) and not data:
+    if (not isinstance(data, np.ndarray)) and not data:
         from numpy.random import seed
         from numpy.random import randn
         # seed the random number generator
@@ -803,13 +821,14 @@ def check_dist(data = [], dist='norm', alpha = 0.05):
     passed = 0
     failed = 0
 
-    kstest_norm = lambda d: kstest(d, 'norm', (_mean, _std))
-    kstest_uniform = lambda d: kstest(d, 'uniform', (_min, _max - _min))
-    tests = { 'norm': [('Shapiro-Wilk', shapiro), ('Kolmogorov-Smirnov (norm)', kstest_norm)], 'uniform': [('Kolmogorov-Smirnov (uniform)', kstest_uniform)] }
+    def kstest_norm(d): return kstest(d, 'norm', (_mean, _std))
+    def kstest_uniform(d): return kstest(d, 'uniform', (_min, _max - _min))
+    tests = {'norm': [('Shapiro-Wilk', shapiro), ('Kolmogorov-Smirnov (norm)', kstest_norm)],
+             'uniform': [('Kolmogorov-Smirnov (uniform)', kstest_uniform)]}
     if data.size > 20:
         # The test below requires at least 20 elements
         tests['norm'].append(('D\'Agostino', normaltest))
-    if not dist in tests:
+    if dist not in tests:
         raise ValueError('We only support the following distributions: {}'.format(tests.keys()))
     logger.debug('Testing for {} distribution'.format(dist))
 
@@ -826,9 +845,10 @@ def check_dist(data = [], dist='norm', alpha = 0.05):
             logger.debug('  {} test: FAILED'.format(test))
 
     logger.debug('check_dist: {} tests PASSED, {} tests FAILED'.format(passed, failed))
-    return(passed, failed)
+    return (passed, failed)
 
-def get_modes(X, max_modes = 10):
+
+def get_modes(X, max_modes=10):
     '''
     Get the modes for a distribution::Statistics
 
@@ -863,21 +883,21 @@ def get_modes(X, max_modes = 10):
     from sklearn.preprocessing import MinMaxScaler
     from sklearn.metrics import silhouette_score
     scaler = MinMaxScaler()
-    X_scaled=scaler.fit_transform(X.reshape(-1,1))
+    X_scaled = scaler.fit_transform(X.reshape(-1, 1))
     km_silhouette = []
-    km_scores= []
-    for i in range(1,max_modes):
+    km_scores = []
+    for i in range(1, max_modes):
         km = KMeans(n_clusters=i, random_state=0).fit(X_scaled)
         preds = km.predict(X_scaled)
 
-        logger.debug("Score for number of cluster(s) {}: {}".format(i,km.score(X_scaled)))
+        logger.debug("Score for number of cluster(s) {}: {}".format(i, km.score(X_scaled)))
         km_scores.append(-km.score(X_scaled))
 
         if (i > 1):
             # silhouette method only works for n_clusters >= 2
-            silhouette = silhouette_score(X_scaled,preds)
+            silhouette = silhouette_score(X_scaled, preds)
             km_silhouette.append(silhouette)
-            logger.debug("Silhouette score for number of cluster(s) {}: {}".format(i,silhouette))
+            logger.debug("Silhouette score for number of cluster(s) {}: {}".format(i, silhouette))
 
     # find optimal value according to elbow method
     diffs = np.abs(np.diff(km_scores))
@@ -893,7 +913,10 @@ def get_modes(X, max_modes = 10):
         modes_by_silhouette_method = (np.argmax(km_silhouette) + 2)
         logger.debug('optimal clustering according to silhouette method: {}'.format(modes_by_silhouette_method))
         if modes_by_elbow_method != modes_by_silhouette_method:
-            logger.warning('Elbow and silhouette methods gave different mode counts -- {} and {}. Usually this means you might have a single mode or your data was not drawn from normal distributions'.format(modes_by_elbow_method, modes_by_silhouette_method))
+            logger.warning(
+                'Elbow and silhouette methods gave different mode counts -- {} and {}. Usually this means you might have a single mode or your data was not drawn from normal distributions'.format(
+                    modes_by_elbow_method,
+                    modes_by_silhouette_method))
             num_modes = 1
 
     km = KMeans(n_clusters=num_modes, random_state=0).fit(X_scaled)
@@ -912,7 +935,7 @@ def normalize(v, min_=0, max_=1):
     Returns a new scaled numpy array of the same shape as the original.
     '''
     from sklearn.preprocessing import minmax_scale
-    return minmax_scale(v, feature_range=(min_,max_), axis=0)
+    return minmax_scale(v, feature_range=(min_, max_), axis=0)
 
 
 def standardize(v):
@@ -929,7 +952,8 @@ def standardize(v):
     from scipy.stats import zscore
     return zscore(v, axis=0)
 
-def dframe_append_weighted_row(df, weights, ignore_index = True, use_abs = False):
+
+def dframe_append_weighted_row(df, weights, ignore_index=True, use_abs=False):
     '''
     Appends row to dataframe that uses a weighted combination of other rows::Statistics
 
@@ -969,15 +993,16 @@ def dframe_append_weighted_row(df, weights, ignore_index = True, use_abs = False
     2  1  2  2
 
     '''
-    assert(df.shape[0] == len(weights))
+    assert (df.shape[0] == len(weights))
     weights_array = np.asarray(weights)
     new_row = []
 
     for c in df.columns:
         new_row.append(((abs(df[c].values) if use_abs else df[c].values) * np.asarray(weights_array)).sum())
-    return df.append(pd.DataFrame([new_row], columns = df.columns), ignore_index = ignore_index)
+    return df.append(pd.DataFrame([new_row], columns=df.columns), ignore_index=ignore_index)
 
-def dict_outliers(dlist, labels = [], threshold = 2.0):
+
+def dict_outliers(dlist, labels=[], threshold=2.0):
     '''
     Get outliers from a collection of dictionaries::Statistics
 
@@ -1030,7 +1055,7 @@ def dict_outliers(dlist, labels = [], threshold = 2.0):
         i += 1
 
     # get the dict with non-empty keys
-    pop_dict = { k: v for k, v in outl_by_key.items() if v }
+    pop_dict = {k: v for k, v in outl_by_key.items() if v}
     return (outliers, pop_dict)
 
 # https://datascience.stackexchange.com/questions/57122/in-elbow-curve-how-to-find-the-point-from-where-the-curve-starts-to-rise

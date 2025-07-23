@@ -1,15 +1,18 @@
+from getpass import getuser
+from os import path
+from pathlib import Path
+
+
 def test_settings_import():
     pass
+
 
 # Copy this file and edit it as follows:
 # cp preset_settings/settings_xxxxxxx.py settings.py
 # Then feel free to edit the file to suit you.
-from pathlib import Path
-from os import path
-from getpass import getuser
 
 orm = 'sqlalchemy'
-db_params = { 'url': 'sqlite:///{HOME}/EPMT_DB.sqlite'.format(HOME=str(Path.home())), 'echo': False }
+db_params = {'url': 'sqlite:///{HOME}/EPMT_DB.sqlite'.format(HOME=str(Path.home())), 'echo': False}
 bulk_insert = True
 
 # You can alter the settings below to override defaults
@@ -23,10 +26,10 @@ epmt_output_prefix = path.expandvars("$TMPDIR/epmt")
 stage_command_dest = "/nbhome/" + getuser()
 # verbose = 0
 # input pattern must match both csv v1 and v2 filenames
-#input_pattern = "*-papiex*.[ct]sv"
+# input_pattern = "*-papiex*.[ct]sv"
 
 
-#install_prefix = "/home/Jeffrey.Durachta/workflowDB/EPMT/epmt-2.1.0-centos-6/papiex-epmt-install/"
+# install_prefix = "/home/Jeffrey.Durachta/workflowDB/EPMT/epmt-2.1.0-centos-6/papiex-epmt-install/"
 
 # when we are not attached to a terminal we log to the file below
 # logfile = path.expandvars("/tmp/epmt_{}.log".format(getuser() or "unknown"))
@@ -41,7 +44,7 @@ stage_command_dest = "/nbhome/" + getuser()
 # job_tags_env = 'EPMT_JOB_TAGS'
 # per_process_fields = ["tags","hostname","exename","path","args","exitcode","pid","generation","ppid","pgid","sid","numtids", "mpinumranks", "mpirank", "exitsignal"]
 # skip_for_thread_sums = ["tid", "start", "end", "num_threads", "starttime"]
-# 
+#
 # # outlier detection
 # univariate_classifiers = ['iqr', 'modified_z_score', 'z_score']
 # outlier_thresholds = { 'modified_z_score': 3.5, 'z_score': 3.0 }

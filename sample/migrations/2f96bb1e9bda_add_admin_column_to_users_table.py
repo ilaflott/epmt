@@ -1,7 +1,7 @@
 """add admin column to users table
 
 Revision ID: 2f96bb1e9bda
-Revises: 
+Revises:
 Create Date: 2019-09-18 09:36:28.650393
 
 """

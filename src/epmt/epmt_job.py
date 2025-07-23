@@ -1,4 +1,6 @@
-#from __future__ import print_function
+# from __future__ import print_function
+from epmt.orm import *
+import epmt.epmt_settings as settings
 from os.path import basename, dirname
 from os import environ
 from logging import getLogger
@@ -14,15 +16,14 @@ import sys
 from io import StringIO
 
 logger = getLogger(__name__)  # you can use other name
-import epmt.epmt_settings as settings
-from epmt.orm import *
 
 #
 # Spinning cursor sequence
-#from itertools import cycle
-#spinner = cycle(['-', '/', '|', '\\'])
+# from itertools import cycle
+# spinner = cycle(['-', '/', '|', '\\'])
 
 # Construct a number from the pattern
+
 
 def sortKeyFunc(s):
     t = basename(s)
@@ -32,38 +33,42 @@ def sortKeyFunc(s):
     t = t[7:-4]
 # append instance number
     t2 = t.split("-")
-    return int(t2[0]+t2[1])
+    return int(t2[0] + t2[1])
+
 
 @logfn
-def create_job(jobid,user):
-# This code sucks, it should not get before create. It should properly handle the exception, rollback and restart
+def create_job(jobid, user):
+    # This code sucks, it should not get before create. It should properly handle the exception, rollback and restart
     job = orm_get(Job, jobid)
     if job:
         return None
-    job = orm_create(Job,jobid=jobid,user=user)
+    job = orm_create(Job, jobid=jobid, user=user)
     return job
 
-##	metadata['job_pl_id'] = global_job_id
-##	metadata['job_pl_scriptname'] = global_job_scriptname
-##	metadata['job_pl_jobname'] = global_job_name
-##	metadata['job_pl_from_batch'] = from_batch
-#	metadata['job_pl_hostname'] = gethostname()
-#	metadata['job_pl_username'] = global_job_username
-#	metadata['job_pl_groupnames'] = global_job_groupnames
-#	metadata['job_pl_env_len'] = len(env)
-#	metadata['job_pl_env'] = env
-#	metadata['job_pl_submit'] = datetime.now()
-#	metadata['job_pl_start'] = ts
-#	metadata['job_el_env_changes_len'] = len(env)
-#	metadata['job_el_env_changes'] = env
-#	metadata['job_el_stop'] = ts
-#	metadata['job_el_from_batch'] = from_batch
-#	metadata['job_el_status'] = status
+# metadata['job_pl_id'] = global_job_id
+# metadata['job_pl_scriptname'] = global_job_scriptname
+# metadata['job_pl_jobname'] = global_job_name
+# metadata['job_pl_from_batch'] = from_batch
+# metadata['job_pl_hostname'] = gethostname()
+# metadata['job_pl_username'] = global_job_username
+# metadata['job_pl_groupnames'] = global_job_groupnames
+# metadata['job_pl_env_len'] = len(env)
+# metadata['job_pl_env'] = env
+# metadata['job_pl_submit'] = datetime.now()
+# metadata['job_pl_start'] = ts
+# metadata['job_el_env_changes_len'] = len(env)
+# metadata['job_el_env_changes'] = env
+# metadata['job_el_stop'] = ts
+# metadata['job_el_from_batch'] = from_batch
+# metadata['job_el_status'] = status
+
 
 created_hosts = {}
 # Rather than using this function directly, please use
 # lookup_or_create_host_safe, as that handles a race condition
 # when using concurrent submits
+
+
 def lookup_or_create_host(hostname):
     logger = getLogger(__name__)  # you can use other name
     host = created_hosts.get(hostname)
@@ -72,7 +77,7 @@ def lookup_or_create_host(hostname):
         # in the session cache. In such a case, we need to purge it
         try:
             host.name
-        except:
+        except BaseException:
             del created_hosts[hostname]
             host = None
 
@@ -81,13 +86,13 @@ def lookup_or_create_host(hostname):
 
     if host is None:
         host = orm_create(Host, name=hostname)
-        logger.info("Created host %s",hostname)
+        logger.info("Created host %s", hostname)
         # for sqlalchemy the created_hosts map is crucial for boosting performance
         # However with Pony we end up caching objects from different db_sessions
         # and so we don't want use our create_hosts map with Pony
         if settings.orm == 'sqlalchemy':
             created_hosts[hostname] = host
-    assert(host.name == hostname)
+    assert (host.name == hostname)
     return host
 
 
@@ -104,9 +109,10 @@ def lookup_or_create_host_safe(hostname):
         h = lookup_or_create_host(hostname)
     return h
 
+
 def lookup_or_create_user(username):
     logger = getLogger(__name__)  # you can use other name
-    user = orm_get_or_create(User, name = username)
+    user = orm_get_or_create(User, name=username)
     # user = orm_get(User, username)
     # if user is None:
     #     logger.info("Creating user %s",username)
@@ -138,7 +144,7 @@ def lookup_or_create_user(username):
 
 
 # Generator function that returns a
-def get_proc_rows(csvfile, skiprows = 0, fmt='1', metric_names=[]):
+def get_proc_rows(csvfile, skiprows=0, fmt='1', metric_names=[]):
     from epmt.epmt_convert_csv import OUTPUT_CSV_FIELDS, OUTPUT_CSV_SEP
     # we only support two formats at present
     if fmt not in ('1', '2'):
@@ -151,7 +157,12 @@ def get_proc_rows(csvfile, skiprows = 0, fmt='1', metric_names=[]):
 
     # csv v1 format has a header, for v2, we know the field names a priori
     # v2 also uses a different delimiter
-    reader = csv.DictReader(csvfile, escapechar='\\') if fmt == '1' else csv.DictReader(csvfile, fieldnames = OUTPUT_CSV_FIELDS, delimiter = OUTPUT_CSV_SEP)
+    reader = csv.DictReader(
+        csvfile,
+        escapechar='\\') if fmt == '1' else csv.DictReader(
+        csvfile,
+        fieldnames=OUTPUT_CSV_FIELDS,
+        delimiter=OUTPUT_CSV_SEP)
 
     # ordinarily the line below would not be a good idea,
     # however, we are dealing with small CSV files (less than 200k rows) so a gulp
@@ -186,7 +197,7 @@ def get_proc_rows(csvfile, skiprows = 0, fmt='1', metric_names=[]):
         if fmt == '1':
             # now yield rows from [row ... row+thr_count]
             # make sure the yielded dataframe has it's index reset to 0
-            yield (rows[row_num:row_num+thr_count], row_num, nrows)
+            yield (rows[row_num:row_num + thr_count], row_num, nrows)
             # advance row pointer
             row_num += thr_count
         else:
@@ -197,11 +208,11 @@ def get_proc_rows(csvfile, skiprows = 0, fmt='1', metric_names=[]):
             # array of metrics from *all* threads. It is a comma-separated
             # string enclosed in curly braces. We read in the array and then
             # split it into multiple rows like v1 format would expect
-            thr_arr = row['threads_df'].replace('{','').replace('}','').split(',')
+            thr_arr = row['threads_df'].replace('{', '').replace('}', '').split(',')
             num_metrics = len(metric_names)
             process_data = []
             for t in range(thr_count):
-                thr_metrics = { metric_names[i]: int(thr_arr[t*num_metrics+i]) for i in range(num_metrics) }
+                thr_metrics = {metric_names[i]: int(thr_arr[t * num_metrics + i]) for i in range(num_metrics)}
                 # make a new rwo
                 process_data.append(thr_metrics)
             # now merge the data in "row" with the thread 0 data, after removing
@@ -253,8 +264,8 @@ def load_process_from_dictlist(proc, host, j, u, settings, profile):
                            user=u)
 
     except Exception as e:
-        logger.error("%s",e)
-        logger.error("Corrupted CSV or invalid input type");
+        logger.error("%s", e)
+        logger.error("Corrupted CSV or invalid input type")
         raise ValueError('Corrupted CSV or invalid input type')
     profile.load_process.init += time.time() - _t
 
@@ -266,12 +277,12 @@ def load_process_from_dictlist(proc, host, j, u, settings, profile):
         # and the highest end time?
         earliest_thread_start = Timestamp(int(proc[0]['start']), unit='us')
         latest_thread_finish = Timestamp(int(proc[0]['end']), unit='us')
-        p.start = earliest_thread_start.to_pydatetime().replace(tzinfo = pytz.utc)
-        p.end = latest_thread_finish.to_pydatetime().replace(tzinfo = pytz.utc)
-        p.duration = float((latest_thread_finish - earliest_thread_start).total_seconds())*float(1000000)
+        p.start = earliest_thread_start.to_pydatetime().replace(tzinfo=pytz.utc)
+        p.end = latest_thread_finish.to_pydatetime().replace(tzinfo=pytz.utc)
+        p.duration = float((latest_thread_finish - earliest_thread_start).total_seconds()) * float(1000000)
     except Exception as e:
-        logger.error("%s",e)
-        logger.error("missing or invalid value for thread start/end time");
+        logger.error("%s", e)
+        logger.error("missing or invalid value for thread start/end time")
     profile.load_process.misc += time.time() - _t
 
     # We have coupled the operation below with a later df.drop to save time.
@@ -291,13 +302,12 @@ def load_process_from_dictlist(proc, host, j, u, settings, profile):
     # We pass metric_sums as a python dictionary to Pony so we can do
     # complex queries in Pony using metrics in the 'metric_sums' dict.
     _t = time.time()
-    #p.threads_df = df.to_json(orient='split')
-    #p.threads_df = {'columns': list(proc[0].keys()), 'data':[]}
-    #for thr in proc:
+    # p.threads_df = df.to_json(orient='split')
+    # p.threads_df = {'columns': list(proc[0].keys()), 'data':[]}
+    # for thr in proc:
     #    p.threads_df['data'].append(list(thr.values()))
     p.threads_df = proc
     profile.load_process.to_json += time.time() - _t
-
 
     _t = time.time()
     tags = proc[0].get('tags')
@@ -326,7 +336,7 @@ def load_process_from_dictlist(proc, host, j, u, settings, profile):
 
     _t = time.time()
     fields = set(proc[0].keys()) - set(settings.skip_for_thread_sums) - set(settings.per_process_fields)
-    thread_metric_sums = {k: 0 for k in fields }
+    thread_metric_sums = {k: 0 for k in fields}
 
     for thr in proc:
         for k in fields:
@@ -343,7 +353,8 @@ def load_process_from_dictlist(proc, host, j, u, settings, profile):
 # Extract a dictionary from the rows of header on the file
 #
 
-def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
+
+def extract_tags_from_comment_line(jobdatafile, comment="#", tarfile=None):
     rows = 0
     retstr = None
 
@@ -357,7 +368,7 @@ def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
         else:
             f = tarfile.extractfile(info)
     else:
-        f = open(jobdatafile,'r')
+        f = open(jobdatafile, 'r')
 
     line = f.readline()
     while line:
@@ -374,7 +385,7 @@ def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
 
 #        for member in tar.getmembers():
 
-#def check_experiment_in_metadata(metadata):
+# def check_experiment_in_metadata(metadata):
 #    for i in ("exp_name","exp_component","exp_oname","exp_jobname"):
 #        if i not in metadata:
 #            return False
@@ -407,7 +418,9 @@ def extract_tags_from_comment_line(jobdatafile,comment="#",tarfile=None):
 # We only use relations for bulk mapping as orm_add_to_collection is
 # really slow if the processes are to be re-read from the DB
 # relations and descendant maps are used if we do bulk inserts
-def _proc_ancestors(pid_map, proc, ancestor_pid, relations = None, descendant_map = {}):
+
+
+def _proc_ancestors(pid_map, proc, ancestor_pid, relations=None, descendant_map={}):
 
     if ancestor_pid in pid_map:
         proc.depth += 1
@@ -422,7 +435,7 @@ def _proc_ancestors(pid_map, proc, ancestor_pid, relations = None, descendant_ma
             descendant_map[ancestor.id].add(proc)
         else:
             descendant_map[ancestor.id] = set([proc])
-        if not(relations is None):
+        if not (relations is None):
             relations.append({'ancestor': ancestor.id, 'descendant': proc.id})
         else:
             orm_add_to_collection(ancestor.descendants, proc)
@@ -439,6 +452,8 @@ def _proc_ancestors(pid_map, proc, ancestor_pid, relations = None, descendant_ma
 # Makes a pid map (a dictionary referenced by PIDs).
 # Each dict entry is a list containing one or more Process
 # (or dotdict if using bulk inserts) objects.
+
+
 def _mk_pid_map(all_procs):
     pid_map = {}
     for p in all_procs:
@@ -454,7 +469,7 @@ def _mk_pid_map(all_procs):
 # of candidates whose PID matches the PPID of proc.
 # proc is a dotdict or a Process object
 def _disambiguate_parent(entries, proc):
-    sorted_entries = sorted(entries, key = lambda p: p.start)
+    sorted_entries = sorted(entries, key=lambda p: p.start)
     for p in sorted_entries:
         if (p.end > proc.start):
             # if (p.start > proc.start):
@@ -466,7 +481,7 @@ def _disambiguate_parent(entries, proc):
             return p
     # each process has a unique parent, so we know
     # control must never come here else something's broken
-    assert(False)
+    assert (False)
 
 
 def _create_process_tree(pid_map):
@@ -483,7 +498,8 @@ def _create_process_tree(pid_map):
                 else:
                     # the process must have execed so we have
                     # multiple records for the PID.
-                    for e in entries: assert(e.pid == ppid)
+                    for e in entries:
+                        assert (e.pid == ppid)
                     parent = _disambiguate_parent(entries, proc)
                 proc.parent = parent
                 # commented out line below as it's automatically
@@ -509,6 +525,7 @@ def _create_process_tree(pid_map):
         thr_data.engine.execute(t.insert(), r)
     return desc_map
 
+
 def is_process_tree_computed(j):
     return bool(j.info_dict.get('process_tree'))
 
@@ -518,9 +535,11 @@ def is_process_tree_computed(j):
 # _create_process_tree.
 # 'all_procs' and 'pid_map' are optional and if supplied
 # will reduce processing time.
+
+
 @db_session
-def mk_process_tree(j, all_procs = None, pid_map = None):
-    if type(j) == str:
+def mk_process_tree(j, all_procs=None, pid_map=None):
+    if isinstance(j, str):
         j = Job[j]
     info_dict = j.info_dict.copy()
     if info_dict.get('process_tree'):
@@ -544,7 +563,7 @@ def mk_process_tree(j, all_procs = None, pid_map = None):
     _t2 = time.time()
     # make sure the inane ORM can understand that we are
     # updating info_dict
-    info_dict.update({ 'process_tree': 1 })
+    info_dict.update({'process_tree': 1})
     j.info_dict = info_dict
 
     logger.debug('  process tree took: %2.5f sec', _t2 - _t1)
@@ -572,10 +591,12 @@ def mk_process_tree(j, all_procs = None, pid_map = None):
 # all_procs and pid_map. If any of them are missing, it will
 # build them by using the data in the database/ORM.
 #
+
+
 @timing
-def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, update_unprocessed_jobs_table = True, force = False):
+def post_process_job(j, all_tags=None, all_procs=None, pid_map=None, update_unprocessed_jobs_table=True, force=False):
     logger = getLogger(__name__)  # you can use other name
-    if type(j) == str:
+    if isinstance(j, str):
         jobid = j
         j = Job[jobid]
     else:
@@ -616,10 +637,10 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
 
     _t0 = time.time()
     if not j.processes:
-        logger.warning('Job {} contains no processes, perhaps an error in collation or populating the staging data?'.format(jobid))
+        logger.warning(
+            'Job {} contains no processes, perhaps an error in collation or populating the staging data?'.format(jobid))
 
-
-    if all_tags == None:
+    if all_tags is None:
         logger.info("  recreating all_tags..")
         all_tags = set()
         # we need to read the tags from the processes
@@ -629,9 +650,9 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
 
     # Add sum of tags to job
     if all_tags:
-        logger.info("  found %d distinct sets of process tags",len(all_tags))
+        logger.info("  found %d distinct sets of process tags", len(all_tags))
         # convert each of the pickled tags back into a dict
-        proc_sums['all_proc_tags'] = [ loads(t) for t in sorted(all_tags) ]
+        proc_sums['all_proc_tags'] = [loads(t) for t in sorted(all_tags)]
     else:
         logger.debug('  no process tags found in the entire job')
         proc_sums['all_proc_tags'] = []
@@ -649,7 +670,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     # job.proc_sums field
     nthreads = 0
     threads_sums_across_procs = {}
-    papiex_err_pids = set([]) # set iff rdtsc_duration <= 0
+    papiex_err_pids = set([])  # set iff rdtsc_duration <= 0
     papiex_err = ''          # set iff rdtsc_duration <= 0
     num_errs = 0             # total error count
     if all_procs:
@@ -687,8 +708,10 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
                 num_errs += 1
                 # logger.debug('process {} (PID {}) has non-positive rdstc'.format(proc.id, proc.pid))
                 papiex_err_pids.add(proc.pid)
-                logger.debug('  rdtsc_duration for PID (%d) < 0 (database ID %s)', proc.pid, str(proc.id if proc.id != None else "not set yet"))
-                papiex_err = 'papiex / PAPI library could not be preloaded (rdtsc_duration = 0).' if (rdtsc == 0) else 'PAPI failed or misbehaved process closed a descriptor it did not own (rdtsc_duration < 0).'
+                logger.debug('  rdtsc_duration for PID (%d) < 0 (database ID %s)', proc.pid,
+                             str(proc.id if proc.id is not None else "not set yet"))
+                papiex_err = 'papiex / PAPI library could not be preloaded (rdtsc_duration = 0).' if (
+                    rdtsc == 0) else 'PAPI failed or misbehaved process closed a descriptor it did not own (rdtsc_duration < 0).'
                 # Set rdtsc_duration to -1 in errant process and threads
                 # we need to clone the ORM object as the ORM skips update
                 # at times if you just do an in-place field change
@@ -701,8 +724,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
                         t['rdtsc_duration'] = -1
                 proc.threads_df = thr_df
 
-
-        logger.info("  job contains %d processes (%d threads)",len(all_procs), nthreads)
+        logger.info("  job contains %d processes (%d threads)", len(all_procs), nthreads)
         _t3 = time.time()
         logger.debug('  thread sums calculation took: %2.5f sec', _t3 - _t2)
         # see comment above about why we don't use bulk insert for
@@ -734,7 +756,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     if num_errs:
         papiex_err += ' {} processes have potentially erroneous PAPI metric counts'.format(num_errs)
         logger.warning('papiex error: %s. Setting rdtsc_duration to -1 for job %s', papiex_err, jobid)
-        proc_sums['rdtsc_duration'] = -1 # the current sum is wrong, so use -1
+        proc_sums['rdtsc_duration'] = -1  # the current sum is wrong, so use -1
         # use a dict copy so we force an ORM update of this field
         annotations = dict.copy(j.annotations or {})
         annotations['papiex-error'] = papiex_err
@@ -763,7 +785,7 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
     # the cpu time for a job is the sum of the exclusive times
     # of all processes in the job
     # We use list-comprehension and aggregation over slower ORM ops
-    ### j.cpu_time = orm_sum_attribute(j.processes, 'cpu_time')
+    # j.cpu_time = orm_sum_attribute(j.processes, 'cpu_time')
     # j.cpu_time = sum([p.cpu_time for p in all_procs])
     # _t6 = time.time()
     # logger.debug('job cpu_time calculation took: %2.5f sec', _t6 - _t5)
@@ -789,7 +811,9 @@ def post_process_job(j, all_tags = None, all_procs = None, pid_map = None, updat
                 orm_delete(u)
                 logger.info('  marking job %s as processed in database', jobid)
                 orm_commit()
-            logger.debug('  checking/updating unprocessed jobs table (includes implicit commit) took: %2.5f sec', time.time() - _t6)
+            logger.debug(
+                '  checking/updating unprocessed jobs table (includes implicit commit) took: %2.5f sec',
+                time.time() - _t6)
     return True
 
 
@@ -853,9 +877,12 @@ def populate_process_table_from_staging(j):
     # we process around 3K procs/sec, so if this operation will
     # take longer than 5sec, let's warn the user
     if num_procs > 15000:
-        logger.warning('Moving staged processes for job ' + jobid + ' will take approx. %2.0f sec..', num_procs/3000)
+        logger.warning('Moving staged processes for job ' + jobid + ' will take approx. %2.0f sec..', num_procs / 3000)
 
-    staged_procs = orm_raw_sql("SELECT id, threads_df, start, finish, tags, hostname, numtids, exename, path, args, pid, ppid, pgid, sid, generation, exitcode, exitsignal FROM processes_staging WHERE id BETWEEN {} AND {}".format(first_proc_id, last_proc_id))
+    staged_procs = orm_raw_sql(
+        "SELECT id, threads_df, start, finish, tags, hostname, numtids, exename, path, args, pid, ppid, pgid, sid, generation, exitcode, exitsignal FROM processes_staging WHERE id BETWEEN {} AND {}".format(
+            first_proc_id,
+            last_proc_id))
     proc_ids = []
     nprocs = 0
     insert_sql = ""
@@ -864,7 +891,8 @@ def populate_process_table_from_staging(j):
     prefix_insert_sql = "INSERT INTO processes(jobid,duration,tags,host_id,threads_df,threads_sums,numtids,cpu_time,exename,path,args,pid,ppid,pgid,sid,gen,exitcode,start,\"end\") VALUES "
     for proc_row in staged_procs:
         nprocs += 1
-        (proc_id, threads_df, start, finish, tags, host_id, numtids, exename, path, args, pid, ppid, pgid, sid, gen, exitcode, exitsignal) = proc_row
+        (proc_id, threads_df, start, finish, tags, host_id, numtids, exename,
+         path, args, pid, ppid, pgid, sid, gen, exitcode, exitsignal) = proc_row
         proc_ids.append(proc_id)
         duration = finish - start  # in us
         # convert from unix timestamp to python datetime
@@ -873,17 +901,18 @@ def populate_process_table_from_staging(j):
 
         # take care to escape characters using psycopg2's adapat
         tags = psycopg2.extensions.adapt(dumps(tag_from_string(tags) if tags else {}))
-        if args is None: args = ''
+        if args is None:
+            args = ''
         args = args.replace('%', '%%')
         args = psycopg2.extensions.adapt(args)
 
-        threads_sums = { metric_names[i]: int(threads_df[i]) for i in range(len(metric_names)) }
+        threads_sums = {metric_names[i]: int(threads_df[i]) for i in range(len(metric_names))}
         for t in range(1, numtids):
             for i in range(len(metric_names)):
                 # threads_df is a flattened list where each thread's metrics are
                 # adjacent to the previous
-                threads_sums[metric_names[i]] += int(threads_df[t*len(metric_names) + i])
-        cpu_time = threads_sums.get('usertime', 0) + threads_sums.get('systemtime',0)
+                threads_sums[metric_names[i]] += int(threads_df[t * len(metric_names) + i])
+        cpu_time = threads_sums.get('usertime', 0) + threads_sums.get('systemtime', 0)
         # threads_sums is to be saved as JSON
         threads_sums = dumps(threads_sums)
 
@@ -892,12 +921,31 @@ def populate_process_table_from_staging(j):
         # list of dicts
         _thr_dict_list = []
         for t in range(numtids):
-            _thr_dict_list.append( { metric_names[i]: int(threads_df[t*len(metric_names) + i]) for i in range(len(metric_names)) })
+            _thr_dict_list.append({metric_names[i]: int(threads_df[t * len(metric_names) + i])
+                                  for i in range(len(metric_names))})
         # threads_df is to be saved as JSON
         threads_df = dumps(_thr_dict_list)
 
-        insert_sql += prefix_insert_sql + """('{jobid}',{duration},{tags},'{host_id}','{threads_df}','{threads_sums}',{numtids},{cpu_time},'{exename}','{path}',{args},{pid},{ppid},{pgid},{sid},{gen},{exitcode},'{start}','{end}');\n""".format(jobid=jobid, start=start, end=end, duration=duration, tags=tags, host_id=host_id, threads_df=threads_df, threads_sums=threads_sums, numtids=numtids, cpu_time=cpu_time, exename=exename, path=path, args=args, pid=pid, ppid=ppid, pgid=pgid, sid=sid, gen=gen, exitcode=exitcode)
-
+        insert_sql += prefix_insert_sql + """('{jobid}',{duration},{tags},'{host_id}','{threads_df}','{threads_sums}',{numtids},{cpu_time},'{exename}','{path}',{args},{pid},{ppid},{pgid},{sid},{gen},{exitcode},'{start}','{end}');\n""".format(
+            jobid=jobid,
+            start=start,
+            end=end,
+            duration=duration,
+            tags=tags,
+            host_id=host_id,
+            threads_df=threads_df,
+            threads_sums=threads_sums,
+            numtids=numtids,
+            cpu_time=cpu_time,
+            exename=exename,
+            path=path,
+            args=args,
+            pid=pid,
+            ppid=ppid,
+            pgid=pgid,
+            sid=sid,
+            gen=gen,
+            exitcode=exitcode)
 
     # sql to delete the rows from the staging table
     delete_sql = "DELETE FROM processes_staging WHERE id BETWEEN {} AND {};\n".format(first_proc_id, last_proc_id)
@@ -916,7 +964,7 @@ def populate_process_table_from_staging(j):
 
     # now do a transaction
     try:
-        #orm_raw_sql(insert_sql+delete_sql+update_job_sql, commit=True)
+        # orm_raw_sql(insert_sql+delete_sql+update_job_sql, commit=True)
         logger.debug('executing: orm_raw_sql(insert_sql,commit=True)')
         orm_raw_sql(insert_sql, commit=True)
         logger.debug('executing: orm_raw_sql(delete_sql,commit=True)')
@@ -931,7 +979,8 @@ def populate_process_table_from_staging(j):
             logger.error('You do not have sufficient privileges for this operation')
         else:
 
-            logger.error(f'related to error? .... insert_sql[:{settings.max_log_statement_length}] = {insert_sql[:settings.max_log_statement_length]}')
+            logger.error(
+                f'related to error? .... insert_sql[:{settings.max_log_statement_length}] = {insert_sql[:settings.max_log_statement_length]}')
             logger.error(f'related to error? .... delete_sql = {delete_sql}')
             logger.error(f'related to error? .... update_job_sql = {update_job_sql}')
 
@@ -944,14 +993,16 @@ def populate_process_table_from_staging(j):
                 logger.error(err_str)
         return False
     table_copy_time = time.time() - _start_time
-    logger.warning("  copied %d processes from staging in %2.5f sec at %2.5f procs/sec", nprocs, table_copy_time, nprocs/table_copy_time)
+    logger.warning("  copied %d processes from staging in %2.5f sec at %2.5f procs/sec",
+                   nprocs, table_copy_time, nprocs / table_copy_time)
     return True
+
 
 @db_session
 def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     logger = getLogger(__name__)  # you can use other name
     job_init_start_time = time.time()
-# Synthesize what we need
+    # Synthesize what we need
     # it's safe and fast to call the check_fix_metadata
     # it will not waste time re-checking (since it marks the metadata as checked)
     metadata = check_fix_metadata(raw_metadata)
@@ -976,14 +1027,16 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     if env_dict.get('pp_script'):
         job_status['script_path'] = env_dict.get('pp_script')
 
-# Fields used in this function
+    # Fields used in this function
     jobid = metadata['job_pl_id']
     username = metadata['job_pl_username']
     start_ts = metadata['job_pl_start_ts']
     stop_ts = metadata['job_el_stop_ts']
     submit_ts = metadata['job_pl_submit_ts']
     if not start_ts.tzinfo:
-        tz_str = get_first_key_match(env_dict, 'TZ', 'TIMEZONE') or get_first_key_match(environ, 'EPMT_TZ') or 'US/Eastern'
+        tz_str = get_first_key_match(
+            env_dict, 'TZ', 'TIMEZONE') or get_first_key_match(
+            environ, 'EPMT_TZ') or 'US/Eastern'
         logger.debug('timezone could not be auto-detected, assuming {0}'.format(tz_str))
         tz_default = pytz.timezone(tz_str)
         start_ts = tz_default.localize(start_ts)
@@ -1005,7 +1058,8 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             job_tag_from_ann = tag_from_string(annotations[settings.job_tags_env])
             if job_tags and job_tag_from_ann:
                 if (job_tags != job_tag_from_ann):
-                    err_msg = 'Metadata and annotations contain different job tags:\n{} (metadata),\n{} (annotations)'.format(job_tags, job_tag_from_ann)
+                    err_msg = 'Metadata and annotations contain different job tags:\n{} (metadata),\n{} (annotations)'.format(
+                        job_tags, job_tag_from_ann)
                     return (False, err_msg, ())
                 else:
                     logger.warning('Both metadata and annotations have the same job tags')
@@ -1014,16 +1068,18 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         # set annotation based on metadata job tags (if it is not set)
         from epmt.epmtlib import tag_dict_to_string
         tag_str = tag_dict_to_string(job_tags)
-        logger.debug('updating {} in annotations to {} based on metadata job tags'.format(settings.job_tags_env, tag_str))
+        logger.debug(
+            'updating {} in annotations to {} based on metadata job tags'.format(
+                settings.job_tags_env, tag_str))
         annotations[settings.job_tags_env] = tag_str
 
     # sometimes script name is to be found in the job tags
     if (job_status.get('script_name') is None) and job_tags and job_tags.get('script_name'):
         job_status['script_name'] = job_tags.get('script_name')
 
-#    info_dict = metadata['job_pl_from_batch'] # end batch also
+    # info_dict = metadata['job_pl_from_batch'] # end batch also
 
-    logger.info("Processing job id %s",jobid)
+    logger.info("Processing job id %s", jobid)
 
     # Initialize elements used in compute
     then = datetime.now()
@@ -1031,15 +1087,15 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     earliest_process = datetime.utcnow().replace(tzinfo=pytz.utc)
     latest_process = datetime.fromtimestamp(0).replace(tzinfo=pytz.utc)
 
-#    stdout.write('-')
-# Hostname, job, metricname objects
-# Iterate over hosts
+    # stdout.write('-')
+    ## Hostname, job, metricname objects
+    ## Iterate over hosts
 
-    logger.debug("Iterating over %d hosts for job ID %s, user %s...",len(filedict.keys()),jobid,username)
+    logger.debug("Iterating over %d hosts for job ID %s, user %s...", len(filedict.keys()), jobid, username)
 
-#
-# Create user and job object
-#
+    #
+    # Create user and job object
+    #
     from sqlalchemy import exc
     try:
         u = lookup_or_create_user(username)
@@ -1049,7 +1105,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         # the user must exist now
         u = lookup_or_create_user(username)
 
-    j = create_job(jobid,u)
+    j = create_job(jobid, u)
     if j is None:
         return (False, 'Assuming job {} is already in database'.format(str(jobid)), ())
 
@@ -1067,10 +1123,14 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
     # save naive datetime objects in the database
     j.start = start_ts.replace(tzinfo=None)
     j.end = stop_ts.replace(tzinfo=None)
-    j.submit = submit_ts.replace(tzinfo=None) # Wait time is start - submit and should probably be stored
-    info_dict = {'tz': start_ts.tzinfo.tzname(None), 'status': job_status, 'procs_in_process_table': 0, 'post_processed': 0}
-    j.duration = int((j.end - j.start).total_seconds()*1000000)
-    logger.info("Computed duration of job %s: %f us, %.2f m",jobid,j.duration,j.duration/60000000)
+    j.submit = submit_ts.replace(tzinfo=None)  # Wait time is start - submit and should probably be stored
+    info_dict = {
+        'tz': start_ts.tzinfo.tzname(None),
+        'status': job_status,
+        'procs_in_process_table': 0,
+        'post_processed': 0}
+    j.duration = int((j.end - j.start).total_seconds() * 1000000)
+    logger.info("Computed duration of job %s: %f us, %.2f m", jobid, j.duration, j.duration / 60000000)
 
     didsomething = False
     all_tags = set()
@@ -1096,7 +1156,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             hostname = metadata.get('job_pl_hostname', '')
             if not hostname:
                 logger.warning('could not determine hostname from metadata either')
-        logger.debug("Processing host %s",hostname)
+        logger.debug("Processing host %s", hostname)
         h = None
         if hostname:
             h = lookup_or_create_host_safe(hostname)
@@ -1105,7 +1165,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         nrecs = 0
         fileno = 0
         csv = datetime.now()
-        fmt = '1' # default csv format
+        fmt = '1'  # default csv format
         header_filename = "{}-papiex-header.tsv".format(hostname)
         if tarfile:
             logger.debug('checking if tarfile contains CSV v2 files')
@@ -1151,15 +1211,15 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             # if it's the latter, then use map to convert it to a list
             # of strings, join and then split to get an array of headers.
             # If it's already a string, then just split to get the header array
-            if type(csv_headers) == str:
+            if isinstance(csv_headers, str):
                 csv_headers = csv_headers.split(OUTPUT_CSV_SEP)
             else:
-                csv_headers = "".join(map(chr,csv_headers)).split(OUTPUT_CSV_SEP)
+                csv_headers = "".join(map(chr, csv_headers)).split(OUTPUT_CSV_SEP)
             # remove leading/trailing whitespace in column names
-            csv_headers = [ h.strip() for h in csv_headers ]
+            csv_headers = [h.strip() for h in csv_headers]
             logger.debug('papiex headers: {}'.format(csv_headers))
             metric_names = csv_headers[OUTPUT_CSV_FIELDS.index('threads_df')]
-            metric_names = metric_names.replace('{','').replace('}','')
+            metric_names = metric_names.replace('{', '').replace('}', '')
             logger.debug('per-thread metric names: {}'.format(metric_names))
             # save the metric_names in job info_dict for future use (such as when creating
             # threads_df from a flattened array
@@ -1168,7 +1228,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         for f in files:
             fileno += 1
             _file_io_start_ts = time.time()
-            logger.debug("Processing file %s (%d of %d)",f, fileno, cntmax)
+            logger.debug("Processing file %s (%d of %d)", f, fileno, cntmax)
 #
 #            stdout.write('\b')            # erase the last written char
 #            stdout.write(spinner.next())  # write the next character
@@ -1176,14 +1236,14 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
 #
 # We need rows to skip
 # oldproctag (after comment char) is outdated as a process tag but kept for posterities sake
-            skiprows,oldproctag = extract_tags_from_comment_line(f,tarfile=tarfile)
-            logger.debug("%s had %d comment rows, oldproctags %s",f,skiprows,oldproctag)
+            skiprows, oldproctag = extract_tags_from_comment_line(f, tarfile=tarfile)
+            logger.debug("%s had %d comment rows, oldproctags %s", f, skiprows, oldproctag)
             if tarfile:
                 logger.debug('extracting {} from tar'.format(f))
                 info = tarfile.getmember(f)
                 flo = tarfile.extractfile(info)
             else:
-                flo = open(f,'rb')
+                flo = open(f, 'rb')
             if (fmt == '2' and (orm_db_provider() == 'postgres') and (settings.orm == 'sqlalchemy')):
                 import psycopg2
                 logger.info('Doing a fast ingest of {}'.format(flo.name))
@@ -1198,8 +1258,9 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 cur = conn.cursor()
                 _copy_start_ts = time.time()
                 logger.debug('establishing connection to DB took: %2.5f sec', _copy_start_ts - _conn_start_ts)
-                copy_sql = "COPY processes_staging({}) FROM STDIN DELIMITER '{}' CSV QUOTE E'\b'".format(",".join(OUTPUT_CSV_FIELDS), OUTPUT_CSV_SEP)
-                logger.debug('Issuing direct-copy SQL: ' +copy_sql)
+                copy_sql = "COPY processes_staging({}) FROM STDIN DELIMITER '{}' CSV QUOTE E'\b'".format(
+                    ",".join(OUTPUT_CSV_FIELDS), OUTPUT_CSV_SEP)
+                logger.debug('Issuing direct-copy SQL: ' + copy_sql)
                 try:
                     # copy_from is deprecated and copy_expert is recommended
                     # Also, copy_from cannot handle a HEADER option
@@ -1225,13 +1286,15 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                     conn.close()
                 copy_processes_time = time.time() - _copy_start_ts
                 flo.close()
-                logger.info('direct CSV copy of %d processes took: %2.5f sec, at %2.5f procs/sec', num_procs_copied, copy_processes_time, num_procs_copied/copy_processes_time)
+                logger.info('direct CSV copy of %d processes took: %2.5f sec, at %2.5f procs/sec',
+                            num_procs_copied, copy_processes_time, num_procs_copied / copy_processes_time)
                 didsomething = (num_procs_copied > 0)
                 copy_csv_direct = True
                 total_procs += num_procs_copied
                 # save the staging table row id range for the job
                 info_dict['procs_staging_ids'] = (lastid - num_procs_copied + 1, lastid)
-                logger.debug('job process_staging ID range: {}'.format(lastid if num_procs_copied == 1 else info_dict['procs_staging_ids']))
+                logger.debug('job process_staging ID range: {}'.format(
+                    lastid if num_procs_copied == 1 else info_dict['procs_staging_ids']))
                 continue
 
             csv_file = StringIO(flo.read().decode('utf8'))
@@ -1248,7 +1311,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
             #     continue
 
 
-# Make Process/Thread/Metrics objects in DB
+            # Make Process/Thread/Metrics objects in DB
             # there are 1 or more process dataframes in the collated df
             # let's iterate over them
             _df_process_start_ts = time.time()
@@ -1261,70 +1324,73 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
                 p = load_process_from_dictlist(proc, h, j, u, settings, profile)
                 load_process_from_df_time += time.time() - _load_process_from_df_start_ts
                 if not p:
-                    logger.error("Failed loading process, file %s!",f);
+                    logger.error("Failed loading process, file %s!", f)
                     continue
 
-                if not 'metric_names' in info_dict:
+                if 'metric_names' not in info_dict:
                     # save the metric names in the info_dict
                     # only need to do this once
                     info_dict['metric_names'] = ",".join(sorted(p.threads_sums.keys()))
 
-# If using old version of papiex, process tags are in the comment field
+                # If using old version of papiex, process tags are in the comment field
                 _proc_tag_start_ts = time.time()
                 if not p.tags:
                     p.tags = tag_from_string(oldproctag) if oldproctag else {}
-
+                # pickle and add tag dictionaries to a set
+                # remember to sort_keys during the pickle!
                 if p.tags:
-                    # pickle and add tag dictionaries to a set
-                    # remember to sort_keys during the pickle!
                     all_tags.add(dumps(p.tags, sort_keys=True))
                 proc_tag_process_time += time.time() - _proc_tag_start_ts
-
                 _t = time.time()
+                
                 # We shouldn't be seeing a pid repeat in a job.
                 # Theoretically it's posssible but it would complicate the pid map a bit
                 # assert(p.pid not in pid_map)
                 pid_map[p.pid] = p
                 all_procs.append(p)
                 total_procs += 1
-# Compute duration of job
+                
+                # Compute duration of job
                 if (p.start < earliest_process):
                     earliest_process = p.start
                     root_proc = p
-                if (p.end > latest_process):
-                    latest_process = p.end
+                #if (p.end > latest_process):
+                #    latest_process = p.end
+                latest_process = max(latest_process, p.end)
 
                 # correct the process start/stop times for timezone
                 # start_ts and end_ts are timezone-aware datetime objects
-                p.start = p.start.replace(tzinfo = pytz.utc).astimezone(tz=tz_default)
-                p.end   = p.end.replace(tzinfo = pytz.utc).astimezone(tz=tz_default)
+                p.start = p.start.replace(tzinfo=pytz.utc).astimezone(tz=tz_default)
+                p.end = p.end.replace(tzinfo=pytz.utc).astimezone(tz=tz_default)
                 if ((p.start < start_ts) or (p.end > stop_ts)):
-                    msg = 'Corrupted CSV detected: Process ({0}, pid {1}) start/finish times ({2}, {3}) do not fall within job interval ({4}, {5}). Bailing on job ingest..'.format(p.exename, p.pid, p.start, p.end, start_ts, stop_ts)
+                    msg = 'Corrupted CSV detected: Process ({0}, pid {1}) start/finish times ({2}, {3}) do not fall within job interval ({4}, {5}). Bailing on job ingest..'.format(
+                        p.exename, p.pid, p.start, p.end, start_ts, stop_ts)
                     logger.error(msg)
                     raise ValueError(msg)
+                
                 # save naive datetime objects in the database
-                p.start = p.start.replace(tzinfo = None)
-                p.end = p.end.replace(tzinfo = None)
+                p.start = p.start.replace(tzinfo=None)
+                p.end = p.end.replace(tzinfo=None)
 
-# Debugging/    progress
+                # Debugging/    progress
                 cnt += 1
                 nrecs += p.numtids
                 csvt = datetime.now() - csv
-                if (((nrecs % 1000) == 0) or \
-                    ((cntmax==1) and (nrecs == nrows)) or \
-                    ((cntmax > 1) and (fileno == cntmax))):
+                if (((nrecs % 1000) == 0) or
+                    ((cntmax == 1) and (nrecs == nrows)) or
+                        ((cntmax > 1) and (fileno == cntmax))):
                     if cntmax > 1:
                         # many small files each with a single process
-                        logger.info("Did %d (%d/%d files)...%.2f/sec",nrecs,fileno, cntmax,nrecs/csvt.total_seconds())
+                        logger.info("Did %d (%d/%d files)...%.2f/sec", nrecs,
+                                    fileno, cntmax, nrecs / csvt.total_seconds())
                     else:
                         # collated file
-                        logger.info("Did %d (%d in file)...%.2f/sec",nrecs,nrows,nrecs/csvt.total_seconds())
+                        logger.info("Did %d (%d in file)...%.2f/sec", nrecs, nrows, nrecs / csvt.total_seconds())
                     # break
                 proc_misc_time += time.time() - _t
 
             df_process_time += time.time() - _df_process_start_ts
 
-#
         if cnt:
             didsomething = True
 
@@ -1334,17 +1400,22 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         logger.debug('file I/O time took: %2.5f sec', file_io_time)
         logger.debug('process load ops took: %2.5f sec', df_process_time)
         logger.debug('  - load process from dictlist took: %2.5f sec', load_process_from_df_time)
-        logger.debug('    - {0}'.format([ "%s: %2.5f sec" % (k, v)  for (k,v) in profile.load_process.items()]))
+        logger.debug('    - {0}'.format(["%s: %2.5f sec" % (k, v) for (k, v) in profile.load_process.items()]))
         logger.debug('  - tag processing took: %2.5f sec', proc_tag_process_time)
         logger.debug('  - proc misc. processing took: %2.5f sec', proc_misc_time)
-        logger.debug('  - get_proc_rows took: %2.5f sec', df_process_time - load_process_from_df_time - proc_tag_process_time - proc_misc_time)
+        logger.debug(
+            '  - get_proc_rows took: %2.5f sec',
+            df_process_time -
+            load_process_from_df_time -
+            proc_tag_process_time -
+            proc_misc_time)
 
         if filedict:
             if not didsomething:
                 logger.warning("Something went wrong in parsing process data files")
                 return (False, "Error parsing CSV", ())
         else:
-            logger.warning("job %s, user %s, jobname %s has no process data",jobid,username,jobname)
+            logger.warning("job %s, user %s, jobname %s has no process data", jobid, username, jobname)
 
         # procs are not in staging table they will be in the processes table
         info_dict['procs_in_process_table'] = 1
@@ -1353,8 +1424,8 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         # j.cpu_time = reduce(lambda c, p: c + p.cpu_time, all_procs, 0)
         # j.cpu_time = sum([p.cpu_time for p in all_procs])
 
-        #logger.info("Earliest process start: %s",j.start)
-        #logger.info("Latest process end: %s",j.end)
+        # logger.info("Earliest process start: %s",j.start)
+        # logger.info("Latest process end: %s",j.end)
 
         if root_proc:
             # if root_proc.exitcode != j.exitcode:
@@ -1367,7 +1438,7 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         if settings.bulk_insert and all_procs:
             logger.info('doing a bulk insert of {0} processes'.format(len(all_procs)))
             _b0 = time.time()
-            #thr_data.engine.execute(Process.__table__.insert(), all_procs)
+            # thr_data.engine.execute(Process.__table__.insert(), all_procs)
             Session.bulk_insert_mappings(Process, all_procs)
             logger.info('bulk insert of processes took: %2.5f sec', time.time() - _b0)
 
@@ -1393,24 +1464,25 @@ def ETL_job_dict(raw_metadata, filedict, settings, tarfile=None):
         # logger.debug('post process job took: %2.5f sec', time.time() - _post_process_start_ts)
     else:
         # mark job as unprocessed. It will need post-processing later
-        from sqlalchemy import exc
         try:
-            logger.debug('inserting **UNPROCESSED** reference for job %s',j.jobid)
+            logger.debug('inserting **UNPROCESSED** reference for job %s', j.jobid)
             orm_create(UnprocessedJob, jobid=j.jobid)
         except exc.IntegrityError as e:
-            logger.warning('**UNPROCESSED** reference for job %s already exists',j.jobid)
+            logger.warning('**UNPROCESSED** reference for job %s already exists', j.jobid)
             Session.rollback()
             return (False, "Job already in database (unprocessed)", ())
 
-    logger.debug("Committing job %s to database",j.jobid)
+    logger.debug("Committing job %s to database", j.jobid)
     _c0 = time.time()
     orm_commit()
     logger.debug("Commit time: %2.5f sec", time.time() - _c0)
     now = datetime.now()
     logger.info("Staged import of job %s with %d processes took %s, %f processes/sec",
-                j.jobid,total_procs, now - then,total_procs/float((now-then).total_seconds()))
-    print("Imported successfully - job:",jobid,"processes:",total_procs,"rate:",total_procs/float((now-then).total_seconds()))
+                j.jobid, total_procs, now - then, total_procs / float((now - then).total_seconds()))
+    print("Imported successfully - job:", jobid, "processes:", total_procs,
+          "rate:", total_procs / float((now - then).total_seconds()))
     return (True, 'Import successful', (j.jobid, total_procs))
+
 
 def post_process_pending_jobs():
     '''

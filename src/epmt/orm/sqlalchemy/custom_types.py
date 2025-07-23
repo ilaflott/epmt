@@ -1,6 +1,7 @@
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.types import ARRAY
 
+
 @compiles(ARRAY, "sqlite")
 def compile_array_sqlite(type_, compiler, **kw):
     return "JSON"

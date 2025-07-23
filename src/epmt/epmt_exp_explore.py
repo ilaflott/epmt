@@ -21,8 +21,9 @@ from logging import getLogger
 
 logger = getLogger(__name__)
 
+
 @db_session
-def exp_component_outliers(exp_name, metric = 'duration', op = np.sum, limit = 10):
+def exp_component_outliers(exp_name, metric='duration', op=np.sum, limit=10):
     '''
     Orders components in an experiment by aggregate metric value::Experiments
 
@@ -90,7 +91,7 @@ def exp_component_outliers(exp_name, metric = 'duration', op = np.sum, limit = 1
     ]
     '''
     from epmt.epmtlib import ranges, natural_keys
-    exp_jobs = eq.get_jobs(tags = { 'exp_name': exp_name }, fmt = 'orm' )
+    exp_jobs = eq.get_jobs(tags={'exp_name': exp_name}, fmt='orm')
     # sorted jobids
     exp_jobids = sorted([j.jobid for j in exp_jobs], key=natural_keys)
     if not exp_jobids:
@@ -99,9 +100,10 @@ def exp_component_outliers(exp_name, metric = 'duration', op = np.sum, limit = 1
 
     # get a compact string of jobids if possible for logs
     try:
-        job_ranges_str = ",".join(["{}..{}".format(a, b) if (a != b) else "{}".format(a) for (a,b) in ranges([int(x) for x in exp_jobids])])
+        job_ranges_str = ",".join(["{}..{}".format(a, b) if (a != b) else "{}".format(a)
+                                  for (a, b) in ranges([int(x) for x in exp_jobids])])
         logger.info('Experiment {} contains {} jobs: {}'.format(exp_name, exp_jobs.count(), job_ranges_str))
-    except:
+    except BaseException:
         # the ranges function can fail for non-integer jobids, so here
         # we simply print the job count, and not actually list the jobids
         logger.info('Experiment {} contains {} jobs'.format(exp_name, exp_jobs.count()))
@@ -142,7 +144,7 @@ def exp_component_outliers(exp_name, metric = 'duration', op = np.sum, limit = 1
         v['exp_component'] = c
         # d[0] is the time-segment -- extract it from the data field
         # and prepare a list of time-segments
-        v['exp_times'] = [ d[0] for d in v['data']]
+        v['exp_times'] = [d[0] for d in v['data']]
         # d[1] is the jobid -- extract it from the data field and prepare
         # a list of jobids for the component
         jobids = [d[1] for d in v['data']]
@@ -161,12 +163,12 @@ def exp_component_outliers(exp_name, metric = 'duration', op = np.sum, limit = 1
     # something like min/max/stddev instead by changing op.
 
     # order the components list by desc. metric sum (op is sum generally, but could be min/max/stddev)
-    ordered_comp_list = sorted(comp_list, key = lambda v: op(v['metrics']), reverse=True)[:limit]
+    ordered_comp_list = sorted(comp_list, key=lambda v: op(v['metrics']), reverse=True)[:limit]
     return ordered_comp_list
 
 
 @db_session
-def exp_time_segment_stats(exp_name, metric = 'duration'):
+def exp_time_segment_stats(exp_name, metric='duration'):
     '''
     Computes statistics by time-segment for an experiment::Experiments
 
@@ -208,15 +210,15 @@ OrderedDict([('18540101', {'jobids': ['625151'], 'metrics': [10425623185.0]}),
     # a dictionary with time-segments in increasing order.
     from collections import OrderedDict
     od = OrderedDict()
-    exp_jobs = eq.get_jobs(tags = { 'exp_name': exp_name }, fmt = 'orm' )
+    exp_jobs = eq.get_jobs(tags={'exp_name': exp_name}, fmt='orm')
     # because jobs are ordered in increasing start time, we we will
     # end up creating a dictionary with time-segments in increasing order
     for j in exp_jobs:
         exp_time = j.tags.get('exp_time', '')
         if exp_time:
-            if not exp_time in od:
+            if exp_time not in od:
                 # initialize the dict
-                od[exp_time] = { 'jobids': [], 'metrics': [] }
+                od[exp_time] = {'jobids': [], 'metrics': []}
             # append the jobid and it's metric to the list of jobids
             # for the corresponding time-segment
             od[exp_time]['jobids'].append(j.jobid)
@@ -226,26 +228,28 @@ OrderedDict([('18540101', {'jobids': ['625151'], 'metrics': [10425623185.0]}),
     return od
 
 
-
 @db_session
-def exp_explore(exp_name, metric = 'duration', op = np.sum, limit=10):
+def exp_explore(exp_name, metric='duration', op=np.sum, limit=10):
     '''
     Prints a drilldown for an experiment by components and time-segments::Experiments
     '''
     from scipy.stats import variation
 
-    metric = metric or 'duration' # defaults when using with command-line
-    limit = limit or 10 # defaults when using with command-line
+    metric = metric or 'duration'  # defaults when using with command-line
+    limit = limit or 10  # defaults when using with command-line
 
-    exp_jobs = eq.get_jobs(tags = { 'exp_name': exp_name }, fmt = 'orm' )
+    exp_jobs = eq.get_jobs(tags={'exp_name': exp_name}, fmt='orm')
     ordered_comp_list = exp_component_outliers(exp_name, metric, op, limit)
 
-    agg_metric = np.sum([ np.array(d['metrics']).sum() for d in ordered_comp_list ])
+    agg_metric = np.sum([np.array(d['metrics']).sum() for d in ordered_comp_list])
 
     print('\ntop {} components by {}({}):'.format(limit, op.__name__, metric))
     print("%16s  %12s         %12s %12s %4s" % ("component", "sum", "min", "max", "cv"))
     for v in ordered_comp_list:
-        print("%16.16s: %12d [%4.1f%%] %12d %12d %4.1f" % (v['exp_component'], op(v['metrics']), 100*np.sum(v['metrics'])/agg_metric, np.min(v['metrics']),  np.max(v['metrics']), variation(v['metrics'])))
+        print("%16.16s: %12d [%4.1f%%] %12d %12d %4.1f" %
+              (v['exp_component'], op(v['metrics']), 100 *
+               np.sum(v['metrics']) /
+                  agg_metric, np.min(v['metrics']), np.max(v['metrics']), variation(v['metrics'])))
 
     # now let's the variations within a component across different time segments
     print('\nvariations across time segments (by component):')
@@ -254,7 +258,8 @@ def exp_explore(exp_name, metric = 'duration', op = np.sum, limit=10):
     for v in ordered_comp_list:
         outliers = v['outlier_scores']
         for idx in range(len(v['metrics'])):
-            print("%16.16s %12s %12s %16d %6s" % (v['exp_component'], v['exp_times'][idx], v['jobids'][idx], v['metrics'][idx], "**" * int(outliers[idx])))
+            print("%16.16s %12s %12s %16d %6s" % (v['exp_component'], v['exp_times']
+                  [idx], v['jobids'][idx], v['metrics'][idx], "**" * int(outliers[idx])))
         print()
 
     # finally let's see if by summing the metric across all the jobs in a
@@ -268,8 +273,9 @@ def exp_explore(exp_name, metric = 'duration', op = np.sum, limit=10):
         print("%12s %16d %6s" % (time_segments[idx], metric_sums[idx], "**" * int(outlier_scores[idx])))
     return True
 
+
 @db_session
-def find_missing_time_segments(exp_name, jobs=[], components = [], time_segments = range(18540101, 20190101, 50000)):
+def find_missing_time_segments(exp_name, jobs=[], components=[], time_segments=range(18540101, 20190101, 50000)):
     '''
     Finds missing time segments in an experiment::Experiments
 
@@ -310,30 +316,31 @@ def find_missing_time_segments(exp_name, jobs=[], components = [], time_segments
       'ocean_cobalt_fdet_100': [18540101, 18590101, 18640101, 18690101, 18740101, 18790101, 18890101, 18940101, 18990101, 19040101, 19090101, 19140101, 19190101, 19240101, 19290101, 19340101, 19390101, 19440101, 19490101, 19540101, 19590101, 19640101, 19690101, 19740101, 19790101, 19840101, 19890101, 19940101, 19990101, 20040101, 20090101]
     }
     '''
-    tag_filter = { 'exp_name': exp_name }
-    jobs = eq.get_jobs(jobs, fmt='orm', tags = [ tag_filter ])
+    tag_filter = {'exp_name': exp_name}
+    jobs = eq.get_jobs(jobs, fmt='orm', tags=[tag_filter])
     logger.debug('Looking for time segments: {}'.format(sorted(time_segments)))
     logger.debug('{} matching jobs from the experiment'.format(jobs.count()))
-    jobs_tags = eq.get_job_tags(jobs, tag_filter = tag_filter, fold=True)
+    jobs_tags = eq.get_job_tags(jobs, tag_filter=tag_filter, fold=True)
     matched_comp = jobs_tags['exp_component']
     if components:
         matched_comp &= set(components)
     logger.debug('{} components matched'.format(len(matched_comp)))
     ret = {}
     for c in sorted(matched_comp):
-        comp_tags = eq.get_job_tags(jobs, tag_filter = 'exp_name:{};exp_component:{}'.format(exp_name, c))
+        comp_tags = eq.get_job_tags(jobs, tag_filter='exp_name:{};exp_component:{}'.format(exp_name, c))
         exp_times = comp_tags['exp_time']
-        if type(exp_times) == str:
+        if isinstance(exp_times, str):
             exp_times = [exp_times]
-        exp_times = set([ int(t) for t in exp_times ])
+        exp_times = set([int(t) for t in exp_times])
         missing_times = set(time_segments) - exp_times
         if missing_times:
             print('{} is missing {}'.format(c, sorted(missing_times)))
             ret[c] = sorted(missing_times)
     return ret
 
+
 @db_session
-def exp_find_jobs(exp_name, components = [], exp_times = [], failed = None, **kwargs):
+def exp_find_jobs(exp_name, components=[], exp_times=[], failed=None, **kwargs):
     '''
     Finds jobs within an experiment::Experiments
 
@@ -383,15 +390,15 @@ def exp_find_jobs(exp_name, components = [], exp_times = [], failed = None, **kw
         logger.warning('If you use the "tags" option then "exp_name", "components" and "exp_time" options will be ignored')
     else:
         # create tags using exp_name and components
-        tags = [ { 'exp_name': exp_name, 'exp_component' : c } for c in components ] if components else [ { 'exp_name': exp_name } ]
+        tags = [{'exp_name': exp_name, 'exp_component': c}
+                for c in components] if components else [{'exp_name': exp_name}]
         # expand exp_times into the tag dictionaries
         if exp_times:
             _tags = []
             for tag in tags:
-                _tags.extend([ dict(tag, exp_time = str(t)) for t in exp_times ])
+                _tags.extend([dict(tag, exp_time=str(t)) for t in exp_times])
             tags = _tags
         kwargs['tags'] = tags
-
 
     if failed is not None:
         # create a filter with exitcode, but first check the user isn't
@@ -405,7 +412,6 @@ def exp_find_jobs(exp_name, components = [], exp_times = [], failed = None, **kw
         else:
             # pony
             kwargs['fltr'] = (lambda j: j.exitcode != 0) if failed else (lambda j: j.exitcode == 0)
-
 
     # if fmt is not set use fmt default as 'terse'
     out_fmt = kwargs.get('fmt', 'terse')

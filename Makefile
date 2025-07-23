@@ -37,15 +37,15 @@ DOCKER_BUILD:=docker build -f
 
 # minimal-metrics src url for the epmt project- includes this repo, papiex, and epmt-dash (aka ui)
 MM_SRC_URL_BASE=https://gitlab.com/minimal-metrics-llc/epmt
+INL_SRC_URL_BASE=https://github.com/ilaflott
 
 # papiex details
-INL_SRC_URL_BASE=https://github.com/ilaflott
 PAPIEX_VERSION?=2.3.14
 PAPIEX_SRC?=papiex
 #PAPIEX_SRC_BRANCH=master
 #PAPIEX_SRC_BRANCH=centos7_yum_fix
-#PAPIEX_SRC_BRANCH=rocky8_docker
-PAPIEX_SRC_BRANCH=rocky8_docker_mchip_mac
+PAPIEX_SRC_BRANCH=rocky8_docker
+#PAPIEX_SRC_BRANCH=rocky8_docker_mchip_mac
 #PAPIEX_SRC_TARBALL=papiex-epmt.tar.gz
 PAPIEX_SRC_TARBALL=$(PAPIEX_SRC_BRANCH).tar.gz
 #PAPIEX_SRC_URL=$(MM_SRC_URL_BASE)/papiex/-/archive/$(PAPIEX_SRC_BRANCH)/$(PAPIEX_SRC_TARBALL)
@@ -61,7 +61,8 @@ EPMT_INSTALL_PATH=/opt/minimalmetrics
 EPMT_INSTALL_PREFIX=$(EPMT_INSTALL_PATH)/epmt-$(EPMT_VERSION)/epmt-install
 
 # <root>/src/epmt/ui submodule details
-EPMT_DASH_SRC_BRANCH=main
+#EPMT_DASH_SRC_BRANCH=main
+EPMT_DASH_SRC_BRANCH=autopep8.poke
 #EPMT_DASH_SRC_TARBALL=epmt-dash-$(EPMT_DASH_SRC_BRANCH).tar.gz
 EPMT_DASH_SRC_TARBALL=$(EPMT_DASH_SRC_BRANCH).tar.gz
 EPMT_DASH_SRC_URL=$(INL_SRC_URL_BASE)/epmt-dash/archive/$(EPMT_DASH_SRC_TARBALL)
