@@ -403,7 +403,7 @@ class OutliersAPI(unittest.TestCase):
         import epmt.epmt_stat as es
         p = eq.get_procs('kern-6656-20190614-190245', fmt='pandas', order=eq.desc(eq.Process.duration), limit=1)
         # clone and make 10 rows of the 1 process row
-        procs = p._append([p]*9, ignore_index=True)
+        procs = p.append([p]*9, ignore_index=True)
         # now double the value of cpu_time/duration of the 6th row
         # thus making it an outlier
         procs.loc[[5], 'duration'] *= 2 
@@ -418,7 +418,7 @@ class OutliersAPI(unittest.TestCase):
         p = eq.get_procs('kern-6656-20190614-190245', fmt='orm', order=eq.desc(eq.Process.duration), limit=1)[0]
         t = eq.get_thread_metrics(p) 
         # clone and make 10 rows of the 1 thread row
-        threads = t._append([t]*9, ignore_index=True)
+        threads = t.append([t]*9, ignore_index=True)
         # now increase the value of usertime/systemtime of the 6th row
         # thus making it an outlier
         threads.loc[[5], 'usertime'] *= 2 
