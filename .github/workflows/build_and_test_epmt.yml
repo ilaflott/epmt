@@ -123,8 +123,7 @@ jobs:
         run: |
           python3 -m unittest -v epmt.test.test_lib
 
-      - name: test_outliers (GUARDED) call 
-        continue-on-error: true
+      - name: test_outliers call 
         run: |
           python3 -m unittest -v epmt.test.test_outliers
 
