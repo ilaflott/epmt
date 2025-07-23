@@ -69,9 +69,9 @@ nltk
 notebook<7
 numba
 numexpr
-numpy<2
+numpy>2
 packaging
-pandas<2
+pandas>2
 pandocfilters
 parso
 patsy
