@@ -1,3 +1,6 @@
+"""
+EPMT delete command module - handles job deletion functionality.
+"""
 from epmt.epmt_query import delete_jobs
 from logging import getLogger
 logger = getLogger(__name__)  # you can use other name

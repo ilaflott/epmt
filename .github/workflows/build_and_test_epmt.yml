@@ -159,10 +159,9 @@ jobs:
         run: |
           pip install pylint
 
-      - name: run pylint (GUARDED)
-        continue-on-error: true
+      - name: run pylint
         run: |
-          pylint --fail-under 5.3 --max-line-length 120 --max-args 6 -ry src/epmt
+          pylint --fail-under 5.5 --max-line-length 120 --max-args 6 -ry src/epmt
 
       - name: upload pip installable
         uses: actions/upload-artifact@v4

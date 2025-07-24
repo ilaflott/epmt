@@ -1,3 +1,6 @@
+"""
+EPMT job module - handles job-related data structures and operations.
+"""
 # from __future__ import print_function
 from epmt.orm import *
 import epmt.epmt_settings as settings

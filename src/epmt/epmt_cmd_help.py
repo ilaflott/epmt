@@ -1,3 +1,6 @@
+"""
+EPMT help command module - provides help functionality.
+"""
 # from __future__ import print_function
 from inspect import signature
 from sys import stderr
@@ -6,6 +9,7 @@ from sys import stderr
 
 
 def epmt_help_api(funcs=[]):
+    """Provide help documentation for EPMT API functions."""
     import epmt.epmt_settings as settings
     import epmt.epmt_query as eq
     import epmt.epmt_outliers as eod

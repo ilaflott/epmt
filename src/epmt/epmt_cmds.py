@@ -1,9 +1,12 @@
+"""
+EPMT commands module - main command interface for EPMT functionality.
+"""
 #!/usr/bin/env python
 from __future__ import print_function
 from epmt.epmtlib import get_username, epmt_logging_init, init_settings, conv_dict_byte2str, cmd_exists, run_shell_cmd, safe_rm, dict_filter, check_fix_metadata, logfn
 import epmt.epmt_settings as settings
 from datetime import datetime
-from os import environ, makedirs, mkdir, path, getpid, chdir, remove, uname, kill
+from os import environ, makedirs, mkdir, path, getpid, remove, uname, kill
 from socket import gethostname
 from subprocess import run
 from glob import glob
@@ -13,9 +16,8 @@ from shutil import copyfile, rmtree, move
 import errno
 import fnmatch
 import pickle
-from logging import getLogger, DEBUG
+from logging import getLogger
 
-from epmt.orm import db_session
 logger = getLogger(__name__)
 
 
@@ -1819,7 +1821,7 @@ def epmt_entrypoint(args):
 
     if args.command == 'daemon':
 
-        from epmt.epmt_daemon import start_daemon, stop_daemon, daemon_loop, print_daemon_status
+        from epmt.epmt_daemon import start_daemon, stop_daemon, print_daemon_status
         if args.no_analyze and not args.post_process:
             logger.error("Skipping analysis requires post processing to be enabled")
             return 0
