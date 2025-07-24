@@ -1,11 +1,21 @@
+"""
+EPMT daemon module - handles background daemon functionality.
+"""
 # from __future__ import print_function
 from getpass import getuser
 from os import path, kill, unlink, getppid
-from sys import exit, stdin, stdout, stderr
+from sys import exit as sys_exit, stdin, stdout, stderr
 from time import sleep, time
-from daemon import DaemonContext, pidfile
 from signal import SIGHUP, SIGTERM, SIGQUIT, SIGINT, SIGUSR1
 import logging
+
+try:
+    from daemon import DaemonContext, pidfile
+except ImportError:
+    # daemon module not available
+    DaemonContext = None
+    pidfile = None
+
 logger = logging.getLogger(__name__)  # you can use other name
 
 # DO NOT IMPORT ANYTHING FROM ANY EPMT FILES HERE
@@ -23,42 +33,45 @@ PID_FILE = '/tmp/epmt.pid.' + getuser()
 # we received a signal earlier and stop gracefully.
 # A global is unfortunately necessary as this variable
 # is shared between the signal handler and the daemon loop
-sig_count = 0
+SIG_COUNT = 0
 
 
 def is_daemon_running(pidf=PID_FILE):
+    """Check if daemon is running based on PID file."""
     from epmt.epmtlib import check_pid
-    logger = logging.getLogger(is_daemon_running.__name__)
-    logger.debug("Looking for file %s to fetch daemon pid", pidf)
+    
+    current_logger = logging.getLogger(is_daemon_running.__name__)
+    current_logger.debug("Looking for file %s to fetch daemon pid", pidf)
     try:
-        with open(pidf, 'r') as f:
+        with open(pidf, 'r', encoding='utf-8') as f:
             pid = f.read().strip()
-        logger.debug('Found daemon lockfile with PID({0})'.format(pid))
+        current_logger.debug(f'Found daemon lockfile with PID({pid})')
 #    except IOError:
 #        return -1
     except Exception as e:
-        logger.debug(str(e))
+        current_logger.debug(str(e))
         return False, -1
     if int(pid) < 0:
-        logger.error('PID %d for daemon is less than 0, this cant be true', int(pid))
+        current_logger.error('PID %d for daemon is less than 0, this cant be true', int(pid))
         return False, -1
     stat, msg = check_pid(int(pid))
     if not stat:
-        #        logger.warning("PID %d for daemon doesn't seem alive: %s",int(pid),msg)
-        logger.error("You should check PID {0} and consider removing the stale lock file {1}.".format(int(pid), pidf))
+        #        current_logger.warning("PID %d for daemon doesn't seem alive: %s",int(pid),msg)
+        current_logger.error("You should check PID %d and consider removing the stale lock file %s.",
+                            int(pid), pidf)
         return False, -1
     return True, int(pid)
 
 
 def start_daemon(foreground=False, pidf=PID_FILE, **daemon_args):
-    logger = logging.getLogger(start_daemon.__name__)
+    """Start the daemon process."""
+    current_logger = logging.getLogger(start_daemon.__name__)
     stat, pid = is_daemon_running(pidf)
     if stat:
-        logger.error(
-            'Daemon may be still running at pid {0}. If not, please remove the lock file {1} and try again'.format(
-                pid,
-                pidf))
-        return (-1)
+        current_logger.error(
+            'Daemon may be still running at pid %d. If not, please remove the lock file %s and try again',
+            pid, pidf)
+        return -1
     # set up signal handlers
     # from signal import SIGHUP, SIGTERM, SIGQUIT, SIGINT, SIGUSR1, signal
     # for sig in [SIGHUP, SIGTERM, SIGQUIT, SIGINT, SIGUSR1]:
@@ -123,13 +136,13 @@ def stop_daemon(pidf=PID_FILE):
 
 
 def print_daemon_status(pidf=PID_FILE):
-    logger = logging.getLogger(print_daemon_status.__name__)
+    """Print status of daemon."""
+    current_logger = logging.getLogger(print_daemon_status.__name__)
     stat, pid = is_daemon_running(pidf)
     if not stat:
         print('EPMT daemon not running, start with "epmt daemon --start"')
         return -1
-    else:
-        print('EPMT daemon running PID {0}. stop with "epmt daemon --stop"'.format(pid))
+    print(f'EPMT daemon running PID {pid}. stop with "epmt daemon --stop"')
     return 0
 
 # if niters is set, then the daemon loop will end after 'niters' iterations

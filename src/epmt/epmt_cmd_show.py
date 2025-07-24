@@ -1,3 +1,6 @@
+"""
+EPMT show command module - handles job display functionality.
+"""
 # from __future__ import print_function
 from logging import getLogger
 import epmt.epmt_query as eq
