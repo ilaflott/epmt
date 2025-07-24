@@ -9,6 +9,7 @@ from sys import stderr
 
 
 def epmt_help_api(funcs=[]):
+    """Provide help documentation for EPMT API functions."""
     import epmt.epmt_settings as settings
     import epmt.epmt_query as eq
     import epmt.epmt_outliers as eod
