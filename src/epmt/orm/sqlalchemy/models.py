@@ -1,7 +1,8 @@
 from .general import *
 from datetime import datetime
 from sqlalchemy.ext.declarative import DeclarativeMeta
-from sqlalchemy import Table, Column, String, Integer, ForeignKey, Boolean, DateTime, Text, Float, BigInteger, Index, UniqueConstraint, desc, asc, JSON
+from sqlalchemy import Table, Column, String, Integer, ForeignKey, Boolean, DateTime, Float, JSON
+from sqlalchemy.orm import backref, relationship
 from six import with_metaclass
 import epmt.epmt_settings as settings
 
