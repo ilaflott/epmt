@@ -246,7 +246,7 @@ def get_roots(jobs, fmt='dict'):
     This function is a thin-wrapper around `get_procs`
     '''
     compute_process_trees(jobs)
-    return get_procs(jobs, order=Process.start, fltr=((Process.parent is None)
+    return get_procs(jobs, order=Process.start, fltr=((Process.parent == None)  # pylint: disable=singleton-comparison
                      if settings.orm == 'sqlalchemy' else 'p.parent == None'), fmt=fmt)
 
 
@@ -2700,7 +2700,7 @@ def _warn_incomparable_jobs(jobs):
         msg = 'WARNING: The jobs do not share identical tag values for "exp_name" and "exp_component"'
         from sys import stderr
         logger.warning(msg)
-        # print('WARNING:', msg, file=stderr)
+        print('WARNING:', msg, file=stderr)
         for j in jobs:
             logger.warning('j = %s', j)
             logger.warning('j.tags = %s', j.tags)

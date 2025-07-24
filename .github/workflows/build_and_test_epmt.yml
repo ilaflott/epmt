@@ -127,8 +127,7 @@ jobs:
         run: |
           python3 -m unittest -v epmt.test.test_outliers
 
-      - name: test_query (GUARDED) call 
-        continue-on-error: true
+      - name: test_query call 
         run: |
           python3 -m unittest -v epmt.test.test_query
 
