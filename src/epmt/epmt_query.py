@@ -246,7 +246,7 @@ def get_roots(jobs, fmt='dict'):
     This function is a thin-wrapper around `get_procs`
     '''
     compute_process_trees(jobs)
-    return get_procs(jobs, order=Process.start, fltr=((Process.parent == None)
+    return get_procs(jobs, order=Process.start, fltr=((Process.parent == None)  # pylint: disable=singleton-comparison
                      if settings.orm == 'sqlalchemy' else 'p.parent == None'), fmt=fmt)
 
 
