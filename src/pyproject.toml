@@ -13,7 +13,7 @@ version         = "4.11.0"
 authors         = [ { name = "Minimal Metrics, LLC", email = "some.where@over.there" } ]
 description     = "Experiment Performance Metrics Toolkit"
 readme          = "README.md"
-requires-python = ">=3.9"
+requires-python = "==3.9.22"
 classifiers     = [ "Programming Language :: Python :: 3", ]
 # 20231102 caw: pyinstaller is pinned at 5.7.0, latest version doesn't allow the settings.py tactic.
 dependencies = [
