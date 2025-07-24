@@ -1,3 +1,6 @@
+"""
+EPMT static file server module - serves static documentation files.
+"""
 #!/usr/bin/env python
 from flask import Flask, send_from_directory, render_template
 # set the project root directory as the static folder

@@ -1,3 +1,6 @@
+"""
+EPMT help command module - provides help functionality.
+"""
 # from __future__ import print_function
 from inspect import signature
 from sys import stderr

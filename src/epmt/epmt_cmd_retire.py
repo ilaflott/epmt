@@ -1,3 +1,6 @@
+"""
+EPMT retire command module - handles retirement of jobs and models.
+"""
 from epmt.epmt_query import retire_jobs, retire_refmodels
 from epmt.epmt_settings import retire_models_ndays, retire_jobs_ndays
 import tracemalloc as tm

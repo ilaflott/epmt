@@ -1,3 +1,6 @@
+"""
+EPMT settings module - loads default settings and user-specific overrides.
+"""
 # load defaults
 from epmt.epmt_default_settings import *
 
@@ -15,8 +18,8 @@ from epmt.epmt_default_settings import *
 try:
     from epmt.settings import *
 except Exception as e:
-    raise ModuleImportError('alternate epmt.settings import approach did not' +
-                            ' work and neither did the first attempt!') from e
+    raise ModuleNotFoundError('alternate epmt.settings import approach did not' +
+                              ' work and neither did the first attempt!') from e
 # else:
 #    logger.debug('epmt_settings imported successfully! yay!!!')
 
