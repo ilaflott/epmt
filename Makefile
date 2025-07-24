@@ -99,7 +99,7 @@ epmt-build compile build:
 lint:
 	@echo "(lint) whoami: $(shell whoami)"
 	cd src
-	python3 -m pylint --fail-under 4.5 --max-line-length 120 --max-args 6 -ry epmt
+	python3 -m pylint --fail-under 5.5 --max-line-length 120 --max-args 6 -ry src/epmt
 
 # install a virtual environment
 install-py3-conda:
