@@ -3,7 +3,6 @@ name: build_and_test_epmt
 on:
   push
 
-# thank you m. lee
 # cancel running jobs if theres a newer push
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
