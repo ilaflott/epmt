@@ -1,6 +1,6 @@
 from __future__ import print_function
 import epmt.epmt_settings as settings
-from sqlalchemy import *
+from sqlalchemy import engine_from_config, text, inspect, MetaData
 # from sqlalchemy.event import listens_for
 # from sqlalchemy.pool import Pool
 from sqlalchemy import sql as sqla_sql
