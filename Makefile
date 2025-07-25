@@ -42,9 +42,9 @@ INL_SRC_URL_BASE=https://github.com/ilaflott
 # papiex details
 PAPIEX_VERSION?=2.3.14
 PAPIEX_SRC?=papiex
-#PAPIEX_SRC_BRANCH=master
+PAPIEX_SRC_BRANCH=main
 #PAPIEX_SRC_BRANCH=centos7_yum_fix
-PAPIEX_SRC_BRANCH=rocky8_docker
+#PAPIEX_SRC_BRANCH=rocky8_docker
 #PAPIEX_SRC_BRANCH=rocky8_docker_mchip_mac
 #PAPIEX_SRC_TARBALL=papiex-epmt.tar.gz
 PAPIEX_SRC_TARBALL=$(PAPIEX_SRC_BRANCH).tar.gz
