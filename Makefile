@@ -40,11 +40,11 @@ MM_SRC_URL_BASE=https://gitlab.com/minimal-metrics-llc/epmt
 INL_SRC_URL_BASE=https://github.com/ilaflott
 
 # papiex details
-PAPIEX_VERSION?=2.3.14
+PAPIEX_VERSION?=2.3.15
 PAPIEX_SRC?=papiex
-#PAPIEX_SRC_BRANCH=master
+PAPIEX_SRC_BRANCH=main
 #PAPIEX_SRC_BRANCH=centos7_yum_fix
-PAPIEX_SRC_BRANCH=rocky8_docker
+#PAPIEX_SRC_BRANCH=rocky8_docker
 #PAPIEX_SRC_BRANCH=rocky8_docker_mchip_mac
 #PAPIEX_SRC_TARBALL=papiex-epmt.tar.gz
 PAPIEX_SRC_TARBALL=$(PAPIEX_SRC_BRANCH).tar.gz
@@ -295,8 +295,10 @@ $(PAPIEX_SRC)/$(PAPIEX_RELEASE): $(PAPIEX_SRC)
 	@echo
 	@echo "################### BEGIN MAKE PAPIEX TARBALL : papiex-dist ########################################"
 	if [ -n "${OUTSIDE_DOCKER}" ]; then \
-	echo "making distclean install dist within PAPIEX_SRC/PAPIEX_RELEASE target"; \
+	echo "make and make check within PAPIEX_SRC/PAPIEX_RELEASE target"; \
 	make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) distclean install dist; \
+	make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) dist-test; \
+	make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) check; \
 	else \
 	echo "making docker-dist within PAPIEX_SRC/PAPIEX_RELEASE target"; \
 	make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) docker-dist; \
