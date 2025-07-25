@@ -111,16 +111,7 @@ setup(name="epmt",
 #                    'papiex-epmt-install/lib/libpapiex.so.2.3.14',
 
 
-                     ] ),
-                  ('lib/python3.9/site-packages/epmt/bin',
-                    ['papiex-epmt-install/bin/check_events',
-                     'papiex-epmt-install/bin/monitor-link',
-                     'papiex-epmt-install/bin/monitor-run',
-                     'papiex-epmt-install/bin/papi_avail',
-                     'papiex-epmt-install/bin/papi_command_line',
-                     'papiex-epmt-install/bin/papi_component_avail',
-                     'papiex-epmt-install/bin/papi_native_avail',
-                     'papiex-epmt-install/bin/showevtinfo',
-                             ]) ],
+                   ] ),
+                 ],
       scripts=['scripts/epmt'],
       )
