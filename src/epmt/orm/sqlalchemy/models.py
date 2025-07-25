@@ -1,6 +1,8 @@
 from .general import *
 from datetime import datetime
 from sqlalchemy.ext.declarative import DeclarativeMeta
+from sqlalchemy import Table, Column, String, Integer, ForeignKey, Boolean, DateTime, Float, JSON
+from sqlalchemy.orm import backref, relationship
 from six import with_metaclass
 import epmt.epmt_settings as settings
 
@@ -13,6 +15,12 @@ if 'postgres' in settings.db_params.get('url', ''):
 # Instead read docs/migration.md and create a migration script.
 # Then run "alembic upgrade head"
 ###########################
+
+# Control what gets exported when using "from .models import *"
+__all__ = [
+    'CommonMeta', 'User', 'Host', 'ReferenceModel', 'Job', 'UnprocessedJob', 'Process',
+    'refmodel_job_associations_table', 'host_job_associations_table', 'ancestor_descendant_associations_table'
+]
 
 
 class CommonMeta(DeclarativeMeta):

@@ -1,15 +1,15 @@
 from __future__ import print_function
 import epmt.epmt_settings as settings
-from sqlalchemy import *
+from sqlalchemy import engine_from_config, text, inspect, MetaData, desc
 # from sqlalchemy.event import listens_for
 # from sqlalchemy.pool import Pool
 from sqlalchemy import sql as sqla_sql
-from sqlalchemy.orm import backref, relationship, sessionmaker, scoped_session, mapperlib
+from sqlalchemy.orm import sessionmaker, scoped_session, mapperlib
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.query import Query
 import threading
 from functools import wraps
-from os import chdir, getcwd, path
+from os import chdir, getcwd
 
 from logging import getLogger
 logger = getLogger(__name__)
@@ -353,7 +353,7 @@ def orm_jobs_col(jobs):
 
 
 def orm_to_dict(obj, **kwargs):
-    from .models import Job, Process, User, Host, ReferenceModel
+    from .models import Job, Process, Host, ReferenceModel
     from epmt.epmtlib import isString
     # we need to make sure jobs are post-processed first and foremost
     # This step has to be done before we get a dict from the object
@@ -764,7 +764,6 @@ def get_db_schema_version():
 @chdir_for_alembic_and_restore_cwd
 def migrate_db():
     from alembic import config, script
-    from sqlalchemy import exc
     alembic_cfg = config.Config('alembic.ini')
     script_ = script.ScriptDirectory.from_config(alembic_cfg)
     epmt_schema_head = script_.get_current_head()

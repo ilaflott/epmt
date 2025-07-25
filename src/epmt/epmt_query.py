@@ -18,6 +18,7 @@ from datetime import datetime
 import pandas as pd
 
 from epmt.orm import *
+from sqlalchemy import func
 from json import loads, dumps
 from logging import getLogger
 import epmt.epmt_settings as settings
