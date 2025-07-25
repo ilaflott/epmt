@@ -94,7 +94,6 @@ jobs:
           epmt -v -V
 
       - name: epmt check call
-        continue-on-error: true
         run: |
           echo 2 > /proc/sys/kernel/perf_event_paranoid
           epmt -vv check
