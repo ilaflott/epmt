@@ -40,7 +40,7 @@ MM_SRC_URL_BASE=https://gitlab.com/minimal-metrics-llc/epmt
 INL_SRC_URL_BASE=https://github.com/ilaflott
 
 # papiex details
-PAPIEX_VERSION?=2.3.14
+PAPIEX_VERSION?=2.3.15
 PAPIEX_SRC?=papiex
 PAPIEX_SRC_BRANCH=main
 #PAPIEX_SRC_BRANCH=centos7_yum_fix
