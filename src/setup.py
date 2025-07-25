@@ -84,24 +84,31 @@ setup(name="epmt",
                              'test/shell/*',
                       ]
                     },
+
+##copying papiex-epmt-install/lib/libmonitor.so -> epmt-4.11.0/papiex-epmt-install/lib
+##copying papiex-epmt-install/lib/libmonitor.so.0 -> epmt-4.11.0/papiex-epmt-install/lib
+##copying papiex-epmt-install/lib/libmonitor.so.0.0.0 -> epmt-4.11.0/papiex-epmt-install/lib
+##copying papiex-epmt-install/lib/libpapiex.so -> epmt-4.11.0/papiex-epmt-install/lib
+##copying papiex-epmt-install/lib/libpapiex.so.2 -> epmt-4.11.0/papiex-epmt-install/lib
+      
       data_files=[('lib/python3.9/site-packages/epmt/lib',
                    [
 #                    'papiex-epmt-install/lib/libmonitor_wrap.a',
-#                    'papiex-epmt-install/lib/libmonitor.so',
-#                    'papiex-epmt-install/lib/libmonitor.so.0',                         
-#                    'papiex-epmt-install/lib/libmonitor.so.0.0.0',
+                    'papiex-epmt-install/lib/libmonitor.so',
+                    'papiex-epmt-install/lib/libmonitor.so.0',                         
+                    'papiex-epmt-install/lib/libmonitor.so.0.0.0',
 #                    'papiex-epmt-install/lib/libpapi.a',
 #                    'papiex-epmt-install/lib/libpapi.so',
 #                    'papiex-epmt-install/lib/libpapi.so.5',                    
 #                    'papiex-epmt-install/lib/libpapi.so.5.7.0',
 #                    'papiex-epmt-install/lib/libpapi.so.5.7.0.0',                    
-                    'papiex-epmt-install/lib/libpfm.a',
-                    'papiex-epmt-install/lib/libpfm.so',
-                    'papiex-epmt-install/lib/libpfm.so.4',
-                    'papiex-epmt-install/lib/libpfm.so.4.10.1',
+#                    'papiex-epmt-install/lib/libpfm.a',
+#                    'papiex-epmt-install/lib/libpfm.so',
+#                    'papiex-epmt-install/lib/libpfm.so.4',
+#                    'papiex-epmt-install/lib/libpfm.so.4.10.1',
                     'papiex-epmt-install/lib/libpapiex.so',
                     'papiex-epmt-install/lib/libpapiex.so.2',                    
-                    'papiex-epmt-install/lib/libpapiex.so.2.3.14',
+#                    'papiex-epmt-install/lib/libpapiex.so.2.3.14',
 
 
                      ] ),
