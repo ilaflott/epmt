@@ -296,8 +296,8 @@ $(PAPIEX_SRC)/$(PAPIEX_RELEASE): $(PAPIEX_SRC)
 	@echo "################### BEGIN MAKE PAPIEX TARBALL : papiex-dist ########################################"
 	if [ -n "${OUTSIDE_DOCKER}" ]; then \
 	echo "make and make check within PAPIEX_SRC/PAPIEX_RELEASE target"; \
-        make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET); \
-        make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) check; \
+	make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET); \
+	make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) check; \
 	else \
 	echo "making docker-dist within PAPIEX_SRC/PAPIEX_RELEASE target"; \
 	make -C $(PAPIEX_SRC) OS_TARGET=$(OS_TARGET) docker-dist; \
