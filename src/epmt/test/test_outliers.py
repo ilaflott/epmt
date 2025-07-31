@@ -3,9 +3,10 @@
 # the import below is crucial to get a sane test environment
 import unittest
 from json import dumps
-from epmt.orm import setup_db
+from epmt.orm import setup_db, db_session
 from epmt.epmtlib import frozen_dict, timing
 import epmt.epmt_settings as settings
+import epmt.epmt_query as eq
 # from json import loads
 import epmt.epmt_outliers as eod
 from epmt.epmtlib import frozen_dict
