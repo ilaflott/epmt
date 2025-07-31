@@ -2,7 +2,7 @@ load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 
 setup() {
-  resource_path=$(dirname `command -v epmt`)
+  resource_path=$(python -c "import epmt, os; print(os.path.dirname(epmt.__file__))")
   test -n "${resource_path}" || fail
   test -d ${resource_path} || fail
 
