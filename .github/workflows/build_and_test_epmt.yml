@@ -45,18 +45,18 @@ jobs:
           cd sqlite-amalgamation-3490100
           gcc -shared -fPIC -O2  -DSQLITE_ENABLE_JSON1 -DSQLITE_ENABLE_LOAD_EXTENSION -DSQLITE_MAX_VARIABLE_NUMBER=9999 sqlite3.c -o /usr/lib64/libsqlite3.so
 
-      - name: install python3
+      - name: install python3.9
         run: |
           cd /usr/src
-          echo 'downloading python'
+          echo 'downloading python 3.9.*'
           curl -o Python-3.9.22.tgz https://www.python.org/ftp/python/3.9.22/Python-3.9.22.tgz
           tar xzf Python-3.9.22.tgz
           cd Python-3.9.22
-          echo 'building python3'
+          echo 'building python3.9'
           ./configure --quiet --prefix=/usr --enable-shared --enable-optimizations --enable-loadable-sqlite-extensions
           make --silent install > /dev/null
 
-      - name: configure python3 and upgrade pip and grab gcc-c++
+      - name: configure python3.9 and upgrade pip and grab gcc-c++
         run: |
           ldconfig
           python3 -V

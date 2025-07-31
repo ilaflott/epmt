@@ -4,6 +4,7 @@ setup(name="epmt",
       version="4.11.0",
       url="https://some.where",
       author_email="some@where.com",
+      python_requires=">=3.9,<3.10",
       packages=['epmt', 'epmt.orm', 'epmt.orm.sqlalchemy', 'epmt.test'],
       package_data={'epmt':
                     ['alembic.ini',
