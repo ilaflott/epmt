@@ -30,7 +30,10 @@ jobs:
       - name: yum install and update
         run: |
           yum update -y
-          yum install -y findutils unzip bash tcsh nc curl make git gcc postgresql-devel zlib-devel bzip2 bzip2-devel readline-devel sqlite-devel openssl-devel xz xz-devel libffi-devel
+          yum install -y findutils unzip bash tcsh nc curl file \
+            make git gcc postgresql-devel zlib-devel bzip2 bzip2-devel \
+            readline-devel sqlite-devel openssl-devel xz xz-devel libffi-devel \
+            gcc-c++ gcc-gfortran tcl environment-modules perl bind-utils openssh-clients openssh-server
 
       - name: install and configure sqlite3
         run: |
@@ -93,7 +96,7 @@ jobs:
         run: |
           epmt -v -V
 
-      - name: epmt check call 
+      - name: epmt check call
         run: |
           echo 2 > /proc/sys/kernel/perf_event_paranoid
           epmt -vv check

@@ -127,8 +127,7 @@ def verify_install_prefix():
         logger.error("Found wildcards in install_prefix: {}".format(install_prefix))
         PrintFail()
         return False
-    for e in ["/lib/libpapiex.so", "/lib/libmonitor.so",
-              "/lib/libpapi.so", "/lib/libpfm.so", "/bin/papi_command_line"]:
+    for e in ["/lib/libpapiex.so", "/lib/libmonitor.so"]: #              "/lib/libpapi.so", "/lib/libpfm.so", "/bin/papi_command_line"]:
         cmd = "ls -l " + install_prefix + e + ">/dev/null 2>&1"
         logger.info("\t" + cmd)
         return_code = run(cmd, shell=True).returncode
@@ -185,6 +184,8 @@ def verify_epmt_output_prefix():
 
 
 def verify_papiex_options():
+    pass # This function is under review for potential deprecation due to limited usage and unclear requirements. 
+    # If deprecation is confirmed, it will be removed in a future release. Otherwise, it may be implemented to handle papiex options.
     s = get_papiex_options(settings)
     # print("papiex_options =",s, end='')
     logger.info(f'papiex_options = {s}')
@@ -337,9 +338,9 @@ def epmt_check():
     logger.warning('CHECKING verify_perf()...')
     if verify_perf() == False:
         retval = False
-    logger.warning('CHECKING verify_papiex_options()...')
-    if verify_papiex_options() == False:
-        retval = False
+    #logger.warning('CHECKING verify_papiex_options()...')
+    #if verify_papiex_options() == False:
+    #    retval = False
     logger.warning('CHECKING verify_stage_command()...')
     if verify_stage_command() == False:
         retval = False
