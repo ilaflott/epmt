@@ -79,11 +79,11 @@ function kernel_build() {
 }
 
 @test "kernel compile with COLLATED_TSV" {
-  skip
-  # orm=$(epmt -h | grep orm:| cut -f2 -d:)
-  # [[ $orm == "sqlalchemy" ]] || skip
-  # db_params=$(epmt -h | grep db_params:| cut -f2- -d:)
-  # [[ "$db_params" =~ "postgres" ]] || skip
+  # Skip this test if using in-memory SQLite database
+  db_params=$(epmt -h | grep db_params:| cut -f2- -d:)
+  [[ "$db_params" =~ ":memory:" ]] && skip "Test requires persistent database, skipping for in-memory SQLite"
+  
+  skip "Kernel compile test disabled by default"
 
   jobid=`kernel_build COLLATED_TSV`
   run tar tzf ./$jobid.tgz

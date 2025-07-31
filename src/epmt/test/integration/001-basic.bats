@@ -62,6 +62,10 @@ teardown() {
 }
 
 @test "epmt submit -e" {
+  # Skip this test if using in-memory SQLite database
+  db_params=$(epmt -h | grep db_params:| cut -f2- -d:)
+  [[ "$db_params" =~ ":memory:" ]] && skip "Test requires persistent database, skipping for in-memory SQLite"
+
   run epmt submit -e ${resource_path}/test/data/submit/692500.tgz
   assert_success
   run epmt submit -e ${resource_path}/test/data/submit/692500.tgz ${resource_path}/test/data/query/685000.tgz

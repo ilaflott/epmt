@@ -46,6 +46,9 @@ workload() {
 exp_output=('-d" -f2' '\\\' ' b' '\' ',' "'" '-e \tHello' '-e \tThereU\nR' '-e \a' '-e \a' '-e \' '-e some test \b and more text' 'b' '\b' '\b' '-e \. some text' '-e try\.some more text' 's/^\.//')
 
 @test "epmt start/run/stop/submit with escape char" {
+  # Skip this test if using in-memory SQLite database
+  db_params=$(epmt -h | grep db_params:| cut -f2- -d:)
+  [[ "$db_params" =~ ":memory:" ]] && skip "Test requires persistent database, skipping for in-memory SQLite"
     export SLURM_JOB_ID=12340
     export SLURM_JOB_NAME=12340_name
     epmt start           # Generate prolog
@@ -86,6 +89,10 @@ exp_output=('-d" -f2' '\\\' ' b' '\' ',' "'" '-e \tHello' '-e \tThereU\nR' '-e \
 }
 
 @test "epmt canned data/submit with escape char" {
+  # Skip this test if using in-memory SQLite database
+  db_params=$(epmt -h | grep db_params:| cut -f2- -d:)
+  [[ "$db_params" =~ ":memory:" ]] && skip "Test requires persistent database, skipping for in-memory SQLite"
+
 # Canned job test
   export SLURM_JOB_ID=12340
   run epmt submit "${resource_path}"/test/data/tsv/12340
