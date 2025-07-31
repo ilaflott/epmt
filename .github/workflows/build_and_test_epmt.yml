@@ -150,8 +150,7 @@ jobs:
         run: |
           python3 -m unittest -v epmt.test.test_submit
 
-      - name: epmt integration (GUARDED) call 
-        continue-on-error: true
+      - name: epmt integration call 
         run: |
           epmt integration
 

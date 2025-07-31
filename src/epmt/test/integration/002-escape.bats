@@ -71,7 +71,7 @@ exp_output=('-d" -f2' '\\\' ' b' '\' ',' "'" '-e \tHello' '-e \tThereU\nR' '-e \
     if [ $(uname -s) == "Linux" ] && $(test -f "${papiex_path}/lib/libpapiex.so") ; then 
       #echo > /dev/tty; echo > /dev/tty 
       for i in ${!exp_output[*]}; do
-        out=$(echo 'import epmt_query as eq; procs=eq.get_procs(fmt="orm", jobs=["12340"])[:]; p = procs['$i']; print(p.args);' | epmt python -)
+        out=$(echo 'import epmt.epmt_query as eq; procs=eq.get_procs(fmt="orm", jobs=["12340"])[:]; p = procs['$i']; print(p.args);' | epmt python -)
         a=${out}
         b=${exp_output[$i]}
         #echo x${a}x > /dev/tty
@@ -99,7 +99,7 @@ exp_output=('-d" -f2' '\\\' ' b' '\' ',' "'" '-e \tHello' '-e \tThereU\nR' '-e \
 
   # Below we have the expected output in sequence, don't use run as it doesn't play with a pipe
   for i in ${!exp_output[*]}; do
-      out=$(echo 'import epmt_query as eq; procs=eq.get_procs(fmt="orm", jobs=["12340"])[:]; p = procs['$i']; print(p.args);'  | epmt python -)
+      out=$(echo 'import epmt.epmt_query as eq; procs=eq.get_procs(fmt="orm", jobs=["12340"])[:]; p = procs['$i']; print(p.args);'  | epmt python -)
       [[ "$out" == "${exp_output[$i]}" ]]
   done
 }
