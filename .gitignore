@@ -67,3 +67,4 @@ src/epmt/settings.py
 venv*
 
 
+*.db
