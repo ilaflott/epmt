@@ -184,7 +184,8 @@ def verify_epmt_output_prefix():
 
 
 def verify_papiex_options():
-    pass # deprecation worthy, maybe
+    pass # This function is under review for potential deprecation due to limited usage and unclear requirements. 
+    # If deprecation is confirmed, it will be removed in a future release. Otherwise, it may be implemented to handle papiex options.
     s = get_papiex_options(settings)
     # print("papiex_options =",s, end='')
     logger.info(f'papiex_options = {s}')
