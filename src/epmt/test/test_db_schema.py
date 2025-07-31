@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 
 # the import below is crucial to get a sane test environment
-from . import *
+import unittest
+from epmt.orm.sqlalchemy.models import Process
+from epmt.orm.sqlalchemy.general import Session, db_session, orm_get, orm_dump_schema, setup_db
+from epmt.orm import orm_db_provider
+from epmt.epmtlib import timing, capture
+import epmt.epmt_settings as settings
 
 
 @timing

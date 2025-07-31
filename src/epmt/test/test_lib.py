@@ -1,7 +1,13 @@
 #!/usr/bin/env python
 
 # the import below is crucial to get a sane test environment
-from . import *
+import unittest
+import sqlite3
+import pandas as pd
+import numpy as np
+import logging
+from io import StringIO
+from epmt.epmtlib import epmt_logging_init, get_install_root
 
 # import sqlite3
 # import pandas as pd
