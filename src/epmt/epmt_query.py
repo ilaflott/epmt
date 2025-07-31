@@ -17,7 +17,10 @@ from epmt.epmtlib import tag_from_string, tags_list, init_settings, sum_dicts, u
 from datetime import datetime
 import pandas as pd
 
-from epmt.orm import *
+from epmt.orm import (
+    Job, Operation, Process, ReferenceModel, UnprocessedJob,
+    db_session, orm_commit, orm_create, orm_findall, orm_get, setup_db
+)
 from sqlalchemy import func
 from json import loads, dumps
 from logging import getLogger

@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 
 # the import below is crucial to get a sane test environment
-from . import *
+import unittest
+from datetime import datetime
+from shutil import copytree
+from epmt.orm import UnprocessedJob, db_session, setup_db
+from epmt.epmtlib import capture, timing
+import epmt.epmt_settings as settings
 
 from epmt.epmt_cmds import epmt_dbsize
 from epmt.epmt_cmd_delete import epmt_delete_jobs

@@ -1,7 +1,11 @@
 #!/usr/bin/env python
 
 # the import below is crucial to get a sane test environment
-from . import *
+import unittest
+from json import dumps
+from epmt.orm import setup_db
+from epmt.epmtlib import frozen_dict, timing
+import epmt.epmt_settings as settings
 # from json import loads
 import epmt.epmt_outliers as eod
 from epmt.epmtlib import frozen_dict

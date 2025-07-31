@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 
-from . import *
+import unittest
+from os import environ
+from epmt.epmtlib import capture, timing
+from epmt.orm import setup_db
+import epmt.epmt_settings as settings
 # import os
 
 # These will be used in both tests

@@ -1,7 +1,11 @@
 #!/usr/bin/env python
 
 # the import below is crucial to get a sane test environment
-from . import *
+import unittest
+from glob import glob
+from epmt.epmtlib import capture, timing, get_install_root
+import epmt.epmt_query as eq
+import epmt.epmt_settings as settings
 import epmt.epmt_exp_explore as exp
 
 
