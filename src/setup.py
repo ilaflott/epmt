@@ -85,11 +85,7 @@ setup(name="epmt",
                       ]
                     },
 
-##copying papiex-epmt-install/lib/libmonitor.so -> epmt-4.11.0/papiex-epmt-install/lib
-##copying papiex-epmt-install/lib/libmonitor.so.0 -> epmt-4.11.0/papiex-epmt-install/lib
-##copying papiex-epmt-install/lib/libmonitor.so.0.0.0 -> epmt-4.11.0/papiex-epmt-install/lib
-##copying papiex-epmt-install/lib/libpapiex.so -> epmt-4.11.0/papiex-epmt-install/lib
-##copying papiex-epmt-install/lib/libpapiex.so.2 -> epmt-4.11.0/papiex-epmt-install/lib
+# (Lines 88-92 removed)
       
       data_files=[('lib/python3.9/site-packages/epmt/lib',
                    [
