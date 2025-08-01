@@ -2,7 +2,7 @@ load 'libs/bats-support/load'
 load 'libs/bats-assert/load'
 
 setup() {
-  resource_path=$(dirname `command -v epmt`)
+  resource_path=$(python3 -c "import epmt, os; print(os.path.dirname(epmt.__file__))")
   papiex_path=$(epmt -h | grep install_prefix|cut -f2 -d:)
   test -n "${resource_path}" || fail
   test -d ${resource_path} || fail
@@ -46,6 +46,9 @@ workload() {
 exp_output=('-d" -f2' '\\\' ' b' '\' ',' "'" '-e \tHello' '-e \tThereU\nR' '-e \a' '-e \a' '-e \' '-e some test \b and more text' 'b' '\b' '\b' '-e \. some text' '-e try\.some more text' 's/^\.//')
 
 @test "epmt start/run/stop/submit with escape char" {
+  # Skip this test if using in-memory SQLite database
+  db_params=$(epmt -h | grep db_params:| cut -f2- -d:)
+  [[ "$db_params" =~ ":memory:" ]] && skip "Test requires persistent database, skipping for in-memory SQLite"
     export SLURM_JOB_ID=12340
     export SLURM_JOB_NAME=12340_name
     epmt start           # Generate prolog
@@ -71,7 +74,7 @@ exp_output=('-d" -f2' '\\\' ' b' '\' ',' "'" '-e \tHello' '-e \tThereU\nR' '-e \
     if [ $(uname -s) == "Linux" ] && $(test -f "${papiex_path}/lib/libpapiex.so") ; then 
       #echo > /dev/tty; echo > /dev/tty 
       for i in ${!exp_output[*]}; do
-        out=$(echo 'import epmt_query as eq; procs=eq.get_procs(fmt="orm", jobs=["12340"])[:]; p = procs['$i']; print(p.args);' | epmt python -)
+        out=$(echo 'import epmt.epmt_query as eq; procs=eq.get_procs(fmt="orm", jobs=["12340"])[:]; p = procs['$i']; print(p.args);' | epmt python -)
         a=${out}
         b=${exp_output[$i]}
         #echo x${a}x > /dev/tty
@@ -86,6 +89,10 @@ exp_output=('-d" -f2' '\\\' ' b' '\' ',' "'" '-e \tHello' '-e \tThereU\nR' '-e \
 }
 
 @test "epmt canned data/submit with escape char" {
+  # Skip this test if using in-memory SQLite database
+  db_params=$(epmt -h | grep db_params:| cut -f2- -d:)
+  [[ "$db_params" =~ ":memory:" ]] && skip "Test requires persistent database, skipping for in-memory SQLite"
+
 # Canned job test
   export SLURM_JOB_ID=12340
   run epmt submit "${resource_path}"/test/data/tsv/12340
@@ -99,7 +106,7 @@ exp_output=('-d" -f2' '\\\' ' b' '\' ',' "'" '-e \tHello' '-e \tThereU\nR' '-e \
 
   # Below we have the expected output in sequence, don't use run as it doesn't play with a pipe
   for i in ${!exp_output[*]}; do
-      out=$(echo 'import epmt_query as eq; procs=eq.get_procs(fmt="orm", jobs=["12340"])[:]; p = procs['$i']; print(p.args);'  | epmt python -)
+      out=$(echo 'import epmt.epmt_query as eq; procs=eq.get_procs(fmt="orm", jobs=["12340"])[:]; p = procs['$i']; print(p.args);'  | epmt python -)
       [[ "$out" == "${exp_output[$i]}" ]]
   done
 }

@@ -65,5 +65,3 @@ src/epmt/settings.py
 
 # virtualenv
 venv*
-
-

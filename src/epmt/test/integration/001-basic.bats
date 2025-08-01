@@ -7,7 +7,7 @@ load 'libs/bats-assert/load'
 }
 
 setup() {
-  resource_path=$(dirname `command -v epmt`)
+  resource_path=$(python3 -c "import epmt, os; print(os.path.dirname(epmt.__file__))")
   test -n "${resource_path}" || fail
   test -d ${resource_path} || fail
   epmt_output_prefix=$(epmt -h | sed -n 's/epmt_output_prefix://p')
@@ -62,6 +62,10 @@ teardown() {
 }
 
 @test "epmt submit -e" {
+  # Skip this test if using in-memory SQLite database
+  db_params=$(epmt -h | grep db_params:| cut -f2- -d:)
+  [[ "$db_params" =~ ":memory:" ]] && skip "Test requires persistent database, skipping for in-memory SQLite"
+
   run epmt submit -e ${resource_path}/test/data/submit/692500.tgz
   assert_success
   run epmt submit -e ${resource_path}/test/data/submit/692500.tgz ${resource_path}/test/data/query/685000.tgz
