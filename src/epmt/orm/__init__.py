@@ -151,6 +151,7 @@ if settings.orm == 'sqlalchemy':
         ancestor_descendant_associations_table
     )
 else:
+    # NOTE: pony package usage may be deprecated in future versions
     from .pony import (
         Base, Session, db_session, setup_db, orm_get, orm_findall, orm_create, orm_delete,
         orm_delete_jobs, orm_delete_refmodels, orm_commit, orm_add_to_collection,
