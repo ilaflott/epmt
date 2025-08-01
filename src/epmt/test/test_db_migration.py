@@ -1,7 +1,11 @@
 #!/usr/bin/env python
 
 # the import below is crucial to get a sane test environment
-from . import *
+import unittest
+from os import path
+from epmt.epmtlib import capture
+from epmt.orm import setup_db, migrate_db, get_db_schema_version, orm_in_memory
+import epmt.epmt_settings as settings
 
 
 def setUpModule():

@@ -1,7 +1,16 @@
 #!/usr/bin/env python
 
 # the import below is crucial to get a sane test environment
-from . import *
+import unittest
+from datetime import datetime
+from glob import glob
+from epmt.orm import Job, Operation, Process, db_session, setup_db
+from epmt.orm.sqlalchemy.general import orm_get, orm_commit
+from epmt.epmtlib import capture, timing, epmt_logging_init, str_dict
+from epmt.epmt_cmds import epmt_submit
+import epmt.epmt_query as eq
+import epmt.epmt_settings as settings
+from . import install_root
 epmt_logging_init(0)
 JOBS_LIST = ['685016', '685003', '685000']
 

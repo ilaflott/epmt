@@ -1,7 +1,17 @@
 #!/usr/bin/env python
 
 # the import below is crucial to get a sane test environment
-from . import *
+import unittest
+from datetime import datetime
+from shutil import copyfile
+from glob import glob
+from tempfile import mkdtemp
+from epmt.orm import Job, Process, UnprocessedJob, db_session, setup_db
+from epmt.epmtlib import capture, epmt_logging_init, timing, get_install_root
+from epmt.epmt_cmds import epmt_submit
+from epmt.epmt_convert_csv import convert_csv_in_tar
+import epmt.epmt_settings as settings
+from . import install_root
 
 # import unittest
 # from sys import stderr

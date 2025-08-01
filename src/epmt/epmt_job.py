@@ -2,7 +2,11 @@
 EPMT job module - handles job-related data structures and operations.
 """
 # from __future__ import print_function
-from epmt.orm import *
+from epmt.orm import (
+    Base, Host, Job, Process, Session, UnprocessedJob, User,
+    db_session, orm_add_to_collection, orm_commit, orm_create, orm_db_provider,
+    orm_delete, orm_findall, orm_get, orm_get_or_create, orm_raw_sql, orm_sum_attribute
+)
 import epmt.epmt_settings as settings
 from os.path import basename, dirname
 from os import environ

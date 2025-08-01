@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 
-from . import *
-# import os
+import unittest
+import os
+from os import environ
+from epmt.epmtlib import capture, timing
+from epmt.orm import setup_db
+import epmt.epmt_settings as settings
+import epmt.epmt_query as eq
 
 # These will be used in both tests
 # One can embed them in the class, but referring to them with
