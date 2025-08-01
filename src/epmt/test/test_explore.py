@@ -4,9 +4,12 @@
 import unittest
 from glob import glob
 from epmt.epmtlib import capture, timing, get_install_root
+from epmt.epmt_cmds import epmt_submit
 import epmt.epmt_query as eq
 import epmt.epmt_settings as settings
 import epmt.epmt_exp_explore as exp
+
+install_root = get_install_root()
 
 
 def do_cleanup():

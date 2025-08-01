@@ -3,14 +3,15 @@
 # the import below is crucial to get a sane test environment
 import unittest
 from json import dumps
+from glob import glob
 from epmt.orm import setup_db, db_session
 from epmt.epmtlib import frozen_dict, timing
+from epmt.epmt_cmds import epmt_submit
 import epmt.epmt_settings as settings
 import epmt.epmt_query as eq
 # from json import loads
 import epmt.epmt_outliers as eod
-from epmt.epmtlib import frozen_dict
-from json import dumps
+from . import install_root
 
 
 def do_cleanup():
