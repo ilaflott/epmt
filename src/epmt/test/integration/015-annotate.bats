@@ -5,7 +5,7 @@ setup() {
   stage_dest=$(epmt -h | sed -n 's/stage_command_dest://p')
   test -n "${stage_dest}" || fail
   test -d ${stage_dest} || fail
-  resource_path=$(python -c "import epmt, os; print(os.path.dirname(epmt.__file__))")
+  resource_path=$(python3 -c "import epmt, os; print(os.path.dirname(epmt.__file__))")
   test -n "${resource_path}" || fail
   test -d ${resource_path} || fail
   epmt_output_prefix=$(epmt -h | sed -n 's/epmt_output_prefix://p')
