@@ -24,7 +24,7 @@ setup() {
   # echo "stage_dest:${stage_dest}"
   test -n "${stage_dest}" || fail
   test -d ${stage_dest} || fail
-  resource_path=$(python3 -c "import epmt, os; print(os.path.dirname(os.path.dirname(epmt.__file__)))")
+  resource_path=$(python3 -c "import epmt, os; print(os.path.dirname(epmt.__file__))")
   # echo "resource_path:${resource_path}"
   test -n "${resource_path}" || fail
   test -d ${resource_path} || fail
@@ -40,55 +40,55 @@ teardown() {
 } 
 
 @test "sbatch epmt-example.tcsh" {
-      sbatch ${resource_path}/examples/epmt-example.tcsh 
+      sbatch ${resource_path}/test/shell/epmt-example.tcsh 
       assert_success
       verify_staged_file
       assert_success
 }
 @test "sbatch epmt-example.csh" {
-      sbatch ${resource_path}/examples/epmt-example.csh
+      sbatch ${resource_path}/test/shell/epmt-example.csh
       assert_success
       verify_staged_file
       assert_success      
 }
 @test "sbatch epmt-example.bash" {
-      sbatch ${resource_path}/examples/epmt-example.bash
+      sbatch ${resource_path}/test/shell/epmt-example.bash
       assert_success
       verify_staged_file
       assert_success
 }
 @test "sbatch epmt-example.sh" {
-      sbatch ${resource_path}/examples/epmt-example.sh
+      sbatch ${resource_path}/test/shell/epmt-example.sh
       assert_success
       verify_staged_file
       assert_success
 }
 @test "srun prolog/epilog (inline)" {
-      srun -n1 --task-prolog="${resource_path}/slurm/slurm_task_prolog_epmt.sh" --task-epilog="${resource_path}/slurm/slurm_task_epilog_epmt.sh" sleep 1
+      srun -n1 --task-prolog="${resource_path}/../../utils/SLURM/slurm_task_prolog_epmt.sh" --task-epilog="${resource_path}/../../utils/SLURM/slurm_task_epilog_epmt.sh" sleep 1
       assert_success
       verify_staged_file
       assert_success
 }
 @test "srun prolog/epilog (tcsh)" {
-      srun -n1 --task-prolog="${resource_path}/slurm/slurm_task_prolog_epmt.sh" --task-epilog="${resource_path}/slurm/slurm_task_epilog_epmt.sh" /tmp/sleeptest.tcsh
+      srun -n1 --task-prolog="${resource_path}/../../utils/SLURM/slurm_task_prolog_epmt.sh" --task-epilog="${resource_path}/../../utils/SLURM/slurm_task_epilog_epmt.sh" /tmp/sleeptest.tcsh
       assert_success
       verify_staged_file
       assert_success
 }
 @test "srun prolog/epilog (csh)" {
-      srun -n1 --task-prolog="${resource_path}/slurm/slurm_task_prolog_epmt.sh" --task-epilog="${resource_path}/slurm/slurm_task_epilog_epmt.sh" /tmp/sleeptest.csh
+      srun -n1 --task-prolog="${resource_path}/../../utils/SLURM/slurm_task_prolog_epmt.sh" --task-epilog="${resource_path}/../../utils/SLURM/slurm_task_epilog_epmt.sh" /tmp/sleeptest.csh
       assert_success
       verify_staged_file
       assert_success
 }
 @test "srun prolog/epilog (bash)" {
-      srun -n1 --task-prolog="${resource_path}/slurm/slurm_task_prolog_epmt.sh" --task-epilog="${resource_path}/slurm/slurm_task_epilog_epmt.sh" /tmp/sleeptest.bash
+      srun -n1 --task-prolog="${resource_path}/../../utils/SLURM/slurm_task_prolog_epmt.sh" --task-epilog="${resource_path}/../../utils/SLURM/slurm_task_epilog_epmt.sh" /tmp/sleeptest.bash
       assert_success
       verify_staged_file
       assert_success
 }
 @test "srun prolog/epilog (sh)" {
-      srun -n1 --task-prolog="${resource_path}/slurm/slurm_task_prolog_epmt.sh" --task-epilog="${resource_path}/slurm/slurm_task_epilog_epmt.sh" /tmp/sleeptest.sh
+      srun -n1 --task-prolog="${resource_path}/../../utils/SLURM/slurm_task_prolog_epmt.sh" --task-epilog="${resource_path}/../../utils/SLURM/slurm_task_epilog_epmt.sh" /tmp/sleeptest.sh
       assert_success
       verify_staged_file
       assert_success
