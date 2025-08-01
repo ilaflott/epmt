@@ -19,7 +19,9 @@ import pandas as pd
 
 from epmt.orm import (
     Job, Operation, Process, ReferenceModel, UnprocessedJob,
-    db_session, orm_commit, orm_create, orm_findall, orm_get, setup_db
+    db_session, orm_commit, orm_create, orm_delete_jobs, orm_delete_refmodels, 
+    orm_findall, orm_get, orm_get_jobs, orm_get_procs, orm_get_refmodels,
+    orm_is_query, orm_jobs_col, orm_procs_col, orm_to_dict, setup_db
 )
 from sqlalchemy import func
 from json import loads, dumps

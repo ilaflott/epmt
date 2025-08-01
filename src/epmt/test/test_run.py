@@ -3,9 +3,8 @@
 import unittest
 import os
 from epmt.orm import setup_db
-from epmt.epmtlib import get_username, timing
+from epmt.epmtlib import get_username, timing, capture, epmt_logging_init
 import epmt.epmt_settings as settings
-# import os
 
 
 def remove_stale_files():
