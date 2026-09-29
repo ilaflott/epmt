@@ -626,8 +626,8 @@ def post_process_job( j,
     if not force:
         #if is_job_post_processed(j):
         if _is_job_post_processed_internal(j):
-            logger.warning('skipped processing jobid %s as it has been already processed', j.jobid)
-            return False
+            logger.debug('skipped processing jobid %s as it has been already processed', j.jobid)
+            return True
 
     # we need to set up signal handlers so the user doesn't
     # abort the post-processing midway.

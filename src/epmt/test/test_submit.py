@@ -591,10 +591,10 @@ class EPMTSubmit(unittest.TestCase):
         else:
             self.assertEqual(post_process_pending_jobs(), [])
         self.assertFalse('685003' in eq.get_unprocessed_jobs())
-        self.assertFalse(post_process_job(j.jobid))
         self.assertFalse(orm_get(UnprocessedJob, '685003'))
         #with self.assertRaises(Exception):
         #    UnprocessedJob['685003']
+        self.assertTrue(post_process_job(j.jobid))
         self.assertRaises(Exception, lambda: UnprocessedJob['685003'])
         self.assertTrue(eq.is_job_post_processed(j))
 

@@ -56,18 +56,15 @@ class EPMTShell(unittest.TestCase):
             self.assertEqual(0, results)
 
     def test_monolithic(self):
-        from epmt.epmt_cmds import (epmt_source, epmt_start_job, epmt_dump_metadata,
-                                    epmt_run, epmt_stop_job, epmt_stage, epmt_submit)
-        with capture() as (_out, _err):
-            # TODO see if this works
-            # results = epmt_check()
-            # self.assertEqual(results, False)
+        from epmt.epmt_cmds import ( epmt_source, epmt_start_job, epmt_dump_metadata,
+                                     epmt_run, epmt_stop_job, epmt_stage, epmt_submit )
 
+        with capture() as (_out, _err):
             # Source
             results = epmt_source()
             self.assertIn("PAPIEX_OPTIONS", results, 'epmt_source options are missing')
-            self.assertIn("PAPIEX_OUTPUT", results, 'epmt_source output is missing')
-            self.assertIn("LD_PRELOAD", results, 'epmt_source ld_preload is missing')
+            self.assertIn("PAPIEX_OUTPUT" , results, 'epmt_source output is missing')
+            self.assertIn("LD_PRELOAD"    , results, 'epmt_source ld_preload is missing')
 
             # Start
             results = epmt_start_job()
@@ -92,10 +89,12 @@ class EPMTShell(unittest.TestCase):
             # Stage
             results = epmt_stage([])  # ['/tmp/epmt/' + tuser + '/epmt/'+jobid+'/'])
             self.assertTrue(results)
-            self.assertEqual(os.path.isfile(jobid + '.tgz'), 1, "epmt_stage output file missing")
+            self.assertEqual(os.path.isfile(f'{jobid}.tgz'),
+                             1,
+                             "epmt_stage output file missing")
 
             # Submit
-            results = epmt_submit([jobid + '.tgz'], dry_run=False)
+            results = epmt_submit([f'{jobid}.tgz'], dry_run=False)
             self.assertTrue(results)
 
 

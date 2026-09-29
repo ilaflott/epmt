@@ -1,5 +1,8 @@
 #!/bin/bash -e
-export SLURM_JOBID=3456
+
+# conditional assignment- so this can be tested on a batch node in `salloc` and outside a slurm batch env
+export SLURM_JOBID="${SLURM_JOBID:-3456}"
+# echo $SLURM_JOBID # DEBUG
 epmt start               # Collect job data
 epmt annotate inbetween_1=1
 epmt -v run sleep 1      # Run command, if no papiex just run command silently

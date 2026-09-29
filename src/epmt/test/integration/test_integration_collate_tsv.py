@@ -8,7 +8,8 @@ import pytest
 from conftest import run_cmd, epmt_setting
 
 # Use a file-based SQLite database for persistence across epmt commands
-EPMT_DB_URL = "sqlite:////tmp/epmt_test_collate_tsv.sqlite"
+EPMT_DB_PATH = "/tmp/epmt_test_collate_tsv.sqlite"
+EPMT_DB_URL  = f"sqlite:///{EPMT_DB_PATH}"
 
 
 @pytest.fixture(autouse=True)
@@ -20,8 +21,8 @@ def setup_and_teardown():
     env = {"EPMT_DB_URL": EPMT_DB_URL}
 
     # Clean up
-    if os.path.exists("/tmp/epmt_test_collate_tsv.sqlite"):
-        os.remove("/tmp/epmt_test_collate_tsv.sqlite")
+    if os.path.exists(EPMT_DB_PATH):
+        os.remove(EPMT_DB_PATH)
     staged = os.path.join(stage_dest, "989.tgz")
     if os.path.exists(staged):
         os.remove(staged)
@@ -34,8 +35,8 @@ def setup_and_teardown():
     staged = os.path.join(stage_dest, "989.tgz")
     if os.path.exists(staged):
         os.remove(staged)
-    if os.path.exists("/tmp/epmt_test_collate_tsv.sqlite"):
-        os.remove("/tmp/epmt_test_collate_tsv.sqlite")
+    if os.path.exists(EPMT_DB_PATH):
+        os.remove(EPMT_DB_PATH)
 
 
 class TestCollateTsv:

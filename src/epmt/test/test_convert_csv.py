@@ -11,7 +11,6 @@ import tempfile
 import unittest
 
 from epmt.epmtlib import get_install_root
-
 install_root = get_install_root()
 
 

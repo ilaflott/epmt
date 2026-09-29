@@ -593,8 +593,17 @@ def get_jobs(
 
 #
 @db_session
-def get_procs(jobs=None, tags=None, fltr=None, order=None, offset=0, limit=None, when=None,
-              hosts=None, fmt='dict', merge_threads_sums=True, exact_tag_only=False):
+def get_procs(jobs=None,
+              tags=None,
+              fltr=None,
+              order=None,
+              offset=0,
+              limit=None,
+              when=None,
+              hosts=None,
+              fmt='dict',
+              merge_threads_sums=True,
+              exact_tag_only=False):
     """
     Returns a collection of processes for a set of jobs based on filter criteria::Processes
 
@@ -1828,6 +1837,7 @@ op_duration_method: string, optional
         tags = []
     if op_duration_method not in ("sum", "sum-minus-overlap", "finish-minus-start"):
         raise ValueError('op_duration_method must be one of ("sum", "sum-minus-overlap", "finish-minus-start")')
+
     _empty_collection_check(jobs)
     jobs = orm_jobs_col(jobs).order_by(Job.start)
 
@@ -1845,39 +1855,36 @@ op_duration_method: string, optional
     # from hashlib import md5
     # print(md5(str(stringify_dicts(tags)).encode('utf-8')).hexdigest())
 
-    all_procs = []
     # we iterate over tags, where each tag is dictionary
+    all_procs = []
     for t in tags:
         logger.debug('  processing op: %s', t)
+
         # group the Query response we got by jobid
         # we use group_concat to join the thread_sums json into a giant string
         if settings.orm == 'sqlalchemy':
+
+            # postgres doesn't have an group_concat, so we first aggregate into an
+            # an array and then join the array elements into a string using a separator
             if 'postgres' in settings.db_params.get('url', ''):
-                # postgres doesn't have an group_concat, so we first aggregate into an
-                # an array and then join the array elements into a string using a separator
-                concat_threads_sums = func.array_to_string(func.array_agg(Process.threads_sums), '@@@')
+                concat_threads_sums = func.array_to_string(
+                    func.array_agg(Process.threads_sums), '@@@')
             else:
-                concat_threads_sums = func.group_concat(Process.threads_sums, '@@@')
+                concat_threads_sums = func.group_concat(
+                    Process.threads_sums, '@@@')
+
+            # group processes by job
             procs_grp_by_job = orm_get_procs(
                 jobs, t, None, None, 0, 0, None, [], exact_tags_only, [
-                    Process.jobid, func.count(
-                        Process.id), func.min(
-                        Process.start), func.max(
-                        Process.end), func.sum(
-                        Process.duration), func.sum(
-                            Process.cpu_time), func.sum(
-                                Process.numtids), concat_threads_sums]).group_by(
-                                    Process.jobid).order_by(
-                                        Process.jobid)
-        # else:
-        #    # Pony ORM
-        #    # we use order=0 as a hack to avoid going to the default order of p.start
-        #    # That does not work with the GROUP BY clause. By having order=0, we use the
-        #    # implicit order and works with GROUP BY
-        #    procs = get_procs(jobs, order=0, tags = t, exact_tag_only = exact_tags_only, fmt='orm')
-        #    procs_grp_by_job = select((p.job, count(p.id), min(p.start), max(p.end),
-        #        sum(p.duration), sum(p.cpu_time), sum(p.numtids),
-        #        group_concat(p.threads_sums, sep='@@@')) for p in procs)
+                    Process.jobid,
+                    func.count(Process.id),
+                    func.min(Process.start),
+                    func.max(Process.end),
+                    func.sum(Process.duration),
+                    func.sum(Process.cpu_time),
+                    func.sum(Process.numtids),
+                    concat_threads_sums
+                ] ).group_by( Process.jobid ).order_by( Process.jobid )
 
         for row in procs_grp_by_job:
             (j, nprocs, start, end, duration, excl_cpu, n_tids, threads_sums_str) = row
@@ -1890,34 +1897,47 @@ op_duration_method: string, optional
                 # So we use Operation to correctly compute duration
                 # This is an expensive computation:
                 # O(N log N) complexity, where N is the num. of processes
-                op = Operation(j, t, exact_tags_only, op_duration_method="sum-minus-overlap")
+                op = Operation(j,
+                               t,
+                               exact_tags_only,
+                               op_duration_method = "sum-minus-overlap")
                 duration = round(op.duration, 1)
-            elif op_duration_method == "sum":
-                # nop since we already computed that in 'duration' using the ORM
+            elif op_duration_method == "sum": # already done using ORM, no-op
                 pass
             else:
                 raise ValueError(f"Do not know how to handle op_duration_method: {op_duration_method}")
+
             # convert from giant string to array of strings where each list
             # list element is a json of a threads_sums dict
             _l1 = threads_sums_str.split('@@@')
+
             # get back the dicts
             thr_sums_dicts = [loads(s) for s in _l1]
+
             # now aggregate across the dicts
             sum_dict = {}
             for d in thr_sums_dicts:
                 sum_dict = sum_dicts(sum_dict, d)
+
             # add some useful fields so we can back-reference and
             # also add some sums we obtained in the query
             # we add synthetic alias keys for jobid and cpu_time for
             # a more consistent user experience
             jobid = j.jobid if (isinstance(j, Job)) else j
-            sum_dict.update({'job': jobid, 'jobid': jobid, 'tags': t, 'num_procs': nprocs,
-                            'numtids': n_tids, 'cpu_time': excl_cpu, 'duration': duration})
+            sum_dict.update( { 'job': jobid,
+                               'jobid': jobid,
+                               'tags': t,
+                               'num_procs': nprocs,
+                               'numtids': n_tids,
+                               'cpu_time': excl_cpu,
+                               'duration': duration } )
             all_procs.append(sum_dict)
 
     if group_by_tag:
         logger.debug('grouping by tags..')
-        all_procs = group_dicts_by_key(all_procs, key='tags', exclude=['job', 'jobid'])
+        all_procs = group_dicts_by_key(all_procs,
+                                       key='tags',
+                                       exclude=['job', 'jobid'])
 
     if fmt == 'pandas':
         return pd.DataFrame(all_procs)
@@ -3324,3 +3344,32 @@ def verify_jobs(jobs):
             # concatenate the errors into a flat list
             errors[jobid] = job_errors + proc_errors
     return (not (errors), errors)
+
+
+def print_scannable_op_metrics(jobs):
+    """
+    Fetches and prints core operation metrics for a list of jobs, 
+    split by jobid, op, and op_instance.
+    """
+    # 1. Fetch all uncompressed tags across the specified jobs
+    all_tags = get_job_proc_tags(jobs, fold=False)
+    
+    # 2. Extract unique pairs of 'op' and 'op_instance'
+    combinations = {
+        (t.get('op'), t.get('op_instance')) 
+        for t in all_tags 
+        if 'op' in t and 'op_instance' in t
+    }
+    
+    # 3. Format them back into the list of dictionaries epmt expects
+    split_tags = [{'op': op, 'op_instance': inst} for op, inst in combinations]
+    
+    # 4. Fetch the raw metrics (group_by_tag=False ensures jobid is kept)
+    df = get_op_metrics(jobs, tags=split_tags, fmt='pandas')
+    
+    # 5. Filter the DataFrame for maximum scannability and print
+    scannable_df = df[['jobid', 'tags', 'num_procs', 'cpu_time', 'duration']]
+    print(scannable_df)
+    
+    # Return it just in case you want to capture it in a variable later
+    return scannable_df
