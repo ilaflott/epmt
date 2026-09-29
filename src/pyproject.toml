@@ -42,8 +42,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Interactive notebook / IPython shell support
-notebook = [
+notebook = [ # Interactive notebook / IPython shell support
     "ipykernel",
     "ipython",
     "ipywidgets",
@@ -56,32 +55,32 @@ notebook = [
 	"jupyterlab<4",
     "qtconsole",
 ]
-# Dash-based web UI
-ui = [
+
+ui = [ # Dash-based web UI
     "dash",
     "dash-bootstrap-components",
     "dash-daq",
     "dash-table",
 ]
-# Documentation generation
-docs = [
+
+docs = [ # Documentation generation
     "livereload",
     "mkdocs",
     "mkdocs-git-committers-plugin",
     "mkdocs-theme-bootstrap4",
 ]
-# testing, linting and static analysis
-devtest = [
+
+devtest = [ # testing, linting and static analysis
     "pylint",
     "pytest",
 ]
-# 20231102 caw: pyinstaller is pinned at 5.7.0, latest version doesn't allow the settings.py tactic.
-build = [
+
+build = [ # pyinstaller build reqs
     "pyinstaller==6.0.0",
     "pyinstaller-hooks-contrib==2023.11",
 ]
-# Shorthand: install everything (mirrors the old flat dependency list)
-all = [
+
+all = [ # Shorthand: install everything (mirrors the old flat dependency list)
     "epmt[notebook,ui,docs,devtest,build]",
 ]
 
@@ -89,8 +88,8 @@ all = [
 epmt = "epmt.cli:main"
 
 [project.urls]
-"Homepage" = "https://gitlab.com/minimal-metrics-llc/epmt/epmt"
-"Bug Tracker" = "https://gitlab.com/minimal-metrics-llc/epmt/epmt/-/issues"
+"Homepage" = "https://github.com/noaa-gfdl/epmt"
+"Bug Tracker" = "https://github.com/NOAA-GFDL/epmt/issues"
 
 [tool.setuptools]
 include-package-data = false

@@ -9,6 +9,7 @@ commands are not found or the controller is unreachable.
 import os
 import time
 import pytest
+import re
 
 from conftest import run_cmd, epmt_setting
 
@@ -50,7 +51,6 @@ def _sbatch_wait(script, extra_args=""):
     tuple of (subprocess.CompletedProcess, str)
         The CompletedProcess from sbatch and the combined job output string.
     """
-    import re  # pylint: disable=import-outside-toplevel
     r = run_cmd(
         f"sbatch --wait --output=/tmp/slurm-%j.out --error=/tmp/slurm-%j.out "
         f"{extra_args} {script}"

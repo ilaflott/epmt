@@ -8,7 +8,8 @@ import pytest
 from conftest import run_cmd
 
 # Use a file-based SQLite database for persistence across epmt commands
-EPMT_DB_URL = "sqlite:////tmp/epmt_explore_test.db"
+EPMT_DB_PATH = "/tmp/epmt_explore_test.db"
+EPMT_DB_URL  = f"sqlite:///{EPMT_DB_PATH}"
 
 
 @pytest.fixture(autouse=True)
@@ -18,8 +19,8 @@ def setup_and_teardown(resource_path):
     jobs_in_module = "625151 627907 629322 633114 675992 680163 685000 685001 685003 685016 691209 692500 693129"
 
     # Clean up any existing test DB
-    if os.path.exists("/tmp/epmt_explore_test.db"):
-        os.remove("/tmp/epmt_explore_test.db")
+    if os.path.exists(EPMT_DB_PATH):
+        os.remove(EPMT_DB_PATH)
 
     # Delete pre-existing jobs
     run_cmd(f"epmt delete {jobs_in_module}", env=env)
@@ -49,8 +50,8 @@ def setup_and_teardown(resource_path):
 
     # Teardown
     run_cmd(f"epmt delete {jobs_in_module}", env=env)
-    if os.path.exists("/tmp/epmt_explore_test.db"):
-        os.remove("/tmp/epmt_explore_test.db")
+    if os.path.exists(EPMT_DB_PATH):
+        os.remove(EPMT_DB_PATH)
 
 
 class TestExplore:
