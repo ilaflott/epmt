@@ -15,6 +15,7 @@ The format can be selected using the `fmt` argument.
 from datetime import datetime
 from json import loads, dumps
 from logging import getLogger
+import time
 
 import pandas as pd
 from sqlalchemy import func
@@ -2078,7 +2079,7 @@ def delete_jobs(jobs, force=False, before=None, after=None, warn=True, remove_mo
     # return num_jobs if orm_delete_jobs(jobs) else 0
 
 
-def retire_jobs(ndays=settings.retire_jobs_ndays, skip_unprocessed=False, dry_run=False):
+def retire_jobs(ndays=settings.retire_jobs_ndays, skip_unprocessed=False, dry_run=False, deadline=None):
     """
     Retires jobs older than specified number of days::Jobs
     Parameters
@@ -2094,6 +2095,10 @@ def retire_jobs(ndays=settings.retire_jobs_ndays, skip_unprocessed=False, dry_ru
                if True, don't delete any jobs, just print to
                screen how many WOULD be deleted with this set
                equal to False
+      deadline: float or None, optional
+               If set, a time.time() value representing the absolute
+               deadline. The chunked deletion loop will stop cleanly
+               once this time has passed.
     Returns
     -------
     The number of jobs retired (int)
@@ -2156,6 +2161,11 @@ def retire_jobs(ndays=settings.retire_jobs_ndays, skip_unprocessed=False, dry_ru
                 logger.debug('offset is now: %s', offset)
 
         logger.info('%d jobs out of %d deleted so far', tot_num_deleted, num_delete_attempts)
+
+        # check deadline at end of each iteration
+        if deadline is not None and time.time() >= deadline:
+            logger.warning('time limit reached during chunked job retirement, stopping')
+            break
 
     logger.info('done deleting jobs in chunks!')
 
@@ -3155,7 +3165,7 @@ def get_job_staging_ids(j):
 
 
 #@db_session
-def post_process_jobs(jobs, check=True):
+def post_process_jobs(jobs, check=True, deadline=None):
     '''
     Post-process a collection of jobs::Jobs
 
@@ -3165,6 +3175,10 @@ def post_process_jobs(jobs, check=True):
 
       check : boolean, optional, default = True
               Check if the job has in fact been processed before doing it again
+
+      deadline : float or None, optional
+              If set, a time.time() value representing the absolute deadline.
+              The loop will stop cleanly once this time has passed.
 
     Returns
     -------
@@ -3187,6 +3201,10 @@ def post_process_jobs(jobs, check=True):
         if post_process_job(jobid, force=not check):
             out.append(jobid)
         cnt += 1
+        # check deadline at end of each iteration
+        if deadline is not None and time.time() >= deadline:
+            logger.warning('time limit reached during post-processing, stopping after %d of %d jobs', cnt, len(jobs) if hasattr(jobs, '__len__') else cnt)
+            break
     logger.info("%d of %d jobs post-processed", len(out), cnt)
     return out
 

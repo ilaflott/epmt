@@ -2,6 +2,7 @@
 EPMT dbcare module - executes tasks for taking care of the database, designed to be run on a regular basis
 """
 
+import time
 from logging import getLogger
 
 from epmt.epmt_cmd_retire import epmt_retire
@@ -90,14 +91,23 @@ def _vacuum_tables():
         logger.warning('could not query post-vacuum dead row stats: %s', e)
 
 
-def epmt_dbcare(retire_jobs=False, vacuum_tables=False, post_process=False):
+def epmt_dbcare(retire_jobs=False, vacuum_tables=False, post_process=False, time_limit=None):
     '''
     routine to help regularly take care of the database. for each arg that's true, undertake a cleanup behavior
     retire_jobs will run job retirement. vacuum_tables will run the SQL command VACUUM on jobs, processes, and
     processes_staging, taking care of dead rows. post_process will post process jobs in the database that have
     not yet been associated with data in processes_staging.
+
+    time_limit: float or None
+        If set, the maximum number of minutes to spend on dbcare operations.
+        The routine will stop cleanly after this duration.
     '''
     job_list=[]
+
+    deadline = None
+    if time_limit is not None:
+        deadline = time.time() + time_limit * 60
+        logger.info('time_limit set to %.1f minutes', time_limit)
 
     ## RETIRE JOBS
     if not retire_jobs:
@@ -105,13 +115,24 @@ def epmt_dbcare(retire_jobs=False, vacuum_tables=False, post_process=False):
     else:
         logger.info('retiring jobs.')
         epmt_retire(skip_unprocessed=True,
-                    dry_run=False)
+                    dry_run=False,
+                    time_limit=time_limit)
+
+    # check deadline after retirement
+    if deadline is not None and time.time() >= deadline:
+        logger.warning('time limit reached after retirement, stopping')
+        return
 
     ## VACUUM DB TABLES
     if not vacuum_tables:
         logger.warning('skipping vacuuming of tables in DB')
     else:
         _vacuum_tables()
+
+    # check deadline after vacuum
+    if deadline is not None and time.time() >= deadline:
+        logger.warning('time limit reached after vacuuming, stopping')
+        return
 
     ## POST PROCESS JOBS
     if not post_process:
@@ -152,7 +173,7 @@ def epmt_dbcare(retire_jobs=False, vacuum_tables=False, post_process=False):
 
 
         # postprocess the unprocessed jobs
-        num_jobs_ppd=len(post_process_jobs(jobs=job_list))
+        num_jobs_ppd=len(post_process_jobs(jobs=job_list, deadline=deadline))
         if num_jobs_ppd > 0:
             logger.info('success, num_jobs_ppd = %s', num_jobs_ppd )
         else:

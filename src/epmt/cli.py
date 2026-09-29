@@ -297,6 +297,10 @@ def main():
         '-p', '--post-process',
         default = False, action = 'store_true',
         help = 'postprocess jobs in the DB that are unprocessed (i.e. not associated with entries in processes table)')
+    dbcare_parser.add_argument(
+        '--time-limit',
+        type = float, default = None, metavar = 'MINUTES',
+        help = 'time limit in minutes; the command will stop cleanly after this duration')
 
     # Concat PARSER
     concat_parser = subparser.add_parser(
@@ -338,6 +342,10 @@ def main():
         default=False,
         action='store_true',
         help="If retire targets a job that hasn't been processed yet, leave that job alone and skip.")
+    retire_parser.add_argument(
+        '--time-limit',
+        type=float, default=None, metavar='MINUTES',
+        help='time limit in minutes; the command will stop cleanly after this duration')
 
     # Submit PARSER
     submit_parser = subparser.add_parser(

@@ -241,5 +241,128 @@ class TestSignalHandler(unittest.TestCase):
         self.assertIn('def sig_handler(signo, frame)', source)
 
 
+class TestTimeLimit(unittest.TestCase):
+    """Tests for --time-limit functionality (issue #249)."""
+
+    def test_retire_stops_at_deadline(self):
+        """epmt_retire should stop job retirement when deadline is already passed."""
+        import time
+
+        call_order = []
+
+        def mock_retire_refmodels(*args, **kwargs):
+            call_order.append('models')
+            return 0
+
+        def mock_retire_jobs(*args, **kwargs):
+            call_order.append('jobs')
+            return 0
+
+        # time_limit=0 means the deadline is immediately in the past
+        with patch('epmt.epmt_cmd_retire.retire_refmodels', side_effect=mock_retire_refmodels):
+            with patch('epmt.epmt_cmd_retire.retire_jobs', side_effect=mock_retire_jobs):
+                # Use a very small time limit so deadline passes after model retirement
+                with patch('epmt.epmt_cmd_retire.time') as mock_time:
+                    # First call: time.time() for setting deadline returns 100
+                    # Second call: time.time() for checking deadline returns 200 (past deadline)
+                    mock_time.time.side_effect = [100.0, 200.0]
+                    result = epmt_retire(time_limit=0.01)
+
+        # models should have been retired, but jobs should be skipped
+        self.assertIn('models', call_order)
+        self.assertNotIn('jobs', call_order)
+        self.assertEqual(result, (0, 0))
+
+    def test_retire_no_time_limit(self):
+        """epmt_retire without time_limit should complete both phases."""
+        import epmt.epmt_cmd_retire as retire_mod
+
+        call_order = []
+
+        def mock_retire_refmodels(*args, **kwargs):
+            call_order.append('models')
+            return 1
+
+        def mock_retire_jobs(*args, **kwargs):
+            call_order.append('jobs')
+            return 2
+
+        with patch.object(retire_mod, 'retire_refmodels', side_effect=mock_retire_refmodels):
+            with patch.object(retire_mod, 'retire_jobs', side_effect=mock_retire_jobs):
+                result = epmt_retire(time_limit=None)
+
+        self.assertEqual(call_order, ['models', 'jobs'])
+        self.assertEqual(result, (2, 1))
+
+    def test_retire_jobs_stops_at_deadline(self):
+        """retire_jobs chunked loop should stop when deadline is reached."""
+        import time as time_mod
+        from epmt.epmt_query import retire_jobs as rj
+
+        # Set up: pretend there are many jobs requiring chunked deletion
+        with patch('epmt.epmt_query.get_jobs') as mock_get_jobs, \
+             patch('epmt.epmt_query.delete_jobs') as mock_delete_jobs:
+
+            # Mock: lots of jobs older than N days, requiring chunked deletion
+            mock_query = unittest.mock.MagicMock()
+            mock_query.count.side_effect = [100, 50, 50]  # db count, total older, filtered
+            mock_get_jobs.return_value = mock_query
+
+            mock_delete_jobs.return_value = 20  # each chunk deletes 20
+
+            # deadline already passed
+            deadline = time_mod.time() - 1
+
+            result = rj(ndays=7, deadline=deadline)
+
+            # Should have attempted one chunk then stopped
+            self.assertEqual(mock_delete_jobs.call_count, 1)
+            self.assertEqual(result, 20)
+
+    def test_post_process_jobs_stops_at_deadline(self):
+        """post_process_jobs should stop iterating when deadline is reached."""
+        import time as time_mod
+        from epmt.epmt_query import post_process_jobs
+
+        with patch('epmt.epmt_job.post_process_job') as mock_pp:
+            mock_pp.return_value = True
+
+            # deadline already passed
+            deadline = time_mod.time() - 1
+            result = post_process_jobs(jobs=['job1', 'job2', 'job3'], deadline=deadline)
+
+            # Should process only the first job then stop
+            self.assertEqual(mock_pp.call_count, 1)
+            self.assertEqual(result, ['job1'])
+
+    def test_post_process_jobs_no_deadline(self):
+        """post_process_jobs without deadline should process all jobs."""
+        from epmt.epmt_query import post_process_jobs
+
+        with patch('epmt.epmt_job.post_process_job') as mock_pp:
+            mock_pp.return_value = True
+
+            result = post_process_jobs(jobs=['job1', 'job2', 'job3'], deadline=None)
+
+            self.assertEqual(mock_pp.call_count, 3)
+            self.assertEqual(sorted(result), ['job1', 'job2', 'job3'])
+
+    def test_dbcare_stops_after_retire_at_deadline(self):
+        """dbcare should stop after retire if time limit is exceeded."""
+
+        with patch('epmt.epmt_cmd_dbcare.epmt_retire') as mock_retire, \
+             patch('epmt.epmt_cmd_dbcare._vacuum_tables') as mock_vacuum, \
+             patch('epmt.epmt_cmd_dbcare.time') as mock_time:
+
+            # First call: set deadline. Second call: check after retire -> past deadline
+            mock_time.time.side_effect = [100.0, 200.0]
+
+            epmt_dbcare(retire_jobs=True, vacuum_tables=True,
+                        post_process=True, time_limit=0.01)
+
+            mock_retire.assert_called_once()
+            mock_vacuum.assert_not_called()
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -1870,14 +1870,16 @@ def epmt_entrypoint(args):
     if args.command == 'retire':
         from epmt.epmt_cmd_retire import epmt_retire
         epmt_retire(skip_unprocessed=args.skip_unproc,
-                    dry_run=args.dry_run)
+                    dry_run=args.dry_run,
+                    time_limit=args.time_limit)
         return 0
 
     if args.command == 'dbcare':
         from epmt.epmt_cmd_dbcare import epmt_dbcare
         epmt_dbcare( retire_jobs = args.retire_jobs ,
                      vacuum_tables = args.vacuum_tables,
-                     post_process = args.post_process )
+                     post_process = args.post_process,
+                     time_limit = args.time_limit )
         return 0
 
     if args.command == 'concat':
