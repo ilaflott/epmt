@@ -62,6 +62,30 @@ def is_daemon_running(pidf=PID_FILE):
     return True, int(pid)
 
 
+def _preserve_logger_file_descriptors(context, logger_name='epmt'):
+    """
+    Preserve open logger streams across ``DaemonContext`` setup.
+
+    ``python-daemon`` closes every open file descriptor except stdio and any
+    descriptors listed in ``files_preserve`` when the context is entered. If
+    logging has already been initialized, file-based handlers need to be added
+    to that preserve list so later log writes do not hit a closed stream.
+    """
+    logger_files = list(getattr(context, 'files_preserve', []) or [])
+    for handler in getLogger(logger_name).handlers:
+        stream = getattr(handler, 'stream', None)
+        if stream is None:
+            continue
+        try:
+            fileno = stream.fileno()
+        except (AttributeError, OSError, ValueError):
+            continue
+        logger_files.append(fileno)
+
+    if logger_files:
+        context.files_preserve = list(dict.fromkeys(logger_files))
+
+
 def start_daemon(foreground=False, pidf=PID_FILE, **daemon_args):
     """
     Start the daemon process.
@@ -90,16 +114,9 @@ def start_daemon(foreground=False, pidf=PID_FILE, **daemon_args):
         context.detach_process = True
         context.pidfile = pidfile.TimeoutPIDLockFile(pidf)
         logger.info('Using lock file %s for the EPMT daemon', pidf)
-        # ensure logging uses the same file-descriptors and they are preserved across the fork
-        logger_files = []
-        try:
-            for handler in getLogger('epmt').handlers:
-                fileno = handler.stream.fileno()
-                logger_files.append(fileno)
-            if logger_files:
-                context.files_preserve = logger_files
-        except BaseException:
-            logger.warning('could not get file descriptor for logging in daemon')
+    # ensure logging uses the same file descriptors after entering the daemon
+    # context, even in foreground mode where logging was already initialized.
+    _preserve_logger_file_descriptors(context)
     context.signal_map = {}
 
     # set up signal handlers
